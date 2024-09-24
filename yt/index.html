@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embed YouTube Video</title>
+</head>
+<body>
+    <div id="video-container"></div>
+
+    <script>
+        // Example YouTube URL
+        const youtubeURL = window.location;
+
+        // Function to get URL parameters
+        function getURLParams(url) {
+            const params = new URLSearchParams(new URL(url).search);
+            return {
+                v: params.get('v'),
+                t: params.get('t')
+            };
+        }
+
+        // Extract parameters
+        const { v, t } = getURLParams(youtubeURL);
+
+        // Embed YouTube video
+        const videoContainer = document.getElementById('video-container');
+        const embedURL = `https://www.youtube.com/embed/${v}?start=${t}`;
+        videoContainer.innerHTML = `<iframe width="560" height="315" src="${embedURL}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    </script>
+</body>
+</html>
