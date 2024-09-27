@@ -4,9 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Embed YouTube Video</title>
+    <style>
+        .youtube-video-container {
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+        }
+
+        .youtube-video-container::after {
+          display: block;
+          content: "";
+          padding-top: 56.25%;
+        }
+
+        .youtube-video-container iframe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+    </style>
 </head>
 <body>
-    <div id="video-container"></div>
+    <div id="video-container">
 
     <script>
         // Example YouTube URL
@@ -30,5 +51,6 @@
         const embedURL = `https://www.youtube.com/embed/${v}?start=${t}`;
         videoContainer.innerHTML = `<iframe width="560" height="315" src="${embedURL}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     </script>
+    </div>
 </body>
 </html>
