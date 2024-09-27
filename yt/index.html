@@ -10,7 +10,8 @@
 
     <script>
         // Example YouTube URL
-        const youtubeURL = window.location;
+        const hashPos = window.location.indexOf("#") + 1;
+        const youtubeURL = window.location.substring (hashPos);
 
         // Function to get URL parameters
         function getURLParams(url) {
