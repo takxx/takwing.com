@@ -26,7 +26,7 @@
       autolock: true,
     }).ready(function (fs, main) {
       fs.extract("game.zip").then(function () {
-        main(["-c", "cd game", "-c", "play"]).then(function (ci) {
+        main(["-c", "cd game", "-c", "rich.exe"]).then(function (ci) {
           window.ci = ci;
         });
       });
