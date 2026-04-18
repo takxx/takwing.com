@@ -12,15 +12,13 @@
   <script src="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.js"></script>
 
   <script>
-  (async () => {
-    const emulator = await Dos(document.getElementById('dosbox'), { wdosboxUrl: 'https://cdn.jsdelivr.net/npm/js-dos@7.4.0/bin/' });
-
-    const response = await fetch('./game.zip'); 
-    const arrayBuffer = await response.arrayBuffer();
-    await emulator.run(arrayBuffer);
-	emulator.sendString("RICH3.EXE\r"); // \r = Enter
-
-  })();
+	(async () => {
+	const emulator = await Dos(document.getElementById('dosbox'), {
+	wdosbox: 'https://cdn.jsdelivr.net/npm/js-dos@7.4.0/bin/dosbox.wasm'
+	});
+	await emulator.run('./game.zip'); // or use Blob URL approach above
+	emulator.sendString('RICH3.EXE\r');
+	})();
   </script>
 </body>
 </html>
