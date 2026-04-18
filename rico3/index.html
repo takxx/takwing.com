@@ -15,7 +15,7 @@
   (async () => {
     const emulator = await Dos(document.getElementById('dosbox'), { wdosboxUrl: 'https://cdn.jsdelivr.net/npm/js-dos@7.4.0/bin/' });
 
-    const response = await fetch('game.zip'); 
+    const response = await fetch('./game.zip'); 
     const arrayBuffer = await response.arrayBuffer();
     await emulator.run(arrayBuffer);
 	emulator.sendString("RICH3.EXE\r"); // \r = Enter
