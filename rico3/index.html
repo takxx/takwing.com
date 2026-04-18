@@ -12,6 +12,7 @@
 </head>
 <body>
   <div id="jsdos-container" style="width:640px;height:400px"></div>
+  <script>
     (async () => {
       const emulator = await Dos(document.getElementById('jsdos-container'), { wdosbox: 'dosbox.wasm' });
       await emulator.run('./game.zip'); 
