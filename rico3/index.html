@@ -2,23 +2,27 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title></title>
-  <style>html,body,#dosbox{height:100%;margin:0}</style>
+  <title>jsDOS Game</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsdos@2.0.0/dist/jsdos.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsdos@2.0.0/dist/jsdos.css">
+  <style>body,html{height:100%;margin:0}#dosbox{width:100%;height:100vh}</style>
 </head>
 <body>
   <div id="dosbox"></div>
 
-  <!-- js-dos from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.js"></script>
-
   <script>
-	(async () => {
-	const emulator = await Dos(document.getElementById('dosbox'), {
-	wdosbox: 'https://cdn.jsdelivr.net/npm/js-dos@7.4.0/bin/dosbox.wasm'
-	});
-	await emulator.run('./game.zip'); // or use Blob URL approach above
-	emulator.sendString('RICH3.EXE\r');
-	})();
+    const container = document.getElementById('dosbox');
+    const gameUrl = 'game.zip';
+    const dosbox = new Dosbox({
+      id: 'dosbox',
+      autostart: true,
+      onrun: function() { console.log('DOS started'); }
+    });
+    dosbox.run({
+      file: gameUrl,
+      mount: '/',
+      cmd: 'RICH3.EXE'          
+    }).catch(err => console.error('Failed to run:', err));
   </script>
 </body>
 </html>
