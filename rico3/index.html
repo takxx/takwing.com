@@ -10,13 +10,13 @@
 		 padding: 0;
 	 }
 	</style>
-	<script src="/js-dos/js-dos.js"></script>
-	<link href="/js-dos/js-dos.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/js-dos@8.3.20/dist/js-dos.min.js"></script>
+	<link href="https://cdn.jsdelivr.net/npm/js-dos@8.3.20/dist/js-dos.min.css" rel="stylesheet">
 </head>
 <body>
 	<div id="jsdos" />
 	<script>
-	 emulators.pathPrefix = "/js-dos/";
+	 emulators.pathPrefix = "https://cdn.jsdelivr.net/npm/js-dos@8.3.20/dist/";
 	 Dos(document.getElementById("jsdos"))
 		 .run("game.jsdos");
 	</script>
