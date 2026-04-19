@@ -1,48 +1,24 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>js-dos</title>
-  <script src="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.css" rel="stylesheet">
-  <style>
-    body,html { height:100%; margin:0; display:flex; align-items:center; justify-content:center; background:#000; }
-    #dosbox { width:640px; height:400px; }
-  </style>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<style>
+	 html, body, #jsdos {
+		 width: 100%;
+		 height: 100%;
+		 margin: 0;
+		 padding: 0;
+	 }
+	</style>
+<script src="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.css" rel="stylesheet">
 </head>
 <body>
-  <div id="dosbox"></div>
-
-  <script>
-    (async function(){
-      try {
-        const el = document.getElementById('dosbox');
-
-        // Ensure wdosboxUrl matches the js-dos version
-        const instance = await Dos(el, {
-          wdosboxUrl: "https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/wdosbox.js"
-        });
-
-        // Debug: inspect available methods if needed
-        // console.log('js-dos instance:', instance);
-
-        // Different js-dos builds expose different call signatures.
-        // Try common possibilities in order:
-        if (typeof instance.run === 'function') {
-          await instance.run('game.jsdos');
-        } else if (instance.lib && typeof instance.lib.run === 'function') {
-          await instance.lib.run('game.jsdos');
-        } else if (typeof instance.runWasm === 'function') {
-          await instance.runWasm('game.jsdos');
-        } else if (instance.console && typeof instance.console.run === 'function') {
-          await instance.console.run('game.jsdos');
-        } else {
-          console.error('No known run() method found on js-dos instance. Available keys:', Object.keys(instance));
-        }
-      } catch (err) {
-        console.error('Error initializing js-dos:', err);
-      }
-    })();
-  </script>
+	<div id="jsdos" />
+	<script>
+	 emulators.pathPrefix = "https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/";
+	 Dos(document.getElementById("jsdos"))
+		 .run("game.jsdos");
+	</script>
 </body>
 </html>
