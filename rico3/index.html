@@ -1,78 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>js-dos</title>
-  
   <script src="https://cdn.jsdelivr.net/npm/js-dos/dist/js-dos.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/js-dos/dist/js-dos.min.css" rel="stylesheet">
-  
-  
   <style>
-    html,body{height:100%;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#111;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    #dosbox{width:800px;height:600px;background:#000;border:4px solid #222;box-shadow:0 8px 24px rgba(0,0,0,.6)}
-    .controls{margin:12px;display:flex;gap:8px}
-    button{padding:8px 12px;background:#222;color:#fff;border:1px solid #333;cursor:pointer}
-    button:disabled{opacity:.5;cursor:not-allowed}
+    body,html { height:100%; margin:0; display:flex; align-items:center; justify-content:center; background:#000; }
+    #dosbox { width:640px; height:400px; }
   </style>
 </head>
 <body>
-  <div class="controls">
-    <button id="start">Start</button>
-    <button id="stop" disabled>Stop</button>
-  </div>
+  <div id="dosbox"></div>
 
-  <div id="dosbox" aria-label="js-dos emulator"></div>
+  <script>
+    (async function(){
+      // Create the DosBox instance inside the #dosbox element
+      const emulator = await Dos(document.getElementById('dosbox'), { wdosboxUrl: "https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/wdosbox.js" });
 
-
-  <script type="module">
-
-    const dosEl = document.getElementById('dosbox');
-    const startBtn = document.getElementById('start');
-    const stopBtn = document.getElementById('stop');
-
-    let emulator = null;
-    let instance = null;
-
-    async function start() {
-      if (instance) return;
-      startBtn.disabled = true;
-      try {
-        // Create emulator attached to element. options: {w, h} are optional.
-        emulator = await jsDos(dosEl, { w: 800, h: 600 });
-        // run the bundle (game.jsdos must be served from same folder)
-        instance = await emulator.run('game.jsdos');
-        stopBtn.disabled = false;
-      } catch (err) {
-        console.error('js-dos start error:', err);
-        startBtn.disabled = false;
-      }
-    }
-
-    async function stop() {
-      if (!instance) return;
-      try {
-        await instance.quit();
-      } catch (e) { /* ignore */ }
-      instance = null;
-      if (emulator && emulator.destroy) emulator.destroy();
-      emulator = null;
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-    }
-
-    startBtn.addEventListener('click', start);
-    stopBtn.addEventListener('click', stop);
-
-    // cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-      if (instance && instance.quit) instance.quit().catch(()=>{});
-      if (emulator && emulator.destroy) emulator.destroy();
-    });
-
-    // auto-start for convenience (comment out if you prefer manual start)
-    // start().catch(()=>{});
+      // Mount and run local game.jsdos (file should be alongside this HTML)
+      // .jsdos is a packaged JS file produced by js-dos packaging tools
+      await emulator.run("game.jsdos");
+    })();
   </script>
 </body>
 </html>
