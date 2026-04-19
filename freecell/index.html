@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FreeCell — Single Page (Fixed)</title>
+<style>
+  :root{--bg:#0b3; --table:#0c2b2b; --card:#fff; --card-back:#0b84ff;}
+  *{box-sizing:border-box; font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{margin:0;background:linear-gradient(180deg,#064 0%,#003 100%);padding:14px;color:#fff;user-select:none}
+  header{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  h1{font-size:18px;margin:0}
+  button{background:#222;color:#fff;padding:6px 10px;border-radius:6px;border:0;cursor:pointer}
+  #board{max-width:980px;margin:0 auto}
+  .row{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start}
+  .slot{width:92px;height:120px;border-radius:8px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;position:relative}
+  .slot.small{width:68px;height:92px}
+  .slot .label{position:absolute;left:6px;top:6px;font-size:12px;opacity:.8}
+  .pile{width:92px;min-height:120px;position:relative}
+  .card{width:88px;height:116px;border-radius:8px;position:absolute;left:0;top:0;background:#eee;color:#000;border:1px solid #aaa;display:flex;flex-direction:column;justify-content:space-between;padding:6px;font-weight:600;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+  .card.red{color:#b00}
+  .card .top{font-size:14px}
+  .card .suit{font-size:22px;line-height:1}
+  .hidden{opacity:.04}
+  .stack{position:relative;height:420px;width:92px}
+  .stack .card{position:absolute}
+  #status{margin-left:auto;font-size:14px;opacity:.9}
+  footer{margin-top:18px;opacity:.9;font-size:13px}
+  .hint{font-size:12px;color:#eef}
+  .controls{display:flex;gap:8px}
+</style>
+</head>
+<body>
+<div id="board">
+  <header>
+    <h1>FreeCell</h1>
+    <div class="controls">
+      <button id="newBtn">New</button>
+      <button id="restartBtn">Restart</button>
+      <button id="undoBtn">Undo</button>
+      <button id="autoBtn">Auto-move</button>
+      <button id="solveBtn">Hint</button>
+    </div>
+    <div id="status"></div>
+  </header>
+
+  <div class="row" id="topRow">
+    <div class="slot small" data-type="free" data-index="0"><div class="label">Free 1</div></div>
+    <div class="slot small" data-type="free" data-index="1"><div class="label">Free 2</div></div>
+    <div class="slot small" data-type="free" data-index="2"><div class="label">Free 3</div></div>
+    <div class="slot small" data-type="free" data-index="3"><div class="label">Free 4</div></div>
+
+    <div style="width:24px"></div>
+
+    <div class="slot small" data-type="home" data-index="0"><div class="label">♥</div></div>
+    <div class="slot small" data-type="home" data-index="1"><div class="label">♦</div></div>
+    <div class="slot small" data-type="home" data-index="2"><div class="label">♣</div></div>
+    <div class="slot small" data-type="home" data-index="3"><div class="label">♠</div></div>
+  </div>
+
+  <div class="row" id="tableauRow">
+    <div class="stack" data-type="tableau" data-index="0"></div>
+    <div class="stack" data-type="tableau" data-index="1"></div>
+    <div class="stack" data-type="tableau" data-index="2"></div>
+    <div class="stack" data-type="tableau" data-index="3"></div>
+    <div class="stack" data-type="tableau" data-index="4"></div>
+    <div class="stack" data-type="tableau" data-index="5"></div>
+    <div class="stack" data-type="tableau" data-index="6"></div>
+    <div class="stack" data-type="tableau" data-index="7"></div>
+  </div>
+
+  <footer>
+    <div class="hint">Double-click a card to auto-move to foundations when possible. Drag or click to move. Game state is in-memory only.</div>
+  </footer>
+</div>
+
+<script>
+/* Fixed FreeCell: safer checks and robust serialization */
+const SUITS = ['♥','♦','♣','♠'];
+const COLORS = {'♥':'red','♦':'red','♣':'black','♠':'black'};
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+let deck = [];
+let tableau = Array.from({length:8},()=>[]);
+let frees = Array.from({length:4},()=>null);
+let homes = { '♥':0,'♦':0,'♣':0,'♠':0 };
+let history = [];
+
+const status = document.getElementById('status');
+
+function buildDeck(){
+  deck = [];
+  for(const s of SUITS) for(const r of RANKS) deck.push({suit:s,rank:r,rankN:RANKS.indexOf(r)+1});
+}
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+}
+function deal(){
+  buildDeck(); shuffle(deck);
+  tableau = Array.from({length:8},()=>[]);
+  for(let i=0;i<52;i++){ tableau[i%8].push(copyCard(deck[i])); }
+  frees = Array.from({length:4},()=>null);
+  homes = {'♥':0,'♦':0,'♣':0,'♠':0};
+  history = [];
+  saveSnapshot();
+  render();
+}
+function restart(){ if(history.length) { restoreSnap(history[0]); history=[history[0]]; render(); } }
+function saveSnapshot(){ history.push(serialize()); updateStatus(); }
+function serialize(){
+  // convert to plain arrays/objects to avoid prototype issues
+  return JSON.stringify({
+    tableau: tableau.map(col => col.map(copyCard)),
+    frees: frees.map(c => c ? copyCard(c) : null),
+    homes: {...homes}
+  });
+}
+function restoreSnap(s){
+  try{
+    const obj = JSON.parse(s);
+    tableau = (obj.tableau || []).map(col => (col || []).map(normalizeCard));
+    frees = (obj.frees || [null,null,null,null]).map(c => c ? normalizeCard(c) : null);
+    homes = Object.assign({'♥':0,'♦':0,'♣':0,'♠':0}, obj.homes || {});
+  }catch(e){
+    console.error('restore failed',e);
+  }
+}
+function copyCard(c){ return {suit:c.suit,rank:c.rank,rankN: Number(c.rankN) || (RANKS.indexOf(c.rank)+1)}; }
+function normalizeCard(c){
+  if(!c || typeof c !== 'object') return null;
+  const suit = SUITS.includes(c.suit) ? c.suit : '♠';
+  const rank = typeof c.rank==='string' && RANKS.includes(c.rank) ? c.rank : 'A';
+  const rankN = Number(c.rankN) || (RANKS.indexOf(rank)+1);
+  return {suit,rank,rankN};
+}
+function updateStatus(){ status.textContent = `Moves: ${Math.max(0,history.length-1)}  |  Foundations: ${Object.values(homes).reduce((a,b)=>a+b,0)}/52`; }
+
+function render(){
+  document.querySelectorAll('.stack').forEach(st=>st.innerHTML='');
+  document.querySelectorAll('.slot.small[data-type="free"]').forEach((el,i)=>{
+    el.innerHTML = '<div class="label">Free '+(i+1)+'</div>';
+    if(frees[i]) el.appendChild(cardElement(frees[i],{loc:'free',idx:i}));
+  });
+  document.querySelectorAll('.slot.small[data-type="home"]').forEach((el,i)=>{
+    el.innerHTML = '<div class="label">'+SUITS[i]+'</div>';
+    const s = SUITS[i];
+    const count = homes[s] || 0;
+    if(count>0){
+      el.appendChild(cardFace({suit:s,rank:RANKS[count-1],rankN:count}, true));
+    }
+  });
+  tableau.forEach((col,ci)=>{
+    const container = document.querySelector(`.stack[data-index="${ci}"]`);
+    (col||[]).forEach((c,ri)=>{
+      if(!c) return;
+      const topOffset = ri*28;
+      const el = cardElement(c,{loc:'tableau',idx:ci,pos:ri});
+      el.style.top = (topOffset)+'px';
+      container.appendChild(el);
+    });
+  });
+  updateStatus();
+  if(Object.values(homes).reduce((a,b)=>a+b,0)===52) setTimeout(()=>alert('You won!'),80);
+}
+
+function cardFace(card,small){
+  card = normalizeCard(card);
+  const el = document.createElement('div');
+  el.className = 'card';
+  if(COLORS[card.suit]==='red') el.classList.add('red');
+  el.innerHTML = `<div class="top">${card.rank}</div><div class="suit">${card.suit}</div>`;
+  el.style.width = small ? '68px' : '88px';
+  el.style.height= small ? '92px' : '116px';
+  el.dataset.suit = card.suit; el.dataset.rank = card.rank; el.dataset.rankN = card.rankN;
+  return el;
+}
+
+function cardElement(card,meta){
+  card = normalizeCard(card);
+  const el = cardFace(card);
+  el.draggable = false;
+  el.dataset.loc = meta.loc;
+  el.dataset.idx = meta.idx;
+  if(meta.pos!=null) el.dataset.pos = meta.pos;
+  el.addEventListener('pointerdown', onPointerDown);
+  el.addEventListener('dblclick', onDoubleClick);
+  return el;
+}
+
+/* Interaction logic */
+let pointer = {startX:0,startY:0,el:null,from:null};
+function onPointerDown(e){
+  e.preventDefault();
+  const el = e.currentTarget;
+  pointer.startX = e.clientX; pointer.startY = e.clientY; pointer.el = el;
+  const loc = el.dataset.loc;
+  if(loc==='tableau'){
+    const col = Number(el.dataset.idx);
+    const pos = Number(el.dataset.pos);
+    const seq = (tableau[col] || []).slice(pos).map(copyCard);
+    pointer.from = {type:'tableau',col,pos,seq};
+  } else if(loc==='free'){
+    const i = Number(el.dataset.idx);
+    pointer.from = {type:'free',i,card: frees[i] ? copyCard(frees[i]) : null};
+  } else return;
+
+  const onUp = (ev)=>{
+    document.removeEventListener('pointerup', onUp);
+    if(Math.hypot(ev.clientX-pointer.startX,ev.clientY-pointer.startY) < 8){
+      clickMove(pointer);
+    }
+    pointer = {startX:0,startY:0,el:null,from:null};
+  };
+  document.addEventListener('pointerup', onUp);
+}
+
+function clickMove(p){
+  if(!p.from) return;
+  if(p.from.type==='free'){
+    const i = p.from.i;
+    const card = frees[i];
+    if(!card) return;
+    if(canMoveToHome(card)){ moveFreeToHome(i); return; }
+    for(let t=0;t<8;t++){ if(canPlaceOnTableau(card,tableau[t])){ moveFreeToTableau(i,t); return; } }
+    return;
+  }
+  if(p.from.type==='tableau'){
+    const {col,pos,seq} = p.from;
+    if(!Array.isArray(seq) || seq.length===0) return;
+    if(seq.length===1 && canMoveToHome(seq[0])){ moveTableauToHome(col,pos); return; }
+    for(let t=0;t<8;t++){
+      if(t===col) continue;
+      if(canPlaceSequence(seq,tableau[t])){ moveTableauToTableau(col,pos,t); return; }
+    }
+    for(let i=0;i<4;i++){ if(!frees[i] && seq.length===1){ moveTableauToFree(col,pos,i); return; } }
+  }
+}
+
+function onDoubleClick(e){
+  const el = e.currentTarget;
+  const loc = el.dataset.loc;
+  if(loc==='tableau'){
+    const col = Number(el.dataset.idx); const pos = Number(el.dataset.pos);
+    const colArr = tableau[col] || [];
+    if(pos!==colArr.length-1) return;
+    const card = colArr[colArr.length-1];
+    if(card && canMoveToHome(card)) moveTableauToHome(col,pos);
+  } else if(loc==='free'){
+    const i=Number(el.dataset.idx);
+    const card = frees[i];
+    if(card && canMoveToHome(card)) moveFreeToHome(i);
+  }
+}
+
+/* Rules */
+function canMoveToHome(card){
+  if(!card) return false;
+  return (homes[card.suit] || 0) === (Number(card.rankN) - 1);
+}
+function canPlaceOnTableau(card, destCol){
+  if(!card) return false;
+  destCol = destCol || [];
+  if(destCol.length===0) return true;
+  const top = destCol[destCol.length-1];
+  if(!top) return false;
+  const topColor = COLORS[top.suit]; const cardColor = COLORS[card.suit];
+  return top.rankN === Number(card.rankN)+1 && topColor !== cardColor;
+}
+function canPlaceSequence(seq, destCol){
+  if(!Array.isArray(seq) || seq.length===0) return false;
+  seq = seq.map(normalizeCard);
+  for(let i=0;i<seq.length-1;i++){
+    if(seq[i].rankN !== seq[i+1].rankN+1) return false;
+    if(COLORS[seq[i].suit]===COLORS[seq[i+1].suit]) return false;
+  }
+  const freeEmpty = frees.filter(f=>!f).length;
+  const emptyCols = tableau.filter(c=>!c || c.length===0).length + ((destCol && destCol.length===0)? -1:0);
+  const maxMovable = (freeEmpty+1)*(emptyCols+1);
+  if(seq.length > maxMovable) return false;
+  if(!destCol || destCol.length===0) return true;
+  return canPlaceOnTableau(seq[0], destCol);
+}
+
+/* Moves */
+function moveFreeToHome(i){ const card = frees[i]; if(!card || !canMoveToHome(card)) return; homes[card.suit] = (homes[card.suit]||0) + 1; frees[i]=null; saveSnapshot(); render(); }
+function moveFreeToTableau(i,t){ const card = frees[i]; if(!card || !canPlaceOnTableau(card,tableau[t])) return; tableau[t].push(copyCard(card)); frees[i]=null; saveSnapshot(); render(); }
+function moveTableauToHome(col,pos){ const colArr = tableau[col] || []; if(pos!==colArr.length-1) return; const card = colArr[colArr.length-1]; if(!card || !canMoveToHome(card)) return; colArr.pop(); homes[card.suit] = (homes[card.suit]||0) + 1; saveSnapshot(); render(); }
+function moveTableauToFree(col,pos,i){ const colArr = tableau[col] || []; if(pos!==colArr.length-1) return; const card = colArr.pop(); frees[i]=copyCard(card); saveSnapshot(); render(); }
+function moveTableauToTableau(col,pos,t){ const colArr = tableau[col] || []; const seq = colArr.slice(pos); if(!canPlaceSequence(seq,tableau[t])) return; tableau[t] = (tableau[t]||[]).concat(seq.map(copyCard)); tableau[col] = colArr.slice(0,pos); saveSnapshot(); render(); }
+
+/* Drag/drop */
+let dragState = null;
+document.addEventListener('pointerdown', (e)=>{
+  const card = e.target.closest('.card');
+  if(!card) return;
+  const rect = card.getBoundingClientRect();
+  dragState = {el:card.cloneNode(true),orig:card,offsetX:e.clientX-rect.left,offsetY:e.clientY-rect.top};
+  dragState.el.style.position='fixed'; dragState.el.style.zIndex=9999; dragState.el.style.pointerEvents='none';
+  document.body.appendChild(dragState.el);
+  moveDrag(e);
+  document.addEventListener('pointermove', moveDrag);
+  document.addEventListener('pointerup', dropDrag, {once:true});
+});
+function moveDrag(e){
+  if(!dragState) return;
+  dragState.el.style.left = (e.clientX-dragState.offsetX)+'px';
+  dragState.el.style.top = (e.clientY-dragState.offsetY)+'px';
+}
+function dropDrag(e){
+  if(!dragState) return;
+  document.removeEventListener('pointermove', moveDrag);
+  const drop = document.elementFromPoint(e.clientX, e.clientY);
+  const destSlot = drop && drop.closest('.stack, .slot.small');
+  const src = dragState.orig;
+  const loc = src.dataset.loc;
+  if(destSlot){
+    const dtype = destSlot.classList.contains('stack') ? 'tableau' : destSlot.dataset.type;
+    const destIndex = Number(destSlot.dataset.index);
+    if(loc==='free'){
+      const i = Number(src.dataset.idx);
+      const card = frees[i];
+      if(!card) { cleanupDrag(); return; }
+      if(dtype==='home'){ if(canMoveToHome(card)){ moveFreeToHome(i); } }
+      else if(dtype==='tableau'){ moveFreeToTableau(i,destIndex); }
+    } else if(loc==='tableau'){
+      const col = Number(src.dataset.idx); const pos = Number(src.dataset.pos);
+      if(dtype==='home'){
+        const colArr = tableau[col] || [];
+        if(pos===colArr.length-1){ moveTableauToHome(col,pos); }
+      } else if(dtype==='tableau'){
+        moveTableauToTableau(col,pos,destIndex);
+      } else if(dtype==='free'){
+        if(destSlot.dataset.index!=null){ const freeIdx = Number(destSlot.dataset.index); moveTableauToFree(col,pos,freeIdx); }
+      }
+    }
+  }
+  cleanupDrag();
+}
+function cleanupDrag(){ if(dragState && dragState.el) dragState.el.remove(); dragState=null; }
+
+/* Auto/hint */
+function autoMoveToHomes(){
+  for(let t=0;t<8;t++){
+    const col = tableau[t] || [];
+    if(col.length===0) continue;
+    const card = col[col.length-1];
+    if(card && canMoveToHome(card)){ col.pop(); homes[card.suit] = (homes[card.suit]||0)+1; saveSnapshot(); render(); return true; }
+  }
+  for(let i=0;i<4;i++){
+    const card = frees[i];
+    if(card && canMoveToHome(card)){ frees[i]=null; homes[card.suit] = (homes[card.suit]||0)+1; saveSnapshot(); render(); return true; }
+  }
+  return false;
+}
+document.getElementById('autoBtn').addEventListener('click', ()=>{ while(autoMoveToHomes()){}; render(); });
+document.getElementById('solveBtn').addEventListener('click', ()=>{ const hint = findHint(); alert(hint || 'No obvious move found.'); });
+function findHint(){
+  for(let t=0;t<8;t++){
+    const col = tableau[t] || [];
+    if(!col.length) continue;
+    const card = col[col.length-1];
+    if(card && canMoveToHome(card)) return `Move ${card.rank}${card.suit} from column ${t+1} to foundation`;
+    for(let i=0;i<4;i++) if(!frees[i]) return `Move ${card.rank}${card.suit} from column ${t+1} to a free cell`;
+    for(let d=0;d<8;d++){ if(d===t) continue; if(card && canPlaceOnTableau(card,tableau[d])) return `Move ${card.rank}${card.suit} from column ${t+1} to column ${d+1}`; }
+  }
+  for(let i=0;i<4;i++) if(frees[i]){
+    const c = frees[i];
+    if(c && canMoveToHome(c)) return `Move ${c.rank}${c.suit} from free ${i+1} to foundation`;
+    for(let d=0;d<8;d++) if(c && canPlaceOnTableau(c,tableau[d])) return `Move ${c.rank}${c.suit} from free ${i+1} to column ${d+1}`;
+  }
+  return null;
+}
+
+/* Buttons */
+document.getElementById('newBtn').addEventListener('click', ()=>deal());
+document.getElementById('restartBtn').addEventListener('click', ()=>restart());
+document.getElementById('undoBtn').addEventListener('click', ()=>{
+  if(history.length<=1) return;
+  history.pop();
+  restoreSnap(history[history.length-1]);
+  render();
+});
+
+/* start */
+deal();
+</script>
+</body>
+</html>
