@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <title>js-dos</title>
-  <script src="https://cdn.jsdelivr.net/npm/js-dos/dist/js-dos.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/js-dos/dist/js-dos.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/js-dos.min.css" rel="stylesheet">
   <style>
     body,html { height:100%; margin:0; display:flex; align-items:center; justify-content:center; background:#000; }
     #dosbox { width:640px; height:400px; }
@@ -15,12 +15,33 @@
 
   <script>
     (async function(){
-      // Create the DosBox instance inside the #dosbox element
-      const emulator = await Dos(document.getElementById('dosbox'), { wdosboxUrl: "https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/wdosbox.js" });
+      try {
+        const el = document.getElementById('dosbox');
 
-      // Mount and run local game.jsdos (file should be alongside this HTML)
-      // .jsdos is a packaged JS file produced by js-dos packaging tools
-      await emulator.run("game.jsdos");
+        // Ensure wdosboxUrl matches the js-dos version
+        const instance = await Dos(el, {
+          wdosboxUrl: "https://cdn.jsdelivr.net/npm/js-dos@7.4.0/dist/wdosbox.js"
+        });
+
+        // Debug: inspect available methods if needed
+        // console.log('js-dos instance:', instance);
+
+        // Different js-dos builds expose different call signatures.
+        // Try common possibilities in order:
+        if (typeof instance.run === 'function') {
+          await instance.run('game.jsdos');
+        } else if (instance.lib && typeof instance.lib.run === 'function') {
+          await instance.lib.run('game.jsdos');
+        } else if (typeof instance.runWasm === 'function') {
+          await instance.runWasm('game.jsdos');
+        } else if (instance.console && typeof instance.console.run === 'function') {
+          await instance.console.run('game.jsdos');
+        } else {
+          console.error('No known run() method found on js-dos instance. Available keys:', Object.keys(instance));
+        }
+      } catch (err) {
+        console.error('Error initializing js-dos:', err);
+      }
     })();
   </script>
 </body>
