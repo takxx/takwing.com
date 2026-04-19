@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>js-dos sample (ESM)</title>
   
-<script type="module"> import jsDos from 'https://cdn.jsdelivr.net/npm/js-dos/+esm' </script>  
+  <script src="https://cdn.jsdelivr.net/npm/js-dos/dist/js-dos.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/js-dos/dist/js-dos.min.css" rel="stylesheet">
+  
   
   <style>
     html,body{height:100%;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#111;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
@@ -23,6 +25,7 @@
 
   <div id="dosbox" aria-label="js-dos emulator"></div>
 
+
   <script type="module">
 
     const dosEl = document.getElementById('dosbox');
@@ -38,7 +41,7 @@
       try {
         // Create emulator attached to element. options: {w, h} are optional.
         emulator = await jsDos(dosEl, { w: 800, h: 600 });
-        // run the bundle (sample.jsdos must be served from same folder)
+        // run the bundle (game.jsdos must be served from same folder)
         instance = await emulator.run('game.jsdos');
         stopBtn.disabled = false;
       } catch (err) {
