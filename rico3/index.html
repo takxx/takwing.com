@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>js-dos Compatible Loader</title>
-  <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
+  <title>js-dos Game (default URL)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/js-dos@8.3.20/dist/js-dos.css">
   <style>
     body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;height:100vh;display:flex;flex-direction:column}
     header{display:flex;align-items:center;gap:12px;padding:8px 12px;background:#0f0f10;border-bottom:1px solid #222;z-index:10000}
@@ -13,13 +13,13 @@
     .container{flex:1;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
     .wrap{position:relative;width:900px;max-width:95%;height:640px;max-height:90vh;border:2px solid #444;background:#000;box-sizing:border-box}
     #dosbox{width:100%;height:100%}
+    a{color:#6cf}
   </style>
 </head>
 <body>
   <header>
-    <button id="startBtn">Start Game</button>
     <button id="restartBtn">Restart</button>
-    <div id="status">Idle</div>
+    <div id="status">Loading default URL...</div>
   </header>
 
   <div class="container">
@@ -28,148 +28,44 @@
     </div>
   </div>
 
-  <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-dos@8.3.20/dist/js-dos.js"></script>
 
   <script>
-    (function () {
+    (function(){
       const dosbox = document.getElementById('dosbox');
       const status = document.getElementById('status');
-      const startBtn = document.getElementById('startBtn');
       const restartBtn = document.getElementById('restartBtn');
-      const GAME_URL = './bundle.jsdos';
-      const options = { wdosboxUrl: 'https://v8.js-dos.com/latest/wdosbox.js' };
 
-      let emu;
-      try {
-        emu = Dos(dosbox, options); // v8 synchronous factory
-      } catch (e) {
-        console.error('Dos init error', e);
-        status.textContent = 'Emulator init error';
-        return;
-      }
+      // Default game URL (replace with the link that works for you)
+      const GAME_URL = 'https://takwing.com/rico3/bundle.jsdos';
 
-      console.log('emulator methods:', Object.keys(emu || {}));
+      const options = {
+        wdosboxUrl: 'https://cdn.jsdelivr.net/npm/js-dos@8.3.20/dist/wdosbox.js'
+      };
 
-      // Helper: fetch .jsdos as arrayBuffer
-      function fetchArrayBuffer(url) {
-        return fetch(url).then(r => {
-          if (!r.ok) throw new Error('Network error ' + r.status);
-          return r.arrayBuffer();
-        });
-      }
-
-      // Try various run strategies in order:
-      // 1) emu.run(url)
-      // 2) Dos.run(element, url, options)
-      // 3) emu.runCommand / runFromUrl variants
-      // 4) Manual: fetch archive, mount buffer and exec main exe
-      function startGame() {
-        status.textContent = 'Loading...';
-
-        // 1. emu.run
-        if (typeof emu.run === 'function') {
-          emu.run(GAME_URL).then(onStarted).catch(onStartError);
-          return;
-        }
-
-        // 2. Dos.run (static)
-        if (typeof Dos.run === 'function') {
-          try {
-            Dos.run(dosbox, GAME_URL, options).then(onStarted).catch(onStartError);
-            return;
-          } catch (e) {
-            // fallthrough to next methods
-            console.warn('Dos.run threw', e);
-          }
-        }
-
-        // 3. emu.runCommand / runFromUrl
-        if (typeof emu.runCommand === 'function') {
-          Promise.resolve().then(() => emu.runCommand(GAME_URL)).then(onStarted).catch(onStartError);
-          return;
-        }
-        if (typeof emu.runFromUrl === 'function') {
-          emu.runFromUrl(GAME_URL).then(onStarted).catch(onStartError);
-          return;
-        }
-
-        // 4. Manual mount & exec
-        // Many .jsdos bundles are ZIP-like; attempt mount then look for autorun or common exes.
-        fetchArrayBuffer(GAME_URL)
-          .then(buf => {
-            // If emulator exposes mountFromBuffer/mount then use it
-            const uint8 = new Uint8Array(buf);
-            if (typeof emu.mount === 'function') {
-              // mount at root and try to find an exe to run
-              return Promise.resolve(emu.mount('/', uint8)).then(() => uint8);
-            }
-            if (typeof emu.mountFromBuffer === 'function') {
-              return Promise.resolve(emu.mountFromBuffer(uint8)).then(() => uint8);
-            }
-
-            // If no mount helper, try to use createFS / FS APIs if present
-            if (emu.fs && typeof emu.fs.mount === 'function') {
-              // some builds expose emu.fs (Emscripten FS)
-              return Promise.resolve(emu.fs.mount(uint8)).then(() => uint8);
-            }
-
-            // As last resort, try Dos.run with blob URL (some older builds accept URL only)
-            const blob = new Blob([buf]);
-            const blobUrl = URL.createObjectURL(blob);
-            if (typeof Dos.run === 'function') {
-              return Dos.run(dosbox, blobUrl, options).then(() => { URL.revokeObjectURL(blobUrl); return uint8; });
-            }
-
-            throw new Error('Emulator has no mount/run helpers for manual buffer');
-          })
+      function startFromUrl(url) {
+        status.textContent = 'Starting: ' + url;
+        // Dos.run returns a Promise in this build
+        Dos.run(dosbox, url, options)
           .then(() => {
-            // After mounting, try to exec common autorun names
-            const attempts = [
-              'AUTORUN.COM','AUTOEXEC.BAT','INSTALL.EXE','SETUP.EXE','GAME.EXE','START.EXE'
-            ];
-            // try emu.exec or emu.runCommand variants
-            const execFn = (name) => {
-              if (typeof emu.exec === 'function') return emu.exec(name);
-              if (typeof emu.runCommand === 'function') return emu.runCommand(name);
-              if (typeof emu.execFile === 'function') return emu.execFile(name);
-              return Promise.reject(new Error('No exec API on emulator'));
-            };
-
-            // try each until one succeeds
-            return attempts.reduce((p, name) => {
-              return p.catch(() => execFn(name));
-            }, Promise.reject()).then(onStarted).catch(err => {
-              throw new Error('No autorun found and exec attempts failed: ' + err.message);
-            });
+            status.textContent = 'Game started';
+            console.log('Game started from', url);
           })
-          .catch(onStartError);
+          .catch(err => {
+            console.error('Run error', err);
+            status.textContent = 'Run error: ' + (err && err.message || err);
+          });
       }
 
-      function onStarted() {
-        status.textContent = 'Game started';
-        console.log('Game started');
-      }
+      restartBtn.addEventListener('click', () => {
+        // reload page to restart cleanly
+        location.reload();
+      });
 
-      function onStartError(err) {
-        console.error('Start failed', err);
-        status.textContent = 'Start failed: ' + (err && err.message || err);
-      }
-
-      function restart() {
-        try { if (emu && typeof emu.exit === 'function') emu.exit(); } catch (e) {}
-        try {
-          emu = Dos(dosbox, options);
-          startGame();
-        } catch (e) {
-          console.error('Restart failed', e);
-          status.textContent = 'Restart failed';
-        }
-      }
-
-      startBtn.addEventListener('click', startGame);
-      restartBtn.addEventListener('click', restart);
-
-      window.addEventListener('load', () => { status.textContent = 'Ready — click Start'; });
+      // Auto-start
+      window.addEventListener('load', () => {
+        startFromUrl(GAME_URL);
+      });
     })();
   </script>
 </body>
