@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>js-dos Loader (robust)</title>
+  <title>js-dos Simple Launcher</title>
   <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
   <style>
-    body{font-family:Arial;background:#111;color:#eee;margin:0;height:100vh;display:flex;flex-direction:column}
+    body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;height:100vh;display:flex;flex-direction:column}
     header{display:flex;align-items:center;gap:12px;padding:8px 12px;background:#0f0f10;border-bottom:1px solid #222}
     header button{padding:8px 12px;background:#222;color:#fff;border:1px solid #444;cursor:pointer}
     header #status{margin-left:auto;color:#9cf;font-weight:600}
@@ -18,7 +18,7 @@
 <body>
   <header>
     <button id="startBtn">Start</button>
-    <button id="reloadBtn">Reload</button>
+    <button id="openBtn">Open Link</button>
     <div id="status">Idle</div>
   </header>
 
@@ -35,77 +35,66 @@
       const dosbox = document.getElementById('dosbox');
       const status = document.getElementById('status');
       const startBtn = document.getElementById('startBtn');
-      const reloadBtn = document.getElementById('reloadBtn');
+      const openBtn = document.getElementById('openBtn');
 
-      // Put your working bundle URL here
+      // Replace this with the working external link you mentioned
       const GAME_URL = 'https://takwing.com/rico3/bundle.jsdos';
 
-      const options = { wdosboxUrl: 'https://v8.js-dos.com/latest/wdosbox.js' };
+      const options = {
+        wdosboxUrl: 'https://v8.js-dos.com/latest/wdosbox.js'
+      };
 
-      let emu;
-      function createEmu() {
-        try {
-          emu = Dos(dosbox, options); // v8 synchronous factory
-        } catch (e) {
-          console.error('Dos init error', e);
-          status.textContent = 'Emulator init error';
-          throw e;
+      function tryStaticRun(url) {
+        status.textContent = 'Attempting Dos.run...';
+        if (typeof Dos === 'undefined') {
+          status.textContent = 'js-dos not loaded; opening link instead';
+          window.open(url, '_blank');
+          return;
         }
-        console.log('emulator methods:', Object.keys(emu || {}));
-      }
-
-      // Try to start by detecting methods present
-      function startUrl(url) {
-        status.textContent = 'Starting...';
-        // Prefer emu.run if present
-        if (emu && typeof emu.run === 'function') {
-          return emu.run(url);
-        }
-        // other common names
-        if (emu && typeof emu.runFromUrl === 'function') return emu.runFromUrl(url);
-        if (emu && typeof emu.runCommand === 'function') return emu.runCommand(url);
-        if (emu && typeof emu.startFromUrl === 'function') return emu.startFromUrl(url);
-        if (emu && typeof emu.exec === 'function') {
-          // some builds expect the archive mounted; attempt Dos to fetch via object URL and then exec common file
-          return fetch(url)
-            .then(r => { if(!r.ok) throw new Error('Fetch failed ' + r.status); return r.arrayBuffer(); })
-            .then(buf => {
-              const blob = new Blob([buf]);
-              const blobUrl = URL.createObjectURL(blob);
-              // try Dos.run on blobUrl if available as static
-              if (typeof Dos.run === 'function') {
-                return Dos.run(dosbox, blobUrl, options).finally(()=> URL.revokeObjectURL(blobUrl));
-              }
-              // else try mounting if mount exists
-              if (typeof emu.mount === 'function') {
-                return emu.mount('/', new Uint8Array(buf)).then(()=> emu.exec('AUTORUN.COM'));
-              }
-              throw new Error('No run/mount API available after fetch');
+        // If Dos.run exists on this build, use it
+        if (typeof Dos.run === 'function') {
+          Dos.run(dosbox, url, options)
+            .then(()=> status.textContent = 'Game started')
+            .catch(e => {
+              console.error('Dos.run failed', e);
+              status.textContent = 'Dos.run failed; opening link';
+              window.open(url, '_blank');
             });
+          return;
         }
-        // As last resort, try static Dos.run if present (even if Dos.run undefined earlier)
-        if (typeof Dos.run === 'function') return Dos.run(dosbox, url, options);
-
-        return Promise.reject(new Error('No supported run method on emulator'));
-      }
-
-      function start() {
-        status.textContent = 'Initializing...';
+        // If Dos.run is not present, try synchronous factory + run variants
         try {
-          createEmu();
-        } catch (e) { return; }
-        startUrl(GAME_URL)
-          .then(()=> { status.textContent = 'Game started'; })
-          .catch(err => {
-            console.error('Start failed', err);
-            status.textContent = 'Start failed: ' + (err && err.message || err);
-          });
+          const emu = Dos(dosbox, options);
+          if (emu && typeof emu.run === 'function') {
+            emu.run(url).then(()=> status.textContent='Game started').catch(e=>{
+              console.error('emu.run failed', e);
+              status.textContent='emu.run failed; opening link';
+              window.open(url,'_blank');
+            });
+            return;
+          }
+          if (emu && typeof emu.runFromUrl === 'function') {
+            emu.runFromUrl(url).then(()=> status.textContent='Game started').catch(e=>{
+              console.error('emu.runFromUrl failed', e);
+              status.textContent='runFromUrl failed; opening link';
+              window.open(url,'_blank');
+            });
+            return;
+          }
+        } catch (e) {
+          console.warn('Factory run attempt failed', e);
+        }
+        // fallback: open the working URL in a new tab
+        status.textContent = 'No supported run method; opening link';
+        window.open(url, '_blank');
       }
 
-      startBtn.addEventListener('click', start);
-      reloadBtn.addEventListener('click', () => location.reload());
+      startBtn.addEventListener('click', () => tryStaticRun(GAME_URL));
+      openBtn.addEventListener('click', () => window.open(GAME_URL, '_blank'));
 
-      window.addEventListener('load', () => { status.textContent = 'Ready — click Start'; });
+      window.addEventListener('load', () => {
+        status.textContent = 'Ready — click Start';
+      });
     })();
   </script>
 </body>
