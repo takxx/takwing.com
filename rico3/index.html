@@ -19,7 +19,7 @@
   <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
 
   <!-- Your local .jsdos bundle file (placed in same folder). -->
-  //<script src="/rico3/bundle.jsdos" type="application/octet-stream"></script>
+  <script src="/rico3/bundle.jsdos" type="application/octet-stream"></script>
 
   <script>
     (function () {
@@ -34,7 +34,7 @@
           .find(s => s.getAttribute('src') === './bundle.jsdos');
 
         // If the server serves the .jsdos file normally, use emulator.run with the URL instead:
-        const gameUrl = '/rico3/bundle.jsdos';
+        const gameUrl = 'https://takwing.com/rico3/bundle.jsdos';
 
         emulator.run(gameUrl).then(function () {
           console.log('Game started.');
