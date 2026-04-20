@@ -1,37 +1,52 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
-        
- 
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>js-dos Game</title>
+  <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
+  <style>
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
+    #dosbox { width:800px; max-width:95%; height:600px; max-height:90vh; background:#000; border:2px solid #444; position:relative; }
+    #controls { position:absolute; top:8px; left:8px; z-index:10; }
+    button { padding:6px 10px; margin-right:8px; }
+  </style>
+</head>
+<body>
+  <div id="dosbox" aria-label="DOSBox area"></div>
 
-<title></title>
+  <!-- js-dos CDN -->
+  <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
 
+  <!-- Your local .jsdos bundle file (placed in same folder). -->
+  <script src="./bundle.jsdos" type="application/octet-stream"></script>
 
-<meta name="takwing.com">
+  <script>
+    (function () {
+      const dosboxEl = document.getElementById('dosbox');
 
+      // Create DOS instance
+      const options = { wdosboxUrl: "https://v8.js-dos.com/latest/wdosbox.js" }; // ensures emulator worker is loaded from CDN
+      Dos(dosboxEl, options).then(function (emulator) {
+        // Load local .jsdos file that was included as a <script type="application/octet-stream"> above.
+        // Find the script element and get its text (binary can be base64 in some tooling; here we assume the file is served raw).
+        const localScript = Array.from(document.getElementsByTagName('script'))
+          .find(s => s.getAttribute('src') === './bundle.jsdos');
 
+        // If the server serves the .jsdos file normally, use emulator.run with the URL instead:
+        const gameUrl = './bundle.jsdos';
 
-<link rel="canonical" href="https://v8.js-dos.com/">
-        <link rel="preload" as="style" href="https://v8.js-dos.com/build/assets/site-eff5af9b.css" /><link rel="stylesheet" href="https://v8.js-dos.com/build/assets/site-eff5af9b.css" />
-        <link rel="modulepreload" href="https://v8.js-dos.com/build/assets/preact-adb248e8.js" /><script type="module" src="https://v8.js-dos.com/build/assets/preact-adb248e8.js"></script>
-    </head>
-    <body>
-        <div class="mx-auto px-2 lg:min-h-screen flex flex-col">
-            <div class="container mx-auto py-8 px-2">
-    
-
-    
-        <div class="mockup-window bg-base-300 mb-8 relative">
-    <div class="flex justify-center px-4 py-16 bg-base-100 relative h-aspect">
-        <div class="jsdos wh-full" data-lang="zh" data-url="bundle.jsdos"></div>
-    </div>
-</div>
-    
-</div>
-        </div>
-    </body>
+        emulator.run(gameUrl).then(function () {
+          console.log('Game started.');
+        }).catch(function (err) {
+          console.error('Failed to run game:', err);
+          dosboxEl.innerText = 'Failed to run game: ' + (err && err.message || err);
+        });
+      }).catch(function (err) {
+        console.error('Failed to initialize js-dos:', err);
+        document.getElementById('dosbox').innerText = 'Failed to initialize js-dos: ' + (err && err.message || err);
+      });
+    })();
+  </script>
+</body>
 </html>
