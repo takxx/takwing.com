@@ -3,85 +3,116 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>js-dos Game Loader</title>
+  <title>js-dos Loader (compatible)</title>
   <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
-    .wrap { position:relative; width:900px; max-width:95%; height:640px; max-height:90vh; }
-    #dosbox { width:100%; height:100%; background:#000; border:2px solid #444; box-sizing:border-box; }
-    #controls { position:absolute; top:8px; left:8px; z-index:9999; display:flex; gap:8px; }
-    button { padding:6px 10px; font-size:14px; background:#222; color:#fff; border:1px solid #444; cursor:pointer; }
-    #status { position:absolute; top:8px; right:8px; color:#9cf; font-weight:600; z-index:9999; }
-    /* ensure controls receive pointer events */
-    #controls, #controls * { pointer-events:auto; }
+    body{font-family:Arial;background:#111;color:#eee;margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
+    .wrap{position:relative;width:900px;max-width:95%;height:640px;max-height:90vh}
+    #dosbox{width:100%;height:100%;background:#000;border:2px solid #444;box-sizing:border-box}
+    #controls{position:absolute;top:8px;left:8px;z-index:9999;display:flex;gap:8px}
+    button{padding:6px 10px;background:#222;color:#fff;border:1px solid #444;cursor:pointer}
+    #status{position:absolute;top:8px;right:8px;color:#9cf;font-weight:600;z-index:9999}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div id="controls">
-      <button id="startBtn">Start Game</button>
+      <button id="startBtn">Start</button>
       <button id="restartBtn">Restart</button>
     </div>
     <div id="status">Idle</div>
-    <div id="dosbox" aria-label="DOSBox area"></div>
+    <div id="dosbox"></div>
   </div>
 
   <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
 
   <script>
-    (function () {
-      const dosboxEl = document.getElementById('dosbox');
-      const statusEl = document.getElementById('status');
-      const startBtn = document.getElementById('startBtn');
-      const restartBtn = document.getElementById('restartBtn');
+    (function(){
+      const dosbox = document.getElementById('dosbox');
+      const status = document.getElementById('status');
       const GAME_URL = './bundle.jsdos';
-
       const options = { wdosboxUrl: 'https://v8.js-dos.com/latest/wdosbox.js' };
 
       let emu;
       try {
-        emu = Dos(dosboxEl, options);
+        emu = Dos(dosbox, options); // synchronous factory in v8+
       } catch (e) {
-        console.error('Failed to create emulator:', e);
-        statusEl.textContent = 'Emulator init error';
+        console.error('Dos init error', e);
+        status.textContent = 'Emulator init error';
         return;
       }
 
-      if (emu && typeof emu.on === 'function') {
-        emu.on('log', msg => console.log('js-dos log:', msg));
-        emu.on('error', err => console.error('js-dos error:', err));
+      // debug: log available methods
+      console.log('emulator methods:', Object.keys(emu || {}));
+
+      function tryRun(url) {
+        status.textContent = 'Loading...';
+
+        // 1) preferred: emu.run (if present)
+        if (typeof emu.run === 'function') {
+          return emu.run(url);
+        }
+
+        // 2) some builds expose runCommand / runFromUrl
+        if (typeof emu.runCommand === 'function') {
+          return Promise.resolve().then(() => emu.runCommand(url));
+        }
+
+        if (typeof emu.runFromUrl === 'function') {
+          return emu.runFromUrl(url);
+        }
+
+        // 3) Dos.run static helper (older API)
+        if (typeof Dos.run === 'function') {
+          try {
+            return Dos.run(dosbox, url, options);
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        }
+
+        // 4) fallback: fetch and mount manually if emulator supports mount/run callbacks
+        if (typeof emu.mount === 'function' && typeof emu.exec === 'function') {
+          return fetch(url)
+            .then(r => {
+              if (!r.ok) throw new Error('Network error ' + r.status);
+              return r.arrayBuffer();
+            })
+            .then(buf => emu.mount('/', new Uint8Array(buf)).then(() => emu.exec('GAME.EXE')));
+        }
+
+        return Promise.reject(new Error('No supported run method on emulator'));
       }
 
-      function startGame() {
-        statusEl.textContent = 'Loading...';
-        emu.run(GAME_URL)
+      function start() {
+        tryRun(GAME_URL)
           .then(() => {
-            statusEl.textContent = 'Game started';
+            status.textContent = 'Game started';
+            console.log('started');
           })
           .catch(err => {
-            console.error('run error', err);
-            statusEl.textContent = 'Run error';
+            console.error('Start failed', err);
+            status.textContent = 'Start failed: ' + (err && err.message || err);
           });
       }
 
-      function restartGame() {
-        try { if (emu && typeof emu.exit === 'function') emu.exit(); } catch(e){}
+      function restart() {
         try {
-          const newEmu = Dos(dosboxEl, options);
-          emu = newEmu;
-          startGame();
+          if (typeof emu.exit === 'function') emu.exit();
+        } catch(e){}
+        try {
+          emu = Dos(dosbox, options);
+          start();
         } catch (e) {
-          console.error('restart failed', e);
-          statusEl.textContent = 'Restart failed';
+          console.error('Restart failed', e);
+          status.textContent = 'Restart failed';
         }
       }
 
-      startBtn.addEventListener('click', startGame);
-      restartBtn.addEventListener('click', restartGame);
+      document.getElementById('startBtn').addEventListener('click', start);
+      document.getElementById('restartBtn').addEventListener('click', restart);
 
-      window.addEventListener('load', () => {
-        statusEl.textContent = 'Ready — click Start';
-      });
+      window.addEventListener('load', () => { status.textContent = 'Ready — click Start'; });
     })();
   </script>
 </body>
