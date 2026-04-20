@@ -15,12 +15,38 @@
 <body>
   <div id="dosbox" aria-label="DOSBox area"></div>
 
-<script>
-  const emu = Dos(document.getElementById('dosbox'), {
-    wdosboxUrl: 'https://v8.js-dos.com/latest/wdosbox.js'
-  });
-  emu.run('./bundle.jsdos').then(() => console.log('started')).catch(e => console.error(e));
-</script>
+  <!-- js-dos CDN -->
+  <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
 
+  <!-- Your local .jsdos bundle file (placed in same folder). -->
+  //<script src="/rico3/bundle.jsdos" type="application/octet-stream"></script>
+
+  <script>
+    (function () {
+      const dosboxEl = document.getElementById('dosbox');
+
+      // Create DOS instance
+      const options = { wdosboxUrl: "https://v8.js-dos.com/latest/wdosbox.js" }; // ensures emulator worker is loaded from CDN
+      Dos(dosboxEl, options).then(function (emulator) {
+        // Load local .jsdos file that was included as a <script type="application/octet-stream"> above.
+        // Find the script element and get its text (binary can be base64 in some tooling; here we assume the file is served raw).
+        const localScript = Array.from(document.getElementsByTagName('script'))
+          .find(s => s.getAttribute('src') === './bundle.jsdos');
+
+        // If the server serves the .jsdos file normally, use emulator.run with the URL instead:
+        const gameUrl = '/rico3/bundle.jsdos';
+
+        emulator.run(gameUrl).then(function () {
+          console.log('Game started.');
+        }).catch(function (err) {
+          console.error('Failed to run game:', err);
+          dosboxEl.innerText = 'Failed to run game: ' + (err && err.message || err);
+        });
+      }).catch(function (err) {
+        console.error('Failed to initialize js-dos:', err);
+        document.getElementById('dosbox').innerText = 'Failed to initialize js-dos: ' + (err && err.message || err);
+      });
+    })();
+  </script>
 </body>
 </html>
