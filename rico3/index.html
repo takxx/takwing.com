@@ -3,48 +3,97 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>js-dos Game</title>
+  <title>js-dos Game Loader</title>
   <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
   <style>
     body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
-    #dosbox { width:800px; max-width:95%; height:600px; max-height:90vh; background:#000; border:2px solid #444; position:relative; }
-    #controls { position:absolute; top:8px; left:8px; z-index:10; }
-    button { padding:6px 10px; margin-right:8px; }
+    #dosbox { width:900px; max-width:95%; height:640px; max-height:90vh; background:#000; border:2px solid #444; position:relative; box-sizing:border-box; }
+    #controls { position:absolute; top:8px; left:8px; z-index:20; display:flex; gap:8px; }
+    button { padding:6px 10px; font-size:14px; }
+    #status { position:absolute; top:8px; right:8px; color:#9cf; font-weight:600; z-index:20; }
   </style>
 </head>
 <body>
-  <div id="dosbox" aria-label="DOSBox area"></div>
+  <div id="dosbox" aria-label="DOSBox area">
+    <div id="controls">
+      <button id="startBtn">Start Game</button>
+      <button id="restartBtn">Restart</button>
+    </div>
+    <div id="status">Idle</div>
+  </div>
 
-  <!-- js-dos CDN -->
   <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
-
-  <!-- Your local .jsdos bundle file (placed in same folder). -->
-  <script src="/rico3/bundle.jsdos" type="application/octet-stream"></script>
 
   <script>
     (function () {
       const dosboxEl = document.getElementById('dosbox');
+      const statusEl = document.getElementById('status');
+      const startBtn = document.getElementById('startBtn');
+      const restartBtn = document.getElementById('restartBtn');
+      const GAME_URL = './bundle.jsdos'; // ensure this file is served as binary from same folder
 
-      // Create DOS instance
-      const options = { wdosboxUrl: "https://v8.js-dos.com/latest/wdosbox.js" }; // ensures emulator worker is loaded from CDN
-      Dos(dosboxEl, options).then(function (emulator) {
-        // Load local .jsdos file that was included as a <script type="application/octet-stream"> above.
-        // Find the script element and get its text (binary can be base64 in some tooling; here we assume the file is served raw).
-        const localScript = Array.from(document.getElementsByTagName('script'))
-          .find(s => s.getAttribute('src') === './bundle.jsdos');
+      // Options: point to the worker file hosted on the same CDN version
+      const options = { wdosboxUrl: 'https://v8.js-dos.com/latest/wdosbox.js' };
 
-        // If the server serves the .jsdos file normally, use emulator.run with the URL instead:
-        const gameUrl = 'https://takwing.com/rico3/bundle.jsdos';
+      // Dos(...) returns emulator object synchronously in v8+
+      let emu;
+      try {
+        emu = Dos(dosboxEl, options);
+      } catch (e) {
+        console.error('Failed to create emulator:', e);
+        statusEl.textContent = 'Emulator init error';
+        return;
+      }
 
-        emulator.run(gameUrl).then(function () {
-          console.log('Game started.');
-        }).catch(function (err) {
-          console.error('Failed to run game:', err);
-          dosboxEl.innerText = 'Failed to run game: ' + (err && err.message || err);
-        });
-      }).catch(function (err) {
-        console.error('Failed to initialize js-dos:', err);
-        document.getElementById('dosbox').innerText = 'Failed to initialize js-dos: ' + (err && err.message || err);
+      // Optional logging
+      if (emu && typeof emu.on === 'function') {
+        emu.on('log', msg => console.log('js-dos log:', msg));
+        emu.on('error', err => console.error('js-dos error:', err));
+      }
+
+      function startGame() {
+        statusEl.textContent = 'Loading...';
+        // emulator.run returns a Promise
+        emu.run(GAME_URL)
+          .then(() => {
+            statusEl.textContent = 'Game started';
+            // If your .jsdos bundle doesn't autorun, exec the main exe here:
+            // emu.exec('GAME.EXE').catch(err=>console.error('exec error', err));
+          })
+          .catch(err => {
+            console.error('run error', err);
+            statusEl.textContent = 'Run error: ' + (err && err.message || err);
+          });
+      }
+
+      function restartGame() {
+        // destroy and recreate emulator to restart cleanly
+        try {
+          if (emu && typeof emu.exit === 'function') emu.exit(); // attempt graceful exit
+        } catch (e) { /* ignore */ }
+
+        try {
+          // recreate emulator
+          const newEmu = Dos(dosboxEl, options);
+          emu = newEmu;
+          startGame();
+        } catch (e) {
+          console.error('restart failed', e);
+          statusEl.textContent = 'Restart failed';
+        }
+      }
+
+      startBtn.addEventListener('click', startGame);
+      restartBtn.addEventListener('click', restartGame);
+
+      // Auto-start once page loads (optional)
+      window.addEventListener('load', () => {
+        // small delay to ensure DOM/worker ready
+        setTimeout(() => {
+          // do not auto-start if you prefer manual start
+          // startGame();
+          statusEl.textContent = 'Ready — click Start';
+        }, 200);
       });
     })();
   </script>
