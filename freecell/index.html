@@ -3,747 +3,1069 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Unicode FreeCell</title>
+<title>FreeCell</title>
 
 <style>
 :root {
-  --green: #075b35;
-  --dark-green: #043d25;
-  --gold: #f1d078;
-  --card-w: clamp(48px, 10vw, 82px);
-  --card-h: calc(var(--card-w) * 1.38);
+  --table: #0c2b2b;
+  --card: #eee;
+  --blue: #0b84ff;
 }
 
 * {
   box-sizing: border-box;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
 body {
   margin: 0;
-  min-height: 100vh;
+  padding: 14px;
   color: white;
-  font-family: system-ui, sans-serif;
-  background:
-    radial-gradient(circle, #16804d, var(--green) 58%, var(--dark-green));
   user-select: none;
+  background: linear-gradient(180deg, #064 0%, #003 100%);
+}
+
+#board {
+  max-width: 980px;
+  margin: auto;
 }
 
 header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px max(10px, 3vw);
-  background: rgba(0,0,0,.22);
+  margin-bottom: 12px;
 }
 
 h1 {
-  margin: 0 auto 0 0;
-  font-size: clamp(1.3rem, 5vw, 2rem);
+  margin: 0;
+  font-size: 18px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 button {
-  padding: 10px 13px;
+  padding: 6px 10px;
+  color: white;
+  background: #222;
   border: 0;
-  border-radius: 8px;
-  color: #172018;
-  background: var(--gold);
-  font-weight: bold;
+  border-radius: 6px;
   cursor: pointer;
 }
 
-button:active {
-  transform: scale(.96);
+button:hover {
+  background: #333;
 }
 
-main {
-  width: min(1100px, 100%);
-  margin: auto;
-  padding: 16px max(8px, 2vw) 30px;
+#status {
+  margin-left: auto;
+  font-size: 14px;
+  opacity: .9;
 }
 
-.top,
-.tableau {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: clamp(4px, 1vw, 12px);
-}
-
-.top {
-  margin-bottom: 18px;
-}
-
-.slot,
-.column {
-  position: relative;
-  border-radius: 9px;
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .slot {
-  min-height: var(--card-h);
-  border: 2px dashed rgba(255,255,255,.42);
-}
-
-.slot-label {
-  position: absolute;
-  top: 50%;
-  width: 100%;
-  transform: translateY(-50%);
-  text-align: center;
-  opacity: .65;
-  font-size: .8rem;
-}
-
-.foundation .slot-label {
-  font-size: clamp(1.5rem, 5vw, 2.5rem);
-}
-
-.column {
-  min-height: min(67vh, 540px);
-}
-
-.column.over {
-  outline: 3px solid var(--gold);
-}
-
-.card {
-  width: var(--card-w);
-  height: var(--card-h);
-  position: absolute;
-  left: 50%;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 92px;
+  height: 120px;
+  background: rgba(255, 255, 255, .06);
+  border-radius: 8px;
+}
+
+.slot.small {
+  width: 68px;
+  height: 92px;
+}
+
+.slot .label {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 12px;
+  opacity: .8;
+  pointer-events: none;
+}
+
+.stack {
+  position: relative;
+  width: 92px;
+  height: 420px;
+}
+
+.card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 88px;
+  height: 116px;
+  padding: 6px;
+  color: #000;
+  background: var(--card);
   border: 1px solid #aaa;
   border-radius: 8px;
-  color: #111;
-  background: #fffdf5;
-  box-shadow: 0 3px 5px rgba(0,0,0,.35);
-  transform: translateX(-50%);
-  font-size: clamp(1rem, 3vw, 1.4rem);
-  font-weight: bold;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .45);
+  font-weight: 600;
   cursor: pointer;
   touch-action: none;
 }
 
 .card.red {
-  color: #c51d2a;
+  color: #b00000;
 }
 
-.card.selected {
-  outline: 4px solid var(--gold);
-  transform: translateX(-50%) translateY(-7px);
-  z-index: 1000 !important;
+.card .top {
+  font-size: 14px;
 }
 
-.card small {
-  position: absolute;
-  top: 4px;
-  left: 5px;
-  font-size: .72em;
+.card .suit {
+  font-size: 22px;
+  line-height: 1;
 }
 
-.status {
-  min-height: 1.5em;
-  margin: 12px 0 0;
-  text-align: center;
-  font-size: .95rem;
+.drag-ghost {
+  z-index: 9999;
+  pointer-events: none !important;
+  margin: 0;
+  opacity: .9;
+  cursor: grabbing;
+  will-change: left, top;
 }
 
-@media (max-width: 600px) {
-  header {
-    flex-wrap: wrap;
+.dragging-source {
+  opacity: .25;
+}
+
+footer {
+  margin-top: 18px;
+  font-size: 13px;
+  opacity: .9;
+}
+
+.hint {
+  color: #eef;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  #topRow,
+  #tableauRow {
+    gap: 6px;
   }
 
-  h1 {
-    width: 100%;
+  .stack {
+    width: calc((100vw - 42px) / 8);
   }
 
-  .column {
-    min-height: 60vh;
+  .stack .card {
+    width: calc((100vw - 50px) / 8);
   }
 
-  button {
-    flex: 1;
+  .card {
+    font-size: 11px;
+  }
+
+  .card .suit {
+    font-size: 17px;
+  }
+
+  .slot.small {
+    width: calc((100vw - 42px) / 8);
   }
 }
 </style>
 </head>
 
 <body>
-<header>
-  <h1>♠ FreeCell ♥</h1>
-  <button id="newGame">New Game</button>
-  <button id="autoMove">Auto Move</button>
-  <button id="undo">Undo</button>
-</header>
+<div id="board">
 
-<main>
-  <section class="top">
-    <div class="slot freecell" data-area="free" data-index="0">
-      <span class="slot-label">Free</span>
-    </div>
-    <div class="slot freecell" data-area="free" data-index="1">
-      <span class="slot-label">Free</span>
-    </div>
-    <div class="slot freecell" data-area="free" data-index="2">
-      <span class="slot-label">Free</span>
-    </div>
-    <div class="slot freecell" data-area="free" data-index="3">
-      <span class="slot-label">Free</span>
+  <header>
+    <h1>FreeCell</h1>
+
+    <div class="controls">
+      <button id="newBtn">New</button>
+      <button id="restartBtn">Restart</button>
+      <button id="undoBtn">Undo</button>
+      <button id="autoBtn">Auto-move</button>
+      <button id="hintBtn">Hint</button>
     </div>
 
-    <div class="slot foundation" data-area="foundation" data-index="0">
-      <span class="slot-label">♣</span>
-    </div>
-    <div class="slot foundation" data-area="foundation" data-index="1">
-      <span class="slot-label">♦</span>
-    </div>
-    <div class="slot foundation" data-area="foundation" data-index="2">
-      <span class="slot-label">♥</span>
-    </div>
-    <div class="slot foundation" data-area="foundation" data-index="3">
-      <span class="slot-label">♠</span>
-    </div>
-  </section>
+    <div id="status"></div>
+  </header>
 
-  <section id="tableau" class="tableau"></section>
+  <div class="row" id="topRow">
+    <div class="slot small" data-type="free" data-index="0">
+      <div class="label">Free 1</div>
+    </div>
 
-  <p id="status" class="status">
-    Tap a card, then tap a destination.
-  </p>
-</main>
+    <div class="slot small" data-type="free" data-index="1">
+      <div class="label">Free 2</div>
+    </div>
+
+    <div class="slot small" data-type="free" data-index="2">
+      <div class="label">Free 3</div>
+    </div>
+
+    <div class="slot small" data-type="free" data-index="3">
+      <div class="label">Free 4</div>
+    </div>
+
+    <div style="width:24px"></div>
+
+    <div class="slot small" data-type="home" data-index="0">
+      <div class="label">♥</div>
+    </div>
+
+    <div class="slot small" data-type="home" data-index="1">
+      <div class="label">♦</div>
+    </div>
+
+    <div class="slot small" data-type="home" data-index="2">
+      <div class="label">♣</div>
+    </div>
+
+    <div class="slot small" data-type="home" data-index="3">
+      <div class="label">♠</div>
+    </div>
+  </div>
+
+  <div class="row" id="tableauRow">
+    <div class="stack" data-type="tableau" data-index="0"></div>
+    <div class="stack" data-type="tableau" data-index="1"></div>
+    <div class="stack" data-type="tableau" data-index="2"></div>
+    <div class="stack" data-type="tableau" data-index="3"></div>
+    <div class="stack" data-type="tableau" data-index="4"></div>
+    <div class="stack" data-type="tableau" data-index="5"></div>
+    <div class="stack" data-type="tableau" data-index="6"></div>
+    <div class="stack" data-type="tableau" data-index="7"></div>
+  </div>
+
+  <footer>
+    <div class="hint">
+      Drag or click cards to move them. Double-click a card to move it to a foundation.
+    </div>
+  </footer>
+</div>
 
 <script>
-const suits = ["♣", "♦", "♥", "♠"];
+'use strict';
 
-const colors = {
-  "♣": "black",
-  "♠": "black",
-  "♦": "red",
-  "♥": "red"
+const SUITS = ['♥', '♦', '♣', '♠'];
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+const COLORS = {
+  '♥': 'red',
+  '♦': 'red',
+  '♣': 'black',
+  '♠': 'black'
 };
 
-const names = [
-  "A", "2", "3", "4", "5", "6", "7",
-  "8", "9", "10", "J", "Q", "K"
-];
-
-let freeCells;
-let foundations;
 let tableau;
-let selected = null;
+let frees;
+let homes;
 let history = [];
 
-const tableauElement = document.getElementById("tableau");
-const statusElement = document.getElementById("status");
+let pointer = {
+  el: null,
+  from: null,
+  startX: 0,
+  startY: 0,
+  pointerId: null,
+  moved: false
+};
 
-function showMessage(text) {
-  statusElement.textContent = text;
-}
+let dragState = null;
 
-function copyState() {
+const status = document.getElementById('status');
+
+/* ---------- Card and game helpers ---------- */
+
+function makeCard(suit, rank) {
   return {
-    freeCells: freeCells.map(card => card ? {...card} : null),
-    foundations: [...foundations],
-    tableau: tableau.map(column =>
-      column.map(card => ({...card}))
-    )
+    suit,
+    rank,
+    rankN: RANKS.indexOf(rank) + 1
   };
 }
 
-function saveState() {
-  history.push(copyState());
+function copyCard(card) {
+  return card
+    ? {
+        suit: card.suit,
+        rank: card.rank,
+        rankN: Number(card.rankN)
+      }
+    : null;
 }
 
-function undoMove() {
-  if (!history.length) {
-    showMessage("There are no moves to undo.");
-    return;
-  }
-
-  const previous = history.pop();
-
-  freeCells = previous.freeCells;
-  foundations = previous.foundations;
-  tableau = previous.tableau;
-  selected = null;
-
-  render();
-  showMessage("Move undone.");
-}
-
-function newGame() {
+function buildDeck() {
   const deck = [];
 
-  for (const suit of suits) {
-    for (let rank = 1; rank <= 13; rank++) {
-      deck.push({ suit, rank });
+  for (const suit of SUITS) {
+    for (const rank of RANKS) {
+      deck.push(makeCard(suit, rank));
     }
   }
 
+  return deck;
+}
+
+function shuffle(deck) {
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
-  freeCells = [null, null, null, null];
-  foundations = [0, 0, 0, 0];
-  tableau = Array.from({length: 8}, () => []);
-  selected = null;
-  history = [];
+  return deck;
+}
 
-  deck.forEach((card, index) => {
-    tableau[index % 8].push(card);
+function deal() {
+  const deck = shuffle(buildDeck());
+
+  tableau = Array.from({ length: 8 }, () => []);
+  frees = [null, null, null, null];
+  homes = {
+    '♥': 0,
+    '♦': 0,
+    '♣': 0,
+    '♠': 0
+  };
+
+  for (let i = 0; i < deck.length; i++) {
+    tableau[i % 8].push(copyCard(deck[i]));
+  }
+
+  history = [];
+  saveSnapshot();
+  render();
+}
+
+function serialize() {
+  return JSON.stringify({
+    tableau: tableau.map(column => column.map(copyCard)),
+    frees: frees.map(copyCard),
+    homes: { ...homes }
+  });
+}
+
+function restoreSnapshot(snapshot) {
+  const state = JSON.parse(snapshot);
+
+  tableau = state.tableau.map(column => column.map(copyCard));
+  frees = state.frees.map(copyCard);
+  homes = { ...state.homes };
+}
+
+function saveSnapshot() {
+  history.push(serialize());
+  updateStatus();
+}
+
+function restart() {
+  if (!history.length) return;
+
+  restoreSnapshot(history[0]);
+  history = [history[0]];
+  render();
+}
+
+function updateStatus() {
+  const foundationCount = Object.values(homes)
+    .reduce((total, count) => total + count, 0);
+
+  status.textContent =
+    `Moves: ${Math.max(0, history.length - 1)} | Foundations: ${foundationCount}/52`;
+}
+
+/* ---------- Rendering ---------- */
+
+function createCardElement(card, meta = {}) {
+  const normalized = copyCard(card);
+  const element = document.createElement('div');
+
+  element.className = 'card';
+
+  if (COLORS[normalized.suit] === 'red') {
+    element.classList.add('red');
+  }
+
+  element.innerHTML = `
+    <div class="top">${normalized.rank}</div>
+    <div class="suit">${normalized.suit}</div>
+  `;
+
+  element.dataset.loc = meta.loc || '';
+  element.dataset.idx = meta.idx ?? '';
+
+  if (meta.pos !== undefined) {
+    element.dataset.pos = meta.pos;
+  }
+
+  element.dataset.suit = normalized.suit;
+  element.dataset.rank = normalized.rank;
+  element.dataset.rankN = normalized.rankN;
+
+  element.addEventListener('pointerdown', onCardPointerDown);
+  element.addEventListener('dblclick', onDoubleClick);
+
+  return element;
+}
+
+function createFoundationCard(card) {
+  const element = createCardElement(card);
+  element.style.width = '68px';
+  element.style.height = '92px';
+  element.style.cursor = 'default';
+  return element;
+}
+
+function render() {
+  document.querySelectorAll('.stack').forEach(stack => {
+    stack.replaceChildren();
   });
 
-  render();
-  showMessage("Select a card or a valid stack.");
+  document.querySelectorAll('[data-type="free"]').forEach((slot, index) => {
+    slot.innerHTML = `<div class="label">Free ${index + 1}</div>`;
+
+    if (frees[index]) {
+      slot.appendChild(
+        createCardElement(frees[index], {
+          loc: 'free',
+          idx: index
+        })
+      );
+    }
+  });
+
+  document.querySelectorAll('[data-type="home"]').forEach((slot, index) => {
+    const suit = SUITS[index];
+
+    slot.innerHTML = `<div class="label">${suit}</div>`;
+
+    if (homes[suit] > 0) {
+      slot.appendChild(
+        createFoundationCard(
+          makeCard(suit, RANKS[homes[suit] - 1])
+        )
+      );
+    }
+  });
+
+  tableau.forEach((column, columnIndex) => {
+    const stack = document.querySelector(
+      `.stack[data-index="${columnIndex}"]`
+    );
+
+    column.forEach((card, position) => {
+      const element = createCardElement(card, {
+        loc: 'tableau',
+        idx: columnIndex,
+        pos: position
+      });
+
+      element.style.top = `${position * 28}px`;
+      stack.appendChild(element);
+    });
+  });
+
+  updateStatus();
+
+  const won = Object.values(homes)
+    .reduce((total, count) => total + count, 0) === 52;
+
+  if (won) {
+    setTimeout(() => alert('You won!'), 80);
+  }
 }
 
-function topCard(area, index) {
-  if (area === "tableau") {
-    return tableau[index].at(-1);
-  }
+/* ---------- Rules ---------- */
 
-  if (area === "free") {
-    return freeCells[index];
-  }
-
-  return null;
+function canMoveToHome(card) {
+  return card &&
+    homes[card.suit] === Number(card.rankN) - 1;
 }
 
-function getSelectedCards() {
-  if (!selected) return [];
+function canPlaceOnTableau(card, destination) {
+  if (!card) return false;
+  if (!destination.length) return true;
 
-  if (selected.area === "tableau") {
-    return tableau[selected.index].slice(selected.pos);
-  }
+  const top = destination[destination.length - 1];
 
-  const card = topCard(selected.area, selected.index);
-  return card ? [card] : [];
+  return (
+    top.rankN === Number(card.rankN) + 1 &&
+    COLORS[top.suit] !== COLORS[card.suit]
+  );
 }
 
-function isValidSequence(cards) {
-  for (let i = 1; i < cards.length; i++) {
-    const previous = cards[i - 1];
-    const current = cards[i];
+function canPlaceSequence(sequence, destination) {
+  if (!sequence.length) return false;
+
+  for (let i = 0; i < sequence.length - 1; i++) {
+    const current = sequence[i];
+    const next = sequence[i + 1];
 
     if (
-      colors[previous.suit] === colors[current.suit] ||
-      previous.rank !== current.rank + 1
+      current.rankN !== next.rankN + 1 ||
+      COLORS[current.suit] === COLORS[next.suit]
     ) {
       return false;
     }
   }
 
-  return true;
+  const emptyFreeCells = frees.filter(card => !card).length;
+  const emptyColumns = tableau.filter(column => column.length === 0).length;
+
+  const destinationIsEmpty = destination.length === 0;
+  const adjustedEmptyColumns =
+    emptyColumns - (destinationIsEmpty ? 1 : 0);
+
+  const maxMovable =
+    (emptyFreeCells + 1) * (adjustedEmptyColumns + 1);
+
+  if (sequence.length > maxMovable) {
+    return false;
+  }
+
+  return canPlaceOnTableau(sequence[0], destination);
 }
 
-function createCard(card, area, index, position) {
-  const element = document.createElement("div");
+/* ---------- Move operations ---------- */
 
-  const selectedStack =
-    selected &&
-    selected.area === "tableau" &&
-    area === "tableau" &&
-    selected.index === index &&
-    position >= selected.pos;
+function moveFreeToHome(index) {
+  const card = frees[index];
 
-  const selectedSingle =
-    selected &&
-    selected.area === area &&
-    selected.index === index &&
-    area !== "tableau";
+  if (!card || !canMoveToHome(card)) return;
 
-  element.className = "card";
+  homes[card.suit]++;
+  frees[index] = null;
 
-  if (colors[card.suit] === "red") {
-    element.classList.add("red");
+  saveSnapshot();
+  render();
+}
+
+function moveFreeToTableau(index, destinationIndex) {
+  const card = frees[index];
+
+  if (!card || !canPlaceOnTableau(card, tableau[destinationIndex])) {
+    return;
   }
 
-  if (selectedStack || selectedSingle) {
-    element.classList.add("selected");
+  tableau[destinationIndex].push(copyCard(card));
+  frees[index] = null;
+
+  saveSnapshot();
+  render();
+}
+
+function moveTableauToHome(columnIndex, position) {
+  const column = tableau[columnIndex];
+
+  if (position !== column.length - 1) return;
+
+  const card = column[column.length - 1];
+
+  if (!card || !canMoveToHome(card)) return;
+
+  column.pop();
+  homes[card.suit]++;
+
+  saveSnapshot();
+  render();
+}
+
+function moveTableauToFree(columnIndex, position, freeIndex) {
+  const column = tableau[columnIndex];
+
+  if (position !== column.length - 1) return;
+  if (frees[freeIndex]) return;
+
+  frees[freeIndex] = copyCard(column.pop());
+
+  saveSnapshot();
+  render();
+}
+
+function moveTableauToTableau(
+  sourceIndex,
+  position,
+  destinationIndex
+) {
+  if (sourceIndex === destinationIndex) return;
+
+  const source = tableau[sourceIndex];
+  const destination = tableau[destinationIndex];
+  const sequence = source.slice(position);
+
+  if (!canPlaceSequence(sequence, destination)) return;
+
+  tableau[destinationIndex] = destination.concat(
+    sequence.map(copyCard)
+  );
+
+  tableau[sourceIndex] = source.slice(0, position);
+
+  saveSnapshot();
+  render();
+}
+
+/* ---------- Pointer and drag handling ---------- */
+
+/*
+  There is intentionally only one pointerdown handler.
+
+  The drag ghost is not created until the pointer moves 8 pixels.
+  This prevents normal clicks from producing a ghost image.
+*/
+
+function getPointerSource(element) {
+  const location = element.dataset.loc;
+
+  if (location === 'tableau') {
+    const column = Number(element.dataset.idx);
+    const position = Number(element.dataset.pos);
+
+    return {
+      type: 'tableau',
+      column,
+      position,
+      sequence: tableau[column]
+        .slice(position)
+        .map(copyCard)
+    };
   }
 
-  element.draggable = true;
-  element.title = `${names[card.rank - 1]}${card.suit}`;
+  if (location === 'free') {
+    const index = Number(element.dataset.idx);
 
-  element.innerHTML =
-    `<small>${names[card.rank - 1]}${card.suit}</small>${card.suit}`;
+    return {
+      type: 'free',
+      index,
+      card: copyCard(frees[index])
+    };
+  }
 
-  element.addEventListener("click", event => {
-    event.stopPropagation();
-    choose(area, index, position);
-  });
+  return null;
+}
 
-  // Double-click works for tableau cards and free-cell cards.
-  element.addEventListener("dblclick", event => {
-    event.stopPropagation();
+function onCardPointerDown(event) {
+  if (event.pointerType === 'mouse' && event.button !== 0) {
+    return;
+  }
+
+  const element = event.currentTarget;
+  const source = getPointerSource(element);
+
+  if (!source) return;
+
+  event.preventDefault();
+
+  pointer = {
+    el: element,
+    from: source,
+    startX: event.clientX,
+    startY: event.clientY,
+    pointerId: event.pointerId,
+    moved: false
+  };
+
+  element.setPointerCapture?.(event.pointerId);
+
+  element.addEventListener('pointermove', onPointerMove);
+  element.addEventListener('pointerup', onPointerUp, { once: true });
+  element.addEventListener('pointercancel', onPointerCancel, { once: true });
+}
+
+function onPointerMove(event) {
+  if (!pointer.el || event.pointerId !== pointer.pointerId) {
+    return;
+  }
+
+  const distance = Math.hypot(
+    event.clientX - pointer.startX,
+    event.clientY - pointer.startY
+  );
+
+  if (!pointer.moved && distance >= 8) {
+    pointer.moved = true;
+    beginDrag(event);
+  }
+
+  if (pointer.moved) {
+    moveDrag(event);
+  }
+}
+
+function onPointerUp(event) {
+  if (!pointer.el || event.pointerId !== pointer.pointerId) {
+    return;
+  }
+
+  const sourcePointer = { ...pointer };
+
+  pointer.el.releasePointerCapture?.(event.pointerId);
+  pointer.el.removeEventListener('pointermove', onPointerMove);
+  pointer.el.removeEventListener('pointercancel', onPointerCancel);
+
+  if (sourcePointer.moved) {
+    dropDrag(event);
+  } else {
+    clickMove(sourcePointer);
+  }
+
+  resetPointer();
+}
+
+function onPointerCancel(event) {
+  if (!pointer.el || event.pointerId !== pointer.pointerId) {
+    return;
+  }
+
+  pointer.el.releasePointerCapture?.(event.pointerId);
+  pointer.el.removeEventListener('pointermove', onPointerMove);
+  pointer.el.removeEventListener('pointerup', onPointerUp);
+
+  cleanupDrag();
+  resetPointer();
+}
+
+function resetPointer() {
+  pointer = {
+    el: null,
+    from: null,
+    startX: 0,
+    startY: 0,
+    pointerId: null,
+    moved: false
+  };
+}
+
+function beginDrag(event) {
+  if (!pointer.el || dragState) return;
+
+  const rect = pointer.el.getBoundingClientRect();
+  const ghost = pointer.el.cloneNode(true);
+
+  ghost.classList.add('drag-ghost');
+
+  ghost.style.position = 'fixed';
+  ghost.style.left = '0';
+  ghost.style.top = '0';
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.height = `${rect.height}px`;
+  ghost.style.zIndex = '9999';
+  ghost.style.pointerEvents = 'none';
+
+  dragState = {
+    ghost,
+    original: pointer.el,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top
+  };
+
+  pointer.el.classList.add('dragging-source');
+  document.body.appendChild(ghost);
+
+  moveDrag(event);
+}
+
+function moveDrag(event) {
+  if (!dragState) return;
+
+  dragState.ghost.style.left =
+    `${event.clientX - dragState.offsetX}px`;
+
+  dragState.ghost.style.top =
+    `${event.clientY - dragState.offsetY}px`;
+}
+
+function dropDrag(event) {
+  if (!dragState) return;
+
+  const destinationElement = document.elementFromPoint(
+    event.clientX,
+    event.clientY
+  );
+
+  const destination = destinationElement?.closest(
+    '.stack, .slot.small'
+  );
+
+  const sourceElement = dragState.original;
+  const sourceLocation = sourceElement.dataset.loc;
+
+  if (destination) {
+    const destinationType =
+      destination.classList.contains('stack')
+        ? 'tableau'
+        : destination.dataset.type;
+
+    const destinationIndex =
+      Number(destination.dataset.index);
+
+    if (sourceLocation === 'free') {
+      const freeIndex = Number(sourceElement.dataset.idx);
+      const card = frees[freeIndex];
+
+      if (card && destinationType === 'home') {
+        moveFreeToHome(freeIndex);
+      } else if (card && destinationType === 'tableau') {
+        moveFreeToTableau(
+          freeIndex,
+          destinationIndex
+        );
+      }
+    }
+
+    if (sourceLocation === 'tableau') {
+      const sourceColumn =
+        Number(sourceElement.dataset.idx);
+
+      const position =
+        Number(sourceElement.dataset.pos);
+
+      if (destinationType === 'home') {
+        moveTableauToHome(sourceColumn, position);
+      } else if (destinationType === 'tableau') {
+        moveTableauToTableau(
+          sourceColumn,
+          position,
+          destinationIndex
+        );
+      } else if (destinationType === 'free') {
+        moveTableauToFree(
+          sourceColumn,
+          position,
+          destinationIndex
+        );
+      }
+    }
+  }
+
+  cleanupDrag();
+}
+
+function cleanupDrag() {
+  if (!dragState) return;
+
+  dragState.original.classList.remove('dragging-source');
+  dragState.ghost.remove();
+  dragState = null;
+}
+
+/* ---------- Click movement ---------- */
+
+function clickMove(sourcePointer) {
+  const source = sourcePointer.from;
+
+  if (!source) return;
+
+  if (source.type === 'free') {
+    const card = frees[source.index];
+
+    if (!card) return;
+
+    if (canMoveToHome(card)) {
+      moveFreeToHome(source.index);
+      return;
+    }
+
+    for (let column = 0; column < 8; column++) {
+      if (canPlaceOnTableau(card, tableau[column])) {
+        moveFreeToTableau(source.index, column);
+        return;
+      }
+    }
+
+    return;
+  }
+
+  if (source.type === 'tableau') {
+    const { column, position, sequence } = source;
+
+    if (!sequence.length) return;
 
     if (
-      area === "tableau" &&
-      position !== tableau[index].length - 1
+      sequence.length === 1 &&
+      canMoveToHome(sequence[0])
     ) {
-      showMessage("Only one card can move to a foundation.");
+      moveTableauToHome(column, position);
       return;
     }
 
-    selected = {
-      area,
-      index,
-      pos: position
-    };
-
-    autoMoveSelected();
-  });
-
-  element.addEventListener("dragstart", () => {
-    selected = {
-      area,
-      index,
-      pos: position
-    };
-  });
-
-  return element;
-}
-
-function addFixedCard(card, parent, area, index, position) {
-  const element = createCard(card, area, index, position);
-
-  element.style.position = "relative";
-  element.style.left = "50%";
-  element.style.transform = "translateX(-50%)";
-
-  parent.appendChild(element);
-}
-
-function render() {
-  document.querySelectorAll(".freecell, .foundation")
-    .forEach(slot => {
-      slot.querySelectorAll(".card")
-        .forEach(card => card.remove());
-    });
-
-  tableauElement.innerHTML = "";
-
-  freeCells.forEach((card, index) => {
-    if (card) {
-      const slot = document.querySelector(
-        `[data-area="free"][data-index="${index}"]`
-      );
-
-      addFixedCard(card, slot, "free", index, 0);
+    for (let destination = 0; destination < 8; destination++) {
+      if (
+        destination !== column &&
+        canPlaceSequence(sequence, tableau[destination])
+      ) {
+        moveTableauToTableau(
+          column,
+          position,
+          destination
+        );
+        return;
+      }
     }
-  });
 
-  foundations.forEach((rank, index) => {
-    if (rank > 0) {
-      const card = {
-        suit: suits[index],
-        rank
-      };
-
-      const slot = document.querySelector(
-        `[data-area="foundation"][data-index="${index}"]`
-      );
-
-      addFixedCard(card, slot, "foundation", index, 0);
-    }
-  });
-
-  for (let columnIndex = 0; columnIndex < 8; columnIndex++) {
-    const column = document.createElement("div");
-
-    column.className = "column";
-    column.dataset.area = "tableau";
-    column.dataset.index = columnIndex;
-
-    column.addEventListener("click", () => {
-      destination("tableau", columnIndex);
-    });
-
-    column.addEventListener("dragover", event => {
-      event.preventDefault();
-      column.classList.add("over");
-    });
-
-    column.addEventListener("dragleave", () => {
-      column.classList.remove("over");
-    });
-
-    column.addEventListener("drop", event => {
-      event.preventDefault();
-      column.classList.remove("over");
-      destination("tableau", columnIndex);
-    });
-
-    tableau[columnIndex].forEach((card, position) => {
-      const element = createCard(
-        card,
-        "tableau",
-        columnIndex,
-        position
-      );
-
-      const spacing = Math.min(
-        28,
-        Math.max(19, window.innerWidth * .052)
-      );
-
-      element.style.top = `${position * spacing}px`;
-      element.style.zIndex = position;
-
-      column.appendChild(element);
-    });
-
-    tableauElement.appendChild(column);
-  }
-
-  checkWin();
-}
-
-function choose(area, index, position) {
-  if (area === "tableau") {
-    const stack = tableau[index].slice(position);
-
-    if (!isValidSequence(stack)) {
-      showMessage("That is not a valid alternating-color stack.");
-      return;
+    if (sequence.length === 1) {
+      for (let free = 0; free < 4; free++) {
+        if (!frees[free]) {
+          moveTableauToFree(column, position, free);
+          return;
+        }
+      }
     }
   }
+}
 
-  if (!selected) {
-    if (topCard(area, index) || area === "tableau") {
-      selected = {area, index, pos: position};
+function onDoubleClick(event) {
+  const card = event.currentTarget;
+  const location = card.dataset.loc;
+
+  if (location === 'free') {
+    const index = Number(card.dataset.idx);
+
+    if (frees[index] && canMoveToHome(frees[index])) {
+      moveFreeToHome(index);
+    }
+
+    return;
+  }
+
+  if (location === 'tableau') {
+    const column = Number(card.dataset.idx);
+    const position = Number(card.dataset.pos);
+    const source = tableau[column];
+
+    if (
+      position === source.length - 1 &&
+      canMoveToHome(source[position])
+    ) {
+      moveTableauToHome(column, position);
+    }
+  }
+}
+
+/* ---------- Auto-move and hints ---------- */
+
+function autoMoveToHome() {
+  for (let column = 0; column < 8; column++) {
+    const source = tableau[column];
+
+    if (!source.length) continue;
+
+    const card = source[source.length - 1];
+
+    if (canMoveToHome(card)) {
+      source.pop();
+      homes[card.suit]++;
+      saveSnapshot();
       render();
-      showMessage("Choose a destination.");
-    }
-
-    return;
-  }
-
-  if (selected.area === area && selected.index === index) {
-    selected = null;
-    render();
-    showMessage("Selection cleared.");
-    return;
-  }
-
-  moveSelectedTo(area, index);
-}
-
-function destination(area, index) {
-  if (selected) {
-    moveSelectedTo(area, index);
-  }
-}
-
-function removeSelected() {
-  const {area, index, pos} = selected;
-
-  if (area === "tableau") {
-    return tableau[index].splice(pos);
-  }
-
-  if (area === "free") {
-    const card = freeCells[index];
-    freeCells[index] = null;
-    return [card];
-  }
-
-  return [];
-}
-
-function emptyFreeCellCount() {
-  return freeCells.filter(card => card === null).length;
-}
-
-function emptyColumnCount(destinationIndex) {
-  let count = tableau.filter(column => column.length === 0).length;
-
-  if (tableau[destinationIndex].length === 0) {
-    count--;
-  }
-
-  return Math.max(0, count);
-}
-
-function maximumMovableCards(destinationIndex) {
-  return (
-    (emptyFreeCellCount() + 1) *
-    Math.pow(2, emptyColumnCount(destinationIndex))
-  );
-}
-
-function canPlaceOnTableau(card, destinationIndex) {
-  const target = tableau[destinationIndex].at(-1);
-
-  if (!target) return true;
-
-  return (
-    colors[target.suit] !== colors[card.suit] &&
-    target.rank === card.rank + 1
-  );
-}
-
-function moveSelectedTo(area, index) {
-  if (!selected) return;
-
-  const cards = getSelectedCards();
-
-  if (!cards.length) return;
-
-  const firstCard = cards[0];
-
-  if (area === "tableau") {
-    if (!isValidSequence(cards)) {
-      showMessage("That stack is not a valid sequence.");
-      return;
-    }
-
-    if (cards.length > maximumMovableCards(index)) {
-      showMessage("Not enough free cells or empty columns.");
-      return;
-    }
-
-    if (!canPlaceOnTableau(firstCard, index)) {
-      showMessage(
-        "Build onto an opposite-color card one rank higher."
-      );
-      return;
+      return true;
     }
   }
 
-  if (area === "free") {
-    if (cards.length !== 1) {
-      showMessage("Only one card can go into a free cell.");
-      return;
-    }
+  for (let index = 0; index < 4; index++) {
+    const card = frees[index];
 
-    if (freeCells[index] !== null) {
-      showMessage("That free cell is occupied.");
-      return;
-    }
-  }
-
-  if (area === "foundation") {
-    if (cards.length !== 1) {
-      showMessage("Only one card can go to a foundation.");
-      return;
-    }
-
-    const suitIndex = suits.indexOf(firstCard.suit);
-
-    if (
-      suitIndex !== index ||
-      firstCard.rank !== foundations[index] + 1
-    ) {
-      showMessage("That card cannot go to this foundation yet.");
-      return;
+    if (card && canMoveToHome(card)) {
+      frees[index] = null;
+      homes[card.suit]++;
+      saveSnapshot();
+      render();
+      return true;
     }
   }
 
-  // Save only valid moves.
-  saveState();
-
-  const movingCards = removeSelected();
-
-  if (area === "tableau") {
-    tableau[index].push(...movingCards);
-  } else if (area === "free") {
-    freeCells[index] = movingCards[0];
-  } else if (area === "foundation") {
-    foundations[index] = movingCards[0].rank;
-  }
-
-  selected = null;
-  render();
-  autoMove();
+  return false;
 }
 
-function autoMoveSelected() {
-  if (!selected) return;
+function findHint() {
+  for (let column = 0; column < 8; column++) {
+    const source = tableau[column];
 
-  const cards = getSelectedCards();
+    if (!source.length) continue;
 
-  if (cards.length !== 1) {
-    showMessage("Only one card can be auto-moved.");
-    return;
-  }
+    const card = source[source.length - 1];
 
-  const card = cards[0];
-  const foundationIndex = suits.indexOf(card.suit);
+    if (canMoveToHome(card)) {
+      return `Move ${card.rank}${card.suit} to a foundation.`;
+    }
 
-  moveSelectedTo("foundation", foundationIndex);
-}
-
-function autoMove() {
-  let moved;
-
-  do {
-    moved = false;
-
-    for (let columnIndex = 0; columnIndex < 8; columnIndex++) {
-      const card = tableau[columnIndex].at(-1);
-
-      if (!card) continue;
-
-      const foundationIndex = suits.indexOf(card.suit);
-
-      if (card.rank === foundations[foundationIndex] + 1) {
-        tableau[columnIndex].pop();
-        foundations[foundationIndex] = card.rank;
-        moved = true;
+    for (let destination = 0; destination < 8; destination++) {
+      if (
+        destination !== column &&
+        canPlaceOnTableau(card, tableau[destination])
+      ) {
+        return `Move ${card.rank}${card.suit} to column ${destination + 1}.`;
       }
     }
 
-    for (let cellIndex = 0; cellIndex < 4; cellIndex++) {
-      const card = freeCells[cellIndex];
-
-      if (!card) continue;
-
-      const foundationIndex = suits.indexOf(card.suit);
-
-      if (card.rank === foundations[foundationIndex] + 1) {
-        freeCells[cellIndex] = null;
-        foundations[foundationIndex] = card.rank;
-        moved = true;
+    for (let free = 0; free < 4; free++) {
+      if (!frees[free]) {
+        return `Move ${card.rank}${card.suit} to Free ${free + 1}.`;
       }
     }
-  } while (moved);
-
-  render();
-}
-
-function checkWin() {
-  if (foundations.every(rank => rank === 13)) {
-    showMessage("You won! 🎉");
   }
+
+  for (let free = 0; free < 4; free++) {
+    const card = frees[free];
+
+    if (!card) continue;
+
+    if (canMoveToHome(card)) {
+      return `Move ${card.rank}${card.suit} to a foundation.`;
+    }
+
+    for (let column = 0; column < 8; column++) {
+      if (canPlaceOnTableau(card, tableau[column])) {
+        return `Move ${card.rank}${card.suit} to column ${column + 1}.`;
+      }
+    }
+  }
+
+  return 'No obvious move found.';
 }
 
-document.getElementById("newGame")
-  .addEventListener("click", newGame);
+/* ---------- Buttons ---------- */
 
-document.getElementById("autoMove")
-  .addEventListener("click", autoMove);
+document.getElementById('newBtn').addEventListener('click', deal);
+document.getElementById('restartBtn').addEventListener('click', restart);
 
-document.getElementById("undo")
-  .addEventListener("click", undoMove);
+document.getElementById('undoBtn').addEventListener('click', () => {
+  if (history.length <= 1) return;
 
-document.querySelectorAll(".freecell").forEach(slot => {
-  slot.addEventListener("click", () => {
-    destination("free", Number(slot.dataset.index));
-  });
+  history.pop();
+  restoreSnapshot(history[history.length - 1]);
+  render();
 });
 
-document.querySelectorAll(".foundation").forEach(slot => {
-  slot.addEventListener("click", () => {
-    destination("foundation", Number(slot.dataset.index));
-  });
+document.getElementById('autoBtn').addEventListener('click', () => {
+  while (autoMoveToHome()) {}
+  render();
 });
 
-newGame();
+document.getElementById('hintBtn').addEventListener('click', () => {
+  alert(findHint());
+});
+
+/* ---------- Start game ---------- */
+
+deal();
 </script>
 </body>
 </html>
