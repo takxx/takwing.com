@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Casino Connect 4</title>
+
+  <style>
+    :root {
+      --felt-dark: #034c27;
+      --felt-green: #087b3a;
+      --felt-light: #159447;
+      --gold: #e6bb58;
+      --blue: #155fc4;
+      --blue-dark: #0b3d83;
+      --red: #ef3340;
+      --yellow: #ffd43b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      color: white;
+      background:
+        radial-gradient(
+          circle at center,
+          var(--felt-light) 0%,
+          var(--felt-green) 50%,
+          var(--felt-dark) 100%
+        );
+    }
+
+    .game {
+      width: min(94vw, 650px);
+      padding: 24px;
+      text-align: center;
+      border: 3px solid var(--gold);
+      border-radius: 20px;
+      background: rgba(3, 71, 32, 0.42);
+      box-shadow:
+        0 14px 35px rgba(0, 0, 0, 0.45),
+        inset 0 0 24px rgba(255, 255, 255, 0.06);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      color: #ffe29a;
+      font-family: Georgia, serif;
+      font-size: clamp(2.2rem, 8vw, 3.5rem);
+      letter-spacing: 1px;
+      text-shadow: 2px 3px 3px rgba(0, 0, 0, 0.55);
+    }
+
+    #status {
+      min-height: 28px;
+      margin-bottom: 16px;
+      color: #fff7d1;
+      font-size: 1.05rem;
+      font-weight: bold;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: clamp(5px, 1.3vw, 10px);
+      padding: clamp(8px, 2vw, 14px);
+      background: var(--blue);
+      border: 5px solid var(--blue-dark);
+      border-radius: 16px;
+      box-shadow:
+        0 8px 15px rgba(0, 0, 0, 0.35),
+        inset 0 2px 3px rgba(255, 255, 255, 0.2);
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      border: 0;
+      border-radius: 50%;
+      background: #dbe4ef;
+      box-shadow:
+        inset 0 5px 6px rgba(0, 0, 0, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: transform 0.12s, filter 0.12s;
+    }
+
+    .cell:hover {
+      filter: brightness(1.08);
+      transform: scale(1.04);
+    }
+
+    .cell.player {
+      background: var(--red);
+    }
+
+    .cell.computer {
+      background: var(--yellow);
+    }
+
+    .cell.win {
+      outline: 4px solid white;
+      outline-offset: -8px;
+      animation: pulse 0.7s infinite alternate;
+    }
+
+    @keyframes pulse {
+      to {
+        filter: brightness(1.3);
+      }
+    }
+
+    #restart {
+      margin-top: 20px;
+      padding: 12px 24px;
+      border: 2px solid #c99935;
+      border-radius: 8px;
+      background: #172033;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #restart:hover {
+      background: #293a59;
+    }
+
+    .legend {
+      margin-top: 16px;
+      color: #fff7d1;
+      font-size: 0.9rem;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      margin: 0 4px 0 12px;
+      border-radius: 50%;
+      vertical-align: -1px;
+    }
+
+    .dot.red {
+      background: var(--red);
+    }
+
+    .dot.yellow {
+      background: var(--yellow);
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game">
+    <h1>Connect 4</h1>
+
+    <div id="status"></div>
+
+    <div
+      id="board"
+      class="board"
+      aria-label="Connect 4 game board"
+    ></div>
+
+    <button id="restart">New Game</button>
+
+    <div class="legend">
+      <span class="dot red"></span>You
+      <span class="dot yellow"></span>Computer
+    </div>
+  </main>
+
+  <script>
+    const ROWS = 6;
+    const COLS = 7;
+
+    const EMPTY = 0;
+    const PLAYER = 1;
+    const COMPUTER = 2;
+
+    // Higher depth means stronger but slower AI.
+    const AI_DEPTH = 6;
+
+    let board;
+    let currentPlayer;
+    let gameOver;
+    let winningCells;
+
+    const boardElement = document.getElementById("board");
+    const statusElement = document.getElementById("status");
+    const restartButton = document.getElementById("restart");
+
+    function newGame() {
+      board = Array.from(
+        { length: ROWS },
+        () => Array(COLS).fill(EMPTY)
+      );
+
+      currentPlayer =
+        Math.random() < 0.5 ? PLAYER : COMPUTER;
+
+      gameOver = false;
+      winningCells = [];
+
+      render();
+
+      if (currentPlayer === PLAYER) {
+        setStatus("Your turn");
+      } else {
+        setStatus("Computer starts");
+
+        setTimeout(() => {
+          computerTurn();
+        }, 600);
+      }
+    }
+
+    function setStatus(message) {
+      statusElement.textContent = message;
+    }
+
+    function render() {
+      boardElement.innerHTML = "";
+
+      for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const cell = document.createElement("button");
+
+          cell.className = "cell";
+          cell.setAttribute(
+            "aria-label",
+            `Row ${row + 1}, column ${col + 1}`
+          );
+
+          if (board[row][col] === PLAYER) {
+            cell.classList.add("player");
+          }
+
+          if (board[row][col] === COMPUTER) {
+            cell.classList.add("computer");
+          }
+
+          const isWinningCell = winningCells.some(
+            ([winningRow, winningCol]) =>
+              winningRow === row && winningCol === col
+          );
+
+          if (isWinningCell) {
+            cell.classList.add("win");
+          }
+
+          cell.addEventListener("click", () => {
+            playerMove(col);
+          });
+
+          boardElement.appendChild(cell);
+        }
+      }
+    }
+
+    function playerMove(col) {
+      if (gameOver || currentPlayer !== PLAYER) {
+        return;
+      }
+
+      const row = dropPiece(col, PLAYER);
+
+      // The selected column is full.
+      if (row === -1) {
+        return;
+      }
+
+      render();
+
+      if (finishIfNeeded(PLAYER)) {
+        return;
+      }
+
+      currentPlayer = COMPUTER;
+      setStatus("Computer is thinking...");
+
+      setTimeout(() => {
+        computerTurn();
+      }, 350);
+    }
+
+    function computerTurn() {
+      if (gameOver) {
+        return;
+      }
+
+      const column = chooseComputerColumn();
+      dropPiece(column, COMPUTER);
+
+      render();
+
+      if (finishIfNeeded(COMPUTER)) {
+        return;
+      }
+
+      currentPlayer = PLAYER;
+      setStatus("Your turn");
+    }
+
+    function dropPiece(column, player) {
+      for (let row = ROWS - 1; row >= 0; row--) {
+        if (board[row][column] === EMPTY) {
+          board[row][column] = player;
+          return row;
+        }
+      }
+
+      return -1;
+    }
+
+    function getValidColumns() {
+      return Array.from({ length: COLS }, (_, column) => column)
+        .filter(column => board[0][column] === EMPTY);
+    }
+
+    /*
+      Strong computer player using depth-6 minimax
+      with alpha-beta pruning.
+    */
+    function chooseComputerColumn() {
+      const validColumns = getValidColumns();
+
+      let bestScore = -Infinity;
+      let bestColumns = [];
+
+      for (const column of orderColumns(validColumns)) {
+        const row = dropPiece(column, COMPUTER);
+
+        const score = minimax(
+          AI_DEPTH - 1,
+          false,
+          -Infinity,
+          Infinity
+        );
+
+        board[row][column] = EMPTY;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestColumns = [column];
+        } else if (score === bestScore) {
+          bestColumns.push(column);
+        }
+      }
+
+      // If several moves are equally good, choose randomly.
+      return bestColumns[
+        Math.floor(Math.random() * bestColumns.length)
+      ];
+    }
+
+    function minimax(depth, maximizing, alpha, beta) {
+      const validColumns = getValidColumns();
+
+      if (findWinningLine(COMPUTER).won) {
+        return 1000000 + depth;
+      }
+
+      if (findWinningLine(PLAYER).won) {
+        return -1000000 - depth;
+      }
+
+      if (depth === 0 || validColumns.length === 0) {
+        return evaluateBoard();
+      }
+
+      if (maximizing) {
+        let bestScore = -Infinity;
+
+        for (const column of orderColumns(validColumns)) {
+          const row = dropPiece(column, COMPUTER);
+
+          const score = minimax(
+            depth - 1,
+            false,
+            alpha,
+            beta
+          );
+
+          board[row][column] = EMPTY;
+
+          bestScore = Math.max(bestScore, score);
+          alpha = Math.max(alpha, bestScore);
+
+          if (beta <= alpha) {
+            break;
+          }
+        }
+
+        return bestScore;
+      }
+
+      let bestScore = Infinity;
+
+      for (const column of orderColumns(validColumns)) {
+        const row = dropPiece(column, PLAYER);
+
+        const score = minimax(
+          depth - 1,
+          true,
+          alpha,
+          beta
+        );
+
+        board[row][column] = EMPTY;
+
+        bestScore = Math.min(bestScore, score);
+        beta = Math.min(beta, bestScore);
+
+        if (beta <= alpha) {
+          break;
+        }
+      }
+
+      return bestScore;
+    }
+
+    function orderColumns(columns) {
+      // Center columns are strategically stronger in Connect 4.
+      const preferredOrder = [3, 2, 4, 1, 5, 0, 6];
+
+      return preferredOrder.filter(column =>
+        columns.includes(column)
+      );
+    }
+
+    function evaluateBoard() {
+      let score = 0;
+
+      // Reward control of the center column.
+      const centerColumn = Math.floor(COLS / 2);
+
+      for (let row = 0; row < ROWS; row++) {
+        if (board[row][centerColumn] === COMPUTER) {
+          score += 6;
+        } else if (board[row][centerColumn] === PLAYER) {
+          score -= 6;
+        }
+      }
+
+      // Evaluate all possible groups of four.
+      for (let row = 0; row < ROWS; row++) {
+        for (let column = 0; column < COLS; column++) {
+          if (column + 3 < COLS) {
+            score += evaluateWindow([
+              board[row][column],
+              board[row][column + 1],
+              board[row][column + 2],
+              board[row][column + 3]
+            ]);
+          }
+
+          if (row + 3 < ROWS) {
+            score += evaluateWindow([
+              board[row][column],
+              board[row + 1][column],
+              board[row + 2][column],
+              board[row + 3][column]
+            ]);
+          }
+
+          if (row + 3 < ROWS && column + 3 < COLS) {
+            score += evaluateWindow([
+              board[row][column],
+              board[row + 1][column + 1],
+              board[row + 2][column + 2],
+              board[row + 3][column + 3]
+            ]);
+          }
+
+          if (row + 3 < ROWS && column - 3 >= 0) {
+            score += evaluateWindow([
+              board[row][column],
+              board[row + 1][column - 1],
+              board[row + 2][column - 2],
+              board[row + 3][column - 3]
+            ]);
+          }
+        }
+      }
+
+      return score;
+    }
+
+    function evaluateWindow(window) {
+      const computerCount =
+        window.filter(cell => cell === COMPUTER).length;
+
+      const playerCount =
+        window.filter(cell => cell === PLAYER).length;
+
+      const emptyCount =
+        window.filter(cell => cell === EMPTY).length;
+
+      // A window containing both players cannot become four-in-a-row.
+      if (computerCount > 0 && playerCount > 0) {
+        return 0;
+      }
+
+      if (computerCount === 4) return 100000;
+      if (computerCount === 3 && emptyCount === 1) return 120;
+      if (computerCount === 2 && emptyCount === 2) return 12;
+      if (computerCount === 1 && emptyCount === 3) return 2;
+
+      if (playerCount === 4) return -100000;
+      if (playerCount === 3 && emptyCount === 1) return -150;
+      if (playerCount === 2 && emptyCount === 2) return -15;
+      if (playerCount === 1 && emptyCount === 3) return -2;
+
+      return 0;
+    }
+
+    function finishIfNeeded(player) {
+      const result = findWinningLine(player);
+
+      if (result.won) {
+        winningCells = result.cells;
+        gameOver = true;
+
+        render();
+
+        setStatus(
+          player === PLAYER
+            ? "You win!"
+            : "The computer wins!"
+        );
+
+        return true;
+      }
+
+      if (getValidColumns().length === 0) {
+        gameOver = true;
+        setStatus("It's a draw!");
+        return true;
+      }
+
+      return false;
+    }
+
+    function findWinningLine(player) {
+      for (let row = 0; row < ROWS; row++) {
+        for (let column = 0; column < COLS; column++) {
+          if (board[row][column] !== player) {
+            continue;
+          }
+
+          const result = checkWin(row, column, player);
+
+          if (result.won) {
+            return result;
+          }
+        }
+      }
+
+      return {
+        won: false,
+        cells: []
+      };
+    }
+
+    function checkWin(row, column, player) {
+      const directions = [
+        [0, 1],   // Horizontal
+        [1, 0],   // Vertical
+        [1, 1],   // Diagonal down-right
+        [1, -1]   // Diagonal down-left
+      ];
+
+      for (const [rowDirection, columnDirection] of directions) {
+        const cells = [[row, column]];
+
+        for (const direction of [-1, 1]) {
+          let currentRow =
+            row + rowDirection * direction;
+
+          let currentColumn =
+            column + columnDirection * direction;
+
+          while (
+            currentRow >= 0 &&
+            currentRow < ROWS &&
+            currentColumn >= 0 &&
+            currentColumn < COLS &&
+            board[currentRow][currentColumn] === player
+          ) {
+            cells.push([currentRow, currentColumn]);
+
+            currentRow += rowDirection * direction;
+            currentColumn += columnDirection * direction;
+          }
+        }
+
+        if (cells.length >= 4) {
+          return {
+            won: true,
+            cells
+          };
+        }
+      }
+
+      return {
+        won: false,
+        cells: []
+      };
+    }
+
+    restartButton.addEventListener("click", newGame);
+
+    newGame();
+  </script>
+</body>
+</html>
