@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Casino Bingo Card Generator</title>
+
+  <style>
+    :root {
+      --casino-green: #075b38;
+      --dark-green: #043b25;
+      --gold: #f6c453;
+      --card-cream: #f4eedf;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, Helvetica, sans-serif;
+      color: white;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(255, 255, 255, 0.06) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          135deg,
+          #087044,
+          var(--casino-green) 50%,
+          #034227
+        );
+      background-size: 18px 18px, cover;
+    }
+
+    .game-container {
+      width: min(100%, 680px);
+      padding: 28px;
+      text-align: center;
+      border: 3px solid var(--gold);
+      border-radius: 20px;
+      background: rgba(2, 48, 29, 0.86);
+      box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.4),
+        inset 0 0 25px rgba(255, 255, 255, 0.05);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      color: var(--gold);
+      font-size: clamp(2rem, 7vw, 3.6rem);
+      letter-spacing: 7px;
+      text-shadow: 2px 3px 0 #633e0a;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: #d7f1dc;
+    }
+
+    .bingo-card {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7px;
+      width: 100%;
+      max-width: 570px;
+      margin: 0 auto 24px;
+      padding: 10px;
+      border: 5px solid var(--gold);
+      border-radius: 14px;
+      background: #efe6ce;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .column-header,
+    .cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 8px;
+    }
+
+    .column-header {
+      min-height: 54px;
+      color: white;
+      font-size: clamp(1.3rem, 5vw, 2rem);
+      font-weight: bold;
+      text-shadow: 1px 2px 2px rgba(0, 0, 0, 0.4);
+    }
+
+    /*
+      Bingo header colors
+    */
+    .header-b {
+      background: #d83b3b;
+    }
+
+    .header-i {
+      background: #db961d;
+    }
+
+    .header-n {
+      background: #188aca;
+    }
+
+    .header-g {
+      background: #35933b;
+    }
+
+    .header-o {
+      background: #8a4fc7;
+    }
+
+    /*
+      All unselected squares stay neutral
+    */
+    .cell {
+      aspect-ratio: 1 / 1;
+      padding: 5px;
+      color: #173d2b;
+      background: var(--card-cream);
+      font-size: clamp(0.7rem, 2.5vw, 1rem);
+      font-weight: bold;
+      line-height: 1.15;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      transition:
+        transform 0.15s ease,
+        filter 0.15s ease,
+        background 0.15s ease,
+        color 0.15s ease;
+      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .cell:hover {
+      transform: scale(1.04);
+      filter: brightness(1.08);
+    }
+
+    /*
+      Selected squares receive their column's highlight color
+    */
+    .cell.selected.col-b {
+      color: white;
+      background: #d83b3b;
+    }
+
+    .cell.selected.col-i {
+      color: white;
+      background: #db961d;
+    }
+
+    .cell.selected.col-n {
+      color: white;
+      background: #188aca;
+    }
+
+    .cell.selected.col-g {
+      color: white;
+      background: #35933b;
+    }
+
+    .cell.selected.col-o {
+      color: white;
+      background: #8a4fc7;
+    }
+
+    .cell.selected {
+      box-shadow:
+        inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+        0 0 8px rgba(255, 255, 255, 0.45);
+    }
+
+    /*
+      Free center space
+    */
+    .free-space {
+      color: white;
+      background: #bd2630 !important;
+      font-size: clamp(0.65rem, 2.3vw, 0.95rem);
+      cursor: default;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: 2px solid var(--gold);
+      border-radius: 999px;
+      color: #173d2b;
+      background: var(--gold);
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        background 0.15s ease;
+    }
+
+    button:hover {
+      background: #ffe08a;
+      transform: translateY(-2px);
+    }
+
+    button.secondary {
+      color: white;
+      background: transparent;
+    }
+
+    button.secondary:hover {
+      color: #173d2b;
+      background: var(--gold);
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 15px;
+      color: #d7f1dc;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 500px) {
+      body {
+        padding: 12px;
+      }
+
+      .game-container {
+        padding: 16px 10px;
+      }
+
+      .bingo-card {
+        gap: 4px;
+        padding: 6px;
+        border-width: 3px;
+      }
+
+      .cell,
+      .column-header {
+        border-radius: 5px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game-container">
+    <h1>BINGO</h1>
+    <p class="subtitle">
+      Click a square to highlight it with its column color.
+    </p>
+
+    <section
+      id="bingoCard"
+      class="bingo-card"
+      aria-label="Interactive bingo card"
+    ></section>
+
+    <div class="controls">
+      <button id="generateButton">Generate New Card</button>
+      <button id="clearButton" class="secondary">Clear Marks</button>
+    </div>
+
+    <p id="status" class="status" aria-live="polite">
+      No squares marked.
+    </p>
+  </main>
+
+  <script>
+    const bingoCard = document.getElementById("bingoCard");
+    const generateButton = document.getElementById("generateButton");
+    const clearButton = document.getElementById("clearButton");
+    const status = document.getElementById("status");
+
+    const columns = [
+      {
+        letter: "B",
+        headerClass: "header-b",
+        cellClass: "col-b",
+        min: 1,
+        max: 15
+      },
+      {
+        letter: "I",
+        headerClass: "header-i",
+        cellClass: "col-i",
+        min: 16,
+        max: 30
+      },
+      {
+        letter: "N",
+        headerClass: "header-n",
+        cellClass: "col-n",
+        min: 31,
+        max: 45
+      },
+      {
+        letter: "G",
+        headerClass: "header-g",
+        cellClass: "col-g",
+        min: 46,
+        max: 60
+      },
+      {
+        letter: "O",
+        headerClass: "header-o",
+        cellClass: "col-o",
+        min: 61,
+        max: 75
+      }
+    ];
+
+    function shuffle(array) {
+      const shuffled = [...array];
+
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+
+        [shuffled[i], shuffled[randomIndex]] = [
+          shuffled[randomIndex],
+          shuffled[i]
+        ];
+      }
+
+      return shuffled;
+    }
+
+    function createNumberPool(min, max) {
+      return Array.from(
+        { length: max - min + 1 },
+        (_, index) => min + index
+      );
+    }
+
+    function generateCard() {
+      bingoCard.innerHTML = "";
+
+      const numbersByColumn = columns.map((column) =>
+        shuffle(createNumberPool(column.min, column.max)).slice(0, 5)
+      );
+
+      // Add BINGO headers
+      columns.forEach((column) => {
+        const header = document.createElement("div");
+
+        header.className = `column-header ${column.headerClass}`;
+        header.textContent = column.letter;
+
+        bingoCard.appendChild(header);
+      });
+
+      // Add the 25 bingo squares
+      for (let row = 0; row < 5; row++) {
+        columns.forEach((column, columnIndex) => {
+          const cell = document.createElement("div");
+
+          cell.className = `cell ${column.cellClass}`;
+
+          // Center square is always the free space
+          if (row === 2 && columnIndex === 2) {
+            cell.textContent = "FREE";
+            cell.classList.add("free-space");
+            cell.setAttribute("aria-label", "Free space");
+          } else {
+            const number = numbersByColumn[columnIndex][row];
+
+            cell.textContent = number;
+            cell.setAttribute(
+              "aria-label",
+              `${column.letter} ${number}`
+            );
+
+            cell.addEventListener("click", () => {
+              cell.classList.toggle("selected");
+              updateStatus();
+            });
+          }
+
+          bingoCard.appendChild(cell);
+        });
+      }
+
+      updateStatus();
+    }
+
+    function clearMarks() {
+      document
+        .querySelectorAll(".cell.selected")
+        .forEach((cell) => {
+          cell.classList.remove("selected");
+        });
+
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const markedCount =
+        document.querySelectorAll(".cell.selected").length;
+
+      if (markedCount === 0) {
+        status.textContent = "No squares marked.";
+      } else {
+        status.textContent =
+          `${markedCount} square${markedCount === 1 ? "" : "s"} marked.`;
+      }
+    }
+
+    generateButton.addEventListener("click", generateCard);
+    clearButton.addEventListener("click", clearMarks);
+
+    // Generate the first card when the page loads
+    generateCard();
+  </script>
+</body>
+</html>

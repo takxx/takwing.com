@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo Ball Draw</title>
+
+  <style>
+    :root {
+      --casino-green: #075b38;
+      --dark-green: #043b25;
+      --gold: #f6c453;
+
+      --b-color: #d83b3b;
+      --i-color: #db961d;
+      --n-color: #188aca;
+      --g-color: #35933b;
+      --o-color: #8a4fc7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2vh 2vw;
+      color: white;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(255, 255, 255, 0.06) 1px,
+          transparent 1px
+        ),
+        linear-gradient(135deg, #087044, var(--casino-green), #034227);
+      background-size: 18px 18px, cover;
+    }
+
+    .game {
+      width: min(1200px, 96vw);
+      height: min(94vh, 675px);
+      min-height: 440px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: clamp(10px, 2vh, 18px);
+      padding: clamp(14px, 2vw, 26px);
+      overflow: hidden;
+      border: 3px solid var(--gold);
+      border-radius: 22px;
+      background: rgba(2, 48, 29, 0.88);
+      box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.45),
+        inset 0 0 25px rgba(255, 255, 255, 0.05);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--gold);
+      font-size: clamp(1.8rem, 4vw, 3.4rem);
+      letter-spacing: clamp(4px, 1vw, 9px);
+      text-align: center;
+      text-shadow: 2px 3px 0 #633e0a;
+    }
+
+    .number-board {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      gap: 4px;
+      padding: 8px;
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .number {
+      aspect-ratio: 1.4 / 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 5px;
+      color: #16452d;
+      background: #e9ead7;
+      font-size: clamp(0.55rem, 1.35vw, 0.95rem);
+      font-weight: bold;
+      transition: 0.25s ease;
+    }
+
+    .number.drawn {
+      color: white;
+      transform: scale(1.08);
+      box-shadow: 0 0 9px rgba(255, 255, 255, 0.65);
+    }
+
+    .number.drawn.b {
+      background: var(--b-color);
+    }
+
+    .number.drawn.i {
+      background: var(--i-color);
+    }
+
+    .number.drawn.n {
+      background: var(--n-color);
+    }
+
+    .number.drawn.g {
+      background: var(--g-color);
+    }
+
+    .number.drawn.o {
+      background: var(--o-color);
+    }
+
+    .draw-area {
+      min-height: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 900px;
+    }
+
+    .ball-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ball {
+      position: relative;
+      width: clamp(145px, 25vh, 245px);
+      aspect-ratio: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 50%;
+      color: white;
+      background: var(--ball-color, #777);
+      box-shadow:
+        inset -20px -22px 28px rgba(0, 0, 0, 0.38),
+        inset 18px 15px 24px rgba(255, 255, 255, 0.35),
+        0 22px 15px rgba(0, 0, 0, 0.35);
+      transform-style: preserve-3d;
+    }
+
+    .ball::before {
+      content: "";
+      position: absolute;
+      top: 10%;
+      left: 18%;
+      width: 26%;
+      height: 18%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.7);
+      filter: blur(5px);
+      transform: rotate(-35deg);
+    }
+
+    .ball::after {
+      content: "";
+      position: absolute;
+      inset: 8%;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+    }
+
+    .ball.b {
+      --ball-color: var(--b-color);
+    }
+
+    .ball.i {
+      --ball-color: var(--i-color);
+    }
+
+    .ball.n {
+      --ball-color: var(--n-color);
+    }
+
+    .ball.g {
+      --ball-color: var(--g-color);
+    }
+
+    .ball.o {
+      --ball-color: var(--o-color);
+    }
+
+    .ball-number {
+      position: relative;
+      z-index: 1;
+      width: 52%;
+      aspect-ratio: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 50%;
+      color: #222;
+      background: rgba(255, 255, 255, 0.92);
+      font-size: clamp(2.2rem, 7vh, 5rem);
+      font-weight: bold;
+      box-shadow:
+        inset 3px 4px 7px rgba(255, 255, 255, 0.8),
+        inset -4px -5px 8px rgba(0, 0, 0, 0.22);
+    }
+
+    .ball-label {
+      color: var(--gold);
+      font-size: clamp(1rem, 2.2vw, 1.5rem);
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .ball.animate {
+      animation: bounce 0.7s ease;
+    }
+
+    @keyframes bounce {
+      0% {
+        transform: translateY(0) rotateY(0);
+      }
+
+      35% {
+        transform: translateY(-35px) rotateY(180deg);
+      }
+
+      70% {
+        transform: translateY(8px) rotateY(330deg);
+      }
+
+      100% {
+        transform: translateY(0) rotateY(360deg);
+      }
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+
+    button {
+      min-width: 150px;
+      padding: 12px 20px;
+      border: 2px solid var(--gold);
+      border-radius: 999px;
+      color: #173d2b;
+      background: var(--gold);
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    button:hover {
+      background: #ffe08a;
+      transform: translateY(-2px);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button.secondary {
+      color: white;
+      background: transparent;
+    }
+
+    button.secondary:hover {
+      color: #173d2b;
+      background: var(--gold);
+    }
+
+    .status {
+      position: absolute;
+      left: -9999px;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 1vh 1vw;
+      }
+
+      .game {
+        width: 99vw;
+        height: 98vh;
+        padding: 12px 8px;
+        gap: 9px;
+      }
+
+      .number-board {
+        gap: 2px;
+        padding: 5px;
+      }
+
+      .number {
+        border-radius: 3px;
+        font-size: 0.55rem;
+      }
+
+      .ball {
+        width: min(35vh, 210px);
+      }
+
+      button {
+        min-width: 125px;
+        padding: 10px 14px;
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game">
+    <h1>BINGO BALL DRAW</h1>
+
+    <section
+      id="numberBoard"
+      class="number-board"
+      aria-label="Bingo number board"
+    ></section>
+
+    <section class="draw-area">
+      <div class="ball-wrapper">
+        <div id="ball" class="ball">
+          <div id="ballNumber" class="ball-number">?</div>
+        </div>
+
+        <div id="ballLabel" class="ball-label">
+          READY TO DRAW
+        </div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <button id="drawButton">Draw Ball</button>
+      <button id="resetButton" class="secondary">Reset Game</button>
+    </div>
+
+    <p id="status" class="status" aria-live="polite"></p>
+  </main>
+
+  <script>
+    const numberBoard = document.getElementById("numberBoard");
+    const ball = document.getElementById("ball");
+    const ballNumber = document.getElementById("ballNumber");
+    const ballLabel = document.getElementById("ballLabel");
+    const drawButton = document.getElementById("drawButton");
+    const resetButton = document.getElementById("resetButton");
+    const status = document.getElementById("status");
+
+    let remainingNumbers = [];
+    let drawnNumbers = [];
+
+    function getColumn(number) {
+      if (number <= 15) return "b";
+      if (number <= 30) return "i";
+      if (number <= 45) return "n";
+      if (number <= 60) return "g";
+      return "o";
+    }
+
+    function getColumnName(column) {
+      return column.toUpperCase();
+    }
+
+    function createNumberBoard() {
+      numberBoard.innerHTML = "";
+
+      for (let number = 1; number <= 75; number++) {
+        const numberCell = document.createElement("div");
+
+        numberCell.className = "number";
+        numberCell.id = `number-${number}`;
+        numberCell.textContent = number;
+        numberCell.setAttribute("aria-label", `Number ${number}`);
+
+        numberBoard.appendChild(numberCell);
+      }
+    }
+
+    function shuffle(array) {
+      const shuffled = [...array];
+
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+
+        [shuffled[i], shuffled[randomIndex]] = [
+          shuffled[randomIndex],
+          shuffled[i]
+        ];
+      }
+
+      return shuffled;
+    }
+
+    function resetGame() {
+      remainingNumbers = shuffle(
+        Array.from({ length: 75 }, (_, index) => index + 1)
+      );
+
+      drawnNumbers = [];
+
+      document.querySelectorAll(".number.drawn").forEach((cell) => {
+        cell.className = "number";
+      });
+
+      ball.className = "ball";
+      ballNumber.textContent = "?";
+      ballLabel.textContent = "READY TO DRAW";
+      drawButton.disabled = false;
+      status.textContent = "Game reset. Ready to draw.";
+    }
+
+    function drawBall() {
+      if (remainingNumbers.length === 0) {
+        ballLabel.textContent = "ALL NUMBERS DRAWN";
+        drawButton.disabled = true;
+        return;
+      }
+
+      const selectedNumber = remainingNumbers.pop();
+      const column = getColumn(selectedNumber);
+      const numberCell = document.getElementById(
+        `number-${selectedNumber}`
+      );
+
+      drawnNumbers.push(selectedNumber);
+
+      numberCell.classList.add("drawn", column);
+
+      ball.className = `ball ${column}`;
+      ball.classList.remove("animate");
+
+      // Restart the animation every time a ball is drawn
+      void ball.offsetWidth;
+      ball.classList.add("animate");
+
+      ballNumber.textContent = selectedNumber;
+      ballLabel.textContent =
+        `${getColumnName(column)} ${selectedNumber}`;
+
+      status.textContent =
+        `${drawnNumbers.length} of 75 numbers drawn.`;
+
+      if (remainingNumbers.length === 0) {
+        drawButton.disabled = true;
+        ballLabel.textContent += " — FINAL BALL";
+      }
+    }
+
+    drawButton.addEventListener("click", drawBall);
+    resetButton.addEventListener("click", resetGame);
+
+    createNumberBoard();
+    resetGame();
+  </script>
+</body>
+</html>
