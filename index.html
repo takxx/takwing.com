@@ -1,3 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta http-equiv='refresh' content='0; URL=https://icloud.com/'>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>takwing.com</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      background: #0078d7;
+      color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    .bsod {
+      width: min(900px, 100%);
+    }
+
+    .sad-face {
+      margin-bottom: 28px;
+      font-size: clamp(72px, 12vw, 120px);
+      font-weight: 300;
+      line-height: 1;
+    }
+
+    h1 {
+      max-width: 850px;
+      margin: 0 0 28px;
+      font-size: clamp(22px, 3vw, 32px);
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    .progress {
+      margin-bottom: 42px;
+      font-size: 24px;
+    }
+
+    .details {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .qr-code {
+      width: 92px;
+      height: 92px;
+      flex: 0 0 auto;
+      padding: 7px;
+      background: #fff;
+      image-rendering: pixelated;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 24px;
+      }
+
+      .details {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .progress {
+        margin-bottom: 32px;
+      }
+    }
+  </style>
 </head>
+
+<body>
+  <main class="bsod">
+    <div class="sad-face">:(</div>
+
+    <h1>
+      Your PC ran into a problem and needs to restart.
+      We’re just collecting some error info, and then we’ll restart for you.
+    </h1>
+
+    <div class="progress">0% complete</div>
+
+    <div class="details">
+      <!-- Decorative QR-style graphic; it does not encode anything -->
+      <svg
+        class="qr-code"
+        viewBox="0 0 21 21"
+        role="img"
+        aria-label="Decorative QR code"
+      >
+        <rect width="21" height="21" fill="#fff" />
+
+        <!-- Finder patterns -->
+        <g fill="#000">
+          <path d="M0 0h7v7H0zM1 1v5h5V1H1zM2 2h3v3H2z" />
+          <path d="M14 0h7v7h-7zM15 1v5h5V1h-5zM16 2h3v3h-3z" />
+          <path d="M0 14h7v7H0zM1 15v5h5v-5H1zM2 16h3v3H2z" />
+
+          <!-- Timing modules -->
+          <path d="
+            M8 0h1v1H8z
+            M10 0h1v1h-1z
+            M12 0h1v1h-1z
+            M0 8h1v1H0z
+            M0 10h1v1H0z
+            M0 12h1v1H0z
+          " />
+
+          <!-- Decorative data modules -->
+          <path d="
+            M8 3h1v2H8z
+            M10 2h2v1h-2z
+            M12 3h1v2h-1z
+            M8 7h2v1H8z
+            M11 6h2v2h-2z
+            M14 8h1v2h-1z
+            M16 8h2v1h-2z
+            M19 8h2v2h-2z
+            M8 10h1v2H8z
+            M10 9h2v1h-2z
+            M12 11h2v1h-2z
+            M15 11h1v2h-1z
+            M17 10h2v2h-2z
+            M20 12h1v1h-1z
+            M8 14h2v1H8z
+            M11 14h1v2h-1z
+            M13 15h2v1h-2z
+            M16 14h1v1h-1z
+            M18 15h2v2h-2z
+            M8 17h1v2H8z
+            M10 18h2v1h-2z
+            M13 18h1v2h-1z
+            M15 19h2v1h-2z
+            M19 18h2v2h-2z
+            M3 8h2v1H3z
+            M5 10h1v2H5z
+            M2 11h2v1H2z
+            M4 13h2v1H4z
+            M7 9h1v2H7z
+          " />
+        </g>
+      </svg>
+
+      <div>
+        For more information about this issue and possible fixes, visit<br />
+        <code>https://www.windows.com/stopcode</code>
+        <br /><br />
+
+        Stop code:
+        <code>TAKWING_DOT_COM</code>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
