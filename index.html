@@ -99,7 +99,9 @@
       We’re just collecting some error info, and then we’ll restart for you.
     </h1>
 
-    <div class="progress">0% complete</div>
+    <div class="progress">
+      <span id="percentage">0</span>% complete
+    </div>
 
     <div class="details">
       <!-- Decorative QR-style graphic; it does not encode anything -->
@@ -172,5 +174,38 @@
       </div>
     </div>
   </main>
+  <script>
+  const percentage = document.getElementById("percentage");
+
+  let value = 0;
+
+  function countUp() {
+    percentage.textContent = value;
+
+    if (value >= 99) {
+      // Stay at 99% for 4 seconds
+      setTimeout(countDown, 4000);
+      return;
+    }
+
+    value++;
+    setTimeout(countUp, 180);
+  }
+
+  function countDown() {
+    value--;
+    percentage.textContent = value;
+
+    if (value <= 0) {
+      percentage.textContent = 0;
+      return;
+    }
+
+    // Slower reverse countdown
+    setTimeout(countDown, 280);
+  }
+
+  countUp();
+  </script>
 </body>
 </html>
