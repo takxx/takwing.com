@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dope Wars: Canary Market</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <main class="container">
+    <header>
+      <div>
+        <h1 id="gameTitle"></h1>
+        <div id="subtitle" class="subtitle"></div>
+      </div>
+
+      <div class="header-actions">
+        <label>
+          <span id="languageLabel"></span>
+          <select id="languageSelect">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
+
+        <button id="newGameButton" class="new-game"></button>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat">
+        <small id="dayLabel"></small>
+        <strong id="dayStat"></strong>
+      </div>
+
+      <div class="stat">
+        <small id="cashLabel"></small>
+        <strong id="cashStat"></strong>
+      </div>
+
+      <div class="stat">
+        <small id="debtLabel"></small>
+        <strong id="debtStat"></strong>
+      </div>
+
+      <div class="stat">
+        <small id="capacityLabel"></small>
+        <strong id="spaceStat"></strong>
+      </div>
+
+      <div class="stat">
+        <small id="islandLabel"></small>
+        <strong id="locationStat"></strong>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="panel">
+        <h2 id="marketTitle"></h2>
+
+        <div class="market">
+          <table>
+            <thead>
+              <tr>
+                <th id="productHeader"></th>
+                <th id="priceHeader"></th>
+                <th id="ownedHeader"></th>
+                <th id="tradeHeader"></th>
+              </tr>
+            </thead>
+            <tbody id="marketBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside>
+        <div class="panel">
+          <h2 id="travelTitle"></h2>
+
+          <div class="controls">
+            <label>
+              <span id="destinationLabel"></span>
+              <select id="destinationSelect"></select>
+            </label>
+
+            <button id="travelButton" class="travel primary"></button>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top: 16px">
+          <h2 id="inventoryTitle"></h2>
+          <div id="inventory" class="inventory"></div>
+        </div>
+
+        <div class="panel" style="margin-top: 16px">
+          <h2 id="logTitle"></h2>
+          <div id="log" class="log"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h2 id="modalTitle"></h2>
+      <p id="modalText"></p>
+      <button id="modalButton" class="primary"></button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
