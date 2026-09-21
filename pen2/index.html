@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slack String Double Pendulum</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111827;
+      --canvas: #0b1220;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --blue: #60a5fa;
+      --pink: #f472b6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      display: grid;
+      place-items: center;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, #26344d, var(--bg) 58%);
+      font-family: system-ui, sans-serif;
+    }
+
+    .app {
+      width: min(960px, 100%);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: white;
+      background: var(--blue);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    button:hover {
+      filter: brightness(1.1);
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+    }
+
+    input[type="range"] {
+      accent-color: var(--blue);
+    }
+
+    .stage {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #374151;
+      border-radius: 14px;
+      background: var(--canvas);
+      box-shadow: 0 18px 45px #0005;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: min(70vh, 650px);
+      min-height: 420px;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas.dragging {
+      cursor: grabbing;
+    }
+
+    .hint {
+      position: absolute;
+      left: 14px;
+      bottom: 12px;
+      padding: 7px 10px;
+      border-radius: 7px;
+      color: #d1d5db;
+      background: #111827cc;
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .stats span {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Slack-String Double Pendulum</h1>
+
+    <p>
+      Drag either weight. The strings can pull, but they cannot push.
+    </p>
+
+    <div class="controls">
+      <button id="pauseButton">Pause</button>
+      <button id="resetButton">Reset</button>
+
+      <label>
+        Gravity
+        <input
+          id="gravity"
+          type="range"
+          min="0"
+          max="2"
+          step="0.01"
+          value="1"
+        />
+        <span id="gravityValue">1.00×</span>
+      </label>
+    </div>
+
+    <div class="stage">
+      <canvas id="canvas"></canvas>
+      <div class="hint">Drag either bob with your mouse or finger</div>
+    </div>
+
+    <div class="stats">
+      <div>Angle 1: <span id="angle1">0°</span></div>
+      <div>Angle 2: <span id="angle2">0°</span></div>
+      <div>String 1: <span id="string1">Taut</span></div>
+      <div>String 2: <span id="string2">Taut</span></div>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d", {
+      alpha: false,
+      desynchronized: true
+    });
+
+    const pauseButton = document.getElementById("pauseButton");
+    const resetButton = document.getElementById("resetButton");
+    const gravitySlider = document.getElementById("gravity");
+    const gravityValue = document.getElementById("gravityValue");
+
+    const angle1Output = document.getElementById("angle1");
+    const angle2Output = document.getElementById("angle2");
+    const string1Output = document.getElementById("string1");
+    const string2Output = document.getElementById("string2");
+
+    // Capped for better performance on high-DPI displays.
+    const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+
+    const FIXED_DT = 1 / 120;
+    const MAX_STEPS_PER_FRAME = 8;
+    const CONSTRAINT_ITERATIONS = 6;
+
+    const params = {
+      length1: 180,
+      length2: 180,
+      mass1: 1,
+      mass2: 1,
+      gravity: 1,
+      damping: 0.9995
+    };
+
+    let width = 0;
+    let height = 0;
+
+    const origin = {
+      x: 0,
+      y: 0
+    };
+
+    const physics = {
+      p1: { x: 0, y: 0 },
+      p2: { x: 0, y: 0 },
+      v1: { x: 0, y: 0 },
+      v2: { x: 0, y: 0 }
+    };
+
+    let running = true;
+    let dragging = null;
+    let accumulator = 0;
+    let lastTime = performance.now();
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+
+      width = rect.width;
+      height = rect.height;
+
+      canvas.width = Math.round(width * DPR);
+      canvas.height = Math.round(height * DPR);
+
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      origin.x = width / 2;
+      origin.y = Math.max(70, height * 0.18);
+
+      const scale = Math.min(
+        (width * 0.42) / 360,
+        (height * 0.68) / 360
+      );
+
+      params.length1 = 180 * scale;
+      params.length2 = 180 * scale;
+    }
+
+    function resetPhysics() {
+      const angle1 = Math.PI * 0.78;
+      const angle2 = Math.PI * 0.78;
+
+      physics.p1.x =
+        origin.x + params.length1 * Math.sin(angle1);
+
+      physics.p1.y =
+        origin.y + params.length1 * Math.cos(angle1);
+
+      physics.p2.x =
+        physics.p1.x + params.length2 * Math.sin(angle2);
+
+      physics.p2.y =
+        physics.p1.y + params.length2 * Math.cos(angle2);
+
+      physics.v1.x = 0;
+      physics.v1.y = 0;
+      physics.v2.x = 0;
+      physics.v2.y = 0;
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function normalize(x, y) {
+      const length = Math.hypot(x, y);
+
+      if (length < 0.000001) {
+        return { x: 0, y: 0 };
+      }
+
+      return {
+        x: x / length,
+        y: y / length
+      };
+    }
+
+    /*
+      Applies a one-sided string constraint.
+
+      A rigid rod would correct both:
+        distance > maxLength
+        distance < maxLength
+
+      A real string only corrects:
+        distance > maxLength
+
+      Therefore, the bob can move freely inside the string's radius.
+    */
+    function constrainString(anchor, bob, velocity, maxLength) {
+      const dx = bob.x - anchor.x;
+      const dy = bob.y - anchor.y;
+      const currentLength = Math.hypot(dx, dy);
+
+      // The string is slack.
+      if (currentLength <= maxLength) {
+        return false;
+      }
+
+      const direction = normalize(dx, dy);
+
+      // Put the bob back on the end of the string.
+      bob.x = anchor.x + direction.x * maxLength;
+      bob.y = anchor.y + direction.y * maxLength;
+
+      // Remove velocity moving farther away from the anchor.
+      const outwardVelocity =
+        velocity.x * direction.x +
+        velocity.y * direction.y;
+
+      if (outwardVelocity > 0) {
+        velocity.x -= outwardVelocity * direction.x;
+        velocity.y -= outwardVelocity * direction.y;
+      }
+
+      return true;
+    }
+
+    function integrate(dt) {
+      const gravity = 9.81 * params.gravity;
+
+      // Gravity affects both bobs independently.
+      physics.v1.y += gravity * dt;
+      physics.v2.y += gravity * dt;
+
+      // Light energy damping.
+      const damping = Math.pow(params.damping, dt * 60);
+
+      physics.v1.x *= damping;
+      physics.v1.y *= damping;
+      physics.v2.x *= damping;
+      physics.v2.y *= damping;
+
+      // Integrate positions.
+      physics.p1.x += physics.v1.x * dt;
+      physics.p1.y += physics.v1.y * dt;
+
+      physics.p2.x += physics.v2.x * dt;
+      physics.p2.y += physics.v2.y * dt;
+
+      /*
+        Solve repeatedly because constraining the first string changes
+        the location of the second anchor.
+      */
+      for (let i = 0; i < CONSTRAINT_ITERATIONS; i++) {
+        constrainString(
+          origin,
+          physics.p1,
+          physics.v1,
+          params.length1
+        );
+
+        constrainString(
+          physics.p1,
+          physics.p2,
+          physics.v2,
+          params.length2
+        );
+      }
+    }
+
+    function getStringStates() {
+      const distance1 = distance(origin, physics.p1);
+      const distance2 = distance(physics.p1, physics.p2);
+
+      return {
+        taut1: distance1 >= params.length1 - 0.5,
+        taut2: distance2 >= params.length2 - 0.5
+      };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+
+      drawGrid();
+
+      const stringStates = getStringStates();
+
+      drawString(
+        origin,
+        physics.p1,
+        "#93c5fd",
+        stringStates.taut1
+      );
+
+      drawString(
+        physics.p1,
+        physics.p2,
+        "#f9a8d4",
+        stringStates.taut2
+      );
+
+      drawCircle(origin.x, origin.y, 8, "#e5e7eb");
+      drawWeight(physics.p1.x, physics.p1.y, 17, "#60a5fa");
+      drawWeight(physics.p2.x, physics.p2.y, 20, "#f472b6");
+
+      updateStats(stringStates);
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = "#ffffff08";
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x < width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawString(start, end, color, taut) {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.hypot(dx, dy);
+
+      if (length < 0.001) return;
+
+      const nx = -dy / length;
+      const ny = dx / length;
+
+      ctx.save();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = taut ? 2.5 : 1.5;
+      ctx.lineCap = "round";
+
+      if (taut) {
+        ctx.setLineDash([]);
+      } else {
+        // Slack strings are drawn with a slight sag.
+        ctx.setLineDash([6, 5]);
+      }
+
+      ctx.beginPath();
+
+      const segments = 20;
+      const sag = taut ? 0 : Math.min(18, length * 0.08);
+
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+
+        const x = start.x + dx * t;
+        const y =
+          start.y +
+          dy * t +
+          Math.sin(t * Math.PI) * sag;
+
+        const wave = taut
+          ? 0
+          : Math.sin(t * Math.PI * 8) * 0.5;
+
+        if (i === 0) {
+          ctx.moveTo(x + nx * wave, y + ny * wave);
+        } else {
+          ctx.lineTo(x + nx * wave, y + ny * wave);
+        }
+      }
+
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCircle(x, y, radius, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#ffffff66";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function drawWeight(x, y, radius, color) {
+      drawCircle(x, y, radius, color);
+
+      ctx.fillStyle = "#ffffffaa";
+      ctx.beginPath();
+      ctx.arc(x - radius * 0.3, y - radius * 0.35, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function updateStats(stringStates) {
+      const angle1 = Math.atan2(
+        physics.p1.x - origin.x,
+        physics.p1.y - origin.y
+      );
+
+      const angle2 = Math.atan2(
+        physics.p2.x - physics.p1.x,
+        physics.p2.y - physics.p1.y
+      );
+
+      angle1Output.textContent =
+        `${(angle1 * 180 / Math.PI).toFixed(1)}°`;
+
+      angle2Output.textContent =
+        `${(angle2 * 180 / Math.PI).toFixed(1)}°`;
+
+      string1Output.textContent =
+        stringStates.taut1 ? "Taut" : "Slack";
+
+      string2Output.textContent =
+        stringStates.taut2 ? "Taut" : "Slack";
+
+      string1Output.style.color =
+        stringStates.taut1 ? "#93c5fd" : "#9ca3af";
+
+      string2Output.style.color =
+        stringStates.taut2 ? "#f9a8d4" : "#9ca3af";
+    }
+
+    function pointerPosition(event) {
+      const rect = canvas.getBoundingClientRect();
+
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function distanceToSegment(point, start, end) {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+
+      if (dx === 0 && dy === 0) {
+        return distance(point, start);
+      }
+
+      const t = Math.max(
+        0,
+        Math.min(
+          1,
+          (
+            (point.x - start.x) * dx +
+            (point.y - start.y) * dy
+          ) / (dx * dx + dy * dy)
+        )
+      );
+
+      return distance(point, {
+        x: start.x + t * dx,
+        y: start.y + t * dy
+      });
+    }
+
+    function findDraggedBob(point) {
+      const bob2Distance = distance(point, physics.p2);
+      const bob1Distance = distance(point, physics.p1);
+
+      if (bob2Distance < 38) return 2;
+      if (bob1Distance < 38) return 1;
+
+      const string2Distance = distanceToSegment(
+        point,
+        physics.p1,
+        physics.p2
+      );
+
+      const string1Distance = distanceToSegment(
+        point,
+        origin,
+        physics.p1
+      );
+
+      if (string2Distance < 20) return 2;
+      if (string1Distance < 20) return 1;
+
+      return null;
+    }
+
+    function dragBob(point, bobNumber) {
+      if (bobNumber === 1) {
+        physics.p1.x = point.x;
+        physics.p1.y = point.y;
+        physics.v1.x = 0;
+        physics.v1.y = 0;
+      } else {
+        physics.p2.x = point.x;
+        physics.p2.y = point.y;
+        physics.v2.x = 0;
+        physics.v2.y = 0;
+      }
+    }
+
+    canvas.addEventListener("pointerdown", event => {
+      const point = pointerPosition(event);
+      dragging = findDraggedBob(point);
+
+      if (dragging === null) return;
+
+      canvas.classList.add("dragging");
+      canvas.setPointerCapture(event.pointerId);
+
+      dragBob(point, dragging);
+      draw();
+    });
+
+    canvas.addEventListener("pointermove", event => {
+      if (dragging === null) return;
+
+      const point = pointerPosition(event);
+      dragBob(point, dragging);
+      draw();
+    });
+
+    function stopDragging(event) {
+      dragging = null;
+      canvas.classList.remove("dragging");
+
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture may already have been released.
+      }
+    }
+
+    canvas.addEventListener("pointerup", stopDragging);
+    canvas.addEventListener("pointercancel", stopDragging);
+
+    pauseButton.addEventListener("click", () => {
+      running = !running;
+      accumulator = 0;
+      pauseButton.textContent = running ? "Pause" : "Resume";
+    });
+
+    resetButton.addEventListener("click", () => {
+      resetPhysics();
+      running = true;
+      accumulator = 0;
+      pauseButton.textContent = "Pause";
+      draw();
+    });
+
+    gravitySlider.addEventListener("input", () => {
+      params.gravity = Number(gravitySlider.value);
+      gravityValue.textContent =
+        `${params.gravity.toFixed(2)}×`;
+    });
+
+    let resizeTimer;
+
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+
+      resizeTimer = setTimeout(() => {
+        resizeCanvas();
+        resetPhysics();
+        draw();
+      }, 100);
+    });
+
+    function animationLoop(now) {
+      const elapsed = Math.min(
+        (now - lastTime) / 1000,
+        0.05
+      );
+
+      lastTime = now;
+
+      if (running && dragging === null) {
+        accumulator += elapsed;
+
+        // Prevent a lag spike from creating hundreds of calculations.
+        accumulator = Math.min(accumulator, 0.1);
+
+        let steps = 0;
+
+        while (
+          accumulator >= FIXED_DT &&
+          steps < MAX_STEPS_PER_FRAME
+        ) {
+          integrate(FIXED_DT);
+          accumulator -= FIXED_DT;
+          steps++;
+        }
+      } else {
+        accumulator = 0;
+      }
+
+      draw();
+      requestAnimationFrame(animationLoop);
+    }
+
+    resizeCanvas();
+    resetPhysics();
+    draw();
+    requestAnimationFrame(animationLoop);
+  </script>
+</body>
+</html>
