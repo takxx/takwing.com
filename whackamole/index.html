@@ -121,12 +121,16 @@
       position: absolute;
       left: 50%;
       bottom: -5%;
-      width: 62%;
+      width: var(--mole-size, 62%);
       aspect-ratio: 1 / 1;
       transform: translate(-50%, 115%);
       transition: transform 100ms ease-out;
       cursor: pointer;
       z-index: 2;
+      rotate: var(--mole-rotation, 0deg);
+      filter:
+        hue-rotate(var(--mole-hue, 0deg))
+        brightness(var(--mole-brightness, 1));
     }
 
     .mole.up {
@@ -139,9 +143,25 @@
       inset: 0;
       border-radius: 50% 50% 44% 44%;
       background:
-        radial-gradient(circle at 35% 39%, white 0 5%, #111 6% 11%, transparent 12%),
-        radial-gradient(circle at 65% 39%, white 0 5%, #111 6% 11%, transparent 12%),
-        radial-gradient(ellipse at 50% 67%, #f28c8c 0 11%, #57252d 12% 17%, transparent 18%),
+        radial-gradient(
+          circle at var(--left-eye-x, 35%) var(--eye-y, 39%),
+          white 0 var(--eye-highlight, 5%),
+          #111 calc(var(--eye-highlight, 5%) + 1%) var(--eye-size, 11%),
+          transparent calc(var(--eye-size, 11%) + 1%)
+        ),
+        radial-gradient(
+          circle at var(--right-eye-x, 65%) var(--eye-y, 39%),
+          white 0 var(--eye-highlight, 5%),
+          #111 calc(var(--eye-highlight, 5%) + 1%) var(--eye-size, 11%),
+          transparent calc(var(--eye-size, 11%) + 1%)
+        ),
+        radial-gradient(
+          ellipse var(--mouth-width, 12%) var(--mouth-height, 11%)
+          at 50% var(--mouth-y, 67%),
+          var(--mouth-color, #f28c8c) 0 55%,
+          var(--mouth-dark, #57252d) 56% 78%,
+          transparent 80%
+        ),
         #8c543a;
       border: 4px solid #583323;
       box-shadow: inset 0 -10px 0 rgba(0, 0, 0, 0.12);
@@ -384,6 +404,73 @@
     }
 
     // -----------------------------
+    // Vibration and mole appearance
+    // -----------------------------
+
+    function vibrateOnWhack() {
+      if ("vibrate" in navigator) {
+        navigator.vibrate(25);
+      }
+    }
+
+    function randomizeMoleAppearance(mole) {
+      // General appearance variations.
+      const size = 59 + Math.random() * 7;
+      const rotation = -4 + Math.random() * 8;
+      const hue = -10 + Math.random() * 20;
+      const brightness = 0.92 + Math.random() * 0.16;
+
+      // Eye variations.
+      const eyeY = 36 + Math.random() * 7;
+      const eyeSpacing = 27 + Math.random() * 8;
+      const leftEyeX = 50 - eyeSpacing / 2;
+      const rightEyeX = 50 + eyeSpacing / 2;
+      const eyeSize = 10 + Math.random() * 3;
+      const eyeHighlight = 4 + Math.random() * 2;
+
+      // Mouth variations.
+      const mouthY = 64 + Math.random() * 8;
+      const mouthWidth = 10 + Math.random() * 6;
+      const mouthHeight = 8 + Math.random() * 7;
+
+      const mouthColors = [
+        "#f28c8c",
+        "#ff9f9f",
+        "#e87878",
+        "#f6a0a0"
+      ];
+
+      const mouthDarks = [
+        "#57252d",
+        "#652530",
+        "#481d25"
+      ];
+
+      const mouthColor =
+        mouthColors[Math.floor(Math.random() * mouthColors.length)];
+
+      const mouthDark =
+        mouthDarks[Math.floor(Math.random() * mouthDarks.length)];
+
+      mole.style.setProperty("--mole-size", `${size}%`);
+      mole.style.setProperty("--mole-rotation", `${rotation}deg`);
+      mole.style.setProperty("--mole-hue", `${hue}deg`);
+      mole.style.setProperty("--mole-brightness", brightness);
+
+      mole.style.setProperty("--left-eye-x", `${leftEyeX}%`);
+      mole.style.setProperty("--right-eye-x", `${rightEyeX}%`);
+      mole.style.setProperty("--eye-y", `${eyeY}%`);
+      mole.style.setProperty("--eye-size", `${eyeSize}%`);
+      mole.style.setProperty("--eye-highlight", `${eyeHighlight}%`);
+
+      mole.style.setProperty("--mouth-y", `${mouthY}%`);
+      mole.style.setProperty("--mouth-width", `${mouthWidth}%`);
+      mole.style.setProperty("--mouth-height", `${mouthHeight}%`);
+      mole.style.setProperty("--mouth-color", mouthColor);
+      mole.style.setProperty("--mouth-dark", mouthDark);
+    }
+
+    // -----------------------------
     // Game functions
     // -----------------------------
 
@@ -419,6 +506,8 @@
       const mole = moles[index];
 
       currentMole = mole;
+
+      randomizeMoleAppearance(mole);
       mole.classList.add("up");
 
       playMoleAppearanceSound();
@@ -507,6 +596,7 @@
       if (!mole.classList.contains("up")) return;
 
       playWhackSound();
+      vibrateOnWhack();
 
       mole.classList.remove("up");
       mole.classList.add("whacked");
@@ -532,7 +622,7 @@
       }, settings.waitTime);
     }
 
-    // Pointer events work with both mouse clicks and screen touches.
+    // Pointer events work with mouse clicks and screen touches.
     moles.forEach(mole => {
       mole.addEventListener("pointerdown", whackMole);
     });
