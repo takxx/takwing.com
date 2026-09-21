@@ -8,8 +8,6 @@
   <style>
     :root {
       --gold: #ffd166;
-      --purple: #32174d;
-      --dark: #171321;
       --red: #ef476f;
       --green: #06d6a0;
     }
@@ -94,6 +92,7 @@
       aspect-ratio: 1;
       display: grid;
       place-items: center;
+      overflow: hidden;
       border-radius: 10px;
       background: linear-gradient(#fff, #d8d8d8);
       color: #19111f;
@@ -110,6 +109,49 @@
       background: var(--gold);
       box-shadow: 0 0 18px var(--gold);
       transform: scale(1.04);
+    }
+
+    .reel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+      will-change: transform;
+    }
+
+    .reel-symbol {
+      height: 1em;
+      min-height: 1em;
+      display: grid;
+      place-items: center;
+    }
+
+    .reel.up {
+      animation: reelUp 0.35s linear infinite;
+    }
+
+    .reel.down {
+      animation: reelDown 0.35s linear infinite;
+    }
+
+    @keyframes reelUp {
+      from {
+        transform: translateY(0);
+      }
+
+      to {
+        transform: translateY(-50%);
+      }
+    }
+
+    @keyframes reelDown {
+      from {
+        transform: translateY(-50%);
+      }
+
+      to {
+        transform: translateY(0);
+      }
     }
 
     @keyframes shake {
@@ -275,7 +317,7 @@
       </div>
     </div>
 
-    <section class="board" id="board">
+    <section class="board">
       <svg
         class="payline-indicators"
         viewBox="0 0 300 300"
@@ -392,14 +434,6 @@
       { icon: "7️⃣", payout: 40 }
     ];
 
-    /*
-      Board indexes:
-
-      0  1  2
-      3  4  5
-      6  7  8
-    */
-
     const paylines = {
       1: [
         [3, 4, 5]
@@ -507,11 +541,6 @@
         line.classList.remove("winner");
       });
 
-      /*
-        Restore the selected paylines after removing winner states.
-        This fixes the bug where a previously winning line
-        stopped being highlighted on the next spin.
-      */
       updatePaylineIndicators();
     }
 
@@ -537,7 +566,7 @@
           now + 0.12
         );
 
-        gain.gain.setValueAtTime(0.07, now);
+        gain.gain.setValueAtTime(0.04, now);
 
         gain.gain.exponentialRampToValueAtTime(
           0.001,
@@ -584,21 +613,48 @@
       }
     }
 
-    function spinCell(cell, duration) {
+    /*
+      Each cell in the same column receives
+      the same duration.
+
+      Column 1: moves upward and stops together
+      Column 2: moves downward and stops together
+      Column 3: moves upward and stops together
+    */
+    function spinCell(cell, duration, index) {
       return new Promise(resolve => {
         cell.classList.add("spinning");
 
-        const interval = setInterval(() => {
-          cell.textContent = randomSymbol().icon;
-          playSound("spin");
-        }, 100);
+        const column = index % 3;
+
+        const direction =
+          column === 1 ? "down" : "up";
+
+        const reelSymbols = [
+          ...symbols,
+          ...symbols
+        ];
+
+        const reel = document.createElement("div");
+        reel.className = `reel ${direction}`;
+
+        reel.innerHTML = reelSymbols
+          .map(symbol => {
+            return `
+              <div class="reel-symbol">
+                ${symbol.icon}
+              </div>
+            `;
+          })
+          .join("");
+
+        cell.innerHTML = "";
+        cell.appendChild(reel);
 
         setTimeout(() => {
-          clearInterval(interval);
-
           const result = randomSymbol();
 
-          cell.textContent = result.icon;
+          cell.innerHTML = result.icon;
           cell.classList.remove("spinning");
 
           resolve(result);
@@ -675,9 +731,29 @@
 
       message.textContent = "Spinning...";
 
+      /*
+        All nine cells start at the same time.
+
+        Cells 0, 3, 6 stop together.
+        Cells 1, 4, 7 stop together.
+        Cells 2, 5, 8 stop together.
+      */
+      const columnDurations = [
+        1400,
+        1900,
+        2400
+      ];
+
       const results = await Promise.all(
         cells.map((cell, index) => {
-          return spinCell(cell, 900 + index * 100);
+          const column = index % 3;
+          const duration = columnDurations[column];
+
+          return spinCell(
+            cell,
+            duration,
+            index
+          );
         })
       );
 
