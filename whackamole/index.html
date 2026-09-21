@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whack-a-Mole</title>
+
+  <style>
+    :root {
+      --accent: #ffd166;
+      --accent-dark: #e5a900;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 12px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: white;
+      background: radial-gradient(circle at top, #3ca55c, #176535 75%);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      user-select: none;
+    }
+
+    .game {
+      width: min(680px, 100%);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 2px 0 10px;
+      font-size: clamp(2rem, 5vw, 3rem);
+      text-shadow: 3px 3px 0 #14502a;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .stat {
+      padding: 7px 4px;
+      border-radius: 9px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 0.65rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      display: block;
+      margin-top: 2px;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    .game-message {
+      min-height: 22px;
+      margin-bottom: 7px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .board {
+      width: 100%;
+      max-width: 660px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(7px, 1.8vw, 14px);
+      padding: clamp(10px, 2.5vw, 18px);
+      background: #2c864b;
+      border: 5px solid #165d30;
+      border-radius: 18px;
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 255, 255, 0.08),
+        0 8px 0 rgba(0, 0, 0, 0.18);
+    }
+
+    .hole {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 0.82;
+      overflow: hidden;
+      border-radius: 50%;
+      background:
+        radial-gradient(
+          ellipse at center,
+          #38200e 0 45%,
+          #583516 47% 66%,
+          #996233 68% 100%
+        );
+      box-shadow:
+        inset 0 6px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -8px 0 rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .mole {
+      position: absolute;
+      left: 50%;
+      bottom: -5%;
+      width: 62%;
+      aspect-ratio: 1 / 1;
+      transform: translate(-50%, 115%);
+      transition: transform 100ms ease-out;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .mole.up {
+      transform: translate(-50%, 8%);
+    }
+
+    .mole::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50% 50% 44% 44%;
+      background:
+        radial-gradient(circle at 35% 39%, white 0 5%, #111 6% 11%, transparent 12%),
+        radial-gradient(circle at 65% 39%, white 0 5%, #111 6% 11%, transparent 12%),
+        radial-gradient(ellipse at 50% 67%, #f28c8c 0 11%, #57252d 12% 17%, transparent 18%),
+        #8c543a;
+      border: 4px solid #583323;
+      box-shadow: inset 0 -10px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .mole::after {
+      content: "";
+      position: absolute;
+      top: -10%;
+      left: 18%;
+      width: 64%;
+      height: 30%;
+      border-radius: 50%;
+      background: #8c543a;
+      border-top: 4px solid #583323;
+    }
+
+    .mole.whacked {
+      animation: whacked 180ms ease-out;
+    }
+
+    @keyframes whacked {
+      0% {
+        transform: translate(-50%, 8%) scale(1);
+      }
+
+      50% {
+        transform: translate(-50%, 8%) scale(0.75) rotate(8deg);
+      }
+
+      100% {
+        transform: translate(-50%, 115%) scale(0.75);
+      }
+    }
+
+    button {
+      margin-top: 14px;
+      padding: 9px 20px;
+      border: 0;
+      border-bottom: 4px solid var(--accent-dark);
+      border-radius: 9px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #352400;
+      background: var(--accent);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:active {
+      transform: translateY(3px);
+      border-bottom-width: 2px;
+    }
+
+    .instructions {
+      max-width: 560px;
+      margin: 12px auto 0;
+      font-size: 0.85rem;
+      line-height: 1.35;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 8px;
+      }
+
+      .game {
+        width: 100%;
+      }
+
+      .hud {
+        gap: 5px;
+      }
+
+      .stat {
+        padding: 6px 3px;
+      }
+
+      .stat-value {
+        font-size: 1rem;
+      }
+
+      .board {
+        gap: 6px;
+        padding: 9px;
+        border-width: 4px;
+      }
+
+      .instructions {
+        font-size: 0.78rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game">
+    <h1>Whack-a-Mole!</h1>
+
+    <section class="hud" aria-label="Game information">
+      <div class="stat">
+        <span class="stat-label">Stage</span>
+        <span class="stat-value" id="stage">1</span>
+      </div>
+
+      <div class="stat">
+        <span class="stat-label">Target</span>
+        <span class="stat-value" id="target">5</span>
+      </div>
+
+      <div class="stat">
+        <span class="stat-label">Score</span>
+        <span class="stat-value" id="score">0</span>
+      </div>
+
+      <div class="stat">
+        <span class="stat-label">Time</span>
+        <span class="stat-value" id="time">30</span>
+      </div>
+    </section>
+
+    <div class="game-message" id="message">
+      Whack the moles before time runs out!
+    </div>
+
+    <section class="board" id="board">
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole"></div></div>
+    </section>
+
+    <button id="startButton">Start Game</button>
+
+    <p class="instructions">
+      Click or tap a mole to score points. Each stage has a higher target,
+      and the moles appear faster as you progress.
+    </p>
+  </main>
+
+  <script>
+    const moles = [...document.querySelectorAll(".mole")];
+
+    const stageDisplay = document.getElementById("stage");
+    const targetDisplay = document.getElementById("target");
+    const scoreDisplay = document.getElementById("score");
+    const timeDisplay = document.getElementById("time");
+    const messageDisplay = document.getElementById("message");
+    const startButton = document.getElementById("startButton");
+
+    let stage = 1;
+    let target = 5;
+    let score = 0;
+    let stageScore = 0;
+    let timeLeft = 30;
+    let gameRunning = false;
+
+    let moleTimer;
+    let countdownTimer;
+    let currentMole = null;
+    let audioContext = null;
+
+    // -----------------------------
+    // Sound effects using Web Audio
+    // -----------------------------
+
+    function getAudioContext() {
+      if (!audioContext) {
+        audioContext = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+
+      return audioContext;
+    }
+
+    function playTone(
+      frequency,
+      duration,
+      type = "sine",
+      volume = 0.12,
+      delay = 0
+    ) {
+      const audio = getAudioContext();
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+
+      const startTime = audio.currentTime + delay;
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(
+        volume,
+        startTime + 0.01
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        startTime + duration
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration + 0.03);
+    }
+
+    function playMoleAppearanceSound() {
+      playTone(220, 0.08, "sine", 0.08);
+      playTone(330, 0.1, "sine", 0.06, 0.04);
+    }
+
+    function playWhackSound() {
+      playTone(120, 0.08, "square", 0.14);
+      playTone(75, 0.12, "sawtooth", 0.08, 0.03);
+    }
+
+    function playStageClearedSound() {
+      playTone(523, 0.14, "sine", 0.12);
+      playTone(659, 0.14, "sine", 0.12, 0.12);
+      playTone(784, 0.22, "sine", 0.14, 0.24);
+    }
+
+    function playGameOverSound() {
+      playTone(392, 0.18, "sawtooth", 0.1);
+      playTone(330, 0.18, "sawtooth", 0.1, 0.18);
+      playTone(261, 0.35, "sawtooth", 0.12, 0.36);
+    }
+
+    // -----------------------------
+    // Game functions
+    // -----------------------------
+
+    function updateDisplay() {
+      stageDisplay.textContent = stage;
+      targetDisplay.textContent = target;
+      scoreDisplay.textContent = score;
+      timeDisplay.textContent = timeLeft;
+    }
+
+    function getStageSettings() {
+      return {
+        visibleTime: Math.max(350, 1100 - (stage - 1) * 85),
+        waitTime: Math.max(120, 650 - (stage - 1) * 45)
+      };
+    }
+
+    function hideMole(mole) {
+      mole.classList.remove("up", "whacked");
+    }
+
+    function hideAllMoles() {
+      moles.forEach(hideMole);
+      currentMole = null;
+    }
+
+    function showRandomMole() {
+      if (!gameRunning) return;
+
+      hideAllMoles();
+
+      const index = Math.floor(Math.random() * moles.length);
+      const mole = moles[index];
+
+      currentMole = mole;
+      mole.classList.add("up");
+
+      playMoleAppearanceSound();
+
+      const settings = getStageSettings();
+
+      moleTimer = setTimeout(() => {
+        if (mole === currentMole) {
+          hideMole(mole);
+          currentMole = null;
+        }
+
+        if (gameRunning) {
+          setTimeout(showRandomMole, settings.waitTime);
+        }
+      }, settings.visibleTime);
+    }
+
+    function startCountdown() {
+      clearInterval(countdownTimer);
+
+      countdownTimer = setInterval(() => {
+        timeLeft--;
+        updateDisplay();
+
+        if (timeLeft <= 0) {
+          endStage();
+        }
+      }, 1000);
+    }
+
+    function startStage() {
+      clearTimeout(moleTimer);
+      clearInterval(countdownTimer);
+
+      stageScore = 0;
+      target = 4 + stage;
+      timeLeft = Math.max(12, 30 - (stage - 1) * 2);
+
+      gameRunning = true;
+
+      startButton.textContent = "Restart Game";
+      messageDisplay.textContent =
+        `Stage ${stage}: get ${target} hits!`;
+
+      updateDisplay();
+      startCountdown();
+      showRandomMole();
+    }
+
+    function endStage() {
+      clearTimeout(moleTimer);
+      clearInterval(countdownTimer);
+      hideAllMoles();
+
+      if (stageScore >= target) {
+        playStageClearedSound();
+
+        stage++;
+        messageDisplay.textContent =
+          `Stage cleared! Stage ${stage} is faster.`;
+
+        setTimeout(() => {
+          if (gameRunning) {
+            startStage();
+          }
+        }, 1000);
+      } else {
+        gameRunning = false;
+        playGameOverSound();
+
+        messageDisplay.textContent =
+          `Game over! You needed ${target} hits but got ${stageScore}.`;
+
+        startButton.textContent = "Play Again";
+      }
+    }
+
+    function whackMole(event) {
+      event.preventDefault();
+
+      if (!gameRunning) return;
+
+      const mole = event.currentTarget;
+
+      if (!mole.classList.contains("up")) return;
+
+      playWhackSound();
+
+      mole.classList.remove("up");
+      mole.classList.add("whacked");
+
+      score++;
+      stageScore++;
+      updateDisplay();
+
+      if (stageScore >= target) {
+        endStage();
+        return;
+      }
+
+      clearTimeout(moleTimer);
+      currentMole = null;
+
+      const settings = getStageSettings();
+
+      setTimeout(() => {
+        if (gameRunning) {
+          showRandomMole();
+        }
+      }, settings.waitTime);
+    }
+
+    // Pointer events work with both mouse clicks and screen touches.
+    moles.forEach(mole => {
+      mole.addEventListener("pointerdown", whackMole);
+    });
+
+    startButton.addEventListener("click", () => {
+      // Creating/resuming the audio context from a button click
+      // allows sounds to work in browsers that block autoplay audio.
+      getAudioContext();
+
+      clearTimeout(moleTimer);
+      clearInterval(countdownTimer);
+
+      stage = 1;
+      target = 5;
+      score = 0;
+      stageScore = 0;
+      timeLeft = 30;
+
+      hideAllMoles();
+      updateDisplay();
+      startStage();
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>
