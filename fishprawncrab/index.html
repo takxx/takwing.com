@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>魚蝦蟹骰仔</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      font-family: Arial, "Noto Sans HK", "Noto Sans TC", sans-serif;
+      background: linear-gradient(135deg, #fff1c1, #ffd1d1);
+      color: #333;
+    }
+
+    .app {
+      width: min(100%, 680px);
+      padding: 32px 24px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 24px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      color: #c0392b;
+      font-size: clamp(28px, 6vw, 42px);
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #666;
+      font-size: 18px;
+    }
+
+    .dice-area {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 30px 0;
+    }
+
+    .die {
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #fff;
+      border: 4px solid #e67e22;
+      border-radius: 18px;
+      box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
+      transition: transform 0.15s ease;
+    }
+
+    .symbol {
+      font-size: clamp(50px, 12vw, 76px);
+      line-height: 1;
+    }
+
+    .label {
+      margin-top: 10px;
+      font-size: 21px;
+      font-weight: bold;
+      color: #8e44ad;
+    }
+
+    .die.rolling {
+      animation: shake 0.14s infinite;
+    }
+
+    button {
+      border: none;
+      padding: 14px 36px;
+      border-radius: 999px;
+      color: white;
+      background: #e74c3c;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #b93226;
+    }
+
+    button:hover {
+      background: #c0392b;
+    }
+
+    button:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #b93226;
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    #result {
+      min-height: 32px;
+      margin-top: 24px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #8e44ad;
+    }
+
+    @keyframes shake {
+      0% {
+        transform: rotate(-5deg) scale(1.03);
+      }
+
+      50% {
+        transform: rotate(5deg) scale(0.97);
+      }
+
+      100% {
+        transform: rotate(-5deg) scale(1.03);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .dice-area {
+        gap: 10px;
+      }
+
+      .die {
+        min-height: 120px;
+      }
+
+      .label {
+        font-size: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <h1>🎲 魚蝦蟹骰仔</h1>
+    <p class="subtitle">買定離手</p>
+
+    <section class="dice-area" aria-label="骰仔結果">
+      <div class="die">
+        <span class="symbol">🐟</span>
+        <span class="label">魚</span>
+      </div>
+
+      <div class="die">
+        <span class="symbol">🦐</span>
+        <span class="label">蝦</span>
+      </div>
+
+      <div class="die">
+        <span class="symbol">🦀</span>
+        <span class="label">蟹</span>
+      </div>
+    </section>
+
+    <button id="rollButton" type="button">
+      開骰
+    </button>
+
+    <div id="result" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const faces = [
+      { emoji: "🐟", name: "魚" },
+      { emoji: "🦐", name: "蝦" },
+      { emoji: "🦀", name: "蟹" },
+      { emoji: "🎃", name: "葫蘆" },
+      { emoji: "🐓", name: "雞" },
+      { emoji: "💰", name: "金錢" }
+    ];
+
+    const dice = document.querySelectorAll(".die");
+    const rollButton = document.getElementById("rollButton");
+    const result = document.getElementById("result");
+
+    function getRandomFace() {
+      const randomIndex = Math.floor(Math.random() * faces.length);
+      return faces[randomIndex];
+    }
+
+    function showFace(die, face) {
+      die.querySelector(".symbol").textContent = face.emoji;
+      die.querySelector(".label").textContent = face.name;
+    }
+
+    function rollDice() {
+      rollButton.disabled = true;
+      result.textContent = "擲緊骰……";
+
+      dice.forEach(die => {
+        die.classList.add("rolling");
+      });
+
+      let count = 0;
+
+      const animation = setInterval(() => {
+        dice.forEach(die => {
+          showFace(die, getRandomFace());
+        });
+
+        count++;
+
+        if (count >= 14) {
+          clearInterval(animation);
+
+          dice.forEach(die => {
+            die.classList.remove("rolling");
+          });
+
+          const results = Array.from(dice).map(die => ({
+            name: die.querySelector(".label").textContent
+          }));
+
+          const totals = {};
+
+          results.forEach(face => {
+            totals[face.name] = (totals[face.name] || 0) + 1;
+          });
+
+          const summary = Object.entries(totals)
+            .map(([name, number]) => `${name} ${number} 隻`)
+            .join("、");
+
+          result.textContent = `開到：${summary}`;
+          rollButton.disabled = false;
+        }
+      }, 90);
+    }
+
+    rollButton.addEventListener("click", rollDice);
+  </script>
+</body>
+</html>
