@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <style>
+         html, body, #jsdos {
+             width: 100%;
+             height: 100%;
+             margin: 0;
+             padding: 0;
+         }
+        </style>
+        <script src="/js-dos/v7.5.0/js-dos.js"></script>
+        <link href="/js-dos/v7.5.0/js-dos.css" rel="stylesheet">
+    </head>
+    <body>
+        <div id="jsdos" />
+        <script>
+         emulators.pathPrefix = "/js-dos/v7.5.0/";
+         Dos(document.getElementById("jsdos"))
+             .run("breakout.jsdos");
+        </script>
+    </body>
+</html>
