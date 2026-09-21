@@ -2,20 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Handcrafted Wooden Labyrinth</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1,
+                 maximum-scale=1, user-scalable=no"
+    >
+    <title>Classic Labyrinth</title>
+
     <style>
         :root {
-            /* Hand-picked premium timber color palette */
-            --wood-frame: #4a2c11;
-            --wood-wall: #704214;
-            --wood-wall-highlight: #965d22;
-            --wood-floor: #c29b6a;
-            --wood-grain-dark: rgba(92, 58, 33, 0.08);
-            --wood-grain-light: rgba(255, 230, 200, 0.04);
+            --wood-dark: #211109;
+            --board: #c79458;
+            --cream: #faf7f0;
+            --text: #1c2730;
+            --muted: #69747d;
         }
 
-        * {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
@@ -23,133 +28,235 @@
             -webkit-user-select: none;
         }
 
-        body, html {
+        html,
+        body {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #111;
-            /* Room ambiance ambient occlusion shadow */
-            background-image: radial-gradient(circle, #252525 0%, #0a0a0a 100%);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            perspective: 1400px;
         }
 
-        /* Outer Hand-Carved Wooden Cabinet Frame */
+        body {
+            display: grid;
+            place-items: center;
+            min-height: 100dvh;
+            padding: 14px;
+            font-family:
+                Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(
+                    ellipse at 50% 8%,
+                    rgba(120, 88, 58, .28),
+                    transparent 42%
+                ),
+                linear-gradient(145deg, #17100c, #060403 82%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: .2;
+            background-image:
+                linear-gradient(
+                    rgba(255, 255, 255, .035) 1px,
+                    transparent 1px
+                ),
+                linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, .035) 1px,
+                    transparent 1px
+                );
+            background-size: 38px 38px;
+            mask-image: radial-gradient(circle, black, transparent 75%);
+        }
+
         #game-container {
-            width: 95vw;
-            height: 95vh;
-            max-width: 92vh;
-            max-height: 92vw;
-            aspect-ratio: 1 / 1;
-            background: var(--wood-frame);
-            /* Complex linear gradients simulating layered premium furniture trim planks */
-            background-image: 
-                linear-gradient(0deg, rgba(0,0,0,0.4) 0%, transparent 10px),
-                linear-gradient(90deg, rgba(0,0,0,0.3) 0%, transparent 10px),
-                repeating-linear-gradient(45deg, var(--wood-grain-dark) 0px, var(--wood-grain-dark) 4px, transparent 4px, transparent 12px);
-            padding: 24px;
-            border-radius: 16px;
-            /* Extreme depth projection dropshadow styling */
-            box-shadow: 
-                0 40px 80px rgba(0,0,0,0.85), 
-                0 10px 25px rgba(0,0,0,0.5),
-                inset 0 4px 6px rgba(255,255,255,0.15),
-                inset 0 -10px 20px rgba(0,0,0,0.7);
-            transition: transform 0.1s ease-out;
+            position: relative;
+            width: min(94vw, 760px, calc(100dvh - 28px));
+            height: min(94vw, 760px, calc(100dvh - 28px));
+            padding: clamp(14px, 2.5vw, 26px);
+            border: 2px solid #32170a;
+            border-radius: 18px;
+            background:
+                repeating-linear-gradient(
+                    8deg,
+                    rgba(52, 22, 8, .24) 0 2px,
+                    transparent 2px 9px
+                ),
+                repeating-linear-gradient(
+                    92deg,
+                    #9b5d2e 0,
+                    #77401d 70px,
+                    #a96835 145px,
+                    #512712 230px,
+                    #8a4e25 330px
+                );
+            box-shadow:
+                0 38px 85px rgba(0, 0, 0, .78),
+                0 12px 24px rgba(0, 0, 0, .6),
+                inset 0 2px 2px rgba(255, 230, 190, .42),
+                inset 0 -16px 24px rgba(20, 7, 2, .72);
             transform-style: preserve-3d;
-            backface-visibility: hidden;
+            transition: transform .16s ease-out;
         }
 
-        /* Inner Board / Sanded Veneer Maze Floor Floorboards */
+        #game-container::before {
+            content: "";
+            position: absolute;
+            inset: 8px;
+            pointer-events: none;
+            border: 2px solid rgba(255, 215, 160, .24);
+            border-radius: 13px;
+            box-shadow: inset 0 0 0 2px rgba(38, 15, 5, .5);
+        }
+
         #maze-board {
+            position: relative;
             width: 100%;
             height: 100%;
-            background-color: var(--wood-floor);
-            /* Overlaying interlocking procedural timber grain lines and plank cuts */
-            background-image: 
-                repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 40px, rgba(255,255,255,0.02) 40px, rgba(255,255,255,0.02) 80px),
-                repeating-linear-gradient(0deg, var(--wood-grain-dark) 0px, var(--wood-grain-dark) 2px, transparent 2px, transparent 18px),
-                repeating-linear-gradient(115deg, var(--wood-grain-light) 0px, var(--wood-grain-light) 8px, transparent 8px, transparent 24px);
-            position: relative;
-            border-radius: 6px;
-            /* Sinks the inner track below the external frame structure */
-            box-shadow: 
-                inset 0 12px 24px rgba(0,0,0,0.75),
-                inset 0 -4px 10px rgba(0,0,0,0.4);
             overflow: hidden;
+            border: 5px solid #301508;
+            border-radius: 8px;
+            background:
+                radial-gradient(
+                    ellipse at 25% 10%,
+                    rgba(255, 238, 195, .28),
+                    transparent 42%
+                ),
+                linear-gradient(145deg, #d6a66a, #b77b42 58%, #8f582d);
+            box-shadow:
+                inset 0 9px 18px rgba(36, 14, 4, .5),
+                inset 0 0 0 2px rgba(67, 30, 10, .5);
         }
 
-        /* 3D Sanded Solid Timber Walls */
+        #maze-board::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            pointer-events: none;
+            box-shadow: inset 0 0 25px rgba(47, 20, 7, .28);
+        }
+
         .wall {
             position: absolute;
-            background: var(--wood-wall);
-            background-image: repeating-linear-gradient(0deg, var(--wood-grain-dark) 0px, var(--wood-grain-dark) 2px, transparent 2px, transparent 10px);
-            border-radius: 2px;
-            /* Beveled timber frame overlay edges + casting realistic baseline block shadows */
-            box-shadow: 
-                4px 5px 8px rgba(0,0,0,0.4), 
-                inset 1px 1px 0px var(--wood-wall-highlight),
-                inset -1px -1px 2px rgba(0,0,0,0.5);
+            border: 1px solid #3a1b0b;
+            border-radius: 5px;
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255, 235, 190, .3),
+                    transparent 22%,
+                    rgba(0, 0, 0, .22) 86%
+                ),
+                linear-gradient(90deg, #a96834, #82471f 45%, #5a2b12);
+            box-shadow:
+                3px 5px 0 rgba(48, 21, 8, .28),
+                0 7px 10px rgba(38, 15, 4, .38),
+                inset 1px 1px 0 rgba(255, 226, 174, .48),
+                inset -2px -3px 4px rgba(0, 0, 0, .4);
         }
 
-        /* Deep-Bored Drilled Pit Holes (Hazards) */
         .hole {
             position: absolute;
+            border: 2px solid rgba(57, 31, 15, .55);
             border-radius: 50%;
-            background: #0d0d0d;
-            /* Double-nested shadow parameters create an illusion of hollow vertical depth */
-            box-shadow: 
-                inset 4px 5px 12px rgba(0,0,0,0.95),
-                inset -2px -2px 6px rgba(255,255,255,0.05),
-                1px 2px 2px rgba(255,255,255,0.15);
+            background:
+                radial-gradient(
+                    circle at 34% 28%,
+                    #433229 0 8%,
+                    #171310 28%,
+                    #050505 68%,
+                    #26180f 100%
+                );
+            box-shadow:
+                inset 5px 7px 10px rgba(0, 0, 0, .95),
+                0 2px 3px rgba(255, 255, 255, .14);
         }
 
-        /* Goal & Start Zones (Branded Stamp Look) */
         .endpoint {
             position: absolute;
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            font-size: 12px;
-            letter-spacing: 1px;
-            /* Inset blending mimics a burned wood-burning iron brand mark */
-            box-shadow: inset 1px 2px 5px rgba(0,0,0,0.3);
+            border-radius: 50%;
+            font-size: clamp(9px, 1.4vw, 12px);
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            text-align: center;
+            box-shadow:
+                inset 0 2px 7px rgba(0, 0, 0, .25),
+                0 1px 1px rgba(255, 255, 255, .35);
         }
-        .start-zone { background: rgba(46, 125, 50, 0.15); border: 2px dashed rgba(46, 125, 50, 0.4); color: #1b5e20; }
-        .goal-zone { background: rgba(198, 40, 40, 0.15); border: 2px dashed rgba(198, 40, 40, 0.5); color: #b71c1c; }
 
-        /* Highly-Polished Chrome Ball Bearing */
+        .start-zone {
+            color: #12613a;
+            border: 2px solid rgba(27, 153, 88, .72);
+            background: rgba(99, 235, 155, .22);
+        }
+
+        .checkpoint-zone {
+            color: #765016;
+            border: 2px solid rgba(211, 151, 47, .9);
+            background: rgba(255, 214, 92, .3);
+            transition:
+                color .2s ease,
+                background .2s ease,
+                border-color .2s ease,
+                transform .2s ease;
+        }
+
+        .checkpoint-zone.checkpoint-reached {
+            color: #075d35;
+            border-color: rgba(27, 153, 88, .95);
+            background: rgba(99, 235, 155, .5);
+            transform: scale(1.08);
+        }
+
+        .goal-zone {
+            color: #a92838;
+            border: 2px solid rgba(219, 61, 75, .78);
+            background: rgba(255, 118, 126, .3);
+        }
+
         #ball {
             position: absolute;
-            border-radius: 50%;
-            /* High-contrast multi-stop specular reflection points mimicking brushed steel */
-            background: radial-gradient(circle at 30% 25%, #ffffff 0%, #eaeaea 8%, #b5b5b5 25%, #555555 65%, #222222 100%);
-            /* Heavy offset contact drop shadow updates dynamically with movement */
-            box-shadow: 
-                6px 10px 14px rgba(0,0,0,0.45), 
-                inset -3px -3px 7px rgba(0,0,0,0.6),
-                inset 2px 2px 4px rgba(255,255,255,0.4);
             z-index: 10;
+            border-radius: 50%;
             pointer-events: none;
+            background:
+                radial-gradient(
+                    circle at 27% 20%,
+                    #fff 0 4%,
+                    #f5fbff 8%,
+                    #cbd6da 22%,
+                    #7c898e 44%,
+                    #3d474b 70%,
+                    #111517 100%
+                );
+            border: 1px solid rgba(255, 255, 255, .7);
+            box-shadow:
+                7px 10px 12px rgba(0, 0, 0, .48),
+                inset -4px -5px 8px rgba(0, 0, 0, .7),
+                inset 3px 3px 5px rgba(255, 255, 255, .9);
         }
 
-        /* Vintage Overlay Modal Dialog Canvas */
         .modal {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            inset: 0;
             z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(12, 6, 3, .76);
+            backdrop-filter: blur(12px);
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity .25s ease;
         }
 
         .modal.active {
@@ -158,68 +265,122 @@
         }
 
         .modal-content {
-            background: #fdfaf2;
-            padding: 35px;
-            border-radius: 14px;
-            max-width: 440px;
-            width: 88%;
+            width: min(440px, 100%);
+            padding: clamp(26px, 6vw, 42px);
             text-align: center;
-            border: 5px solid var(--wood-frame);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255, 255, 255, .78);
+            border-radius: 20px;
+            background: linear-gradient(145deg, #fff, #f5efe2);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, .58);
         }
 
-        .modal h2 { color: var(--wood-frame); margin-bottom: 18px; font-size: 28px; letter-spacing: -0.5px; }
-        .modal p { color: #444; margin-bottom: 16px; line-height: 1.6; font-size: 15px; }
-        
+        .modal h2 {
+            margin-bottom: 14px;
+            color: #211109;
+            font-size: clamp(26px, 6vw, 35px);
+            line-height: 1.05;
+        }
+
+        .modal p {
+            margin-bottom: 12px;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.55;
+        }
+
+        .modal p strong {
+            color: var(--text);
+        }
+
         .btn {
-            background: var(--wood-wall);
-            background-image: linear-gradient(180deg, var(--wood-wall-highlight) 0%, var(--wood-wall) 100%);
-            color: #fdfaf2;
-            border: 1px solid var(--wood-frame);
-            padding: 14px 35px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            box-shadow: 0 5px 0 #3a200a, 0 8px 10px rgba(0,0,0,0.3);
-            transition: all 0.05s ease;
-            margin-top: 12px;
+            margin-top: 14px;
+            padding: 14px 28px;
+            border: 0;
+            border-radius: 10px;
+            color: #fff;
+            background: linear-gradient(180deg, #c77c43, #78401f);
+            box-shadow: 0 5px 0 #482311, 0 8px 18px rgba(74, 39, 18, .28);
+            font: inherit;
+            font-weight: 800;
+            letter-spacing: .06em;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            cursor: pointer;
         }
 
         .btn:active {
             transform: translateY(4px);
-            box-shadow: 0 1px 0 #3a200a, 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: 0 1px 0 #482311;
+        }
+
+        @media (max-width: 520px) {
+            body {
+                padding: 10px;
+            }
+
+            #game-container {
+                width: min(96vw, calc(100dvh - 20px));
+                height: min(96vw, calc(100dvh - 20px));
+                padding: 13px;
+                border-radius: 15px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: .01ms !important;
+                transition-duration: .01ms !important;
+            }
         }
     </style>
 </head>
+
 <body>
-
-    <div id="game-container">
-        <div id="maze-board">
+    <main id="game-container">
+        <section id="maze-board" aria-label="Labyrinth game board">
             <div id="ball"></div>
-        </div>
-    </div>
+        </section>
+    </main>
 
-    <!-- Instruction Popup -->
     <div id="instruction-modal" class="modal active">
         <div class="modal-content">
             <h2>Classic Labyrinth</h2>
-            <p>Tilt the fine timber board to roll the polished steel bearing to the Red Goal.</p>
-            <p><strong>Desktop:</strong> Move your mouse cursor across the screen window.</p>
-            <p><strong>Mobile:</strong> Physically tilt your smartphone device using internal sensors.</p>
-            <p style="color: #901a1a; font-weight: bold;">⚠️ Steer clear of the milled pit traps!</p>
-            <button class="btn" id="start-btn">Begin Game</button>
+
+            <p>
+                Guide the steel ball through the wooden maze and reach the
+                red goal without falling into a pit.
+            </p>
+
+            <p>
+                <strong>Desktop:</strong>
+                Move your mouse around the board.
+            </p>
+
+            <p>
+                <strong>Mobile:</strong>
+                Tilt your device to steer the ball.
+            </p>
+
+            <p>
+                <strong>Tip:</strong>
+                Reach the numbered waypoints in order.
+            </p>
+
+            <button type="button" class="btn" id="start-btn">
+                Begin Game
+            </button>
         </div>
     </div>
 
-    <!-- Win / Loss Popup -->
     <div id="end-modal" class="modal">
         <div class="modal-content">
             <h2 id="end-title">Game Complete</h2>
             <p id="end-message"></p>
-            <button class="btn" id="reload-btn">Mill New Board</button>
+
+            <button type="button" class="btn" id="reload-btn">
+                Mill New Board
+            </button>
         </div>
     </div>
 
