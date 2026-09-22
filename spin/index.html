@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinning Wheel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <section class="wheel-area">
+      <div class="wheel-wrap" id="wheelWrap">
+        <div class="pointer" id="pointer"></div>
+        <canvas id="wheel"></canvas>
+      </div>
+    </section>
+
+    <aside class="options-panel">
+      <h1>Wheel options</h1>
+      <p>Enter one option per line, then click or touch the wheel.</p>
+
+      <textarea id="optionInput">1
+2
+3
+4
+5
+6</textarea>
+
+      <button id="applyButton">Apply options</button>
+
+      <div class="result" id="result">Ready</div>
+    </aside>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

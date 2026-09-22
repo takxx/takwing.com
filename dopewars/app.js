@@ -25,8 +25,6 @@ function randomItem(array) {
 }
 
 const products = {
-  Weed: { base: 180, volatility: 0.35 },
-  Acid: { base: 300, volatility: 0.45 },
   Ludes: { base: 140, volatility: 0.30 },
   Speed: { base: 450, volatility: 0.40 },
   Cocaine: { base: 900, volatility: 0.50 },
@@ -34,7 +32,6 @@ const products = {
   Ecstasy: { base: 650, volatility: 0.44 },
   Mushrooms: { base: 260, volatility: 0.38 },
   Ketamine: { base: 780, volatility: 0.50 },
-  Fentanyl: { base: 1600, volatility: 0.70 }
 };
 
 const islands = {
@@ -143,8 +140,6 @@ const text = {
 
 const productNames = {
   en: {
-    Weed: "Weed",
-    Acid: "Acid",
     Ludes: "Ludes",
     Speed: "Speed",
     Cocaine: "Cocaine",
@@ -152,11 +147,8 @@ const productNames = {
     Ecstasy: "Ecstasy",
     Mushrooms: "Mushrooms",
     Ketamine: "Ketamine",
-    Fentanyl: "Fentanyl"
   },
   es: {
-    Weed: "Marihuana",
-    Acid: "Ácido",
     Ludes: "Ludes",
     Speed: "Anfetamina",
     Cocaine: "Cocaína",
@@ -164,7 +156,6 @@ const productNames = {
     Ecstasy: "Éxtasis",
     Mushrooms: "Hongos",
     Ketamine: "Ketamina",
-    Fentanyl: "Fentanilo"
   }
 };
 
