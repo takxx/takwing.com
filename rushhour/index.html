@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rush Hour</title>
+
+  <style>
+    :root {
+      --bg: #090c10;
+      --panel: #151a21;
+      --board: #202832;
+      --cell: #35404d;
+      --text: #f3f5f7;
+      --muted: #aeb7c3;
+      --gap: 4px;
+      --padding: 4px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      display: grid;
+      place-items: center;
+      color: var(--text);
+      background: radial-gradient(
+        circle at top,
+        #202b38,
+        var(--bg) 60%
+      );
+      font-family: system-ui, sans-serif;
+    }
+
+    .game {
+      width: min(94vw, 560px);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 7vw, 2.8rem);
+      letter-spacing: .04em;
+    }
+
+    .subtitle {
+      margin: 6px 0 18px;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding: 10px;
+      background: var(--panel);
+      border: 1px solid #ffffff12;
+      border-radius: 10px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 15px;
+      color: var(--muted);
+      font-size: .9rem;
+      white-space: nowrap;
+    }
+
+    .stats strong {
+      color: var(--text);
+    }
+
+    button,
+    select {
+      padding: 9px 12px;
+      border: 1px solid #ffffff22;
+      border-radius: 8px;
+      color: var(--text);
+      background: #293440;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button {
+      font-weight: 700;
+    }
+
+    button:hover,
+    select:hover {
+      background: #394755;
+    }
+
+    .board {
+      position: relative;
+      width: min(94vw, 560px);
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      gap: var(--gap);
+      padding: var(--padding);
+      background: var(--board);
+      border: 7px solid #05070a;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px #000a;
+    }
+
+    .cell {
+      border-radius: 5px;
+      background: var(--cell);
+      box-shadow: inset 0 1px 2px #ffffff12;
+    }
+
+    .exit {
+      position: absolute;
+      z-index: 3;
+      top: calc(50% - 8.33%);
+      right: -18px;
+      width: 18px;
+      height: 16.66%;
+      border-radius: 0 7px 7px 0;
+      background: #e53935;
+      box-shadow: 0 0 14px #e5393599;
+      pointer-events: none;
+    }
+
+    .exit::after {
+      content: "➜";
+      position: absolute;
+      top: 50%;
+      right: -29px;
+      color: #ff7777;
+      font-size: 1.2rem;
+      transform: translateY(-50%);
+    }
+
+    .car {
+      position: absolute;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid #0008;
+      border-radius: 9px;
+      color: white;
+      font-size: clamp(.6rem, 2.5vw, .9rem);
+      font-weight: 800;
+      text-shadow: 0 1px 2px #000;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      transition: left .12s ease, top .12s ease;
+      box-shadow:
+        inset 0 0 0 3px #ffffff22,
+        0 4px 7px #0008;
+    }
+
+    .car:active {
+      z-index: 20;
+      cursor: grabbing;
+      transition: none;
+    }
+
+    .car::before,
+    .car::after {
+      content: "";
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border: 1px solid #ffffff22;
+      border-radius: 50%;
+      background: #10151b;
+    }
+
+    .car.horizontal::before {
+      left: 15%;
+      bottom: -6px;
+    }
+
+    .car.horizontal::after {
+      right: 15%;
+      bottom: -6px;
+    }
+
+    .car.vertical::before {
+      right: -6px;
+      top: 15%;
+    }
+
+    .car.vertical::after {
+      right: -6px;
+      bottom: 15%;
+    }
+
+    .red { background: #e53935; }
+    .blue { background: #2878d5; }
+    .green { background: #159957; }
+    .yellow { background: #c99800; }
+    .purple { background: #7950c9; }
+    .orange { background: #e76f16; }
+    .teal { background: #008b8b; }
+    .pink { background: #c74783; }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .controls button {
+      min-width: 125px;
+    }
+
+    .message {
+      min-height: 28px;
+      margin-top: 15px;
+      color: #65e698;
+      font-weight: 800;
+    }
+
+    .instructions {
+      margin: 16px auto 0;
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 430px) {
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .stats {
+        justify-content: center;
+      }
+
+      select {
+        width: 100%;
+      }
+
+      .controls button {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game">
+    <h1 data-i18n="title">Rush Hour</h1>
+
+    <p class="subtitle" data-i18n="subtitle">
+      Move the red car to the exit.
+    </p>
+
+    <div class="toolbar">
+      <div class="stats">
+        <span>
+          <span data-i18n="moves">Moves</span>:
+          <strong id="moveCount">0</strong>
+        </span>
+
+        <span>
+          <span data-i18n="best">Best</span>:
+          <strong id="bestCount">—</strong>
+        </span>
+      </div>
+
+      <select id="language" aria-label="Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">繁體中文</option>
+      </select>
+    </div>
+
+    <div id="board" class="board">
+      <div class="exit"></div>
+    </div>
+
+    <div class="controls">
+      <button id="resetButton" data-i18n="reset">Reset</button>
+      <button id="newButton" data-i18n="newPuzzle">
+        New Puzzle
+      </button>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <p class="instructions" data-i18n="instructions">
+      Drag cars only in the direction they are facing.
+    </p>
+  </main>
+
+  <script>
+    const SIZE = 6;
+    const GAP = 4;
+    const PADDING = 4;
+
+    const board = document.getElementById("board");
+    const moveCount = document.getElementById("moveCount");
+    const bestCount = document.getElementById("bestCount");
+    const message = document.getElementById("message");
+    const languageSelect = document.getElementById("language");
+
+    let cars = [];
+    let startingCars = [];
+    let moves = 0;
+    let puzzleNumber = 0;
+
+    let language =
+      localStorage.getItem("rush-hour-language") || "en";
+
+    const translations = {
+      en: {
+        title: "Rush Hour",
+        subtitle: "Move the red car to the exit.",
+        moves: "Moves",
+        best: "Best",
+        reset: "Reset",
+        newPuzzle: "New Puzzle",
+        instructions:
+          "Drag cars only in the direction they are facing.",
+        solved: "Solved in {moves} moves!"
+      },
+
+      es: {
+        title: "Rush Hour",
+        subtitle: "Mueve el coche rojo hasta la salida.",
+        moves: "Movimientos",
+        best: "Mejor",
+        reset: "Reiniciar",
+        newPuzzle: "Nuevo puzzle",
+        instructions:
+          "Arrastra los coches únicamente en la dirección en la que apuntan.",
+        solved: "¡Resuelto en {moves} movimientos!"
+      },
+
+      "zh-Hant": {
+        title: "Rush Hour",
+        subtitle: "將紅色汽車移到出口。",
+        moves: "步數",
+        best: "最佳",
+        reset: "重設",
+        newPuzzle: "新謎題",
+        instructions:
+          "汽車只能沿著面向的方向移動。",
+        solved: "在 {moves} 步內完成！"
+      }
+    };
+
+    /*
+      These layouts are valid solved configurations.
+      The game performs many legal moves from them, meaning every
+      generated puzzle remains solvable.
+    */
+    const layouts = [
+      [
+        {
+          id: "target",
+          row: 2,
+          col: 0,
+          length: 2,
+          dir: "h",
+          color: "red",
+          label: "YOU"
+        },
+        {
+          id: "a",
+          row: 0,
+          col: 0,
+          length: 2,
+          dir: "v",
+          color: "blue"
+        },
+        {
+          id: "b",
+          row: 0,
+          col: 2,
+          length: 2,
+          dir: "v",
+          color: "green"
+        },
+        {
+          id: "c",
+          row: 0,
+          col: 5,
+          length: 3,
+          dir: "v",
+          color: "yellow"
+        },
+        {
+          id: "d",
+          row: 1,
+          col: 3,
+          length: 2,
+          dir: "h",
+          color: "purple"
+        },
+        {
+          id: "e",
+          row: 3,
+          col: 0,
+          length: 2,
+          dir: "v",
+          color: "orange"
+        },
+        {
+          id: "f",
+          row: 4,
+          col: 1,
+          length: 2,
+          dir: "h",
+          color: "teal"
+        },
+        {
+          id: "g",
+          row: 3,
+          col: 3,
+          length: 3,
+          dir: "v",
+          color: "blue"
+        },
+        {
+          id: "h",
+          row: 5,
+          col: 4,
+          length: 2,
+          dir: "h",
+          color: "green"
+        }
+      ],
+
+      [
+        {
+          id: "target",
+          row: 2,
+          col: 0,
+          length: 2,
+          dir: "h",
+          color: "red",
+          label: "YOU"
+        },
+        {
+          id: "a",
+          row: 0,
+          col: 0,
+          length: 2,
+          dir: "v",
+          color: "blue"
+        },
+        {
+          id: "b",
+          row: 0,
+          col: 2,
+          length: 3,
+          dir: "v",
+          color: "green"
+        },
+        {
+          id: "c",
+          row: 0,
+          col: 5,
+          length: 2,
+          dir: "v",
+          color: "yellow"
+        },
+        {
+          id: "d",
+          row: 1,
+          col: 3,
+          length: 2,
+          dir: "h",
+          color: "purple"
+        },
+        {
+          id: "e",
+          row: 3,
+          col: 0,
+          length: 3,
+          dir: "h",
+          color: "orange"
+        },
+        {
+          id: "f",
+          row: 3,
+          col: 4,
+          length: 2,
+          dir: "v",
+          color: "teal"
+        },
+        {
+          id: "g",
+          row: 4,
+          col: 2,
+          length: 2,
+          dir: "h",
+          color: "blue"
+        },
+        {
+          id: "h",
+          row: 5,
+          col: 4,
+          length: 2,
+          dir: "h",
+          color: "pink"
+        }
+      ]
+    ];
+
+    function translate(key) {
+      return translations[language][key];
+    }
+
+    function updateLanguage() {
+      document.documentElement.lang = language;
+
+      document
+        .querySelectorAll("[data-i18n]")
+        .forEach(element => {
+          element.textContent =
+            translate(element.dataset.i18n);
+        });
+
+      message.textContent = "";
+    }
+
+    function createCells() {
+      for (let i = 0; i < SIZE * SIZE; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+
+        board.insertBefore(
+          cell,
+          board.querySelector(".exit")
+        );
+      }
+    }
+
+    function getCellSize() {
+      const usableWidth =
+        board.clientWidth -
+        PADDING * 2 -
+        GAP * (SIZE - 1);
+
+      return usableWidth / SIZE;
+    }
+
+    function cellsFor(car, row = car.row, col = car.col) {
+      const cells = [];
+
+      for (let i = 0; i < car.length; i++) {
+        cells.push({
+          row: row + (car.dir === "v" ? i : 0),
+          col: col + (car.dir === "h" ? i : 0)
+        });
+      }
+
+      return cells;
+    }
+
+    function validateLayout(layout) {
+      const occupied = new Set();
+
+      for (const car of layout) {
+        for (const cell of cellsFor(car)) {
+          const key = `${cell.row},${cell.col}`;
+
+          if (
+            cell.row < 0 ||
+            cell.row >= SIZE ||
+            cell.col < 0 ||
+            cell.col >= SIZE
+          ) {
+            throw new Error(
+              `Car "${car.id}" is outside the board.`
+            );
+          }
+
+          if (occupied.has(key)) {
+            throw new Error(
+              `Cars overlap at ${key}.`
+            );
+          }
+
+          occupied.add(key);
+        }
+      }
+    }
+
+    function occupiedCells(exceptId = null) {
+      const occupied = new Set();
+
+      for (const car of cars) {
+        if (car.id === exceptId) continue;
+
+        for (const cell of cellsFor(car)) {
+          occupied.add(`${cell.row},${cell.col}`);
+        }
+      }
+
+      return occupied;
+    }
+
+    function canPlace(car, row, col) {
+      const occupied = occupiedCells(car.id);
+
+      for (const cell of cellsFor(car, row, col)) {
+        const key = `${cell.row},${cell.col}`;
+
+        if (
+          cell.row < 0 ||
+          cell.row >= SIZE ||
+          cell.col < 0 ||
+          cell.col >= SIZE ||
+          occupied.has(key)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function legalPositions(car) {
+      const positions = [];
+
+      const directions =
+        car.dir === "h"
+          ? [
+              { row: 0, col: -1 },
+              { row: 0, col: 1 }
+            ]
+          : [
+              { row: -1, col: 0 },
+              { row: 1, col: 0 }
+            ];
+
+      for (const direction of directions) {
+        let row = car.row + direction.row;
+        let col = car.col + direction.col;
+
+        while (canPlace(car, row, col)) {
+          positions.push({ row, col });
+
+          row += direction.row;
+          col += direction.col;
+        }
+      }
+
+      return positions;
+    }
+
+    function shuffleCars() {
+      let previousMove = null;
+
+      // More legal moves create more scrambled starting positions.
+      const shuffleCount =
+        180 + Math.floor(Math.random() * 120);
+
+      for (let i = 0; i < shuffleCount; i++) {
+        const choices = [];
+
+        for (const car of cars) {
+          for (const position of legalPositions(car)) {
+            const immediateReverse =
+              previousMove &&
+              previousMove.id === car.id &&
+              previousMove.row === position.row &&
+              previousMove.col === position.col;
+
+            if (!immediateReverse) {
+              choices.push({ car, position });
+            }
+          }
+        }
+
+        if (!choices.length) break;
+
+        const choice =
+          choices[
+            Math.floor(Math.random() * choices.length)
+          ];
+
+        previousMove = {
+          id: choice.car.id,
+          row: choice.car.row,
+          col: choice.car.col
+        };
+
+        choice.car.row = choice.position.row;
+        choice.car.col = choice.position.col;
+      }
+    }
+
+    function difficultyScore() {
+      const target = cars.find(car => car.id === "target");
+
+      let score = 0;
+
+      // Keep the red car away from the exit.
+      score += (SIZE - target.col) * 12;
+
+      // Reward cars occupying the red car's row.
+      for (const car of cars) {
+        if (car.id === "target") continue;
+
+        const cells = cellsFor(car);
+
+        if (
+          cells.some(cell => cell.row === target.row)
+        ) {
+          score += 12;
+        }
+
+        // Vertical vehicles tend to require more planning.
+        if (car.dir === "v") {
+          score += 3;
+        }
+
+        // Longer vehicles create more constraints.
+        score += car.length;
+      }
+
+      // Prefer positions with fewer immediate moves.
+      let possibleMoves = 0;
+
+      for (const car of cars) {
+        possibleMoves += legalPositions(car).length;
+      }
+
+      score += Math.max(0, 35 - possibleMoves);
+
+      return score;
+    }
+
+    function cloneCars(list) {
+      return list.map(car => ({ ...car }));
+    }
+
+    function generatePuzzle() {
+      const source =
+        layouts[
+          Math.floor(Math.random() * layouts.length)
+        ];
+
+      let bestPosition = null;
+      let bestScore = -Infinity;
+
+      /*
+        Generate many legal positions and retain the one
+        that appears most difficult.
+      */
+      for (let attempt = 0; attempt < 40; attempt++) {
+        cars = cloneCars(source);
+        shuffleCars();
+
+        const target =
+          cars.find(car => car.id === "target");
+
+        // Never start with the target already at the exit.
+        if (target.col + target.length >= SIZE) {
+          continue;
+        }
+
+        const score = difficultyScore();
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestPosition = cloneCars(cars);
+        }
+      }
+
+      cars =
+        bestPosition ||
+        cloneCars(source);
+
+      startingCars = cloneCars(cars);
+      moves = 0;
+      message.textContent = "";
+
+      render();
+    }
+
+    function resetPuzzle() {
+      cars = cloneCars(startingCars);
+      moves = 0;
+      message.textContent = "";
+      render();
+    }
+
+    function render() {
+      board
+        .querySelectorAll(".car")
+        .forEach(car => car.remove());
+
+      const size = getCellSize();
+
+      for (const car of cars) {
+        const element = document.createElement("div");
+
+        element.className =
+          "car " +
+          (car.dir === "h"
+            ? "horizontal"
+            : "vertical") +
+          " " +
+          car.color;
+
+        const width =
+          car.dir === "h" ? car.length : 1;
+
+        const height =
+          car.dir === "v" ? car.length : 1;
+
+        element.style.left =
+          `${PADDING + car.col * (size + GAP)}px`;
+
+        element.style.top =
+          `${PADDING + car.row * (size + GAP)}px`;
+
+        element.style.width =
+          `${width * size + (width - 1) * GAP}px`;
+
+        element.style.height =
+          `${height * size + (height - 1) * GAP}px`;
+
+        element.textContent = car.label || "";
+
+        element.addEventListener(
+          "pointerdown",
+          event => dragCar(event, car)
+        );
+
+        board.appendChild(element);
+      }
+
+      moveCount.textContent = moves;
+
+      const best =
+        localStorage.getItem(bestKey());
+
+      bestCount.textContent = best || "—";
+    }
+
+    function dragCar(event, car) {
+      event.preventDefault();
+
+      const element = event.currentTarget;
+      const startX = event.clientX;
+      const startY = event.clientY;
+
+      const originalRow = car.row;
+      const originalCol = car.col;
+      const size = getCellSize();
+
+      element.setPointerCapture(event.pointerId);
+
+      function move(pointerEvent) {
+        const dx =
+          pointerEvent.clientX - startX;
+
+        const dy =
+          pointerEvent.clientY - startY;
+
+        let row = originalRow;
+        let col = originalCol;
+
+        if (car.dir === "h") {
+          col =
+            originalCol +
+            Math.round(dx / (size + GAP));
+        } else {
+          row =
+            originalRow +
+            Math.round(dy / (size + GAP));
+        }
+
+        if (!canPlace(car, row, col)) {
+          return;
+        }
+
+        car.row = row;
+        car.col = col;
+
+        element.style.left =
+          `${PADDING + col * (size + GAP)}px`;
+
+        element.style.top =
+          `${PADDING + row * (size + GAP)}px`;
+      }
+
+      function end() {
+        const moved =
+          car.row !== originalRow ||
+          car.col !== originalCol;
+
+        if (moved) {
+          moves++;
+          render();
+          checkWin();
+        }
+
+        element.removeEventListener(
+          "pointermove",
+          move
+        );
+
+        element.removeEventListener(
+          "pointerup",
+          end
+        );
+
+        element.removeEventListener(
+          "pointercancel",
+          end
+        );
+      }
+
+      element.addEventListener(
+        "pointermove",
+        move
+      );
+
+      element.addEventListener(
+        "pointerup",
+        end
+      );
+
+      element.addEventListener(
+        "pointercancel",
+        end
+      );
+    }
+
+    function bestKey() {
+      return `rush-hour-best-${language}-${puzzleNumber}`;
+    }
+
+    function checkWin() {
+      const target =
+        cars.find(car => car.id === "target");
+
+      if (target.col + target.length >= SIZE) {
+        const oldBest =
+          Number(localStorage.getItem(bestKey()));
+
+        if (!oldBest || moves < oldBest) {
+          localStorage.setItem(
+            bestKey(),
+            moves
+          );
+        }
+
+        message.textContent =
+          translate("solved")
+            .replace("{moves}", moves);
+
+        render();
+      }
+    }
+
+    document
+      .getElementById("resetButton")
+      .addEventListener("click", resetPuzzle);
+
+    document
+      .getElementById("newButton")
+      .addEventListener("click", () => {
+        puzzleNumber++;
+        generatePuzzle();
+      });
+
+    languageSelect.value = language;
+
+    languageSelect.addEventListener(
+      "change",
+      event => {
+        language = event.target.value;
+
+        localStorage.setItem(
+          "rush-hour-language",
+          language
+        );
+
+        updateLanguage();
+        render();
+      }
+    );
+
+    window.addEventListener("resize", render);
+
+    layouts.forEach(validateLayout);
+
+    createCells();
+    updateLanguage();
+    generatePuzzle();
+  </script>
+</body>
+</html>
