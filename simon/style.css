@@ -1,0 +1,317 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --background: #111827;
+
+  /* Flat-topped regular hexagon */
+  --hex-width: clamp(82px, 20vw, 135px);
+  --hex-height: calc(var(--hex-width) * 0.866025);
+
+  /*
+    These control the collage spacing.
+    Smaller values bring neighboring hexagons closer.
+  */
+  --side-offset: calc(var(--hex-width) * 0.78);
+  --row-spacing: calc(var(--hex-height) * 0.56);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  display: grid;
+  place-items: center;
+
+  background:
+    radial-gradient(circle at top, #26344d, var(--background) 60%);
+
+  color: white;
+  font-family: system-ui, sans-serif;
+
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
+
+.game {
+  width: min(95vw, 650px);
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 20px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.status {
+  width: min(90vw, 420px);
+  padding: 12px 18px;
+
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+
+  border-radius: 12px;
+  background: rgb(31 41 55 / 80%);
+  color: #d1d5db;
+}
+
+#message {
+  color: #93c5fd;
+  text-align: right;
+}
+
+/*
+  Flat-topped hexagon.
+*/
+.hex {
+  position: absolute;
+
+  width: var(--hex-width);
+  height: var(--hex-height);
+
+  padding: 0;
+  border: 0;
+
+  clip-path: polygon(
+    25% 0%,
+    75% 0%,
+    100% 50%,
+    75% 100%,
+    25% 100%,
+    0% 50%
+  );
+
+  cursor: pointer;
+  touch-action: none;
+
+  transition:
+    filter 100ms ease,
+    transform 100ms ease;
+}
+
+/*
+  Desired arrangement:
+
+          1
+      6       2
+          0
+      5       3
+          4
+*/
+:root {
+  --background: #111827;
+
+  --hex-width: clamp(82px, 20vw, 135px);
+  --hex-height: calc(var(--hex-width) * 0.866025);
+
+
+  --side-offset: calc(var(--hex-width) * 0.749);
+}
+
+.board {
+  position: relative;
+
+  /*
+    The center of the board is the center of hexagon 0.
+  */
+  width: calc(var(--hex-width) * 2.5);
+  height: calc(var(--hex-height) * 3);
+
+  touch-action: none;
+}
+
+.hex {
+  position: absolute;
+
+  width: var(--hex-width);
+  height: var(--hex-height);
+
+  padding: 0;
+  border: 0;
+
+  clip-path: polygon(
+    25% 0%,
+    75% 0%,
+    100% 50%,
+    75% 100%,
+    25% 100%,
+    0% 50%
+  );
+
+  cursor: pointer;
+  touch-action: none;
+
+  transition:
+    filter 100ms ease,
+    transform 100ms ease;
+}
+
+/*
+  All positions below refer to the CENTER of each hexagon.
+
+          1
+      6       2
+          0
+      5       3
+          4
+*/
+
+/* Top */
+.hex-1 {
+  left: 50%;
+  top: calc(50% - var(--hex-height));
+
+  transform: translate(-50%, -50%);
+  background: #ef4444;
+}
+
+/* Upper-left */
+.hex-6 {
+  left: calc(50% - var(--side-offset));
+  top: calc(50% - var(--hex-height) * 0.5);
+
+  transform: translate(-50%, -50%);
+  background: #3b82f6;
+}
+
+/* Upper-right */
+.hex-2 {
+  left: calc(50% + var(--side-offset));
+  top: calc(50% - var(--hex-height) * 0.5);
+
+  transform: translate(-50%, -50%);
+  background: #f97316;
+}
+
+/* Center */
+.hex-0 {
+  left: 50%;
+  top: 50%;
+
+  transform: translate(-50%, -50%);
+  background: #8b5cf6;
+}
+
+/* Lower-left */
+.hex-5 {
+  left: calc(50% - var(--side-offset));
+  top: calc(50% + var(--hex-height) * 0.5);
+
+  transform: translate(-50%, -50%);
+  background: #06b6d4;
+}
+
+/* Lower-right */
+.hex-3 {
+  left: calc(50% + var(--side-offset));
+  top: calc(50% + var(--hex-height) * 0.5);
+
+  transform: translate(-50%, -50%);
+  background: #eab308;
+}
+
+/* Bottom */
+.hex-4 {
+  left: 50%;
+  top: calc(50% + var(--hex-height));
+
+  transform: translate(-50%, -50%);
+  background: #22c55e;
+}
+
+/* Interaction effects */
+.hex:hover {
+  filter: brightness(1.2);
+}
+
+.hex.active {
+  z-index: 10;
+  filter: brightness(1.8) saturate(1.4);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.hex.wrong {
+  background: #ef4444 !important;
+  filter: brightness(1.8);
+}
+
+/*
+  Start/restart button
+*/
+.start-button {
+  border: 0;
+  padding: 13px 28px;
+
+  border-radius: 999px;
+  background: #60a5fa;
+  color: #0f172a;
+
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  transition:
+    transform 120ms ease,
+    background 120ms ease;
+}
+
+.start-button:hover {
+  background: #93c5fd;
+  transform: scale(1.04);
+}
+
+.start-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/*
+  Mobile adjustment
+*/
+@media (max-width: 480px) {
+  :root {
+    --hex-width: clamp(70px, 19vw, 105px);
+    --side-offset: calc(var(--hex-width) * 0.59);
+  }
+
+  .game {
+    gap: 15px;
+  }
+
+  .status {
+    font-size: 0.9rem;
+  }
+}
+
+.settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  color: #d1d5db;
+  font-size: 0.95rem;
+}
+
+#languageSelect {
+  padding: 7px 10px;
+  border: 1px solid #64748b;
+  border-radius: 8px;
+
+  background: #1f2937;
+  color: white;
+
+  font: inherit;
+  cursor: pointer;
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hexagon Simon</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+	<main class="game">
+	  <h1 data-i18n="title">Hexagon Simon</h1>
+	
+	  <div class="settings">
+		<label for="languageSelect" data-i18n="language">
+		  Language
+		</label>
+	
+		<select id="languageSelect">
+		  <option value="en">English</option>
+		  <option value="es">Español</option>
+		  <option value="zh-Hant">繁體中文</option>
+		</select>
+	  </div>
+	
+	  <div class="status">
+		<span>
+		  <span data-i18n="roundLabel">Round:</span>
+		  <strong id="round">1</strong>
+		</span>
+	
+		<span id="message" data-i18n="watchSequence">
+		  Watch the sequence
+		</span>
+	  </div>
+	
+	  <div id="board" class="board" aria-label="Simon game board">
+		<button class="hex hex-0" data-index="0" aria-label="Hexagon 1"></button>
+		<button class="hex hex-1" data-index="1" aria-label="Hexagon 2"></button>
+		<button class="hex hex-2" data-index="2" aria-label="Hexagon 3"></button>
+		<button class="hex hex-3" data-index="3" aria-label="Hexagon 4"></button>
+		<button class="hex hex-4" data-index="4" aria-label="Hexagon 5"></button>
+		<button class="hex hex-5" data-index="5" aria-label="Hexagon 6"></button>
+		<button class="hex hex-6" data-index="6" aria-label="Hexagon 7"></button>
+	  </div>
+	
+	  <button id="startButton" class="start-button" data-i18n="start">
+		Start Game
+	  </button>
+	</main>
+  <script src="script.js"></script>
+</body>
+</html>
