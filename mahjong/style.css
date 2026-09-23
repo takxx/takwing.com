@@ -19,7 +19,18 @@ body {
   overflow: auto;
 
   color: white;
-  font-family: system-ui, sans-serif;
+  font-family: "Iowan Old Style",
+    "Palatino Linotype",
+    "URW Palladio L",
+    "P052",
+    "Noto Serif",
+    "Kaiti TC",
+    "STKaiti",
+    "BiauKai",
+    "DFKai-SB",
+    "Noto Serif CJK TC",
+    "Noto Serif TC",
+    serif;
 
   background:
     radial-gradient(
