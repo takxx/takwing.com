@@ -1,0 +1,374 @@
+:root {
+  --tile-width: 58px;
+  --tile-height: 78px;
+  --tile-shadow-width: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  overflow: auto;
+
+  color: white;
+  font-family: system-ui, sans-serif;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #278c53 0%,
+      #12683a 58%,
+      #083d23 100%
+    );
+}
+
+main {
+  width: max-content;
+  min-width: 100%;
+  padding: 20px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 14px;
+
+  font-size: 2rem;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  margin-bottom: 8px;
+}
+
+button,
+select {
+  border: 1px solid #999;
+  border-radius: 5px;
+  padding: 8px 13px;
+
+  background: #f4f4f4;
+  color: #222;
+
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #fff;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+select {
+  cursor: pointer;
+}
+
+.status {
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.message {
+  height: 26px;
+
+  color: #fff1a0;
+  font-weight: bold;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* -----------------------------
+   Game board
+----------------------------- */
+
+#gameBoard {
+  position: relative;
+  isolation: isolate;
+
+  width: 850px;
+  height: 650px;
+  margin: 0 auto;
+
+  overflow: hidden;
+
+  border: 5px solid #653419;
+  border-radius: 9px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.035) 25%,
+      transparent 25%
+    ) 0 0 / 20px 20px,
+
+    linear-gradient(
+      315deg,
+      rgba(255, 255, 255, 0.035) 25%,
+      transparent 25%
+    ) 0 0 / 20px 20px,
+
+    #176b3d;
+
+  box-shadow:
+    inset 0 0 0 3px #d5a45c,
+    inset 0 0 30px rgba(0, 0, 0, 0.25),
+    0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* -----------------------------
+   Tiles
+----------------------------- */
+
+.tile {
+  position: absolute;
+
+  display: block;
+
+  width: var(--tile-width);
+  height: var(--tile-height);
+
+  margin: 0;
+  padding: 0;
+
+  border: 1px solid #999;
+  border-radius: 6px;
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  background:
+    linear-gradient(
+      145deg,
+      #fff 0%,
+      #f5f5f5 42%,
+      #dedede 78%,
+      #c9c9c9 100%
+    );
+
+  color: #222;
+
+  font-size: 2rem;
+  line-height: 1;
+
+  user-select: none;
+  cursor: pointer;
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.95),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.15),
+    2px 2px 0 #c0c0c0,
+    4px 4px 0 #999,
+    6px 6px 0 #707070,
+    8px 9px 7px rgba(0, 0, 0, 0.32);
+
+  transition:
+    filter 0.12s ease,
+    transform 0.12s ease,
+    outline 0.12s ease;
+}
+
+/*
+  One fixed content layer inside every tile.
+*/
+.tile-content {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  pointer-events: none;
+}
+
+/*
+  The fallback and image use the exact same dimensions.
+*/
+.tile-fallback,
+.tile-image {
+  position: absolute;
+  inset: 0;
+
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+  padding: 4px;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+  Unicode fallback.
+*/
+.tile-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family:
+    "Noto Sans Symbols 2",
+    "Segoe UI Symbol",
+    "Arial Unicode MS",
+    sans-serif;
+
+  font-size: 2rem;
+  line-height: 1;
+}
+
+/*
+  Image sizing.
+
+  contain keeps the entire image visible and resizes it
+  to fit inside the tile.
+*/
+.tile-image {
+  object-fit: contain;
+}
+
+/*
+  Important: this overrides display:flex on .tile-fallback.
+  Without this rule, hidden fallback text can remain visible.
+*/
+.tile-fallback[hidden],
+.tile-image[hidden] {
+  display: none !important;
+}
+
+/* -----------------------------
+   Tile decoration
+----------------------------- */
+
+.tile::before,
+.tile::after {
+  position: absolute;
+  z-index: 3;
+
+  pointer-events: none;
+  content: "";
+}
+
+.tile::before {
+  inset: 3px;
+
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 4px;
+}
+
+.tile::after {
+  right: 4px;
+  bottom: 3px;
+  left: 4px;
+
+  height: 4px;
+
+  border-radius: 0 0 4px 4px;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.3),
+      rgba(0, 0, 0, 0.1)
+    );
+}
+
+.tile:hover {
+  filter: brightness(1.06);
+}
+
+.tile.selected {
+  z-index: 999999 !important;
+
+  outline: 3px solid #ffd43b;
+  outline-offset: 2px;
+
+  filter: brightness(1.08);
+  transform: translateY(-4px);
+}
+
+/* -----------------------------
+   Unicode fallback colours
+----------------------------- */
+
+.tile.characters {
+  color: #d31920;
+}
+
+.tile.bamboo {
+  color: #168a45;
+}
+
+.tile.balls,
+.tile.winds {
+  color: #216ec2;
+}
+
+.tile.red-dragon {
+  color: #d31920;
+}
+
+.tile.green-dragon {
+  color: #168a45;
+}
+
+.tile.white-dragon {
+  color: #216ec2;
+}
+
+.tile.seasons {
+  color: #8c43b8;
+}
+
+.tile.flowers {
+  color: #e17820;
+}
+
+/* -----------------------------
+   Responsive board
+----------------------------- */
+
+@media (max-width: 900px) {
+  #gameBoard {
+    transform: scale(0.8);
+    transform-origin: top left;
+
+    margin-right: -170px;
+    margin-bottom: -130px;
+  }
+}
+
+@media (max-width: 700px) {
+  #gameBoard {
+    transform: scale(0.6);
+    transform-origin: top left;
+
+    margin-right: -340px;
+    margin-bottom: -260px;
+  }
+}

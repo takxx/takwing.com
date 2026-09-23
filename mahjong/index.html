@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Mahjong Solitaire</title>
+
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1 id="gameTitle">Mahjong Solitaire</h1>
+
+    <div class="toolbar">
+      <button
+        id="newGameBtn"
+        type="button"
+      ></button>
+
+      <button
+        id="restartBtn"
+        type="button"
+      ></button>
+
+      <button
+        id="undoBtn"
+        type="button"
+      ></button>
+
+      <label
+        for="languageSelect"
+        id="languageLabel"
+      ></label>
+
+      <select id="languageSelect">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">繁體中文</option>
+      </select>
+
+      <span class="status">
+        <span id="remainingLabel"></span>
+        <strong id="remainingCount">144</strong>
+      </span>
+    </div>
+
+    <div
+      id="message"
+      class="message"
+      role="status"
+      aria-live="polite"
+    ></div>
+
+    <div
+      id="gameBoard"
+      aria-label="Mahjong Solitaire board"
+    ></div>
+  </main>
+</body>
+</html>
