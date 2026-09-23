@@ -1,8 +1,41 @@
+"use strict";
+
+/* =================================
+   DOM
+================================= */
+
 const board = document.getElementById("board");
 const hexagons = [...document.querySelectorAll(".hex")];
 const startButton = document.getElementById("startButton");
 const roundDisplay = document.getElementById("round");
 const message = document.getElementById("message");
+const languageSelect = document.getElementById("languageSelect");
+
+
+/* =================================
+   Configuration
+================================= */
+
+const HEX_COUNT = 7;
+const LIGHT_TIME = 430;
+const GAP_TIME = 140;
+const FEEDBACK_TIME = 180;
+const SWIPE_THRESHOLD = 8;
+
+
+/*
+  Hexagon adjacency map.
+
+             1
+
+         6       2
+
+             0
+
+         5       3
+
+             4
+*/
 
 const neighbors = {
   0: [1, 2, 3, 4, 5, 6],
@@ -13,6 +46,11 @@ const neighbors = {
   5: [0, 4, 6],
   6: [0, 5, 1]
 };
+
+
+/* =================================
+   Translations
+================================= */
 
 const translations = {
   en: {
@@ -58,13 +96,6 @@ const translations = {
   }
 };
 
-const languageSelect = document.getElementById("languageSelect");
-
-let language = getInitialLanguage();
-let text = translations[language];
-
-languageSelect.value = language;
-
 function getInitialLanguage() {
   const savedLanguage = localStorage.getItem("hexSimonLanguage");
 
@@ -72,9 +103,10 @@ function getInitialLanguage() {
     return savedLanguage;
   }
 
-  const browserLanguages = navigator.languages || [navigator.language];
+  const languages =
+    navigator.languages || [navigator.language];
 
-  for (const browserLanguage of browserLanguages) {
+  for (const browserLanguage of languages) {
     const normalized = browserLanguage.toLowerCase();
 
     if (
@@ -94,50 +126,8 @@ function getInitialLanguage() {
   return "en";
 }
 
-function changeLanguage(newLanguage) {
-  if (!translations[newLanguage]) {
-    newLanguage = "en";
-  }
-
-  language = newLanguage;
-  text = translations[language];
-
-  localStorage.setItem("hexSimonLanguage", language);
-
-  applyTranslations();
-
-  if (!gameRunning) {
-    setMessage("watchSequence");
-  }
-}
-
-languageSelect.addEventListener("change", event => {
-  changeLanguage(event.target.value);
-});
-
-
-function getLanguage() {
-  const languages = navigator.languages || [navigator.language];
-
-  for (const language of languages) {
-    const normalized = language.toLowerCase();
-
-    if (
-      normalized === "zh-tw" ||
-      normalized === "zh-hk" ||
-      normalized === "zh-mo" ||
-      normalized.startsWith("zh-hant")
-    ) {
-      return "zh-Hant";
-    }
-
-    if (normalized.startsWith("es")) {
-      return "es";
-    }
-  }
-
-  return "en";
-}
+let language = getInitialLanguage();
+let text = translations[language];
 
 function applyTranslations() {
   document.documentElement.lang = language;
@@ -153,39 +143,59 @@ function applyTranslations() {
   board.setAttribute("aria-label", text.boardLabel);
 
   hexagons.forEach((hex, index) => {
-    hex.setAttribute(
-      "aria-label",
-      language === "zh-Hant"
-        ? `六角形 ${index + 1}`
-        : language === "es"
-          ? `Hexágono ${index + 1}`
-          : `Hexagon ${index + 1}`
-    );
+    if (language === "zh-Hant") {
+      hex.setAttribute("aria-label", `六角形 ${index + 1}`);
+    } else if (language === "es") {
+      hex.setAttribute("aria-label", `Hexágono ${index + 1}`);
+    } else {
+      hex.setAttribute("aria-label", `Hexagon ${index + 1}`);
+    }
   });
 }
 
+function changeLanguage(newLanguage) {
+  language = translations[newLanguage]
+    ? newLanguage
+    : "en";
+
+  text = translations[language];
+
+  localStorage.setItem(
+    "hexSimonLanguage",
+    language
+  );
+
+  applyTranslations();
+
+  if (!gameRunning) {
+    setMessage("watchSequence");
+  }
+}
+
+
+/* =================================
+   Audio
+================================= */
+
 let audioContext = null;
 
-/*
-  Do, re, mi, fa, so, la, ti.
-  These are the C major notes C4 through B4.
-*/
 const frequencies = [
-  261.63, // Do
-  293.66, // Re
-  329.63, // Mi
-  349.23, // Fa
-  392.00, // So
-  440.00, // La
-  493.88  // Ti
+  261.63,
+  293.66,
+  329.63,
+  349.23,
+  392.0,
+  440.0,
+  493.88
 ];
 
 function getAudioContext() {
   if (!audioContext) {
-    audioContext = new (
+    const AudioContext =
       window.AudioContext ||
-      window.webkitAudioContext
-    )();
+      window.webkitAudioContext;
+
+    audioContext = new AudioContext();
   }
 
   return audioContext;
@@ -207,8 +217,16 @@ function playHexSound(index) {
   const now = context.currentTime;
 
   gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+  gain.gain.exponentialRampToValueAtTime(
+    0.25,
+    now + 0.02
+  );
+
+  gain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    now + 0.38
+  );
 
   oscillator.connect(gain);
   gain.connect(context.destination);
@@ -218,27 +236,27 @@ function playHexSound(index) {
 }
 
 
+/* =================================
+   Game state
+================================= */
+
 let sequence = [];
 let playerInput = [];
 let round = 1;
-let acceptingInput = false;
 let gameRunning = false;
-
-let pointerIsDown = false;
-let swipeStarted = false;
-let lastPointerHex = null;
-let activePointerId = null;
-
-const LIGHT_TIME = 430;
-const GAP_TIME = 140;
-const FEEDBACK_TIME = 180;
+let acceptingInput = false;
+let gameId = 0;
 
 function wait(milliseconds) {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
+  return new Promise(resolve => {
+    setTimeout(resolve, milliseconds);
+  });
 }
 
 function randomItem(array) {
-  return array[Math.floor(Math.random() * array.length)];
+  return array[
+    Math.floor(Math.random() * array.length)
+  ];
 }
 
 function setMessage(key) {
@@ -249,36 +267,70 @@ function updateRound() {
   roundDisplay.textContent = round;
 }
 
+function clearHexStates() {
+  hexagons.forEach(hex => {
+    hex.classList.remove("active", "wrong");
+  });
+}
+
 function addNextSequenceItem() {
   if (sequence.length === 0) {
-    sequence.push(Math.floor(Math.random() * 7));
+    sequence.push(
+      Math.floor(Math.random() * HEX_COUNT)
+    );
+
     return;
   }
 
-  const previous = sequence[sequence.length - 1];
-  sequence.push(randomItem(neighbors[previous]));
+  const previous =
+    sequence[sequence.length - 1];
+
+  sequence.push(
+    randomItem(neighbors[previous])
+  );
 }
 
-async function lightHex(index, duration = LIGHT_TIME) {
+
+/* =================================
+   Sequence playback
+================================= */
+
+async function lightHex(index) {
   const hex = hexagons[index];
+
+  if (!hex) {
+    return;
+  }
 
   playHexSound(index);
   hex.classList.add("active");
 
-  await wait(duration);
+  await wait(LIGHT_TIME);
 
   hex.classList.remove("active");
 }
 
-async function playSequence() {
+async function playSequence(currentGameId) {
   acceptingInput = false;
   setMessage("watchSequence");
 
   await wait(500);
 
+  if (currentGameId !== gameId) {
+    return;
+  }
+
   for (const index of sequence) {
+    if (currentGameId !== gameId) {
+      return;
+    }
+
     await lightHex(index);
     await wait(GAP_TIME);
+  }
+
+  if (currentGameId !== gameId) {
+    return;
   }
 
   playerInput = [];
@@ -286,22 +338,38 @@ async function playSequence() {
   setMessage("yourTurn");
 }
 
+
+/* =================================
+   Game flow
+================================= */
+
 function createNewGame() {
+  gameId++;
+
+  clearHexStates();
+
   sequence = [];
   playerInput = [];
   round = 1;
+
   gameRunning = true;
+  acceptingInput = false;
 
   updateRound();
-  startButton.textContent = text.restart;
+
   startButton.disabled = true;
+  startButton.textContent = text.restart;
 
   addNextSequenceItem();
-  playSequence();
+  playSequence(gameId);
 }
 
 function flashHex(index, className = "active") {
   const hex = hexagons[index];
+
+  if (!hex) {
+    return;
+  }
 
   hex.classList.add(className);
 
@@ -315,13 +383,18 @@ function gameOver() {
   gameRunning = false;
 
   setMessage("wrongSequence");
+
   startButton.disabled = false;
   startButton.textContent = text.tryAgain;
 
-  hexagons.forEach(hex => hex.classList.add("wrong"));
+  hexagons.forEach(hex => {
+    hex.classList.add("wrong");
+  });
 
   setTimeout(() => {
-    hexagons.forEach(hex => hex.classList.remove("wrong"));
+    hexagons.forEach(hex => {
+      hex.classList.remove("wrong");
+    });
   }, 350);
 }
 
@@ -330,24 +403,46 @@ function roundComplete() {
   setMessage("correct");
 
   round++;
+
   updateRound();
 
+  const currentGameId = gameId;
+
   setTimeout(() => {
+    if (
+      currentGameId !== gameId ||
+      !gameRunning
+    ) {
+      return;
+    }
+
     addNextSequenceItem();
-    playSequence();
+    playSequence(currentGameId);
   }, 700);
 }
 
 function selectHexagon(index) {
-  if (!acceptingInput) return;
+  /*
+    This is the only function that can trigger gameOver().
+  */
+  if (!acceptingInput) {
+    return;
+  }
 
-  playHexSound(index);
-  flashHex(index);
+  if (
+    !Number.isInteger(index) ||
+    !hexagons[index]
+  ) {
+    return;
+  }
 
   const expectedIndex = playerInput.length;
   const expectedHex = sequence[expectedIndex];
 
   playerInput.push(index);
+
+  playHexSound(index);
+  flashHex(index);
 
   if (index !== expectedHex) {
     gameOver();
@@ -359,91 +454,260 @@ function selectHexagon(index) {
   }
 }
 
-function getHexFromPoint(x, y) {
-  const element = document.elementFromPoint(x, y);
-  const hex = element?.closest(".hex");
+
+/* =================================
+   Pointer and swipe handling
+================================= */
+
+let pointerIsDown = false;
+let swipeStarted = false;
+let activePointerId = null;
+let lastPointerHex = null;
+
+let pointerStartX = 0;
+let pointerStartY = 0;
+
+function getHexIndex(element) {
+  const hex = element?.closest?.(".hex");
 
   if (!hex || !board.contains(hex)) {
     return null;
   }
 
-  return Number(hex.dataset.index);
+  const index = Number(hex.dataset.index);
+
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= HEX_COUNT
+  ) {
+    return null;
+  }
+
+  return index;
+}
+
+function getHexFromPoint(x, y) {
+  const elements = document.elementsFromPoint(x, y);
+
+  for (const element of elements) {
+    const index = getHexIndex(element);
+
+    if (index !== null) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+function getHexFromEvent(event) {
+  const targetHex = getHexIndex(event.target);
+
+  if (targetHex !== null) {
+    return targetHex;
+  }
+
+  return getHexFromPoint(
+    event.clientX,
+    event.clientY
+  );
 }
 
 function handlePointerDown(event) {
-  if (!acceptingInput) return;
+  if (!acceptingInput) {
+    return;
+  }
+
+  if (activePointerId !== null) {
+    return;
+  }
+
+  const startingHex = getHexFromEvent(event);
+
+  if (startingHex === null) {
+    return;
+  }
 
   event.preventDefault();
 
   pointerIsDown = true;
   swipeStarted = false;
   activePointerId = event.pointerId;
-  lastPointerHex = getHexFromPoint(event.clientX, event.clientY);
+  lastPointerHex = startingHex;
 
-  board.setPointerCapture?.(event.pointerId);
+  pointerStartX = event.clientX;
+  pointerStartY = event.clientY;
+
+  if (board.setPointerCapture) {
+    board.setPointerCapture(event.pointerId);
+  }
+
+  /*
+    Important fix:
+    The starting hexagon must be entered immediately.
+    Otherwise, dragging to the next hexagon skips the
+    first item in the pattern.
+  */
+  selectHexagon(startingHex);
 }
 
 function handlePointerMove(event) {
-  if (!pointerIsDown || !acceptingInput) return;
-  if (event.pointerId !== activePointerId) return;
-
-  event.preventDefault();
-
-  const currentHex = getHexFromPoint(event.clientX, event.clientY);
-
-  if (currentHex === null || currentHex === lastPointerHex) {
+  if (!pointerIsDown) {
     return;
   }
 
-  if (lastPointerHex !== null) {
-    swipeStarted = true;
-
-    if (!neighbors[lastPointerHex].includes(currentHex)) {
-      gameOver();
-      return;
-    }
-
-    selectHexagon(currentHex);
+  if (event.pointerId !== activePointerId) {
+    return;
   }
 
-  lastPointerHex = currentHex;
-}
-
-function handlePointerUp(event) {
-  if (!pointerIsDown) return;
-  if (event.pointerId !== activePointerId) return;
+  /*
+    If the sequence has completed or failed, stop
+    processing this pointer gesture.
+  */
+  if (!acceptingInput) {
+    finishPointer(event);
+    return;
+  }
 
   event.preventDefault();
 
-  const endingHex = getHexFromPoint(event.clientX, event.clientY);
+  const distanceMoved = Math.hypot(
+    event.clientX - pointerStartX,
+    event.clientY - pointerStartY
+  );
 
-  // No movement means this was a tap or click.
-  if (!swipeStarted && endingHex !== null) {
-    selectHexagon(endingHex);
+  /*
+    Small movements do not begin a swipe.
+    The starting hexagon has already been selected.
+  */
+  if (
+    !swipeStarted &&
+    distanceMoved < SWIPE_THRESHOLD
+  ) {
+    return;
+  }
+
+  const currentHex = getHexFromPoint(
+    event.clientX,
+    event.clientY
+  );
+
+  /*
+    The pointer may be over the gap between hexagons.
+    Ignore the gap instead of treating it as an error.
+  */
+  if (currentHex === null) {
+    return;
+  }
+
+  /*
+    Staying on the same hexagon is not a new selection.
+  */
+  if (currentHex === lastPointerHex) {
+    return;
+  }
+
+  /*
+    Only adjacent hexagons may be selected during a drag.
+    Invalid movement is ignored and does not cause gameOver().
+  */
+  if (
+    lastPointerHex === null ||
+    !neighbors[lastPointerHex].includes(currentHex)
+  ) {
+    return;
+  }
+
+  swipeStarted = true;
+  lastPointerHex = currentHex;
+
+  selectHexagon(currentHex);
+}
+
+function handlePointerUp(event) {
+  if (event.pointerId !== activePointerId) {
+    return;
+  }
+
+  event.preventDefault();
+
+  /*
+    Do not select anything here.
+    The starting hexagon was selected during pointerdown,
+    and dragged hexagons were selected during pointermove.
+  */
+
+  finishPointer(event);
+}
+
+function handlePointerCancel(event) {
+  if (event.pointerId !== activePointerId) {
+    return;
+  }
+
+  finishPointer(event);
+}
+
+function finishPointer(event) {
+  if (
+    board.releasePointerCapture &&
+    board.hasPointerCapture?.(event.pointerId)
+  ) {
+    board.releasePointerCapture(event.pointerId);
   }
 
   pointerIsDown = false;
   swipeStarted = false;
-  lastPointerHex = null;
   activePointerId = null;
+  lastPointerHex = null;
 
-  board.releasePointerCapture?.(event.pointerId);
+  pointerStartX = 0;
+  pointerStartY = 0;
 }
 
-function handlePointerCancel(event) {
-  if (event.pointerId !== activePointerId) return;
 
-  pointerIsDown = false;
-  swipeStarted = false;
-  lastPointerHex = null;
-  activePointerId = null;
-}
+/* =================================
+   Event listeners
+================================= */
+
+languageSelect.addEventListener("change", event => {
+  changeLanguage(event.target.value);
+});
+
+startButton.addEventListener(
+  "click",
+  createNewGame
+);
+
+board.addEventListener(
+  "pointerdown",
+  handlePointerDown
+);
+
+board.addEventListener(
+  "pointermove",
+  handlePointerMove
+);
+
+board.addEventListener(
+  "pointerup",
+  handlePointerUp
+);
+
+board.addEventListener(
+  "pointercancel",
+  handlePointerCancel
+);
+
+
+/* =================================
+   Initialization
+================================= */
 
 applyTranslations();
 
-startButton.addEventListener("click", createNewGame);
+languageSelect.value = language;
 
-board.addEventListener("pointerdown", handlePointerDown);
-board.addEventListener("pointermove", handlePointerMove);
-board.addEventListener("pointerup", handlePointerUp);
-board.addEventListener("pointercancel", handlePointerCancel);
+updateRound();
+setMessage("watchSequence");

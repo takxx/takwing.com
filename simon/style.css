@@ -167,6 +167,16 @@ h1 {
     transform 100ms ease;
 }
 
+.board,
+.hex {
+  touch-action: none;
+}
+
+.hex {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
 /* =========================
    Hexagon positions
