@@ -4,16 +4,53 @@ const STARTING_CASH = 2000;
 const STARTING_DEBT = 5500;
 const WIN_CASH = 25000;
 
-// Declare language BEFORE text so it can be used safely.
-let language = localStorage.getItem("canaryMarketLanguage") || "en";
+const SUPPORTED_LANGUAGES = ["en", "es"];
+const LANGUAGE_STORAGE_KEY = "canaryMarketLanguage";
+
 let state;
+let language = getInitialLanguage();
 
 const $ = id => document.getElementById(id);
 
+function getBrowserLanguage() {
+  const browserLanguages = [
+    ...(navigator.languages || []),
+    navigator.language
+  ];
+
+  for (const browserLanguage of browserLanguages) {
+    const baseLanguage = browserLanguage
+      ?.toLowerCase()
+      .split("-")[0];
+
+    if (SUPPORTED_LANGUAGES.includes(baseLanguage)) {
+      return baseLanguage;
+    }
+  }
+
+  return "en";
+}
+
+function getInitialLanguage() {
+  const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+
+  if (SUPPORTED_LANGUAGES.includes(savedLanguage)) {
+    return savedLanguage;
+  }
+
+  return getBrowserLanguage();
+}
+
+function getLocale() {
+  return language === "es" ? "es-ES" : "en-US";
+}
+
 function money(value) {
-  return "€" + Math.max(0, Math.round(value)).toLocaleString(
-    language === "es" ? "es-ES" : "en-US"
-  );
+  return new Intl.NumberFormat(getLocale(), {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0
+  }).format(Math.max(0, Math.round(value)));
 }
 
 function randomBetween(min, max) {
@@ -31,7 +68,7 @@ const products = {
   Heroin: { base: 1300, volatility: 0.58 },
   Ecstasy: { base: 650, volatility: 0.44 },
   Mushrooms: { base: 260, volatility: 0.38 },
-  Ketamine: { base: 780, volatility: 0.50 },
+  Ketamine: { base: 780, volatility: 0.50 }
 };
 
 const islands = {
@@ -47,7 +84,8 @@ const islands = {
 const text = {
   en: {
     title: "Dope Wars: Canary Market",
-    subtitle: "Trade across the seven islands, clear your debt, and build a fortune.",
+    subtitle:
+      "Trade across the seven islands, clear your debt, and build a fortune.",
     language: "Language",
     day: "Day",
     cash: "Cash",
@@ -69,7 +107,8 @@ const text = {
     payDebt: "Pay Debt",
     newGame: "New Game",
     continue: "Continue",
-    welcome: "Welcome to the Canary Market. Clear your debt and reach €25,000.",
+    welcome:
+      "Welcome to the Canary Market. Clear your debt and reach €25,000.",
     positive: "Enter a positive quantity.",
     noSpace: "You do not have enough carrying space.",
     cannotAfford: "You cannot afford that purchase.",
@@ -77,23 +116,28 @@ const text = {
     onlyHave: (n, p) => `You only have ${n} ${p}.`,
     sold: (n, p, v) => `Sold ${n} ${p} for ${money(v)}.`,
     already: "You are already on that island.",
-    arrived: i => `You arrived in ${i}.`,
+    arrived: island => `You arrived in ${island}.`,
     searchEmpty: "You were searched, but your bags were empty.",
-    search: (n, v) => `A search cost you ${n} units and a ${money(v)} fine.`,
-    demand: p => `${p} is suddenly in high demand here.`,
-    crash: p => `${p} flooded the market and prices crashed.`,
-    found: v => `You found ${money(v)} in an old travel bag.`,
+    search: (n, v) =>
+      `A search cost you ${n} units and a ${money(v)} fine.`,
+    demand: product => `${product} is suddenly in high demand here.`,
+    crash: product =>
+      `${product} flooded the market and prices crashed.`,
+    found: value => `You found ${money(value)} in an old travel bag.`,
     noDebtCash: "You do not have enough cash to pay the debt.",
-    paid: v => `Paid ${money(v)} toward your debt.`,
-    timeUp: (c, d) => `You finished with ${money(c)} cash and ${money(d)} debt.`,
+    paid: value => `Paid ${money(value)} toward your debt.`,
+    timeUp: (cash, debt) =>
+      `You finished with ${money(cash)} cash and ${money(debt)} debt.`,
     madeIt: "You Made It!",
     timeTitle: "Time's Up",
-    winText: () => `You cleared your debt and reached ${money(WIN_CASH)} cash.`
+    winText: () =>
+      `You cleared your debt and reached ${money(WIN_CASH)} cash.`
   },
 
   es: {
     title: "Dope Wars: Mercado Canario",
-    subtitle: "Compra y vende entre las siete islas, paga tus deudas y haz fortuna.",
+    subtitle:
+      "Compra y vende entre las siete islas, paga tus deudas y haz fortuna.",
     language: "Idioma",
     day: "Día",
     cash: "Dinero",
@@ -115,7 +159,8 @@ const text = {
     payDebt: "Pagar Deuda",
     newGame: "Nueva Partida",
     continue: "Continuar",
-    welcome: "Bienvenido al Mercado Canario. Paga tu deuda y consigue €25.000.",
+    welcome:
+      "Bienvenido al Mercado Canario. Paga tu deuda y consigue 25.000 €.",
     positive: "Introduce una cantidad positiva.",
     noSpace: "No tienes suficiente espacio de carga.",
     cannotAfford: "No puedes permitirte esa compra.",
@@ -123,18 +168,23 @@ const text = {
     onlyHave: (n, p) => `Solo tienes ${n} ${p}.`,
     sold: (n, p, v) => `Vendiste ${n} ${p} por ${money(v)}.`,
     already: "Ya estás en esa isla.",
-    arrived: i => `Has llegado a ${i}.`,
+    arrived: island => `Has llegado a ${island}.`,
     searchEmpty: "Te registraron, pero no encontraron nada.",
-    search: (n, v) => `Un registro te costó ${n} unidades y una multa de ${money(v)}.`,
-    demand: p => `${p} tiene mucha demanda en esta isla.`,
-    crash: p => `El mercado se inundó de ${p} y los precios se desplomaron.`,
-    found: v => `Encontraste ${money(v)} en una vieja bolsa de viaje.`,
+    search: (n, v) =>
+      `Un registro te costó ${n} unidades y una multa de ${money(v)}.`,
+    demand: product => `${product} tiene mucha demanda en esta isla.`,
+    crash: product =>
+      `El mercado se inundó de ${product} y los precios se desplomaron.`,
+    found: value =>
+      `Encontraste ${money(value)} en una vieja bolsa de viaje.`,
     noDebtCash: "No tienes suficiente dinero para pagar la deuda.",
-    paid: v => `Pagaste ${money(v)} de tu deuda.`,
-    timeUp: (c, d) => `Terminaste con ${money(c)} y una deuda de ${money(d)}.`,
-    madeIt: "¡Lo Conseguiste!",
+    paid: value => `Pagaste ${money(value)} de tu deuda.`,
+    timeUp: (cash, debt) =>
+      `Terminaste con ${money(cash)} y una deuda de ${money(debt)}.`,
+    madeIt: "¡Lo Consegu[i]ste!",
     timeTitle: "Se Acabó el Tiempo",
-    winText: () => `Pagaste tu deuda y conseguiste ${money(WIN_CASH)}.`
+    winText: () =>
+      `Pagaste tu deuda y conseguiste ${money(WIN_CASH)}.`
   }
 };
 
@@ -146,8 +196,9 @@ const productNames = {
     Heroin: "Heroin",
     Ecstasy: "Ecstasy",
     Mushrooms: "Mushrooms",
-    Ketamine: "Ketamine",
+    Ketamine: "Ketamine"
   },
+
   es: {
     Ludes: "Ludes",
     Speed: "Anfetamina",
@@ -155,7 +206,7 @@ const productNames = {
     Heroin: "Heroína",
     Ecstasy: "Éxtasis",
     Mushrooms: "Hongos",
-    Ketamine: "Ketamina",
+    Ketamine: "Ketamina"
   }
 };
 
@@ -169,6 +220,7 @@ const islandNames = {
     "La Gomera": "La Gomera",
     "El Hierro": "El Hierro"
   },
+
   es: {
     Tenerife: "Tenerife",
     "Gran Canaria": "Gran Canaria",
@@ -234,8 +286,10 @@ function generatePrices() {
 }
 
 function usedCapacity() {
-  return Object.values(state.inventory)
-    .reduce((sum, amount) => sum + amount, 0);
+  return Object.values(state.inventory).reduce(
+    (sum, amount) => sum + amount,
+    0
+  );
 }
 
 function getAmount(product) {
@@ -400,7 +454,9 @@ function randomEvent() {
 
     state.prices[product] = Math.max(
       20,
-      Math.round(state.prices[product] * randomBetween(0.25, 0.6))
+      Math.round(
+        state.prices[product] * randomBetween(0.25, 0.6)
+      )
     );
 
     writeLog(t.crash(productLabel(product)), "notice");
@@ -434,23 +490,31 @@ function payDebt() {
 
 function checkWin() {
   if (state.cash >= WIN_CASH && state.debt <= 0) {
-    endGame(currentText().madeIt, currentText().winText());
+    endGame(
+      currentText().madeIt,
+      currentText().winText()
+    );
   }
 }
 
 function endGame(title, message) {
   state.gameOver = true;
+
   $("modalTitle").textContent = title;
   $("modalText").textContent = message;
   $("modalButton").textContent = currentText().continue;
   $("modal").classList.remove("hidden");
+
   render();
 }
 
 function writeLog(message, type = "") {
   const entry = document.createElement("p");
+
   entry.className = type;
-  entry.textContent = `[${currentText().day} ${state.day}] ${message}`;
+  entry.textContent =
+    `[${currentText().day} ${state.day}] ${message}`;
+
   $("log").prepend(entry);
 }
 
@@ -485,54 +549,67 @@ function render() {
 
   $("cashStat").textContent = money(state.cash);
   $("debtStat").textContent = money(state.debt);
-  $("spaceStat").textContent = `${usedCapacity()} / ${CAPACITY}`;
-  $("locationStat").textContent = islandLabel(state.location);
+  $("spaceStat").textContent =
+    `${usedCapacity()} / ${CAPACITY}`;
+  $("locationStat").textContent =
+    islandLabel(state.location);
 
-  $("destinationSelect").innerHTML = Object.keys(islands)
-    .filter(island => island !== state.location)
-    .map(island => `
-      <option value="${island}">
-        ${islandLabel(island)}
-      </option>
-    `)
-    .join("");
+  $("destinationSelect").innerHTML =
+    Object.keys(islands)
+      .filter(island => island !== state.location)
+      .map(island => `
+        <option value="${island}">
+          ${islandLabel(island)}
+        </option>
+      `)
+      .join("");
 
-  $("marketBody").innerHTML = Object.keys(products)
-    .map(product => `
-      <tr>
-        <td class="item-name">${productLabel(product)}</td>
-        <td>${money(state.prices[product])}</td>
-        <td class="owned">${state.inventory[product]}</td>
-        <td>
-          <div class="trade">
-            <input
-              data-product="${product}"
-              type="number"
-              min="1"
-              value="1"
-              aria-label="${productLabel(product)} quantity"
-            >
+  $("marketBody").innerHTML =
+    Object.keys(products)
+      .map(product => `
+        <tr>
+          <td class="item-name">
+            ${productLabel(product)}
+          </td>
 
-            <button
-              type="button"
-              data-action="buy"
-              data-product="${product}"
-            >
-              ${t.buy}
-            </button>
+          <td>
+            ${money(state.prices[product])}
+          </td>
 
-            <button
-              type="button"
-              data-action="sell"
-              data-product="${product}"
-            >
-              ${t.sell}
-            </button>
-          </div>
-        </td>
-      </tr>
-    `)
-    .join("");
+          <td class="owned">
+            ${state.inventory[product]}
+          </td>
+
+          <td>
+            <div class="trade">
+              <input
+                data-product="${product}"
+                type="number"
+                min="1"
+                value="1"
+                aria-label="${productLabel(product)} quantity"
+              >
+
+              <button
+                type="button"
+                data-action="buy"
+                data-product="${product}"
+              >
+                ${t.buy}
+              </button>
+
+              <button
+                type="button"
+                data-action="sell"
+                data-product="${product}"
+              >
+                ${t.sell}
+              </button>
+            </div>
+          </td>
+        </tr>
+      `)
+      .join("");
 
   $("inventory").innerHTML =
     Object.entries(state.inventory)
@@ -557,16 +634,29 @@ function render() {
   $("destinationSelect").disabled = state.gameOver;
 
   const payDebtButton = $("payDebtButton");
-  payDebtButton.disabled = state.gameOver || state.cash <= 0;
+
+  payDebtButton.disabled =
+    state.gameOver || state.cash <= 0;
+
   payDebtButton.addEventListener("click", payDebt);
+
+  $("languageSelect").value = language;
 }
 
-// Language handling
 $("languageSelect").value = language;
 
 $("languageSelect").addEventListener("change", event => {
-  language = event.target.value;
-  localStorage.setItem("canaryMarketLanguage", language);
+  const selectedLanguage = event.target.value;
+
+  language = SUPPORTED_LANGUAGES.includes(selectedLanguage)
+    ? selectedLanguage
+    : "en";
+
+  localStorage.setItem(
+    LANGUAGE_STORAGE_KEY,
+    language
+  );
+
   render();
 });
 
@@ -578,7 +668,9 @@ $("modalButton").addEventListener("click", () => {
 });
 
 $("marketBody").addEventListener("click", event => {
-  const button = event.target.closest("button[data-action]");
+  const button = event.target.closest(
+    "button[data-action]"
+  );
 
   if (!button) return;
 
@@ -587,10 +679,11 @@ $("marketBody").addEventListener("click", event => {
 
   if (action === "buy") {
     buy(product);
-  } else if (action === "sell") {
+  }
+
+  if (action === "sell") {
     sell(product);
   }
 });
 
-// Start game
 createGame();

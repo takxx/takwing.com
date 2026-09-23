@@ -317,8 +317,49 @@
     let puzzleNumber = 0;
     let solved = false;
 
-    let language =
-      localStorage.getItem("rush-hour-language") || "en";
+    // Supported languages (must match <option> values)
+    const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
+
+    // Determine initial language:
+    // 1) Use stored preference if available
+    // 2) Otherwise, use browser's preferred language (if supported)
+    // 3) Otherwise, default to English
+    function getInitialLanguage() {
+      const stored = localStorage.getItem("rush-hour-language");
+      if (stored && SUPPORTED_LANGUAGES.includes(stored)) {
+        return stored;
+      }
+
+      const browserLang =
+        navigator.language ||
+        (navigator.languages && navigator.languages[0]) ||
+        "en";
+
+      // Normalize: "en-US" -> "en", "zh-HK" -> try exact then base
+      const exact = browserLang;
+      const base = browserLang.split("-")[0].toLowerCase();
+
+      // Prefer exact match (e.g. "zh-Hant") if you extend support later
+      if (SUPPORTED_LANGUAGES.includes(exact)) {
+        return exact;
+      }
+
+      // Try base code (e.g. "en", "es")
+      if (SUPPORTED_LANGUAGES.includes(base)) {
+        return base;
+      }
+
+      // Special handling for Chinese variants if you want to map to zh-Hant
+      if (base === "zh") {
+        // Default Chinese browsers to Traditional if you prefer
+        return "zh-Hant";
+      }
+
+      // Fallback
+      return "en";
+    }
+
+    let language = getInitialLanguage();
 
     const translations = {
       en: {
@@ -1018,6 +1059,7 @@
         generatePuzzle();
       });
 
+    // Initialize language selector to current language
     languageSelect.value = language;
 
     languageSelect.addEventListener(
