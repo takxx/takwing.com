@@ -36,13 +36,23 @@ h1 {
 
 .info {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 12px;
   padding: 10px 15px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.18);
   font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.info > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 #board {
@@ -152,6 +162,14 @@ h1 {
   margin: 0;
 }
 
+.topbar-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .controls {
   display: flex;
   justify-content: center;
@@ -194,7 +212,8 @@ h1 {
   }
 }
 
-.language-control {
+.language-control,
+.mode-control {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -203,7 +222,8 @@ h1 {
   white-space: nowrap;
 }
 
-.language-control select {
+.language-control select,
+.mode-control select {
   padding: 6px 8px;
   border: 0;
   border-radius: 8px;
@@ -213,13 +233,33 @@ h1 {
   cursor: pointer;
 }
 
+.timer-wrap {
+  color: #ffdd7a;
+}
+
+.timer-wrap[hidden] {
+  display: none;
+}
+
+.best-wrap {
+  color: #7dff9b;
+}
+
 @media (max-width: 480px) {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .language-control {
+  .topbar-controls {
     align-self: flex-end;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .info {
+    justify-content: center;
+    text-align: center;
   }
 }

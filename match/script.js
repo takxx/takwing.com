@@ -12,17 +12,29 @@ const animals = [
   "🐡"
 ];
 
+const TIMED_START_SECONDS = 80;
+const TIMED_MAX_SECONDS = 99;
+const TIME_PER_POINT = 1 / 3;
+const RESHUFFLE_BONUS_SECONDS = 2;
+
 const translations = {
   en: {
     title: "Sea Matches",
     language: "Language",
+    mode: "Mode",
+    modeRelaxed: "Relaxed",
+    modeTimed: "Timed",
     score: "Score",
     moves: "Moves",
+    time: "Time",
+    bestScore: "Best",
     hint: "Hint",
     newGame: "New Game",
     instructions: "Click or swipe neighboring animals to match them.",
     match: count => `Great! ${count} animals matched!`,
     invalidSwap: "That swap did not make a match.",
+    reshuffled: "No moves available. The board was reshuffled!",
+    timeUp: "Time is up!",
     noMoves: "Game over! There are no possible matches left.",
     hintMessage: "Hint: try swapping these two animals."
   },
@@ -30,13 +42,20 @@ const translations = {
   es: {
     title: "Parejas del Mar",
     language: "Idioma",
+    mode: "Modo",
+    modeRelaxed: "Relajado",
+    modeTimed: "Contrarreloj",
     score: "Puntuación",
     moves: "Movimientos",
+    time: "Tiempo",
+    bestScore: "Mejor",
     hint: "Pista",
     newGame: "Nuevo Juego",
     instructions: "Haz clic o desliza animales vecinos para combinarlos.",
     match: count => `¡Bien! ¡Has combinado ${count} animales!`,
     invalidSwap: "Ese movimiento no creó una combinación.",
+    reshuffled: "No hay movimientos. ¡El tablero se reorganizó!",
+    timeUp: "¡Se acabó el tiempo!",
     noMoves: "¡Fin del juego! No quedan combinaciones posibles.",
     hintMessage: "Pista: intenta intercambiar estos dos animales."
   },
@@ -44,13 +63,20 @@ const translations = {
   "zh-TW": {
     title: "深海群組",
     language: "語言",
+    mode: "模式",
+    modeRelaxed: "休閒",
+    modeTimed: "計時",
     score: "分數",
     moves: "步數",
+    time: "時間",
+    bestScore: "最佳",
     hint: "提示",
     newGame: "重新開始",
     instructions: "點擊或滑動相鄰動物以作配對",
     match: count => `成功配對 ${count} 隻動物！`,
     invalidSwap: "未能配對",
+    reshuffled: "沒有可用步數，棋盤已重新排列！",
+    timeUp: "夠鐘！",
     noMoves: "遊戲結束！已無動物可配對。",
     hintMessage: "提示：試試交換這兩隻動物。"
   }
@@ -63,6 +89,10 @@ const messageElement = document.getElementById("message");
 const newGameButton = document.getElementById("newGame");
 const hintButton = document.getElementById("hintButton");
 const languageSelect = document.getElementById("languageSelect");
+const modeSelect = document.getElementById("modeSelect");
+const timerWrap = document.getElementById("timerWrap");
+const timerElement = document.getElementById("timer");
+const bestScoreElement = document.getElementById("bestScore");
 
 let board = [];
 let selected = null;
@@ -75,6 +105,17 @@ let pointerStart = null;
 let audioContext = null;
 let hintCells = [];
 
+let gameMode = "relaxed";
+let timeLeft = TIMED_START_SECONDS;
+let timerEndTime = null;
+let timerTimeout = null;
+
+let bestScoreRelaxed = 0;
+let bestScoreTimed = 0;
+
+let resizeTimeout = null;
+let reshuffleCheckInterval = null;
+
 /* ---------------------------
    Orientation / board size
 ---------------------------- */
@@ -82,7 +123,6 @@ let hintCells = [];
 function updateBoardSize() {
   const isPortrait = window.innerHeight > window.innerWidth;
 
-  // Portrait → 7×10, Landscape → 10×7 (adjust as you like)
   if (isPortrait) {
     ROWS = 10;
     COLS = 7;
@@ -91,13 +131,8 @@ function updateBoardSize() {
     COLS = 10;
   }
 
-  // Update CSS grid layout via CSS variables
   document.documentElement.style.setProperty("--rows", String(ROWS));
   document.documentElement.style.setProperty("--cols", String(COLS));
-
-  // You can remove the direct gridTemplate* lines if you prefer CSS variables
-  // boardElement.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
-  // boardElement.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
 }
 
 /* ---------------------------
@@ -160,8 +195,17 @@ function setLanguage(language) {
     }
   });
 
-  if (!busy) {
-    messageElement.textContent = translate("instructions");
+  if (modeSelect) {
+    modeSelect.options[0].textContent =
+      translate("modeRelaxed");
+
+    modeSelect.options[1].textContent =
+      translate("modeTimed");
+  }
+
+  if (!busy && !gameOverShown) {
+    messageElement.textContent =
+      translate("instructions");
   }
 }
 
@@ -239,12 +283,6 @@ function playMatchSound(index = 0) {
 }
 
 function playMatchSounds(numberOfMatchedAnimals) {
-  /*
-    3 animals = 1 sound
-    4 animals = 2 sounds
-    5 animals = 3 sounds
-    6 animals = 4 sounds
-  */
   const soundCount = Math.max(
     1,
     numberOfMatchedAnimals - 2
@@ -256,7 +294,7 @@ function playMatchSounds(numberOfMatchedAnimals) {
 }
 
 /* ---------------------------
-   Board setup and rendering
+   Utility functions
 ---------------------------- */
 
 function randomAnimal() {
@@ -271,6 +309,133 @@ function wait(milliseconds) {
   );
 }
 
+function getBestScore() {
+  return gameMode === "relaxed"
+    ? bestScoreRelaxed
+    : bestScoreTimed;
+}
+
+function updateBestScore() {
+  if (gameMode === "relaxed") {
+    if (score > bestScoreRelaxed) {
+      bestScoreRelaxed = score;
+
+      localStorage.setItem(
+        "seaMatchesBestRelaxed",
+        String(bestScoreRelaxed)
+      );
+    }
+  } else {
+    if (score > bestScoreTimed) {
+      bestScoreTimed = score;
+
+      localStorage.setItem(
+        "seaMatchesBestTimed",
+        String(bestScoreTimed)
+      );
+    }
+  }
+}
+
+function formatTime(seconds) {
+  // Always show two digits, even if internal time is fractional.
+  return String(
+    Math.max(0, Math.ceil(seconds))
+  ).padStart(2, "0");
+}
+
+function updateTimerDisplay() {
+  if (!timerWrap || !timerElement) {
+    return;
+  }
+
+  if (gameMode === "timed") {
+    timerWrap.hidden = false;
+    timerElement.textContent = formatTime(timeLeft);
+  } else {
+    timerWrap.hidden = true;
+  }
+}
+
+function addTime(seconds) {
+  if (gameMode !== "timed" || gameOverShown) {
+    return;
+  }
+
+  timeLeft = Math.min(
+    TIMED_MAX_SECONDS,
+    timeLeft + seconds
+  );
+
+  // Move the end time forward by the amount added.
+  if (timerEndTime !== null) {
+    timerEndTime += seconds * 1000;
+  }
+
+  updateTimerDisplay();
+}
+
+function scheduleTimerTick() {
+  if (
+    gameMode !== "timed" ||
+    gameOverShown ||
+    timerEndTime === null
+  ) {
+    return;
+  }
+
+  const millisecondsRemaining =
+    timerEndTime - Date.now();
+
+  if (millisecondsRemaining <= 0) {
+    timeLeft = 0;
+    updateTimerDisplay();
+    showTimeUp();
+    return;
+  }
+
+  timeLeft = millisecondsRemaining / 1000;
+  updateTimerDisplay();
+
+  // Update close to the next visible whole-second change.
+  const nextUpdate =
+    millisecondsRemaining % 1000 || 1000;
+
+  timerTimeout = setTimeout(
+    scheduleTimerTick,
+    nextUpdate
+  );
+}
+
+function startTimer() {
+  stopTimer();
+
+  if (gameMode !== "timed") {
+    return;
+  }
+
+  timeLeft = TIMED_START_SECONDS;
+  timerEndTime =
+    Date.now() + TIMED_START_SECONDS * 1000;
+
+  updateTimerDisplay();
+  scheduleTimerTick();
+}
+
+function stopTimer() {
+  if (timerTimeout !== null) {
+    clearTimeout(timerTimeout);
+    timerTimeout = null;
+  }
+
+  timerEndTime = null;
+  updateTimerDisplay();
+}
+
+/* ---------------------------
+   Board setup and rendering
+---------------------------- */
+
 function createBoard() {
   gameOverShown = false;
   selected = null;
@@ -279,8 +444,12 @@ function createBoard() {
   hintCells = [];
 
   do {
-    board = Array.from({ length: ROWS }, () =>
-      Array.from({ length: COLS }, randomAnimal)
+    board = Array.from(
+      { length: ROWS },
+      () => Array.from(
+        { length: COLS },
+        randomAnimal
+      )
     );
   } while (findMatches().size > 0);
 
@@ -335,6 +504,12 @@ function render() {
 
   scoreElement.textContent = score;
   movesElement.textContent = moves;
+
+  updateTimerDisplay();
+
+  if (bestScoreElement) {
+    bestScoreElement.textContent = getBestScore();
+  }
 }
 
 /* ---------------------------
@@ -365,7 +540,10 @@ function findMatches() {
         board[row][col] === board[row][start];
 
       if (!same) {
-        if (col - start >= 3 && board[row][start]) {
+        if (
+          col - start >= 3 &&
+          board[row][start]
+        ) {
           for (let x = start; x < col; x++) {
             matches.add(`${row},${x}`);
           }
@@ -387,7 +565,10 @@ function findMatches() {
         board[row][col] === board[start][col];
 
       if (!same) {
-        if (row - start >= 3 && board[start][col]) {
+        if (
+          row - start >= 3 &&
+          board[start][col]
+        ) {
           for (let y = start; y < row; y++) {
             matches.add(`${y},${col}`);
           }
@@ -405,21 +586,41 @@ function dropAnimals() {
   for (let col = 0; col < COLS; col++) {
     const remaining = [];
 
-    // Collect existing animals from bottom to top.
     for (let row = ROWS - 1; row >= 0; row--) {
       if (board[row][col] !== null) {
         remaining.push(board[row][col]);
       }
     }
 
-    // Put existing animals back at the bottom.
     for (let row = ROWS - 1; row >= 0; row--) {
       const indexFromBottom = ROWS - 1 - row;
 
       board[row][col] =
-        remaining[indexFromBottom] ?? randomAnimal();
+        remaining[indexFromBottom] ??
+        randomAnimal();
     }
   }
+}
+
+/* ---------------------------
+   Scoring
+---------------------------- */
+
+/*
+  Match of 3 = 1 point
+  Match of 4 = 2 points
+  Match of 5 = 3 points
+  Match of 6 = 4 points
+
+  Chain multiplier:
+  First cascade = ×1
+  Second cascade = ×2
+  Third cascade = ×3
+*/
+function scoreForMatch(count, cascadeLevel) {
+  const basePoints = Math.max(1, count - 2);
+
+  return basePoints * cascadeLevel;
 }
 
 /* ---------------------------
@@ -427,6 +628,9 @@ function dropAnimals() {
 ---------------------------- */
 
 async function resolveMatches() {
+  let cascadeLevel = 1;
+  let pointsThisMove = 0;
+
   while (true) {
     const matches = findMatches();
 
@@ -441,21 +645,28 @@ async function resolveMatches() {
     ];
 
     for (const match of matches) {
-      const [row, col] = match.split(",").map(Number);
+      const [row, col] =
+        match.split(",").map(Number);
+
       const index = row * COLS + col;
 
       cells[index]?.classList.add("matched");
     }
 
-    score += matches.size * 10;
-    scoreElement.textContent = score;
+    pointsThisMove += scoreForMatch(
+      matches.size,
+      cascadeLevel
+    );
+
     messageElement.textContent =
       translate("match", matches.size);
 
     await wait(300);
 
     for (const match of matches) {
-      const [row, col] = match.split(",").map(Number);
+      const [row, col] =
+        match.split(",").map(Number);
+
       board[row][col] = null;
     }
 
@@ -463,13 +674,23 @@ async function resolveMatches() {
     render();
 
     await wait(180);
+
+    cascadeLevel++;
   }
 
-  const possibleMove = findPossibleMove();
+  if (pointsThisMove > 0) {
+    score += pointsThisMove;
 
-  if (!possibleMove) {
-    showGameOver();
-  } else {
+    if (gameMode === "timed") {
+      addTime(pointsThisMove * TIME_PER_POINT);
+    }
+
+    render();
+  }
+
+  if (!findPossibleMove()) {
+    reshuffleBoard();
+  } else if (!gameOverShown) {
     messageElement.textContent =
       translate("instructions");
   }
@@ -497,7 +718,7 @@ async function attemptSwap(first, second) {
 }
 
 /* ---------------------------
-   Click, mouse drag, and swipe
+   Input handling
 ---------------------------- */
 
 function areNeighbors(first, second) {
@@ -509,7 +730,7 @@ function areNeighbors(first, second) {
 }
 
 function handleTap(row, col) {
-  if (busy || !board[row][col]) {
+  if (busy || gameOverShown || !board[row][col]) {
     return;
   }
 
@@ -554,7 +775,6 @@ function handleSwipe(start, endX, endY) {
     Math.abs(deltaY)
   );
 
-  // Treat a short movement as a click or tap.
   if (distance < 18) {
     handleTap(start.row, start.col);
     return;
@@ -576,7 +796,7 @@ function handleSwipe(start, endX, endY) {
     targetCol < COLS &&
     board[targetRow][targetCol];
 
-  if (!validTarget || busy) {
+  if (!validTarget || busy || gameOverShown) {
     selected = null;
     render();
     return;
@@ -599,58 +819,69 @@ function handleSwipe(start, endX, endY) {
   attemptSwap(first, second);
 }
 
-boardElement.addEventListener("pointerdown", event => {
-  const cell = event.target.closest(".cell");
+boardElement.addEventListener(
+  "pointerdown",
+  event => {
+    const cell =
+      event.target.closest(".cell");
 
-  if (!cell || busy) {
-    return;
+    if (!cell || busy || gameOverShown) {
+      return;
+    }
+
+    const row = Number(cell.dataset.row);
+    const col = Number(cell.dataset.col);
+
+    if (!board[row][col]) {
+      return;
+    }
+
+    pointerStart = {
+      row,
+      col,
+      x: event.clientX,
+      y: event.clientY
+    };
+
+    cell.setPointerCapture?.(
+      event.pointerId
+    );
   }
+);
 
-  const row = Number(cell.dataset.row);
-  const col = Number(cell.dataset.col);
+boardElement.addEventListener(
+  "pointerup",
+  event => {
+    if (!pointerStart) {
+      return;
+    }
 
-  if (!board[row][col]) {
-    return;
+    const start = {
+      row: pointerStart.row,
+      col: pointerStart.col,
+      x: pointerStart.x,
+      y: pointerStart.y
+    };
+
+    pointerStart = null;
+
+    handleSwipe(
+      start,
+      event.clientX,
+      event.clientY
+    );
   }
+);
 
-  pointerStart = {
-    row,
-    col,
-    x: event.clientX,
-    y: event.clientY
-  };
-
-  cell.setPointerCapture?.(event.pointerId);
-});
-
-boardElement.addEventListener("pointerup", event => {
-  if (!pointerStart) {
-    return;
+boardElement.addEventListener(
+  "pointercancel",
+  () => {
+    pointerStart = null;
   }
-
-  // Copy the values before clearing pointerStart.
-  const start = {
-    row: pointerStart.row,
-    col: pointerStart.col,
-    x: pointerStart.x,
-    y: pointerStart.y
-  };
-
-  pointerStart = null;
-
-  handleSwipe(
-    start,
-    event.clientX,
-    event.clientY
-  );
-});
-
-boardElement.addEventListener("pointercancel", () => {
-  pointerStart = null;
-});
+);
 
 /* ---------------------------
-   Hints and game over
+   Possible moves and reshuffling
 ---------------------------- */
 
 function findPossibleMove() {
@@ -658,8 +889,6 @@ function findPossibleMove() {
     for (let col = 0; col < COLS; col++) {
       const first = { row, col };
 
-      // Only check right and down.
-      // The reverse directions would duplicate the same swaps.
       const directions = [
         { row: 0, col: 1 },
         { row: 1, col: 0 }
@@ -695,15 +924,53 @@ function findPossibleMove() {
   return null;
 }
 
+function reshuffleBoard() {
+  do {
+    board = Array.from(
+      { length: ROWS },
+      () => Array.from(
+        { length: COLS },
+        randomAnimal
+      )
+    );
+  } while (
+    findMatches().size > 0 ||
+    !findPossibleMove()
+  );
+
+  selected = null;
+  hintCells = [];
+
+  if (gameMode === "timed") {
+    addTime(RESHUFFLE_BONUS_SECONDS);
+  }
+
+  render();
+
+  messageElement.textContent =
+    translate("reshuffled");
+
+  setTimeout(() => {
+    if (!busy && !gameOverShown) {
+      messageElement.textContent =
+        translate("instructions");
+    }
+  }, 1200);
+}
+
+/* ---------------------------
+   Hint
+---------------------------- */
+
 function showHint() {
-  if (busy) {
+  if (busy || gameOverShown) {
     return;
   }
 
   const hint = findPossibleMove();
 
   if (!hint) {
-    showGameOver();
+    reshuffleBoard();
     return;
   }
 
@@ -720,7 +987,7 @@ function showHint() {
   setTimeout(() => {
     hintCells = [];
 
-    if (!busy) {
+    if (!busy && !gameOverShown) {
       messageElement.textContent =
         translate("instructions");
     }
@@ -729,7 +996,11 @@ function showHint() {
   }, 2200);
 }
 
-function showGameOver() {
+/* ---------------------------
+   Game over
+---------------------------- */
+
+function finishGame(messageKey) {
   if (gameOverShown) {
     return;
   }
@@ -737,26 +1008,31 @@ function showGameOver() {
   gameOverShown = true;
   busy = true;
 
-  const gameOverMessage = translate("noMoves");
+  stopTimer();
+  updateBestScore();
+  render();
 
-  messageElement.textContent = gameOverMessage;
+  const finalMessage = translate(messageKey);
+  messageElement.textContent = finalMessage;
 
   setTimeout(() => {
-    alert(gameOverMessage);
+    alert(finalMessage);
   }, 100);
 }
 
+function showTimeUp() {
+  finishGame("timeUp");
+}
+
+function showGameOver() {
+  finishGame("noMoves");
+}
+
 /* ---------------------------
-   Buttons and startup
+   New game and mode changes
 ---------------------------- */
 
-languageSelect.addEventListener("change", event => {
-  setLanguage(event.target.value);
-});
-
-hintButton.addEventListener("click", showHint);
-
-newGameButton.addEventListener("click", () => {
+function resetGameState() {
   score = 0;
   moves = 0;
   selected = null;
@@ -764,18 +1040,115 @@ newGameButton.addEventListener("click", () => {
   gameOverShown = false;
   pointerStart = null;
   hintCells = [];
+}
+
+function startNewGame() {
+  stopTimer();
+  resetGameState();
+
+  if (gameMode === "timed") {
+    startTimer();
+  }
 
   createBoard();
-  setLanguage(currentLanguage);
-});
 
-// Initialize
+  messageElement.textContent =
+    translate("instructions");
+}
+
+function setGameMode(mode) {
+  gameMode = mode === "timed"
+    ? "timed"
+    : "relaxed";
+
+  if (modeSelect) {
+    modeSelect.value = gameMode;
+  }
+
+  startNewGame();
+}
+
+function loadBestScores() {
+  bestScoreRelaxed = Number(
+    localStorage.getItem(
+      "seaMatchesBestRelaxed"
+    ) || "0"
+  );
+
+  bestScoreTimed = Number(
+    localStorage.getItem(
+      "seaMatchesBestTimed"
+    ) || "0"
+  );
+}
+
+/* ---------------------------
+   Event listeners
+---------------------------- */
+
+languageSelect.addEventListener(
+  "change",
+  event => {
+    setLanguage(event.target.value);
+  }
+);
+
+modeSelect.addEventListener(
+  "change",
+  event => {
+    setGameMode(event.target.value);
+  }
+);
+
+hintButton.addEventListener(
+  "click",
+  showHint
+);
+
+newGameButton.addEventListener(
+  "click",
+  startNewGame
+);
+
+window.addEventListener(
+  "resize",
+  () => {
+    clearTimeout(resizeTimeout);
+
+    resizeTimeout = setTimeout(() => {
+      updateBoardSize();
+      startNewGame();
+    }, 150);
+  }
+);
+
+/* ---------------------------
+   Startup
+---------------------------- */
+
+loadBestScores();
+
 updateBoardSize();
-window.addEventListener("resize", () => {
-  updateBoardSize();
-  // Restart game when orientation/size changes
-  createBoard();
-});
 
-setLanguage(getBrowserLanguage());
+currentLanguage = getBrowserLanguage();
+setLanguage(currentLanguage);
+
+gameMode = modeSelect.value || "relaxed";
+
 createBoard();
+
+if (gameMode === "timed") {
+  startTimer();
+}
+
+// Check for a no-moves board periodically.
+// The reshuffle itself adds five seconds in timed mode.
+reshuffleCheckInterval = setInterval(() => {
+  if (
+    !busy &&
+    !gameOverShown &&
+    !findPossibleMove()
+  ) {
+    reshuffleBoard();
+  }
+}, 800);

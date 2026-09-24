@@ -3,22 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Perfect Matches</title>
+  <title>Sea Matches</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <main class="game">
   <div class="topbar">
-    <h1 data-i18n="title">Animal Match</h1>
+    <h1 data-i18n="title">Sea Matches</h1>
 
-    <label class="language-control">
-      <span data-i18n="language">Language</span>
-      <select id="languageSelect" aria-label="Language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <option value="zh-TW">繁體中文</option>
-      </select>
-    </label>
+    <div class="topbar-controls">
+      <label class="language-control">
+        <span data-i18n="language">Language</span>
+        <select id="languageSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-TW">繁體中文</option>
+        </select>
+      </label>
+
+      <label class="mode-control">
+        <span data-i18n="mode">Mode</span>
+        <select id="modeSelect" aria-label="Game mode">
+          <option value="relaxed" data-i18n="modeRelaxed">Relaxed</option>
+          <option value="timed" data-i18n="modeTimed">Timed</option>
+        </select>
+      </label>
+    </div>
   </div>
 
   <div class="info">
@@ -31,6 +41,16 @@
       <span data-i18n="moves">Moves</span>:
       <b id="moves">0</b>
     </span>
+
+    <span id="timerWrap" class="timer-wrap" hidden>
+      <span data-i18n="time">Time</span>:
+      <b id="timer">180</b>
+    </span>
+
+    <span class="best-wrap">
+      <span data-i18n="bestScore">Best</span>:
+      <b id="bestScore">0</b>
+    </span>
   </div>
 
   <div id="board" aria-label="Animal match game board"></div>
@@ -39,15 +59,10 @@
     Click or swipe neighboring animals to match them.
   </p>
 
-	<div class="controls">
-	  <button id="hintButton" data-i18n="hint">
-		Hint
-	  </button>
-	
-	  <button id="newGame" data-i18n="newGame">
-		New Game
-	  </button>
-	</div>
+  <div class="controls">
+    <button id="hintButton" data-i18n="hint">Hint</button>
+    <button id="newGame" data-i18n="newGame">New Game</button>
+  </div>
 </main>
 
   <script src="script.js"></script>
