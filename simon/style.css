@@ -357,7 +357,12 @@ h1 {
 
 @media (max-width: 480px) {
   :root {
-    --hex-width: clamp(68px, 19vw, 100px);
+    /*
+      Larger controls for touch screens.
+      The minimum keeps them usable on narrow phones.
+    */
+    --hex-width: clamp(76px, 28vw, 112px);
+    --hex-height: calc(var(--hex-width) * 0.8660254);
     --side-offset: calc(var(--hex-width) * 0.75);
   }
 
@@ -379,10 +384,20 @@ h1 {
   }
 
   .board {
-    /*
-      Prevent flexbox from shrinking the board vertically.
-    */
     flex-shrink: 0;
+    width: min(
+      calc(var(--hex-width) * 2.5),
+      96vw
+    );
+  }
+
+  .hex {
+    /*
+      Improves visibility and touch feedback on small screens.
+    */
+    transition:
+      filter 100ms ease,
+      transform 100ms ease;
   }
 
   .settings {
@@ -398,7 +413,9 @@ h1 {
 
 @media (max-width: 360px) {
   :root {
-    --hex-width: 64px;
+    --hex-width: clamp(72px, 23vw, 88px);
+    --hex-height: calc(var(--hex-width) * 0.8660254);
+    --side-offset: calc(var(--hex-width) * 0.75);
   }
 
   .game {
@@ -414,7 +431,6 @@ h1 {
     padding-inline: 22px;
   }
 }
-
 
 /* =========================
    Short screens
