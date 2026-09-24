@@ -4,350 +4,56 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lucky 7 Slot Machine</title>
-
-  <style>
-    :root {
-      --gold: #ffd166;
-      --red: #ef476f;
-      --green: #06d6a0;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      font-family: Arial, sans-serif;
-      color: white;
-      background:
-        radial-gradient(circle at top, #61299a, transparent 45%),
-        linear-gradient(135deg, #120d1d, #291341);
-    }
-
-    .machine {
-      width: min(94vw, 500px);
-      padding: 24px;
-      text-align: center;
-      border: 6px solid var(--gold);
-      border-radius: 28px;
-      background: linear-gradient(160deg, #7f2a91, #32174d);
-      box-shadow:
-        0 0 0 8px #8c4b16,
-        0 20px 50px rgba(0, 0, 0, 0.5);
-    }
-
-    h1 {
-      margin: 0 0 8px;
-      color: var(--gold);
-      font-size: 2.4rem;
-      text-shadow: 3px 3px #8b1e3f;
-    }
-
-    .subtitle {
-      margin-bottom: 18px;
-      opacity: 0.85;
-    }
-
-    .status {
-      display: flex;
-      justify-content: space-around;
-      gap: 8px;
-      margin: 18px 0;
-    }
-
-    .status-box {
-      flex: 1;
-      padding: 10px 5px;
-      border-radius: 12px;
-      background: rgba(0, 0, 0, 0.25);
-    }
-
-    .status-box strong {
-      display: block;
-      margin-top: 5px;
-      color: var(--gold);
-      font-size: 1.35rem;
-    }
-
-    .board {
-      position: relative;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 14px;
-      overflow: hidden;
-      border: 4px solid #e6a92c;
-      border-radius: 18px;
-      background: #21142f;
-      box-shadow: inset 0 0 18px #000;
-    }
-
-    .cell {
-      position: relative;
-      z-index: 1;
-      aspect-ratio: 1;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      border-radius: 10px;
-      background: linear-gradient(#fff, #d8d8d8);
-      color: #19111f;
-      font-size: clamp(2rem, 12vw, 3.5rem);
-      box-shadow: inset 0 0 12px #555;
-      transition: 0.2s;
-    }
-
-    .cell.spinning {
-      animation: shake 0.08s infinite alternate;
-    }
-
-    .cell.win {
-      background: var(--gold);
-      box-shadow: 0 0 18px var(--gold);
-      transform: scale(1.04);
-    }
-
-    .reel {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      line-height: 1;
-      will-change: transform;
-    }
-
-    .reel-symbol {
-      height: 1em;
-      min-height: 1em;
-      display: grid;
-      place-items: center;
-    }
-
-    .reel.up {
-      animation: reelUp 0.35s linear infinite;
-    }
-
-    .reel.down {
-      animation: reelDown 0.35s linear infinite;
-    }
-
-    @keyframes reelUp {
-      from {
-        transform: translateY(0);
-      }
-
-      to {
-        transform: translateY(-50%);
-      }
-    }
-
-    @keyframes reelDown {
-      from {
-        transform: translateY(-50%);
-      }
-
-      to {
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes shake {
-      from {
-        transform: translateY(-3px);
-      }
-
-      to {
-        transform: translateY(3px);
-      }
-    }
-
-    .payline-indicators {
-      position: absolute;
-      z-index: 0;
-      inset: 4px;
-      width: calc(100% - 8px);
-      height: calc(100% - 8px);
-      pointer-events: none;
-    }
-
-    .payline {
-      opacity: 0.2;
-      stroke: white;
-      stroke-width: 6;
-      stroke-linecap: round;
-      transition: 0.25s;
-    }
-
-    .payline.active {
-      opacity: 0.68;
-      stroke: var(--gold);
-      stroke-width: 9;
-      filter:
-        drop-shadow(0 0 3px var(--gold))
-        drop-shadow(0 0 7px var(--gold));
-    }
-
-    .payline.winner {
-      opacity: 0.95;
-      stroke: var(--green);
-      stroke-width: 11;
-      filter:
-        drop-shadow(0 0 4px var(--green))
-        drop-shadow(0 0 9px var(--green));
-    }
-
-    .legend {
-      margin-top: 10px;
-      font-size: 0.8rem;
-      opacity: 0.9;
-    }
-
-    .gold-dot {
-      color: var(--gold);
-    }
-
-    .green-dot {
-      color: var(--green);
-    }
-
-    .line-options {
-      margin: 20px 0 12px;
-    }
-
-    .line-options p {
-      margin: 0 0 10px;
-    }
-
-    .line-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .line-button,
-    .spin-button,
-    .reset-button {
-      border: 0;
-      border-radius: 999px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .line-button {
-      padding: 9px 14px;
-      color: white;
-      background: #5b3972;
-    }
-
-    .line-button.selected {
-      color: #3b1600;
-      background: var(--gold);
-    }
-
-    .spin-button {
-      margin-top: 14px;
-      padding: 14px 42px;
-      color: #3b1600;
-      background: var(--gold);
-      font-size: 1.2rem;
-      box-shadow: 0 5px 0 #b4770d;
-    }
-
-    .spin-button:active {
-      transform: translateY(4px);
-      box-shadow: 0 1px 0 #b4770d;
-    }
-
-    .reset-button {
-      margin-top: 14px;
-      padding: 8px 18px;
-      color: white;
-      background: var(--red);
-    }
-
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
-    }
-
-    .message {
-      min-height: 30px;
-      margin: 18px 0 4px;
-      color: var(--gold);
-      font-size: 1.15rem;
-      font-weight: bold;
-    }
-
-    .paytable {
-      margin-top: 18px;
-      padding: 12px;
-      border-radius: 12px;
-      background: rgba(0, 0, 0, 0.2);
-      font-size: 0.85rem;
-      line-height: 1.6;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <main class="machine">
-    <h1>LUCKY 7</h1>
+    <div class="top-bar">
+      <label for="languageSelect" data-i18n="languageLabel">
+        Language
+      </label>
 
-    <div class="subtitle">
+      <select id="languageSelect" aria-label="Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">繁體中文</option>
+      </select>
+    </div>
+
+    <h1 data-i18n="title">LUCKY 7</h1>
+
+    <div class="subtitle" data-i18n="subtitle">
       Choose your paylines and spin!
     </div>
 
     <div class="status">
       <div class="status-box">
-        Credits
+        <span data-i18n="credits">Credits</span>
         <strong id="credits">100</strong>
       </div>
 
       <div class="status-box">
-        Lines
+        <span data-i18n="lines">Lines</span>
         <strong id="selectedLines">1</strong>
       </div>
 
       <div class="status-box">
-        Last Win
+        <span data-i18n="lastWin">Last Win</span>
         <strong id="lastWin">0</strong>
       </div>
     </div>
 
-    <section class="board">
+    <section class="board" aria-label="Slot machine board">
       <svg
         class="payline-indicators"
         viewBox="0 0 300 300"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <line
-          class="payline line-top"
-          x1="-12"
-          y1="50"
-          x2="312"
-          y2="50"
-        />
-
-        <line
-          class="payline line-centre"
-          x1="-12"
-          y1="150"
-          x2="312"
-          y2="150"
-        />
-
-        <line
-          class="payline line-bottom"
-          x1="-12"
-          y1="250"
-          x2="312"
-          y2="250"
-        />
-
+        <line class="payline line-top" x1="-12" y1="50" x2="312" y2="50" />
+        <line class="payline line-centre" x1="-12" y1="150" x2="312" y2="150" />
+        <line class="payline line-bottom" x1="-12" y1="250" x2="312" y2="250" />
         <line
           class="payline line-diagonal-down"
           x1="-12"
@@ -355,7 +61,6 @@
           x2="312"
           y2="312"
         />
-
         <line
           class="payline line-diagonal-up"
           x1="-12"
@@ -379,456 +84,73 @@
     </section>
 
     <div class="legend">
-      <span class="gold-dot">●</span> Selected line
+      <span class="gold-dot">●</span>
+      <span data-i18n="selectedLine">Selected line</span>
+
       &nbsp;
-      <span class="green-dot">●</span> Winning line
+
+      <span class="green-dot">●</span>
+      <span data-i18n="winningLine">Winning line</span>
     </div>
 
     <div class="line-options">
-      <p>Choose paylines — 1 credit per line</p>
+      <p data-i18n="lineCost">
+        Choose paylines — 1 credit per line
+      </p>
 
       <div class="line-buttons">
         <button class="line-button selected" data-lines="1">
-          1 Line
+          <span data-line-count="1">1 Line</span>
         </button>
 
         <button class="line-button" data-lines="3">
-          3 Lines
+          <span data-line-count="3">3 Lines</span>
         </button>
 
         <button class="line-button" data-lines="5">
-          5 Lines
+          <span data-line-count="5">5 Lines</span>
         </button>
       </div>
     </div>
 
-    <button class="spin-button" id="spinButton">
-      SPIN
+    <div class="sound-controls">
+      <button class="sound-button" id="soundButton" type="button">
+        🔊 <span data-i18n="soundOn">Sound on</span>
+      </button>
+    </div>
+
+    <button class="spin-button" id="spinButton" type="button">
+      <span data-i18n="spin">SPIN</span>
     </button>
 
-    <br />
-
-    <button class="reset-button" id="resetButton">
-      Reset Credits
+    <button class="reset-button" id="resetButton" type="button">
+      <span data-i18n="reset">Reset Credits</span>
     </button>
 
-    <div class="message" id="message">
-      Good luck!
+    <div class="message" id="message" aria-live="polite">
+      <span data-i18n="goodLuck">Good luck!</span>
     </div>
 
     <div class="paytable">
-      Three matching symbols on a line pays:
+      <span data-i18n="paytableIntro">
+        Three matching symbols on a line pays:
+      </span>
+
       <br />
+
       🍒 ×5 · 🍋 ×10 · 🍊 ×15 · 🔔 ×20 · 7️⃣ ×50
     </div>
+
+<!--   <div class="expected-value">
+      <h2 data-i18n="expectedValueTitle">
+        Expected win
+      </h2>
+
+      <p id="expectedWin"></p>
+      <p id="expectedNet"></p>
+    </div> -->
   </main>
 
-  <script>
-    const STARTING_CREDITS = 100;
-
-    const symbols = [
-      { icon: "🍒", payout: 5 },
-      { icon: "🍋", payout: 10 },
-      { icon: "🍊", payout: 15 },
-      { icon: "🔔", payout: 20 },
-      { icon: "7️⃣", payout: 50 }
-    ];
-
-    const paylines = {
-      1: [
-        [3, 4, 5]
-      ],
-
-      3: [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8]
-      ],
-
-      5: [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 4, 8],
-        [6, 4, 2]
-      ]
-    };
-
-    const activeLines = {
-      1: [
-        ".line-centre"
-      ],
-
-      3: [
-        ".line-top",
-        ".line-centre",
-        ".line-bottom"
-      ],
-
-      5: [
-        ".line-top",
-        ".line-centre",
-        ".line-bottom",
-        ".line-diagonal-down",
-        ".line-diagonal-up"
-      ]
-    };
-
-    const cells = [
-      ...document.querySelectorAll(".cell")
-    ];
-
-    const lineButtons = [
-      ...document.querySelectorAll(".line-button")
-    ];
-
-    const paylineElements = [
-      ...document.querySelectorAll(".payline")
-    ];
-
-    const creditsDisplay =
-      document.getElementById("credits");
-
-    const selectedLinesDisplay =
-      document.getElementById("selectedLines");
-
-    const lastWinDisplay =
-      document.getElementById("lastWin");
-
-    const message =
-      document.getElementById("message");
-
-    const spinButton =
-      document.getElementById("spinButton");
-
-    const resetButton =
-      document.getElementById("resetButton");
-
-    let credits = STARTING_CREDITS;
-    let selectedLines = 1;
-    let isSpinning = false;
-    let audioContext;
-
-    function randomSymbol() {
-      return symbols[
-        Math.floor(Math.random() * symbols.length)
-      ];
-    }
-
-    function updateDisplays() {
-      creditsDisplay.textContent = credits;
-      selectedLinesDisplay.textContent = selectedLines;
-    }
-
-    function updatePaylineIndicators() {
-      paylineElements.forEach(line => {
-        line.classList.remove("active", "winner");
-      });
-
-      activeLines[selectedLines].forEach(selector => {
-        document
-          .querySelector(selector)
-          .classList.add("active");
-      });
-    }
-
-    function clearWinningCells() {
-      cells.forEach(cell => {
-        cell.classList.remove("win");
-      });
-
-      paylineElements.forEach(line => {
-        line.classList.remove("winner");
-      });
-
-      updatePaylineIndicators();
-    }
-
-    function playSound(type) {
-      audioContext ??= new AudioContext();
-
-      const oscillator =
-        audioContext.createOscillator();
-
-      const gain =
-        audioContext.createGain();
-
-      oscillator.connect(gain);
-      gain.connect(audioContext.destination);
-
-      const now = audioContext.currentTime;
-
-      if (type === "spin") {
-        oscillator.frequency.setValueAtTime(180, now);
-
-        oscillator.frequency.exponentialRampToValueAtTime(
-          70,
-          now + 0.12
-        );
-
-        gain.gain.setValueAtTime(0.04, now);
-
-        gain.gain.exponentialRampToValueAtTime(
-          0.001,
-          now + 0.12
-        );
-
-        oscillator.start(now);
-        oscillator.stop(now + 0.12);
-      }
-
-      if (type === "win") {
-        oscillator.frequency.setValueAtTime(500, now);
-        oscillator.frequency.setValueAtTime(700, now + 0.12);
-        oscillator.frequency.setValueAtTime(950, now + 0.24);
-
-        gain.gain.setValueAtTime(0.15, now);
-
-        gain.gain.exponentialRampToValueAtTime(
-          0.001,
-          now + 0.45
-        );
-
-        oscillator.start(now);
-        oscillator.stop(now + 0.45);
-      }
-
-      if (type === "lose") {
-        oscillator.frequency.setValueAtTime(180, now);
-
-        oscillator.frequency.exponentialRampToValueAtTime(
-          80,
-          now + 0.3
-        );
-
-        gain.gain.setValueAtTime(0.12, now);
-
-        gain.gain.exponentialRampToValueAtTime(
-          0.001,
-          now + 0.3
-        );
-
-        oscillator.start(now);
-        oscillator.stop(now + 0.3);
-      }
-    }
-
-    /*
-      Each cell in the same column receives
-      the same duration.
-
-      Column 1: moves upward and stops together
-      Column 2: moves downward and stops together
-      Column 3: moves upward and stops together
-    */
-    function spinCell(cell, duration, index) {
-      return new Promise(resolve => {
-        cell.classList.add("spinning");
-
-        const column = index % 3;
-
-        const direction =
-          column === 1 ? "down" : "up";
-
-        const reelSymbols = [
-          ...symbols,
-          ...symbols
-        ];
-
-        const reel = document.createElement("div");
-        reel.className = `reel ${direction}`;
-
-        reel.innerHTML = reelSymbols
-          .map(symbol => {
-            return `
-              <div class="reel-symbol">
-                ${symbol.icon}
-              </div>
-            `;
-          })
-          .join("");
-
-        cell.innerHTML = "";
-        cell.appendChild(reel);
-
-        setTimeout(() => {
-          const result = randomSymbol();
-
-          cell.innerHTML = result.icon;
-          cell.classList.remove("spinning");
-
-          resolve(result);
-        }, duration);
-      });
-    }
-
-    function highlightWinningLine(line) {
-      line.forEach(index => {
-        cells[index].classList.add("win");
-      });
-
-      const lineIndicators = {
-        "0,1,2": ".line-top",
-        "3,4,5": ".line-centre",
-        "6,7,8": ".line-bottom",
-        "0,4,8": ".line-diagonal-down",
-        "6,4,2": ".line-diagonal-up"
-      };
-
-      const indicator =
-        lineIndicators[line.join(",")];
-
-      if (indicator) {
-        const lineElement =
-          document.querySelector(indicator);
-
-        lineElement.classList.remove("active");
-        lineElement.classList.add("winner");
-      }
-    }
-
-    function findWinningLines(results) {
-      const winningLines = [];
-
-      paylines[selectedLines].forEach(line => {
-        const [a, b, c] = line;
-
-        const isMatch =
-          results[a].icon === results[b].icon &&
-          results[b].icon === results[c].icon;
-
-        if (isMatch) {
-          winningLines.push({
-            line,
-            payout: results[a].payout,
-            symbol: results[a].icon
-          });
-        }
-      });
-
-      return winningLines;
-    }
-
-    async function spin() {
-      if (isSpinning) return;
-
-      const spinCost = selectedLines;
-
-      if (credits < spinCost) {
-        message.textContent = "Not enough credits!";
-        playSound("lose");
-        return;
-      }
-
-      isSpinning = true;
-      spinButton.disabled = true;
-
-      clearWinningCells();
-
-      credits -= spinCost;
-      lastWinDisplay.textContent = "0";
-      updateDisplays();
-
-      message.textContent = "Spinning...";
-
-      /*
-        All nine cells start at the same time.
-
-        Cells 0, 3, 6 stop together.
-        Cells 1, 4, 7 stop together.
-        Cells 2, 5, 8 stop together.
-      */
-      const columnDurations = [
-        1400,
-        1900,
-        2400
-      ];
-
-      const results = await Promise.all(
-        cells.map((cell, index) => {
-          const column = index % 3;
-          const duration = columnDurations[column];
-
-          return spinCell(
-            cell,
-            duration,
-            index
-          );
-        })
-      );
-
-      const winningLines =
-        findWinningLines(results);
-
-      let totalWin = 0;
-
-      winningLines.forEach(winningLine => {
-        totalWin += winningLine.payout;
-        highlightWinningLine(winningLine.line);
-      });
-
-      if (totalWin > 0) {
-        credits += totalWin;
-        lastWinDisplay.textContent = totalWin;
-
-        message.textContent =
-          `🎉 You won ${totalWin} credits!`;
-
-        playSound("win");
-      } else {
-        lastWinDisplay.textContent = "0";
-
-        message.textContent =
-          "No win this time. Try again!";
-
-        playSound("lose");
-      }
-
-      updateDisplays();
-
-      spinButton.disabled = false;
-      isSpinning = false;
-    }
-
-    lineButtons.forEach(button => {
-      button.addEventListener("click", () => {
-        if (isSpinning) return;
-
-        lineButtons.forEach(item => {
-          item.classList.remove("selected");
-        });
-
-        button.classList.add("selected");
-
-        selectedLines =
-          Number(button.dataset.lines);
-
-        clearWinningCells();
-        updateDisplays();
-
-        message.textContent =
-          `${selectedLines} payline${
-            selectedLines === 1 ? "" : "s"
-          } selected`;
-      });
-    });
-
-    resetButton.addEventListener("click", () => {
-      if (isSpinning) return;
-
-      credits = STARTING_CREDITS;
-      lastWinDisplay.textContent = "0";
-
-      clearWinningCells();
-      updateDisplays();
-
-      message.textContent = "Credits reset!";
-    });
-
-    spinButton.addEventListener("click", spin);
-
-    updateDisplays();
-    updatePaylineIndicators();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>

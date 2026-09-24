@@ -1,0 +1,338 @@
+:root {
+  --gold: #ffd166;
+  --red: #ef476f;
+  --green: #06d6a0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: Arial, sans-serif;
+  color: white;
+  background:
+    radial-gradient(circle at top, #61299a, transparent 45%),
+    linear-gradient(135deg, #120d1d, #291341);
+}
+
+.machine {
+  width: min(94vw, 500px);
+  padding: 24px;
+  text-align: center;
+  border: 6px solid var(--gold);
+  border-radius: 28px;
+  background: linear-gradient(160deg, #7f2a91, #32174d);
+  box-shadow:
+    0 0 0 8px #8c4b16,
+    0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+#languageSelect {
+  padding: 6px 8px;
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  color: white;
+  background: #32174d;
+}
+
+h1 {
+  margin: 0 0 8px;
+  color: var(--gold);
+  font-size: 2.4rem;
+  text-shadow: 3px 3px #8b1e3f;
+}
+
+.subtitle {
+  margin-bottom: 18px;
+  opacity: 0.85;
+}
+
+.status {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.status-box {
+  flex: 1;
+  padding: 10px 5px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.status-box strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--gold);
+  font-size: 1.35rem;
+}
+
+.board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 14px;
+  overflow: hidden;
+  border: 4px solid #e6a92c;
+  border-radius: 18px;
+  background: #21142f;
+  box-shadow: inset 0 0 18px #000;
+}
+
+.cell {
+  position: relative;
+  z-index: 1;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(#fff, #d8d8d8);
+  color: #19111f;
+  font-size: clamp(2rem, 12vw, 3.5rem);
+  box-shadow: inset 0 0 12px #555;
+  transition: 0.2s;
+}
+
+.cell.spinning {
+  animation: shake 0.08s infinite alternate;
+}
+
+.cell.win {
+  background: var(--gold);
+  box-shadow: 0 0 18px var(--gold);
+  transform: scale(1.04);
+}
+
+.reel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  will-change: transform;
+}
+
+.reel-symbol {
+  height: 1em;
+  min-height: 1em;
+  display: grid;
+  place-items: center;
+}
+
+.reel.up {
+  animation: reelUp 0.35s linear infinite;
+}
+
+.reel.down {
+  animation: reelDown 0.35s linear infinite;
+}
+
+@keyframes reelUp {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes reelDown {
+  from {
+    transform: translateY(-50%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+  from {
+    transform: translateY(-3px);
+  }
+
+  to {
+    transform: translateY(3px);
+  }
+}
+
+.payline-indicators {
+  position: absolute;
+  z-index: 0;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  pointer-events: none;
+}
+
+.payline {
+  opacity: 0.2;
+  stroke: white;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: 0.25s;
+}
+
+.payline.active {
+  opacity: 0.68;
+  stroke: var(--gold);
+  stroke-width: 9;
+  filter:
+    drop-shadow(0 0 3px var(--gold))
+    drop-shadow(0 0 7px var(--gold));
+}
+
+.payline.winner {
+  opacity: 0.95;
+  stroke: var(--green);
+  stroke-width: 11;
+  filter:
+    drop-shadow(0 0 4px var(--green))
+    drop-shadow(0 0 9px var(--green));
+}
+
+.legend {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.gold-dot {
+  color: var(--gold);
+}
+
+.green-dot {
+  color: var(--green);
+}
+
+.line-options {
+  margin: 20px 0 12px;
+}
+
+.line-options p {
+  margin: 0 0 10px;
+}
+
+.line-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.line-button,
+.spin-button,
+.reset-button,
+.sound-button {
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.line-button {
+  padding: 9px 14px;
+  color: white;
+  background: #5b3972;
+}
+
+.line-button.selected {
+  color: #3b1600;
+  background: var(--gold);
+}
+
+.sound-controls {
+  margin-top: 14px;
+}
+
+.sound-button {
+  padding: 8px 14px;
+  color: white;
+  background: #5b3972;
+}
+
+.spin-button {
+  margin-top: 14px;
+  padding: 14px 42px;
+  color: #3b1600;
+  background: var(--gold);
+  font-size: 1.2rem;
+  box-shadow: 0 5px 0 #b4770d;
+}
+
+.spin-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #b4770d;
+}
+
+.reset-button {
+  display: block;
+  margin: 14px auto 0;
+  padding: 8px 18px;
+  color: white;
+  background: var(--red);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.message {
+  min-height: 30px;
+  margin: 18px 0 4px;
+  color: var(--gold);
+  font-size: 1.15rem;
+  font-weight: bold;
+}
+
+.paytable,
+.expected-value {
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.expected-value h2 {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-size: 1rem;
+}
+
+.expected-value p {
+  margin: 3px 0;
+}
+
+@media (max-width: 420px) {
+  .machine {
+    padding: 18px;
+  }
+
+  .line-buttons {
+    gap: 5px;
+  }
+
+  .line-button {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+}
