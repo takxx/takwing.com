@@ -3,18 +3,18 @@ let ROWS = 8;
 let COLS = 8;
 
 const animals = [
-  "🐷",
-  "🐴",
-  "🦊",
-  "🐮",
+  "🐙",
+  "🪼",
+  "🦪",
+  "🦀",
   "🐢",
-  "🐵",
-  "🦁"
+  "🐋",
+  "🐡"
 ];
 
 const translations = {
   en: {
-    title: "Animal Match",
+    title: "Perfect Matches",
     language: "Language",
     score: "Score",
     moves: "Moves",
@@ -42,7 +42,7 @@ const translations = {
   },
 
   "zh-TW": {
-    title: "動物對對碰",
+    title: "深海群組",
     language: "語言",
     score: "分數",
     moves: "步數",
