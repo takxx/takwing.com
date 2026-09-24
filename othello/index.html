@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Othello</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1 data-i18n="title">Othello</h1>
+        <p class="subtitle" data-i18n="subtitle">Play against the computer</p>
+      </div>
+
+      <label class="language-control">
+        <span data-i18n="language">Language</span>
+        <select id="languageSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-Hant">繁體中文</option>
+        </select>
+      </label>
+    </header>
+
+    <section class="game-layout">
+      <aside class="panel information-panel">
+        <section class="score-section">
+          <h2 data-i18n="currentScore">Current pieces</h2>
+
+          <div class="score-row">
+            <div class="player-label">
+              <span class="piece black-piece"></span>
+              <span id="humanLabel">You</span>
+            </div>
+            <strong id="humanScore">2</strong>
+          </div>
+
+          <div class="score-row">
+            <div class="player-label">
+              <span class="piece white-piece"></span>
+              <span data-i18n="computer">Computer</span>
+            </div>
+            <strong id="aiScore">2</strong>
+          </div>
+        </section>
+
+        <section class="record-section">
+          <h2 data-i18n="record">Game record</h2>
+
+          <div class="record-row">
+            <span data-i18n="won">Won</span>
+            <strong id="wins">0</strong>
+          </div>
+
+          <div class="record-row">
+            <span data-i18n="lost">Lost</span>
+            <strong id="losses">0</strong>
+          </div>
+
+          <div class="record-row">
+            <span data-i18n="drawn">Drawn</span>
+            <strong id="draws">0</strong>
+          </div>
+        </section>
+
+        <section class="controls-section">
+          <button id="newGameButton" class="primary-button" data-i18n="newGame">
+            New game
+          </button>
+
+          <button id="hintButton" class="secondary-button" data-i18n="hint">
+            Hint
+          </button>
+        </section>
+
+        <section class="status-section">
+          <h2 data-i18n="status">Status</h2>
+          <p id="statusText" aria-live="polite"></p>
+        </section>
+      </aside>
+
+      <section class="board-area">
+        <div class="board-wrapper">
+          <div id="board" class="board" role="grid" aria-label="Othello board"></div>
+        </div>
+
+        <p class="hint-message" id="hintMessage" aria-live="polite"></p>
+      </section>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

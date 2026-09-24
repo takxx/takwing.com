@@ -48,7 +48,7 @@ const translations = {
     moves: "步數",
     hint: "提示",
     newGame: "重新開始",
-    instructions: "點擊或滑動相鄰動物而作配對",
+    instructions: "點擊或滑動相鄰動物以作配對",
     match: count => `成功配對 ${count} 隻動物！`,
     invalidSwap: "未能配對",
     noMoves: "遊戲結束！已無動物可配對。",
