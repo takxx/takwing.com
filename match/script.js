@@ -14,7 +14,7 @@ const animals = [
 
 const translations = {
   en: {
-    title: "Perfect Matches",
+    title: "Sea Matches",
     language: "Language",
     score: "Score",
     moves: "Moves",
@@ -28,7 +28,7 @@ const translations = {
   },
 
   es: {
-    title: "Parejitas",
+    title: "Parejas del Mar",
     language: "Idioma",
     score: "Puntuación",
     moves: "Movimientos",
