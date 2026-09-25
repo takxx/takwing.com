@@ -895,153 +895,218 @@
     applyLanguage(langSelect.value);
   });
 
-  // === Touch controls ===
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartTime = 0;
-  let longPressTimer = null;
-  let longPressSpeed = 200; // ms between drops, will accelerate
-  let longPressActive = false;
+// === Touch controls ===
 
-  const SWIPE_THRESHOLD = 30; // px
-  const TAP_MAX_MOVE = 10;    // px
-  const TAP_MAX_TIME = 250;   // ms
-  const LONGPRESS_DELAY = 350; // ms before long-press triggers
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
 
-  function clearLongPress() {
-    if (longPressTimer !== null) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    }
-    longPressActive = false;
-    longPressSpeed = 200;
+let longPressTimer = null;
+let longPressSpeed = 200;
+let longPressActive = false;
+
+const SWIPE_THRESHOLD = 30;
+const TAP_MAX_MOVE = 10;
+const TAP_MAX_TIME = 250;
+const LONGPRESS_DELAY = 350;
+
+function clearLongPress() {
+  if (longPressTimer !== null) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
   }
 
-  function startLongPressDrop() {
-    if (!cur || gameOver || paused) {
+  longPressActive = false;
+  longPressSpeed = 200;
+}
+
+function startLongPressDrop() {
+  if (!cur || gameOver || paused) {
+    clearLongPress();
+    return;
+  }
+
+  if (!collision(cur, 0, 1)) {
+    cur.y++;
+  } else {
+    place(cur);
+    clearLongPress();
+    return;
+  }
+
+  longPressSpeed = Math.max(60, longPressSpeed * 0.85);
+
+  longPressTimer = setTimeout(
+    startLongPressDrop,
+    longPressSpeed
+  );
+}
+
+function preventBoardGesture(event) {
+  /*
+   * This is deliberately called on every touch event.
+   * On iOS, preventing only touchmove can be too late for a
+   * stationary double tap.
+   */
+  event.preventDefault();
+}
+
+function handleBoardTouchStart(event) {
+  preventBoardGesture(event);
+
+  if (event.touches.length !== 1) {
+    clearLongPress();
+    return;
+  }
+
+  const touch = event.touches[0];
+
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchStartTime = performance.now();
+
+  clearLongPress();
+
+  initAudio();
+  resumeAudio();
+
+  longPressTimer = setTimeout(() => {
+    if (gameOver || paused) {
+      clearLongPress();
       return;
     }
 
-    // Perform one soft drop
-    if (!collision(cur, 0, 1)) {
-      cur.y++;
+    longPressActive = true;
+    startLongPressDrop();
+  }, LONGPRESS_DELAY);
+}
+
+function handleBoardTouchMove(event) {
+  preventBoardGesture(event);
+
+  if (event.touches.length !== 1) {
+    clearLongPress();
+    return;
+  }
+
+  const touch = event.touches[0];
+
+  const dx = touch.clientX - touchStartX;
+  const dy = touch.clientY - touchStartY;
+
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  if (absX > TAP_MAX_MOVE || absY > TAP_MAX_MOVE) {
+    clearLongPress();
+  }
+}
+
+function handleBoardTouchEnd(event) {
+  preventBoardGesture(event);
+
+  if (event.changedTouches.length !== 1) {
+    clearLongPress();
+    return;
+  }
+
+  const touch = event.changedTouches[0];
+
+  const dx = touch.clientX - touchStartX;
+  const dy = touch.clientY - touchStartY;
+
+  const duration = performance.now() - touchStartTime;
+
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  const wasLongPress = longPressActive;
+
+  clearLongPress();
+
+  /*
+   * A long press is soft drop only. Do not also treat its release
+   * as a tap or swipe.
+   */
+  if (wasLongPress) {
+    return;
+  }
+
+  /*
+   * One tap rotates once. Therefore two quick taps rotate twice.
+   * preventDefault() above stops iOS from interpreting the pair
+   * as page zoom.
+   */
+  if (
+    duration < TAP_MAX_TIME &&
+    absX < TAP_MAX_MOVE &&
+    absY < TAP_MAX_MOVE
+  ) {
+    rotate(1);
+    return;
+  }
+
+  /*
+   * Swipes.
+   */
+  if (absX > SWIPE_THRESHOLD || absY > SWIPE_THRESHOLD) {
+    if (absX > absY) {
+      move(dx > 0 ? 1 : -1);
+    } else if (dy > 0) {
+      softDrop();
     } else {
-      place(cur);
-      clearLongPress();
-      return;
+      rotate(1);
     }
-
-    // Schedule next drop with accelerating speed
-    longPressSpeed = Math.max(60, longPressSpeed * 0.85); // accelerate
-    longPressTimer = setTimeout(startLongPressDrop, longPressSpeed);
   }
+}
 
-  board.addEventListener(
-    "touchstart",
+function handleBoardTouchCancel(event) {
+  preventBoardGesture(event);
+  clearLongPress();
+}
+
+/*
+ * The listeners must be passive: false, otherwise iOS may ignore
+ * preventDefault().
+ */
+board.addEventListener(
+  "touchstart",
+  handleBoardTouchStart,
+  { passive: false }
+);
+
+board.addEventListener(
+  "touchmove",
+  handleBoardTouchMove,
+  { passive: false }
+);
+
+board.addEventListener(
+  "touchend",
+  handleBoardTouchEnd,
+  { passive: false }
+);
+
+board.addEventListener(
+  "touchcancel",
+  handleBoardTouchCancel,
+  { passive: false }
+);
+
+/*
+ * Prevent Safari gesture events as an additional safeguard.
+ * These are page-level listeners because Safari can dispatch
+ * gesture events outside the canvas target.
+ */
+["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+  document.addEventListener(
+    type,
     (event) => {
-      if (event.touches.length !== 1) {
-        clearLongPress();
-        return;
-      }
-
-      const touch = event.touches[0];
-
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      touchStartTime = performance.now();
-
-      clearLongPress();
-
-      initAudio();
-      resumeAudio();
-
-      // Start long-press timer
-      longPressTimer = setTimeout(() => {
-        if (gameOver || paused) {
-          clearLongPress();
-          return;
-        }
-        longPressActive = true;
-        startLongPressDrop();
-      }, LONGPRESS_DELAY);
-    },
-    { passive: false }
-  );
-
-  board.addEventListener(
-    "touchmove",
-    (event) => {
-      if (event.touches.length !== 1) {
-        return;
-      }
-
-      const touch = event.touches[0];
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
-
-      // If moved enough, cancel long-press and prevent default gestures
-      if (absX > TAP_MAX_MOVE || absY > TAP_MAX_MOVE) {
-        clearLongPress();
-        event.preventDefault(); // stop scroll/zoom on canvas
-      }
-    },
-    { passive: false }
-  );
-
-  board.addEventListener(
-    "touchend",
-    (event) => {
-      if (event.changedTouches.length !== 1) {
-        clearLongPress();
-        return;
-      }
-
-      const touch = event.changedTouches[0];
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      const duration = performance.now() - touchStartTime;
-
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
-
-      clearLongPress();
-
-      // If it was a long-press, don't interpret as tap or swipe
-      if (longPressActive) {
-        return;
-      }
-
-      // Tap: very small movement, short duration => rotate
-      if (duration < TAP_MAX_TIME && absX < TAP_MAX_MOVE && absY < TAP_MAX_MOVE) {
-        rotate(1);
-        return;
-      }
-
-      // Swipe: larger movement
-      if (absX > SWIPE_THRESHOLD || absY > SWIPE_THRESHOLD) {
-        if (absX > absY) {
-          // Horizontal swipe: left/right move
-          move(dx > 0 ? 1 : -1);
-        } else if (dy > 0) {
-          // Down swipe: soft drop (single step)
-          softDrop();
-        } else {
-          // Up swipe: rotate (alternative to tap)
-          rotate(1);
-        }
-      }
-    },
-    { passive: false }
-  );
-
-  // Also prevent default on gesture events (iOS pinch)
-  ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
-    board.addEventListener(type, (event) => {
       event.preventDefault();
-    }, { passive: false });
-  });
+    },
+    { passive: false }
+  );
+});
 
   // === Initialization ===
   langSelect.value = currentLang;

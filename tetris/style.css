@@ -22,18 +22,31 @@
 html {
   min-height: 100%;
   background: var(--page-bg);
-  touch-action: manipulation; /* disables double-tap zoom globally */
+
+  /*
+   * The game owns touch input. This prevents page scrolling,
+   * double-tap zooming, and pinch gestures.
+   */
+  touch-action: none;
+  overscroll-behavior: none;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 body {
   min-height: 100vh;
   margin: 0;
   padding: 24px;
+
   display: flex;
   justify-content: center;
   align-items: flex-start;
+
   background:
     radial-gradient(circle at top, #1b263b 0%, var(--page-bg) 52%);
+
   color: var(--text);
   font-family:
     system-ui,
@@ -43,26 +56,38 @@ body {
     Roboto,
     Arial,
     sans-serif;
-  touch-action: manipulation; /* extra safety for double-tap */
+
+  touch-action: none;
+  overscroll-behavior: none;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 button,
 select {
   font: inherit;
-  touch-action: manipulation; /* prevent double-tap zoom on controls */
+  touch-action: manipulation;
 }
 
 button {
   border: 0;
   border-radius: 8px;
   padding: 9px 11px;
+
   color: #fff;
   background: var(--accent);
   cursor: pointer;
+
   transition:
     background 0.15s ease,
     transform 0.15s ease,
     filter 0.15s ease;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 button:hover {
@@ -83,37 +108,65 @@ select:focus-visible {
 #container {
   width: 100%;
   max-width: 980px;
+
   display: flex;
   align-items: flex-start;
   justify-content: center;
   gap: 24px;
-  position: relative; /* for absolute positioning of #next on small screens */
+
+  position: relative;
+
+  touch-action: none;
+  overscroll-behavior: none;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 canvas {
   display: block;
+
   background: var(--board-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+
   image-rendering: pixelated;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 #board {
   width: var(--board-width);
   height: var(--board-height);
-  touch-action: none; /* no browser gestures on the game board */
-  -webkit-touch-callout: none;
-  user-select: none;
+
+  /*
+   * Strictly disable browser touch gestures on the game board.
+   */
+  touch-action: none;
+  overscroll-behavior: none;
+
   -webkit-user-select: none;
-  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+
+  /*
+   * Avoid iOS compositing/selection quirks.
+   */
+  -webkit-tap-highlight-color: transparent;
 }
 
 #ui {
   width: 240px;
+
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  touch-action: manipulation;
 }
 
 h1 {
@@ -127,6 +180,7 @@ h1 {
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
+
   background: rgba(26, 34, 51, 0.92);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
@@ -137,27 +191,40 @@ h1 {
 
 .next-panel {
   width: 100%;
+
   display: flex;
   flex-direction: column;
-  position: relative; /* so we can absolutely position #next if needed */
-  padding-top: 76px; /* make space for #next at the top of this panel */
+
+  position: relative;
+  padding-top: 76px;
 }
 
 #next {
   width: 96px;
   height: 72px;
+
   position: absolute;
   top: 8px;
   left: 50%;
+
   transform: translateX(-50%);
+
   background: #0d1528;
-  z-index: 5; /* visually on top of the panel content */
+  z-index: 5;
+
+  touch-action: none;
+  pointer-events: none;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .stat {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   margin: 7px 0;
   font-size: 14px;
 }
@@ -191,6 +258,7 @@ small {
 label {
   display: block;
   margin-bottom: 7px;
+
   color: var(--muted);
   font-size: 14px;
 }
@@ -198,8 +266,10 @@ label {
 select {
   width: 100%;
   padding: 8px 10px;
+
   border: 1px solid rgba(130, 156, 255, 0.55);
   border-radius: 8px;
+
   color: var(--text);
   background: #0d1528;
 }
@@ -221,11 +291,16 @@ select {
   position: fixed;
   inset: 0;
   z-index: 1000;
+
   display: grid;
   place-items: center;
+
   padding: 20px;
   background: rgba(4, 7, 14, 0.72);
+
   backdrop-filter: blur(4px);
+
+  touch-action: manipulation;
 }
 
 .game-over-dialog[hidden] {
@@ -235,16 +310,20 @@ select {
 .game-over-panel {
   width: min(360px, 100%);
   padding: 26px;
+
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 16px;
+
   text-align: center;
   background: #202a3e;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+
   animation: dialog-in 0.18s ease-out;
 }
 
 .game-over-panel p {
   margin: 0 0 20px;
+
   color: var(--text);
   font-size: 19px;
   font-weight: 700;
@@ -283,7 +362,6 @@ select {
   }
 
   .next-panel {
-    /* Keep #next visible above the bottom frames on narrow screens */
     padding-top: 80px;
   }
 }
