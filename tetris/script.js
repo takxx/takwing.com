@@ -248,7 +248,7 @@
       resume: "Resume",
       keysHint: "Keys: ← → ↓ rotate: X/Z or ↑ • Space hard drop • P pause",
       ctrlTouch:
-        "Touch: swipe left/right/up/down to move/rotate/soft drop; double-tap for hard drop",
+        "Touch: swipe left/right to move • tap to rotate • tap+hold to soft drop",
       language: "Language",
       soundOn: "Sound On",
       soundOff: "Sound Off",
@@ -266,7 +266,7 @@
       keysHint:
         "Teclas: ← → ↓ rotar: X/Z o ↑ • Espacio caída rápida • P pausa",
       ctrlTouch:
-        "Táctil: desliza izquierda/derecha/arriba/abajo para mover/rotar/caída suave; doble toque para caída rápida",
+        "Táctil: desliza izquierda/derecha para mover • toca para rotar • mantén pulsado para caída suave",
       language: "Idioma",
       soundOn: "Sonido activado",
       soundOff: "Sonido desactivado",
@@ -283,7 +283,7 @@
       resume: "繼續",
       keysHint: "按鍵：← → ↓ 旋轉：X/Z 或 ↑ • 空格快速落下 • P 暫停",
       ctrlTouch:
-        "觸控：向左／右／上／下滑動來移動／旋轉／緩慢落下；輕點兩次快速落下",
+        "觸控：向左／右滑動來移動 • 輕點旋轉 • 長按緩慢落下",
       language: "語言",
       soundOn: "聲音開啟",
       soundOff: "聲音關閉",
@@ -602,7 +602,7 @@
     }
   }
 
-  async function softDrop() {
+  async function softDropStep() {
     if (!cur || gameOver || paused) {
       return;
     }
@@ -950,7 +950,7 @@
         break;
 
       case "ArrowDown":
-        softDrop();
+        softDropStep();
         break;
 
       case " ":
@@ -987,7 +987,7 @@
   }
 
   // =========================
-  // Touch controls
+  // Touch controls (tap / tap+hold / left-right swipe)
   // =========================
 
   let touchStartX = 0;
@@ -995,22 +995,26 @@
   let touchStartTime = 0;
 
   let longPressTimer = null;
-  let longPressSpeed = 200;
+  let longPressInterval = null;
   let longPressActive = false;
+  let didSwipe = false;
 
-  const SWIPE_THRESHOLD = 30;
-  const TAP_MAX_MOVE = 10;
-  const TAP_MAX_TIME = 250;
-  const LONGPRESS_DELAY = 350;
+  const SWIPE_THRESHOLD = 24;       // min distance to count as swipe
+  const TAP_MAX_MOVE = 12;          // max movement to still be a tap
+  const TAP_MAX_TIME = 260;         // max duration to be a tap
+  const LONGPRESS_DELAY = 320;      // time before long-press starts
+  const LONGPRESS_REPEAT = 90;      // soft-drop repeat interval while holding
 
   function clearLongPress() {
     if (longPressTimer !== null) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
     }
-
+    if (longPressInterval !== null) {
+      clearInterval(longPressInterval);
+      longPressInterval = null;
+    }
     longPressActive = false;
-    longPressSpeed = 200;
   }
 
   function startLongPressDrop() {
@@ -1019,31 +1023,41 @@
       return;
     }
 
-    if (!collision(cur, 0, 1)) {
-      cur.y++;
-    } else {
-      place(cur).catch(() => {});
-      clearLongPress();
-      return;
-    }
+    // First step immediately
+    softDropStep().catch(() => {});
 
-    longPressSpeed = Math.max(60, longPressSpeed * 0.85);
-
-    longPressTimer = setTimeout(
-      startLongPressDrop,
-      longPressSpeed
-    );
+    // Then repeat at interval
+    longPressInterval = setInterval(() => {
+      if (!cur || gameOver || paused) {
+        clearLongPress();
+        return;
+      }
+      softDropStep().catch(() => {});
+    }, LONGPRESS_REPEAT);
   }
 
   function preventBoardGesture(event) {
-    event.preventDefault();
+    // Only prevent default for horizontal gestures we handle.
+    // Vertical moves are allowed so page/UI can scroll.
+    if (event.touches.length !== 1) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+
+    // If primarily horizontal, prevent default to avoid scroll interfering.
+    if (Math.abs(dx) > Math.abs(dy)) {
+      event.preventDefault();
+    }
+    // If primarily vertical, do nothing: let the browser scroll.
   }
 
   function handleBoardTouchStart(event) {
-    preventBoardGesture(event);
-
     if (event.touches.length !== 1) {
       clearLongPress();
+      didSwipe = false;
       return;
     }
 
@@ -1054,12 +1068,30 @@
     touchStartTime = performance.now();
 
     clearLongPress();
+    didSwipe = false;
 
     initAudio();
     resumeAudio();
 
+    // Start long-press timer for soft drop
     longPressTimer = setTimeout(() => {
       if (gameOver || paused) {
+        clearLongPress();
+        return;
+      }
+
+      // Check we haven't already turned this into a swipe
+      const currentTouch = event.touches[0];
+      if (!currentTouch) {
+        clearLongPress();
+        return;
+      }
+
+      const dx = currentTouch.clientX - touchStartX;
+      const dy = currentTouch.clientY - touchStartY;
+
+      if (Math.abs(dx) > TAP_MAX_MOVE || Math.abs(dy) > TAP_MAX_MOVE) {
+        // Moved too much: treat as swipe, not tap/hold
         clearLongPress();
         return;
       }
@@ -1070,10 +1102,9 @@
   }
 
   function handleBoardTouchMove(event) {
-    preventBoardGesture(event);
-
     if (event.touches.length !== 1) {
       clearLongPress();
+      didSwipe = false;
       return;
     }
 
@@ -1081,19 +1112,22 @@
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
 
+    // If movement exceeds tap threshold, cancel tap/long-press and treat as swipe
     if (
       Math.abs(dx) > TAP_MAX_MOVE ||
       Math.abs(dy) > TAP_MAX_MOVE
     ) {
       clearLongPress();
+      didSwipe = true;
     }
+
+    preventBoardGesture(event);
   }
 
   function handleBoardTouchEnd(event) {
-    preventBoardGesture(event);
-
     if (event.changedTouches.length !== 1) {
       clearLongPress();
+      didSwipe = false;
       return;
     }
 
@@ -1111,36 +1145,39 @@
 
     clearLongPress();
 
-    if (wasLongPress) {
+    // If we already decided this is a swipe, handle swipe only
+    if (didSwipe) {
+      // Only horizontal swipes control the game.
+      // Vertical movement is ignored so it can scroll the page.
+      if (absX > SWIPE_THRESHOLD && absX > Math.abs(dy)) {
+        move(dx > 0 ? 1 : -1);
+      }
+      didSwipe = false;
       return;
     }
 
+    // Not a swipe: decide between tap and long-press
+    if (wasLongPress) {
+      // Long-press already handled via interval; just stop on lift.
+      didSwipe = false;
+      return;
+    }
+
+    // Treat as tap if within time/move limits
     if (
       duration < TAP_MAX_TIME &&
       absX < TAP_MAX_MOVE &&
       absY < TAP_MAX_MOVE
     ) {
       rotate(1);
-      return;
     }
 
-    if (
-      absX > SWIPE_THRESHOLD ||
-      absY > SWIPE_THRESHOLD
-    ) {
-      if (absX > absY) {
-        move(dx > 0 ? 1 : -1);
-      } else if (dy > 0) {
-        softDrop();
-      } else {
-        rotate(1);
-      }
-    }
+    didSwipe = false;
   }
 
-  function handleBoardTouchCancel(event) {
-    preventBoardGesture(event);
+  function handleBoardTouchCancel() {
     clearLongPress();
+    didSwipe = false;
   }
 
   board.addEventListener(
