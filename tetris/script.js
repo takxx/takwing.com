@@ -719,14 +719,12 @@
 
     const isMobile = viewportWidth <= 700;
 
-    if (!isMobile) {
-      return {
-        width: COLS * BASE_CELL,
-        height: ROWS * BASE_CELL
-      };
-    }
+    // Reserve space for UI panel on mobile
+    const uiPanelReserve = isMobile ? Math.min(240, viewportWidth * 0.45) : 0;
+    const availableWidth = isMobile
+      ? Math.max(160, viewportWidth - uiPanelReserve - 24)
+      : viewportWidth;
 
-    const availableWidth = Math.max(160, viewportWidth - 24);
     const availableHeight = Math.max(320, viewportHeight - 24);
 
     const cellFromWidth = availableWidth / COLS;
