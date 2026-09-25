@@ -138,6 +138,9 @@ h1 {
   height: calc(var(--hex-height) * 3);
 
   touch-action: none;
+  -webkit-touch-callout: none; /* No long-press callout on iOS */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .hex {

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Slack String Double Pendulum</title>
 
   <style>
@@ -94,7 +94,10 @@
       width: 100%;
       height: min(70vh, 650px);
       min-height: 420px;
-      touch-action: none;
+      touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
+      -webkit-touch-callout: none; /* No long-press callout on iOS */
+      user-select: none;
+      -webkit-user-select: none;
       cursor: grab;
     }
 

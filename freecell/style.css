@@ -20,6 +20,11 @@ body {
 #board {
   max-width: 980px;
   margin: auto;
+  touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
+  -webkit-touch-callout: none; /* No long-press callout on iOS */
+  user-select: none;
+  -webkit-user-select: none;
+
 }
 
 header {

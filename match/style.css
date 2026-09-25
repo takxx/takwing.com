@@ -68,7 +68,10 @@ h1 {
     0 18px 45px rgba(0, 0, 0, 0.35),
     inset 0 0 0 2px rgba(255, 255, 255, 0.08);
   user-select: none;
-  touch-action: none;
+  touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
+  -webkit-touch-callout: none; /* No long-press callout on iOS */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .cell {

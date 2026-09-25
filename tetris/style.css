@@ -22,6 +22,7 @@
 html {
   min-height: 100%;
   background: var(--page-bg);
+  touch-action: manipulation;
 }
 
 body {
@@ -42,6 +43,7 @@ body {
     Roboto,
     Arial,
     sans-serif;
+  touch-action: manipulation;
 }
 
 button,
@@ -98,6 +100,11 @@ canvas {
 #board {
   width: var(--board-width);
   height: var(--board-height);
+  touch-action: none;          /* No pan, pinch, or double-tap zoom */
+  -webkit-touch-callout: none; /* No callout menu on long-press (iOS) */
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
 
 #ui {

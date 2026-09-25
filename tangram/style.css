@@ -10,6 +10,7 @@ body {
   overflow: hidden;
   background: #111827;
   font-family: system-ui, sans-serif;
+  touch-action: manipulation;
 }
 
 body {

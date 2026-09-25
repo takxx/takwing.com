@@ -235,6 +235,10 @@ button:disabled {
   border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 5px;
   background: var(--board-green-dark);
+  touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
+  -webkit-touch-callout: none; /* No long-press callout on iOS */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .cell {
