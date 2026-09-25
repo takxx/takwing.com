@@ -15,16 +15,15 @@ body {
   color: white;
   user-select: none;
   background: linear-gradient(180deg, #064 0%, #003 100%);
+  touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
+  -webkit-touch-callout: none; /* No long-press callout on iOS */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #board {
   max-width: 980px;
   margin: auto;
-  touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
-  -webkit-touch-callout: none; /* No long-press callout on iOS */
-  user-select: none;
-  -webkit-user-select: none;
-
 }
 
 header {
