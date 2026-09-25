@@ -1,7 +1,12 @@
 :root {
-  --cell-size: 30px;
   --cols: 10;
   --rows: 20;
+
+  /*
+   * This value is updated by JavaScript based on the device.
+   */
+  --cell-size: 30px;
+
   --board-width: calc(var(--cols) * var(--cell-size));
   --board-height: calc(var(--rows) * var(--cell-size));
 
@@ -24,8 +29,7 @@ html {
   background: var(--page-bg);
 
   /*
-   * The game owns touch input. This prevents page scrolling,
-   * double-tap zooming, and pinch gestures.
+   * The game owns all touch input on the page.
    */
   touch-action: none;
   overscroll-behavior: none;
@@ -37,12 +41,16 @@ html {
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
+
   margin: 0;
-  padding: 24px;
+  padding: 16px;
 
   display: flex;
   justify-content: center;
   align-items: flex-start;
+
+  overflow-x: hidden;
 
   background:
     radial-gradient(circle at top, #1b263b 0%, var(--page-bg) 52%);
@@ -117,15 +125,11 @@ select:focus-visible {
   position: relative;
 
   touch-action: none;
-  overscroll-behavior: none;
-
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
 }
 
 canvas {
   display: block;
+  max-width: 100%;
 
   background: var(--board-bg);
   border: 1px solid var(--border);
@@ -133,29 +137,23 @@ canvas {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 
   image-rendering: pixelated;
-
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
 }
 
 #board {
+  /*
+   * Width and height are set via CSS variables and inline styles.
+   */
   width: var(--board-width);
   height: var(--board-height);
 
-  /*
-   * Strictly disable browser touch gestures on the game board.
-   */
+  flex: 0 0 auto;
+
   touch-action: none;
   overscroll-behavior: none;
 
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
-
-  /*
-   * Avoid iOS compositing/selection quirks.
-   */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -212,8 +210,8 @@ h1 {
   background: #0d1528;
   z-index: 5;
 
-  touch-action: none;
   pointer-events: none;
+  touch-action: none;
 
   -webkit-user-select: none;
   user-select: none;
@@ -347,7 +345,7 @@ select {
 
 @media (max-width: 700px) {
   body {
-    padding: 16px;
+    padding: 12px;
   }
 
   #container {
@@ -357,8 +355,8 @@ select {
   }
 
   #ui {
-    width: 100%;
-    max-width: var(--board-width);
+    width: min(var(--board-width), 100%);
+    max-width: 100%;
   }
 
   .next-panel {
@@ -367,12 +365,8 @@ select {
 }
 
 @media (max-width: 430px) {
-  :root {
-    --cell-size: 27px;
-  }
-
   #ui {
-    width: var(--board-width);
+    width: min(var(--board-width), 100%);
     max-width: 100%;
   }
 

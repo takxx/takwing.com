@@ -1,7 +1,6 @@
 (() => {
   "use strict";
 
-  // === DOM references ===
   const langSelect = document.getElementById("lang");
   const muteBtn = document.getElementById("mute");
   const bgm = document.getElementById("bgm");
@@ -22,7 +21,222 @@
   const gameOverMessage = document.getElementById("game-over-message");
   const gameOverRestart = document.getElementById("game-over-restart");
 
-  // === Internationalization ===
+  // =========================
+  // Audio settings
+  // =========================
+
+  const MUSIC_VOLUME = 0.22;
+  const SFX_VOLUME = 0.42;
+
+  if (bgm) {
+    bgm.volume = MUSIC_VOLUME;
+    bgm.loop = true;
+    bgm.preload = "auto";
+  }
+
+  let audioCtx = null;
+  let isMuted = true;
+  let bgmStarted = false;
+
+  function initAudio() {
+    if (audioCtx) {
+      return;
+    }
+
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return;
+    }
+
+    audioCtx = new AudioContextClass();
+  }
+
+  async function ensureAudioReady() {
+    if (!audioCtx) {
+      initAudio();
+    }
+
+    if (!audioCtx) {
+      return false;
+    }
+
+    if (audioCtx.state === "suspended") {
+      try {
+        await audioCtx.resume();
+      } catch {
+        return false;
+      }
+    }
+
+    return audioCtx.state === "running";
+  }
+
+  function resumeAudio() {
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
+  }
+
+  function updateMuteButtonText() {
+    const t = translations[currentLang] || translations.en;
+
+    if (!muteBtn) {
+      return;
+    }
+
+    muteBtn.innerHTML = isMuted
+      ? `🔇 <span>${t.soundOff}</span>`
+      : `🔊 <span>${t.soundOn}</span>`;
+
+    muteBtn.classList.toggle("muted", isMuted);
+    muteBtn.setAttribute("aria-pressed", String(!isMuted));
+  }
+
+  function ensureBGMPlaying() {
+    if (!bgm || isMuted || bgmStarted || gameOver || paused) {
+      return;
+    }
+
+    bgm.volume = MUSIC_VOLUME;
+    bgm.muted = false;
+
+    bgm.play()
+      .then(() => {
+        bgmStarted = true;
+      })
+      .catch(() => {
+        bgmStarted = false;
+      });
+  }
+
+  function stopBGM() {
+    if (!bgm) {
+      return;
+    }
+
+    bgm.pause();
+    bgmStarted = false;
+  }
+
+  function setMuted(muted) {
+    isMuted = muted;
+
+    if (bgm) {
+      bgm.volume = MUSIC_VOLUME;
+      bgm.muted = muted;
+
+      if (muted) {
+        bgm.pause();
+        bgmStarted = false;
+      } else if (!gameOver && !paused) {
+        ensureBGMPlaying();
+      }
+    }
+
+    updateMuteButtonText();
+  }
+
+  function playTone(
+    frequency,
+    duration,
+    type = "sine",
+    volume = SFX_VOLUME,
+    delay = 0
+  ) {
+    if (!audioCtx || isMuted) {
+      return;
+    }
+
+    const startTime = audioCtx.currentTime + delay;
+    const oscillator = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, startTime);
+
+    gain.gain.setValueAtTime(0.0001, startTime);
+
+    gain.gain.exponentialRampToValueAtTime(
+      Math.max(volume, 0.001),
+      startTime + 0.015
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      startTime + duration
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    oscillator.start(startTime);
+    oscillator.stop(startTime + duration + 0.03);
+  }
+
+  async function playClearSound() {
+    if (isMuted) {
+      return;
+    }
+
+    const ready = await ensureAudioReady();
+
+    if (!ready) {
+      return;
+    }
+
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+
+    notes.forEach((frequency, index) => {
+      playTone(
+        frequency,
+        0.18,
+        "square",
+        SFX_VOLUME,
+        index * 0.05
+      );
+    });
+  }
+
+  async function playGameOverSound() {
+    if (isMuted) {
+      return;
+    }
+
+    const ready = await ensureAudioReady();
+
+    if (!ready) {
+      return;
+    }
+
+    const notes = [392.0, 349.23, 329.63, 261.63];
+    const noteDuration = 0.35;
+    const noteGap = 0.18;
+
+    notes.forEach((frequency, index) => {
+      playTone(
+        frequency,
+        noteDuration,
+        "triangle",
+        SFX_VOLUME,
+        index * noteGap
+      );
+    });
+  }
+
+  if (muteBtn) {
+    muteBtn.addEventListener("click", async () => {
+      initAudio();
+      await ensureAudioReady();
+      setMuted(!isMuted);
+    });
+  }
+
+  // =========================
+  // Translations
+  // =========================
+
   const translations = {
     en: {
       title: "Tetris",
@@ -104,12 +318,15 @@
 
   function applyLanguage(lang) {
     currentLang = translations[lang] ? lang : "en";
-    document.documentElement.lang = currentLang === "zh-TW" ? "zh-Hant" : currentLang;
+
+    document.documentElement.lang =
+      currentLang === "zh-TW" ? "zh-Hant" : currentLang;
 
     const t = translations[currentLang];
 
     document.querySelectorAll("[data-i18n]").forEach((element) => {
       const key = element.getAttribute("data-i18n");
+
       if (t[key]) {
         element.textContent = t[key];
       }
@@ -118,196 +335,22 @@
     updateMuteButtonText();
     updatePauseButtonText();
 
-    if (!gameOverDialog.hidden) {
+    if (gameOverDialog && !gameOverDialog.hidden) {
       gameOverMessage.textContent = getTranslation("gameOver");
       gameOverRestart.textContent = getTranslation("startRestart");
     }
   }
 
-  // === Audio ===
-  let audioCtx = null;
-  let isMuted = true;
-  let bgmStarted = false;
+  // =========================
+  // Game state
+  // =========================
 
-  function initAudio() {
-    if (audioCtx) {
-      return;
-    }
-
-    const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
-
-    if (!AudioContextClass) {
-      return;
-    }
-
-    audioCtx = new AudioContextClass();
-  }
-
-  function resumeAudio() {
-    if (audioCtx && audioCtx.state === "suspended") {
-      audioCtx.resume().catch(() => {});
-    }
-  }
-
-  function updateMuteButtonText() {
-    const t = translations[currentLang] || translations.en;
-
-    if (!muteBtn) {
-      return;
-    }
-
-    muteBtn.innerHTML = isMuted
-      ? `🔇 <span>${t.soundOff}</span>`
-      : `🔊 <span>${t.soundOn}</span>`;
-
-    muteBtn.classList.toggle("muted", isMuted);
-    muteBtn.setAttribute("aria-pressed", String(!isMuted));
-  }
-
-  function setMuted(muted) {
-    isMuted = muted;
-
-    if (bgm) {
-      bgm.muted = muted;
-
-      if (muted) {
-        bgm.pause();
-        bgmStarted = false;
-      } else if (!gameOver && !paused) {
-        ensureBGMPlaying();
-      }
-    }
-
-    updateMuteButtonText();
-  }
-
-  function ensureBGMPlaying() {
-    if (!bgm || isMuted || bgmStarted || gameOver || paused) {
-      return;
-    }
-
-    bgm.play()
-      .then(() => {
-        bgmStarted = true;
-      })
-      .catch(() => {
-        bgmStarted = false;
-      });
-  }
-
-  function playTone(
-    frequency,
-    duration,
-    type = "sine",
-    volume = 0.12,
-    delay = 0
-  ) {
-    if (!audioCtx || isMuted) {
-      return;
-    }
-
-    const startTime = audioCtx.currentTime + delay;
-    const oscillator = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, startTime);
-
-    gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(
-      Math.max(volume, 0.001),
-      startTime + 0.015
-    );
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      startTime + duration
-    );
-
-    oscillator.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    oscillator.start(startTime);
-    oscillator.stop(startTime + duration + 0.03);
-  }
-
-  function playClearSound() {
-    if (!audioCtx || isMuted) {
-      return;
-    }
-
-    [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
-      playTone(
-        frequency,
-        0.13,
-        "sine",
-        0.07,
-        index * 0.06
-      );
-    });
-  }
-
-  function playGameOverSound() {
-    if (!audioCtx || isMuted) {
-      return 0;
-    }
-
-    const notes = [392.0, 349.23, 329.63, 261.63];
-    const noteDuration = 0.28;
-    const noteGap = 0.13;
-    const totalDuration =
-      (notes.length - 1) * noteGap + noteDuration;
-
-    notes.forEach((frequency, index) => {
-      playTone(
-        frequency,
-        noteDuration,
-        "sine",
-        0.18,
-        index * noteGap
-      );
-    });
-
-    return totalDuration;
-  }
-
-  if (muteBtn) {
-    muteBtn.addEventListener("click", () => {
-      initAudio();
-      resumeAudio();
-      setMuted(!isMuted);
-    });
-  }
-
-  // === Game-over dialog ===
-  function showGameOverDialog() {
-    gameOverMessage.textContent = getTranslation("gameOver");
-    gameOverRestart.textContent = getTranslation("startRestart");
-    gameOverDialog.hidden = false;
-    gameOverRestart.focus();
-  }
-
-  function hideGameOverDialog() {
-    gameOverDialog.hidden = true;
-  }
-
-  gameOverRestart.addEventListener("click", () => {
-    hideGameOverDialog();
-    startGame();
-  });
-
-  // === Tetris constants and state ===
   const COLS = 10;
   const ROWS = 20;
-  const CELL = 30;
+  const BASE_CELL = 30;
 
-  board.width = COLS * CELL;
-  board.height = ROWS * CELL;
+  let CELL = BASE_CELL;
 
-  nextCanvas.width = 96;
-  nextCanvas.height = 72;
-
-  // Modern, softer palette
   const COLORS = {
     I: "#48C6D9",
     J: "#6878D9",
@@ -360,13 +403,6 @@
     ]
   };
 
-  function makeEmptyBoard() {
-    return Array.from(
-      { length: ROWS },
-      () => Array(COLS).fill(null)
-    );
-  }
-
   let grid = makeEmptyBoard();
   let cur = null;
   let next = null;
@@ -382,6 +418,13 @@
   let gameOver = false;
   let paused = false;
   let gameOverDialogPending = false;
+
+  function makeEmptyBoard() {
+    return Array.from(
+      { length: ROWS },
+      () => Array(COLS).fill(null)
+    );
+  }
 
   function randomPiece() {
     const types = Object.keys(SHAPES);
@@ -433,7 +476,7 @@
     return false;
   }
 
-  function place(piece) {
+  async function place(piece) {
     for (const [blockX, blockY] of getBlocks(piece)) {
       const x = piece.x + blockX;
       const y = piece.y + blockY;
@@ -443,11 +486,11 @@
       }
     }
 
-    clearLines();
-    spawn();
+    await clearLines();
+    await spawn();
   }
 
-  function clearLines() {
+  async function clearLines() {
     let removed = 0;
 
     outer:
@@ -477,19 +520,10 @@
     levelEl.textContent = String(level);
     linesEl.textContent = String(lines);
 
-    playClearSound();
+    await playClearSound();
   }
 
-  function stopBGM() {
-    if (!bgm) {
-      return;
-    }
-
-    bgm.pause();
-    bgmStarted = false;
-  }
-
-  function spawn() {
+  async function spawn() {
     cur = next || randomPiece();
     next = randomPiece();
 
@@ -512,9 +546,8 @@
     gameOverDialogPending = true;
 
     initAudio();
-    resumeAudio();
-
-    playGameOverSound();
+    await ensureAudioReady();
+    await playGameOverSound();
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -541,14 +574,13 @@
     for (const [dx] of kicks) {
       if (!collision(cur, dx, 0, direction)) {
         cur.x += dx;
-        cur.rot =
-          (cur.rot + direction + length) % length;
+        cur.rot = (cur.rot + direction + length) % length;
         return;
       }
     }
   }
 
-  function hardDrop() {
+  async function hardDrop() {
     if (!cur || gameOver || paused) {
       return;
     }
@@ -557,7 +589,7 @@
       cur.y++;
     }
 
-    place(cur);
+    await place(cur);
   }
 
   function move(dx) {
@@ -570,7 +602,7 @@
     }
   }
 
-  function softDrop() {
+  async function softDrop() {
     if (!cur || gameOver || paused) {
       return;
     }
@@ -578,13 +610,14 @@
     if (!collision(cur, 0, 1)) {
       cur.y++;
     } else {
-      place(cur);
+      await place(cur);
     }
   }
 
-  function startGame() {
+  async function startGame() {
     initAudio();
-    resumeAudio();
+    await ensureAudioReady();
+
     hideGameOverDialog();
 
     grid = makeEmptyBoard();
@@ -605,13 +638,28 @@
     linesEl.textContent = "0";
 
     next = randomPiece();
-    spawn();
+    await spawn();
 
     if (!isMuted) {
       ensureBGMPlaying();
     }
 
     updatePauseButtonText();
+  }
+
+  // =========================
+  // Dialog and pause controls
+  // =========================
+
+  function showGameOverDialog() {
+    gameOverMessage.textContent = getTranslation("gameOver");
+    gameOverRestart.textContent = getTranslation("startRestart");
+    gameOverDialog.hidden = false;
+    gameOverRestart.focus();
+  }
+
+  function hideGameOverDialog() {
+    gameOverDialog.hidden = true;
   }
 
   function updatePauseButtonText() {
@@ -639,33 +687,77 @@
     }
   }
 
-  function tick(timestamp) {
-    if (!lastTime) {
-      lastTime = timestamp;
-    }
-
-    const delta = timestamp - lastTime;
-    lastTime = timestamp;
-
-    if (!paused && !gameOver && cur) {
-      dropTimer += delta;
-
-      if (dropTimer >= dropInterval) {
-        dropTimer = 0;
-
-        if (!collision(cur, 0, 1)) {
-          cur.y++;
-        } else {
-          place(cur);
-        }
-      }
-    }
-
-    draw();
-    requestAnimationFrame(tick);
+  if (gameOverRestart) {
+    gameOverRestart.addEventListener("click", () => {
+      hideGameOverDialog();
+      startGame().catch(() => {});
+    });
   }
 
-  // === Drawing helpers ===
+  if (startBtn) {
+    startBtn.addEventListener("click", () => {
+      startGame().catch(() => {});
+    });
+  }
+
+  if (pauseBtn) {
+    pauseBtn.addEventListener("click", togglePause);
+  }
+
+  // =========================
+  // Drawing
+  // =========================
+
+  function getAvailableBoardSize() {
+    const viewportWidth = window.visualViewport
+      ? window.visualViewport.width
+      : window.innerWidth;
+
+    const viewportHeight = window.visualViewport
+      ? window.visualViewport.height
+      : window.innerHeight;
+
+    const isMobile = viewportWidth <= 700;
+
+    if (!isMobile) {
+      return {
+        width: COLS * BASE_CELL,
+        height: ROWS * BASE_CELL
+      };
+    }
+
+    const availableWidth = Math.max(160, viewportWidth - 24);
+    const availableHeight = Math.max(320, viewportHeight - 24);
+
+    const cellFromWidth = availableWidth / COLS;
+    const cellFromHeight = availableHeight / ROWS;
+
+    const cellSize = Math.floor(
+      Math.min(cellFromWidth, cellFromHeight, BASE_CELL)
+    );
+
+    return {
+      width: COLS * Math.max(cellSize, 16),
+      height: ROWS * Math.max(cellSize, 16)
+    };
+  }
+
+  function resizeBoardForViewport() {
+    const { width, height } = getAvailableBoardSize();
+
+    CELL = width / COLS;
+
+    board.width = width;
+    board.height = height;
+
+    board.style.width = `${width}px`;
+    board.style.height = `${height}px`;
+
+    board.style.setProperty("--cell-size", `${CELL}px`);
+    document.documentElement.style.setProperty("--cell-size", `${CELL}px`);
+
+    draw();
+  }
 
   function drawCell(x, y, color, targetCtx = ctx, cellSize = CELL) {
     targetCtx.fillStyle = color;
@@ -678,6 +770,7 @@
 
     targetCtx.strokeStyle = "rgba(255, 255, 255, 0.16)";
     targetCtx.lineWidth = 1;
+
     targetCtx.strokeRect(
       x * cellSize + 0.5,
       y * cellSize + 0.5,
@@ -690,6 +783,7 @@
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
+
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
@@ -698,23 +792,17 @@
       return;
     }
 
-    // Place silhouette near the top of the board
-    const silhouetteY = 1;
     const blocks = getBlocks(next, 0);
-
     const minX = Math.min(...blocks.map(([x]) => x));
     const maxX = Math.max(...blocks.map(([x]) => x));
     const pieceWidth = maxX - minX + 1;
-
-    // Center horizontally
     const silhouetteX = Math.floor((COLS - pieceWidth) / 2) - minX;
 
     for (const [blockX, blockY] of blocks) {
       const x = silhouetteX + blockX;
-      const y = silhouetteY + blockY;
+      const y = 1 + blockY;
 
       if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
-        // Very subtle silhouette
         ctx.fillStyle = withAlpha(COLORS[next.type], 0.1);
         ctx.fillRect(
           x * CELL + 2,
@@ -789,7 +877,6 @@
       }
     }
 
-    // Subtle silhouette of the next piece on the board
     drawNextSilhouetteOnBoard();
   }
 
@@ -813,11 +900,13 @@
 
     const offsetX =
       (nextCanvas.width - pieceWidth) / 2 - minX * cellSize;
+
     const offsetY =
       (nextCanvas.height - pieceHeight) / 2 - minY * cellSize;
 
     for (const [blockX, blockY] of blocks) {
       nctx.fillStyle = COLORS[next.type];
+
       nctx.fillRect(
         offsetX + blockX * cellSize + 1,
         offsetY + blockY * cellSize + 1,
@@ -826,6 +915,7 @@
       );
 
       nctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+
       nctx.strokeRect(
         offsetX + blockX * cellSize + 0.5,
         offsetY + blockY * cellSize + 0.5,
@@ -840,7 +930,10 @@
     drawNext();
   }
 
-  // === Keyboard controls ===
+  // =========================
+  // Keyboard controls
+  // =========================
+
   window.addEventListener("keydown", (event) => {
     if (event.repeat) {
       return;
@@ -882,238 +975,257 @@
       case "P":
         togglePause();
         break;
-
-      default:
-        break;
     }
   });
 
-  startBtn.addEventListener("click", startGame);
-  pauseBtn.addEventListener("click", togglePause);
+  // =========================
+  // Language controls
+  // =========================
 
-  langSelect.addEventListener("change", () => {
-    applyLanguage(langSelect.value);
-  });
-
-// === Touch controls ===
-
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-
-let longPressTimer = null;
-let longPressSpeed = 200;
-let longPressActive = false;
-
-const SWIPE_THRESHOLD = 30;
-const TAP_MAX_MOVE = 10;
-const TAP_MAX_TIME = 250;
-const LONGPRESS_DELAY = 350;
-
-function clearLongPress() {
-  if (longPressTimer !== null) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
+  if (langSelect) {
+    langSelect.addEventListener("change", () => {
+      applyLanguage(langSelect.value);
+    });
   }
 
-  longPressActive = false;
-  longPressSpeed = 200;
-}
+  // =========================
+  // Touch controls
+  // =========================
 
-function startLongPressDrop() {
-  if (!cur || gameOver || paused) {
-    clearLongPress();
-    return;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+
+  let longPressTimer = null;
+  let longPressSpeed = 200;
+  let longPressActive = false;
+
+  const SWIPE_THRESHOLD = 30;
+  const TAP_MAX_MOVE = 10;
+  const TAP_MAX_TIME = 250;
+  const LONGPRESS_DELAY = 350;
+
+  function clearLongPress() {
+    if (longPressTimer !== null) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+
+    longPressActive = false;
+    longPressSpeed = 200;
   }
 
-  if (!collision(cur, 0, 1)) {
-    cur.y++;
-  } else {
-    place(cur);
-    clearLongPress();
-    return;
-  }
-
-  longPressSpeed = Math.max(60, longPressSpeed * 0.85);
-
-  longPressTimer = setTimeout(
-    startLongPressDrop,
-    longPressSpeed
-  );
-}
-
-function preventBoardGesture(event) {
-  /*
-   * This is deliberately called on every touch event.
-   * On iOS, preventing only touchmove can be too late for a
-   * stationary double tap.
-   */
-  event.preventDefault();
-}
-
-function handleBoardTouchStart(event) {
-  preventBoardGesture(event);
-
-  if (event.touches.length !== 1) {
-    clearLongPress();
-    return;
-  }
-
-  const touch = event.touches[0];
-
-  touchStartX = touch.clientX;
-  touchStartY = touch.clientY;
-  touchStartTime = performance.now();
-
-  clearLongPress();
-
-  initAudio();
-  resumeAudio();
-
-  longPressTimer = setTimeout(() => {
-    if (gameOver || paused) {
+  function startLongPressDrop() {
+    if (!cur || gameOver || paused) {
       clearLongPress();
       return;
     }
 
-    longPressActive = true;
-    startLongPressDrop();
-  }, LONGPRESS_DELAY);
-}
-
-function handleBoardTouchMove(event) {
-  preventBoardGesture(event);
-
-  if (event.touches.length !== 1) {
-    clearLongPress();
-    return;
-  }
-
-  const touch = event.touches[0];
-
-  const dx = touch.clientX - touchStartX;
-  const dy = touch.clientY - touchStartY;
-
-  const absX = Math.abs(dx);
-  const absY = Math.abs(dy);
-
-  if (absX > TAP_MAX_MOVE || absY > TAP_MAX_MOVE) {
-    clearLongPress();
-  }
-}
-
-function handleBoardTouchEnd(event) {
-  preventBoardGesture(event);
-
-  if (event.changedTouches.length !== 1) {
-    clearLongPress();
-    return;
-  }
-
-  const touch = event.changedTouches[0];
-
-  const dx = touch.clientX - touchStartX;
-  const dy = touch.clientY - touchStartY;
-
-  const duration = performance.now() - touchStartTime;
-
-  const absX = Math.abs(dx);
-  const absY = Math.abs(dy);
-
-  const wasLongPress = longPressActive;
-
-  clearLongPress();
-
-  /*
-   * A long press is soft drop only. Do not also treat its release
-   * as a tap or swipe.
-   */
-  if (wasLongPress) {
-    return;
-  }
-
-  /*
-   * One tap rotates once. Therefore two quick taps rotate twice.
-   * preventDefault() above stops iOS from interpreting the pair
-   * as page zoom.
-   */
-  if (
-    duration < TAP_MAX_TIME &&
-    absX < TAP_MAX_MOVE &&
-    absY < TAP_MAX_MOVE
-  ) {
-    rotate(1);
-    return;
-  }
-
-  /*
-   * Swipes.
-   */
-  if (absX > SWIPE_THRESHOLD || absY > SWIPE_THRESHOLD) {
-    if (absX > absY) {
-      move(dx > 0 ? 1 : -1);
-    } else if (dy > 0) {
-      softDrop();
+    if (!collision(cur, 0, 1)) {
+      cur.y++;
     } else {
-      rotate(1);
+      place(cur).catch(() => {});
+      clearLongPress();
+      return;
+    }
+
+    longPressSpeed = Math.max(60, longPressSpeed * 0.85);
+
+    longPressTimer = setTimeout(
+      startLongPressDrop,
+      longPressSpeed
+    );
+  }
+
+  function preventBoardGesture(event) {
+    event.preventDefault();
+  }
+
+  function handleBoardTouchStart(event) {
+    preventBoardGesture(event);
+
+    if (event.touches.length !== 1) {
+      clearLongPress();
+      return;
+    }
+
+    const touch = event.touches[0];
+
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = performance.now();
+
+    clearLongPress();
+
+    initAudio();
+    resumeAudio();
+
+    longPressTimer = setTimeout(() => {
+      if (gameOver || paused) {
+        clearLongPress();
+        return;
+      }
+
+      longPressActive = true;
+      startLongPressDrop();
+    }, LONGPRESS_DELAY);
+  }
+
+  function handleBoardTouchMove(event) {
+    preventBoardGesture(event);
+
+    if (event.touches.length !== 1) {
+      clearLongPress();
+      return;
+    }
+
+    const touch = event.touches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+
+    if (
+      Math.abs(dx) > TAP_MAX_MOVE ||
+      Math.abs(dy) > TAP_MAX_MOVE
+    ) {
+      clearLongPress();
     }
   }
-}
 
-function handleBoardTouchCancel(event) {
-  preventBoardGesture(event);
-  clearLongPress();
-}
+  function handleBoardTouchEnd(event) {
+    preventBoardGesture(event);
 
-/*
- * The listeners must be passive: false, otherwise iOS may ignore
- * preventDefault().
- */
-board.addEventListener(
-  "touchstart",
-  handleBoardTouchStart,
-  { passive: false }
-);
+    if (event.changedTouches.length !== 1) {
+      clearLongPress();
+      return;
+    }
 
-board.addEventListener(
-  "touchmove",
-  handleBoardTouchMove,
-  { passive: false }
-);
+    const touch = event.changedTouches[0];
 
-board.addEventListener(
-  "touchend",
-  handleBoardTouchEnd,
-  { passive: false }
-);
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
 
-board.addEventListener(
-  "touchcancel",
-  handleBoardTouchCancel,
-  { passive: false }
-);
+    const duration = performance.now() - touchStartTime;
 
-/*
- * Prevent Safari gesture events as an additional safeguard.
- * These are page-level listeners because Safari can dispatch
- * gesture events outside the canvas target.
- */
-["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
-  document.addEventListener(
-    type,
-    (event) => {
-      event.preventDefault();
-    },
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    const wasLongPress = longPressActive;
+
+    clearLongPress();
+
+    if (wasLongPress) {
+      return;
+    }
+
+    if (
+      duration < TAP_MAX_TIME &&
+      absX < TAP_MAX_MOVE &&
+      absY < TAP_MAX_MOVE
+    ) {
+      rotate(1);
+      return;
+    }
+
+    if (
+      absX > SWIPE_THRESHOLD ||
+      absY > SWIPE_THRESHOLD
+    ) {
+      if (absX > absY) {
+        move(dx > 0 ? 1 : -1);
+      } else if (dy > 0) {
+        softDrop();
+      } else {
+        rotate(1);
+      }
+    }
+  }
+
+  function handleBoardTouchCancel(event) {
+    preventBoardGesture(event);
+    clearLongPress();
+  }
+
+  board.addEventListener(
+    "touchstart",
+    handleBoardTouchStart,
     { passive: false }
   );
-});
 
-  // === Initialization ===
+  board.addEventListener(
+    "touchmove",
+    handleBoardTouchMove,
+    { passive: false }
+  );
+
+  board.addEventListener(
+    "touchend",
+    handleBoardTouchEnd,
+    { passive: false }
+  );
+
+  board.addEventListener(
+    "touchcancel",
+    handleBoardTouchCancel,
+    { passive: false }
+  );
+
+  ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+    document.addEventListener(
+      type,
+      (event) => {
+        event.preventDefault();
+      },
+      { passive: false }
+    );
+  });
+
+  // =========================
+  // Game loop and initialization
+  // =========================
+
+  function tick(timestamp) {
+    if (!lastTime) {
+      lastTime = timestamp;
+    }
+
+    const delta = timestamp - lastTime;
+    lastTime = timestamp;
+
+    if (!paused && !gameOver && cur) {
+      dropTimer += delta;
+
+      if (dropTimer >= dropInterval) {
+        dropTimer = 0;
+
+        if (!collision(cur, 0, 1)) {
+          cur.y++;
+        } else {
+          place(cur).catch(() => {});
+        }
+      }
+    }
+
+    draw();
+    requestAnimationFrame(tick);
+  }
+
   langSelect.value = currentLang;
   applyLanguage(currentLang);
 
   next = randomPiece();
-  spawn();
+  spawn().catch(() => {});
+
+  resizeBoardForViewport();
+
+  window.addEventListener("resize", resizeBoardForViewport);
+  window.addEventListener("orientationchange", resizeBoardForViewport);
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener(
+      "resize",
+      resizeBoardForViewport
+    );
+  }
 
   requestAnimationFrame(tick);
 })();
