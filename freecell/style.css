@@ -26,6 +26,10 @@ body {
   overscroll-behavior: none;
 }
 
+/*
+ * Keep the board as a non-zooming custom surface.
+ * The JavaScript touch filters below exempt native controls.
+ */
 #board,
 #board * {
   touch-action: pan-y;
@@ -37,8 +41,8 @@ body {
 #board {
   max-width: 980px;
   margin: auto;
-  touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
-  -webkit-touch-callout: none; /* No long-press callout on iOS */
+  touch-action: none;
+  -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -60,6 +64,18 @@ h1 {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+/*
+ * These remain native controls, but manipulation prevents iOS from
+ * interpreting a quick tap as a double-tap zoom gesture.
+ */
+button,
+#langSelect {
+  touch-action: manipulation;
+  -webkit-user-select: auto;
+  user-select: auto;
+  -webkit-touch-callout: default;
 }
 
 button {
