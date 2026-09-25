@@ -6,54 +6,52 @@
   <title>Tetris</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body style="touch-action: manipulation;">
   <main id="container">
     <canvas id="board" aria-label="Tetris game board"></canvas>
 
     <section id="ui" aria-label="Game controls">
       <h1 data-i18n="title">Tetris</h1>
 
-      <div class="top-row">
-        <section class="panel stats-panel" aria-label="Game statistics">
-          <div class="stat">
-            <span data-i18n="score">Score</span>
-            <strong id="score">0</strong>
-          </div>
-          <div class="stat">
-            <span data-i18n="level">Level</span>
-            <strong id="level">1</strong>
-          </div>
-          <div class="stat">
-            <span data-i18n="lines">Lines</span>
-            <strong id="lines">0</strong>
-          </div>
-        </section>
+      <section class="panel next-panel">
+        <canvas id="next" width="96" height="72" aria-label="Next piece"></canvas>
 
-        <section class="panel next-panel">
-          <canvas id="next" width="96" height="72" aria-label="Next piece"></canvas>
+      <section class="panel stats-panel" aria-label="Game statistics">
+        <div class="stat">
+          <span data-i18n="score">Score</span>
+          <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+          <span data-i18n="level">Level</span>
+          <strong id="level">1</strong>
+        </div>
+        <div class="stat">
+          <span data-i18n="lines">Lines</span>
+          <strong id="lines">0</strong>
+        </div>
+      </section>
 
-          <div class="button-row">
-            <button id="start" type="button" data-i18n="startRestart">
-              Start / Restart
-            </button>
-            <button id="pause" type="button" data-i18n="pause">
-              Pause
-            </button>
-          </div>
+        <div class="button-row">
+          <button id="start" type="button" data-i18n="startRestart">
+            Start / Restart
+          </button>
+          <button id="pause" type="button" data-i18n="pause">
+            Pause
+          </button>
+        </div>
 
-          <p class="keys-hint">
-            <small data-i18n="keysHint">
-              Keys: ← → ↓ rotate: X/Z or ↑ • Space hard drop • P pause
-            </small>
-          </p>
+        <p class="keys-hint">
+          <small data-i18n="keysHint">
+            Keys: ← → ↓ rotate: X/Z or ↑ • Space hard drop • P pause
+          </small>
+        </p>
 
-          <p class="touch-hint">
-            <small data-i18n="ctrlTouch">
-              Touch: swipe left/right/up/down to move/rotate/soft drop; double-tap for hard drop
-            </small>
-          </p>
-        </section>
-      </div>
+        <p class="touch-hint">
+          <small data-i18n="ctrlTouch">
+            Touch: swipe left/right/up/down to move/rotate/soft drop; double-tap for hard drop
+          </small>
+        </p>
+      </section>
 
       <section class="panel lang-panel">
         <label for="lang" data-i18n="language">Language</label>

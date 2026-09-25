@@ -22,7 +22,7 @@
 html {
   min-height: 100%;
   background: var(--page-bg);
-  touch-action: manipulation;
+  touch-action: manipulation; /* disables double-tap zoom globally */
 }
 
 body {
@@ -43,12 +43,13 @@ body {
     Roboto,
     Arial,
     sans-serif;
-  touch-action: manipulation;
+  touch-action: manipulation; /* extra safety for double-tap */
 }
 
 button,
 select {
   font: inherit;
+  touch-action: manipulation; /* prevent double-tap zoom on controls */
 }
 
 button {
@@ -86,6 +87,7 @@ select:focus-visible {
   align-items: flex-start;
   justify-content: center;
   gap: 24px;
+  position: relative; /* for absolute positioning of #next on small screens */
 }
 
 canvas {
@@ -100,8 +102,8 @@ canvas {
 #board {
   width: var(--board-width);
   height: var(--board-height);
-  touch-action: none;          /* No pan, pinch, or double-tap zoom */
-  -webkit-touch-callout: none; /* No callout menu on long-press (iOS) */
+  touch-action: none; /* no browser gestures on the game board */
+  -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
@@ -129,12 +131,6 @@ h1 {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
-.top-row {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
 .stats-panel {
   width: 100%;
 }
@@ -143,13 +139,19 @@ h1 {
   width: 100%;
   display: flex;
   flex-direction: column;
+  position: relative; /* so we can absolutely position #next if needed */
+  padding-top: 76px; /* make space for #next at the top of this panel */
 }
 
 #next {
   width: 96px;
   height: 72px;
-  align-self: center;
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   background: #0d1528;
+  z-index: 5; /* visually on top of the panel content */
 }
 
 .stat {
@@ -280,19 +282,9 @@ select {
     max-width: var(--board-width);
   }
 
-  .top-row {
-    flex-direction: row;
-    align-items: stretch;
-  }
-
-  .stats-panel {
-    flex: 1;
-    min-width: 0;
-  }
-
   .next-panel {
-    flex: 1.4;
-    min-width: 0;
+    /* Keep #next visible above the bottom frames on narrow screens */
+    padding-top: 80px;
   }
 }
 
@@ -301,12 +293,12 @@ select {
     --cell-size: 27px;
   }
 
-  .top-row {
-    flex-direction: column;
-  }
-
   #ui {
     width: var(--board-width);
     max-width: 100%;
+  }
+
+  .next-panel {
+    padding-top: 78px;
   }
 }

@@ -511,15 +511,11 @@
 
     gameOverDialogPending = true;
 
-    // Important:
-    // The dialog is NOT alert(). It does not block the browser's
-    // audio thread, so the tone can begin before the dialog appears.
     initAudio();
     resumeAudio();
 
     playGameOverSound();
 
-    // Give the browser an opportunity to start the scheduled sound.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         gameOverDialogPending = false;
@@ -669,7 +665,8 @@
     requestAnimationFrame(tick);
   }
 
-  // === Drawing ===
+  // === Drawing helpers ===
+
   function drawCell(x, y, color, targetCtx = ctx, cellSize = CELL) {
     targetCtx.fillStyle = color;
     targetCtx.fillRect(
@@ -687,6 +684,54 @@
       cellSize - 1,
       cellSize - 1
     );
+  }
+
+  function withAlpha(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function drawNextSilhouetteOnBoard() {
+    if (!next || !cur) {
+      return;
+    }
+
+    // Place silhouette near the top of the board
+    const silhouetteY = 1;
+    const blocks = getBlocks(next, 0);
+
+    const minX = Math.min(...blocks.map(([x]) => x));
+    const maxX = Math.max(...blocks.map(([x]) => x));
+    const pieceWidth = maxX - minX + 1;
+
+    // Center horizontally
+    const silhouetteX = Math.floor((COLS - pieceWidth) / 2) - minX;
+
+    for (const [blockX, blockY] of blocks) {
+      const x = silhouetteX + blockX;
+      const y = silhouetteY + blockY;
+
+      if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+        // Very subtle silhouette
+        ctx.fillStyle = withAlpha(COLORS[next.type], 0.1);
+        ctx.fillRect(
+          x * CELL + 2,
+          y * CELL + 2,
+          CELL - 4,
+          CELL - 4
+        );
+
+        ctx.strokeStyle = withAlpha(COLORS[next.type], 0.08);
+        ctx.strokeRect(
+          x * CELL + 1.5,
+          y * CELL + 1.5,
+          CELL - 3,
+          CELL - 3
+        );
+      }
+    }
   }
 
   function drawGrid() {
@@ -743,6 +788,9 @@
         drawCell(x, y, COLORS[cur.type]);
       }
     }
+
+    // Subtle silhouette of the next piece on the board
+    drawNextSilhouetteOnBoard();
   }
 
   function drawNext() {
@@ -847,153 +895,153 @@
     applyLanguage(langSelect.value);
   });
 
-// === Touch controls ===
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-let longPressTimer = null;
-let longPressSpeed = 200; // ms between drops, will accelerate
-let longPressActive = false;
+  // === Touch controls ===
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+  let longPressTimer = null;
+  let longPressSpeed = 200; // ms between drops, will accelerate
+  let longPressActive = false;
 
-const SWIPE_THRESHOLD = 30; // px
-const TAP_MAX_MOVE = 10;    // px
-const TAP_MAX_TIME = 250;   // ms
-const LONGPRESS_DELAY = 350; // ms before long-press triggers
+  const SWIPE_THRESHOLD = 30; // px
+  const TAP_MAX_MOVE = 10;    // px
+  const TAP_MAX_TIME = 250;   // ms
+  const LONGPRESS_DELAY = 350; // ms before long-press triggers
 
-function clearLongPress() {
-  if (longPressTimer !== null) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-  longPressActive = false;
-  longPressSpeed = 200;
-}
-
-function startLongPressDrop() {
-  if (!cur || gameOver || paused) {
-    return;
+  function clearLongPress() {
+    if (longPressTimer !== null) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    longPressActive = false;
+    longPressSpeed = 200;
   }
 
-  // Perform one soft drop
-  if (!collision(cur, 0, 1)) {
-    cur.y++;
-  } else {
-    place(cur);
-    clearLongPress();
-    return;
-  }
+  function startLongPressDrop() {
+    if (!cur || gameOver || paused) {
+      return;
+    }
 
-  // Schedule next drop with accelerating speed
-  longPressSpeed = Math.max(60, longPressSpeed * 0.85); // accelerate
-  longPressTimer = setTimeout(startLongPressDrop, longPressSpeed);
-}
-
-board.addEventListener(
-  "touchstart",
-  (event) => {
-    if (event.touches.length !== 1) {
+    // Perform one soft drop
+    if (!collision(cur, 0, 1)) {
+      cur.y++;
+    } else {
+      place(cur);
       clearLongPress();
       return;
     }
 
-    const touch = event.touches[0];
+    // Schedule next drop with accelerating speed
+    longPressSpeed = Math.max(60, longPressSpeed * 0.85); // accelerate
+    longPressTimer = setTimeout(startLongPressDrop, longPressSpeed);
+  }
 
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    touchStartTime = performance.now();
-
-    clearLongPress();
-
-    initAudio();
-    resumeAudio();
-
-    // Start long-press timer
-    longPressTimer = setTimeout(() => {
-      if (gameOver || paused) {
+  board.addEventListener(
+    "touchstart",
+    (event) => {
+      if (event.touches.length !== 1) {
         clearLongPress();
         return;
       }
-      longPressActive = true;
-      startLongPressDrop();
-    }, LONGPRESS_DELAY);
-  },
-  { passive: false } // we may call preventDefault
-);
 
-board.addEventListener(
-  "touchmove",
-  (event) => {
-    if (event.touches.length !== 1) {
-      return;
-    }
+      const touch = event.touches[0];
 
-    const touch = event.touches[0];
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchStartTime = performance.now();
 
-    // If moved enough, cancel long-press and prevent default gestures
-    if (absX > TAP_MAX_MOVE || absY > TAP_MAX_MOVE) {
       clearLongPress();
-      event.preventDefault(); // stop scroll/zoom on canvas
-    }
-  },
-  { passive: false }
-);
 
-board.addEventListener(
-  "touchend",
-  (event) => {
-    if (event.changedTouches.length !== 1) {
-      clearLongPress();
-      return;
-    }
+      initAudio();
+      resumeAudio();
 
-    const touch = event.changedTouches[0];
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-    const duration = performance.now() - touchStartTime;
+      // Start long-press timer
+      longPressTimer = setTimeout(() => {
+        if (gameOver || paused) {
+          clearLongPress();
+          return;
+        }
+        longPressActive = true;
+        startLongPressDrop();
+      }, LONGPRESS_DELAY);
+    },
+    { passive: false }
+  );
 
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-
-    clearLongPress();
-
-    // If it was a long-press, don't interpret as tap or swipe
-    if (longPressActive) {
-      return;
-    }
-
-    // Tap: very small movement, short duration => rotate
-    if (duration < TAP_MAX_TIME && absX < TAP_MAX_MOVE && absY < TAP_MAX_MOVE) {
-      rotate(1);
-      return;
-    }
-
-    // Swipe: larger movement
-    if (absX > SWIPE_THRESHOLD || absY > SWIPE_THRESHOLD) {
-      if (absX > absY) {
-        // Horizontal swipe: left/right move
-        move(dx > 0 ? 1 : -1);
-      } else if (dy > 0) {
-        // Down swipe: soft drop (single step)
-        softDrop();
-      } else {
-        // Up swipe: rotate (alternative to tap)
-        rotate(1);
+  board.addEventListener(
+    "touchmove",
+    (event) => {
+      if (event.touches.length !== 1) {
+        return;
       }
-    }
-  },
-  { passive: false }
-);
 
-// Also prevent default on gesture events (iOS pinch)
-["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
-  board.addEventListener(type, (event) => {
-    event.preventDefault();
-  }, { passive: false });
-});
+      const touch = event.touches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+
+      // If moved enough, cancel long-press and prevent default gestures
+      if (absX > TAP_MAX_MOVE || absY > TAP_MAX_MOVE) {
+        clearLongPress();
+        event.preventDefault(); // stop scroll/zoom on canvas
+      }
+    },
+    { passive: false }
+  );
+
+  board.addEventListener(
+    "touchend",
+    (event) => {
+      if (event.changedTouches.length !== 1) {
+        clearLongPress();
+        return;
+      }
+
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      const duration = performance.now() - touchStartTime;
+
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+
+      clearLongPress();
+
+      // If it was a long-press, don't interpret as tap or swipe
+      if (longPressActive) {
+        return;
+      }
+
+      // Tap: very small movement, short duration => rotate
+      if (duration < TAP_MAX_TIME && absX < TAP_MAX_MOVE && absY < TAP_MAX_MOVE) {
+        rotate(1);
+        return;
+      }
+
+      // Swipe: larger movement
+      if (absX > SWIPE_THRESHOLD || absY > SWIPE_THRESHOLD) {
+        if (absX > absY) {
+          // Horizontal swipe: left/right move
+          move(dx > 0 ? 1 : -1);
+        } else if (dy > 0) {
+          // Down swipe: soft drop (single step)
+          softDrop();
+        } else {
+          // Up swipe: rotate (alternative to tap)
+          rotate(1);
+        }
+      }
+    },
+    { passive: false }
+  );
+
+  // Also prevent default on gesture events (iOS pinch)
+  ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+    board.addEventListener(type, (event) => {
+      event.preventDefault();
+    }, { passive: false });
+  });
 
   // === Initialization ===
   langSelect.value = currentLang;
