@@ -1,4 +1,134 @@
-/* Board container */
+/* =========================
+   Base / Reset
+   ========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+/* =========================
+   Layout container
+   ========================= */
+
+.game-container {
+  width: 100%;
+  max-width: 420px;
+  padding: 16px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* =========================
+   Controls row
+   ========================= */
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  font-size: 14px;
+  user-select: none;
+}
+
+select, button {
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Stats row
+   ========================= */
+
+.stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-value {
+  font-weight: 700;
+  min-width: 1.6em;
+  text-align: right;
+}
+
+/* =========================
+   Message area
+   ========================= */
+
+#message {
+  min-height: 1.4em;
+  margin: 8px auto 12px;
+  font-size: 15px;
+  line-height: 1.4;
+  max-width: 260px;
+}
+
+/* Instruction color variants (used by task text) */
+.instruction-color-primary {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+.instruction-color-secondary {
+  color: #f472b6;
+  font-weight: 700;
+}
+
+.instruction-color-accent {
+  color: #34d399;
+  font-weight: 700;
+}
+
+/* =========================
+   Board container
+   ========================= */
+
 #board {
   position: relative;
   width: 230px;
@@ -114,4 +244,20 @@
   left: calc(50% - 52.5px);
   top: calc(50% - 30.3px);
   transform: translate(-50%, -50%);
+}
+
+/* =========================
+   Small helpers / utilities
+   ========================= */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
