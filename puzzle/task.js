@@ -485,7 +485,7 @@ function createCircleHexes(boardSize, answerSet, target) {
 }
 
 /* ==========================================================================
-   Task 01 internal validation
+   Task 01 Select all colour
    ========================================================================== */
 
 function validateTask01Internals(
@@ -552,12 +552,238 @@ function matchesTask01Target(hex, target) {
 }
 
 /* ==========================================================================
-   Generator skeletons (future tasks)
+   Task 02 edge paths
    ========================================================================== */
 
 async function generateTask02(difficulty) {
-    throw new Error("generateTask02 not implemented.");
+    if (![0, 1].includes(difficulty)) {
+        throw new RangeError(
+            "generateTask02: difficulty must be 0 or 1."
+        );
+    }
+
+    const pathData = PATH_DATA;
+    const boardSize = pathData.boardSize; // 7
+    const pathsByLength = pathData.paths;
+
+    // 1. Choose path length (4, 5, or 6)
+    const answerLength = randomChoice([4, 5, 6]);
+
+    const candidates = pathsByLength[String(answerLength)];
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+        throw new Error(
+            `generateTask02: no paths of length ${answerLength} in path.json.`
+        );
+    }
+
+    // 2. Choose a base path that does NOT contain 0
+    let baseAnswerPath = null;
+    let attempts = 0;
+    const maxAttempts = 200;
+
+    while (attempts < maxAttempts) {
+        attempts += 1;
+        const candidate = [...randomChoice(candidates)];
+        if (!candidate.includes(0)) {
+            baseAnswerPath = candidate;
+            break;
+        }
+    }
+
+    if (!baseAnswerPath) {
+        throw new Error(
+            "generateTask02: could not find a path without center (0)."
+        );
+    }
+
+    // 3. Choose direction, color, and shape for instruction
+    const direction = randomChoice(["clockwise", "anticlockwise"]);
+    const color = randomChoice(TASK_COLORS);
+    const shape = randomChoice(["hex", "circle"]);
+
+    // 4. Populate hexes according to rules
+    const hexes = createTask02Hexes({
+        boardSize,
+        baseAnswerPath,
+        color,
+        shape
+    });
+
+    // 5. Recompute all valid paths of the same length, excluding any with 0
+    const allPathsOfLength = pathsByLength[String(answerLength)] || [];
+    const validAnswerPaths = allPathsOfLength
+        .filter((path) => !path.includes(0))
+        .map((p) => [...p]);
+
+    if (validAnswerPaths.length === 0) {
+        throw new Error(
+            "generateTask02: no valid answer paths (without 0) exist."
+        );
+    }
+
+    // Convert to engine format: cells + answerPaths
+    const colorMap = {
+        red: HexTaskLoader.COLOR_HEX.red,
+        green: HexTaskLoader.COLOR_HEX.green,
+        blue: HexTaskLoader.COLOR_HEX.blue
+    };
+
+    const alphabet = "ABCDEFG".split("");
+
+    const cells = hexes.map((hex) => {
+        const content =
+            hex.character !== undefined
+                ? hex.character
+                : alphabet[hex.index] ?? "";
+
+        return {
+            index: hex.index,
+            content,
+            backgroundColor: colorMap[hex.backgroundColorKey] || ""
+        };
+    });
+
+    // Build instruction metadata
+    // - mode: "HEX_COLOR" or "CIRCLE_CHARACTER" depending on shape
+    // - targetColors: [color]
+    // - task02: extra fields for rendering the instruction
+    const mode = shape === "hex" ? "HEX_COLOR" : "CIRCLE_CHARACTER";
+
+    const task = {
+        type: "findPath",
+
+        data: {
+            difficulty,
+            answerLength,
+            mode
+        },
+
+        instruction: {
+            mode,
+            negated: false,
+            targetColors: [color],
+
+            task02: {
+                length: answerLength,
+                direction,
+                color,
+                shape
+            }
+        },
+
+        cells,
+        answerPaths: validAnswerPaths
+    };
+
+    if (!validateTask02Internals(task, baseAnswerPath, color, shape)) {
+        throw new Error(
+            "generateTask02 created an invalid task."
+        );
+    }
+
+    return task;
 }
+
+function createTask02Hexes({ boardSize, baseAnswerPath, color, shape }) {
+    const answerSet = new Set(baseAnswerPath);
+    const firstIndex = baseAnswerPath[0];
+    const centerIndex = 0;
+
+    return Array.from({ length: boardSize }, (_, index) => {
+        let backgroundColorKey;
+        let character;
+
+        if (index === firstIndex) {
+            // First hex: forced to instructed color/shape
+            if (shape === "hex") {
+                backgroundColorKey = color;
+                character = undefined;
+            } else {
+                // circle shape
+                backgroundColorKey = randomChoice(TASK_COLORS);
+                character = TASK_CIRCLES[color];
+            }
+        } else if (index === centerIndex) {
+            // Center hex: NOT the instructed color/shape
+            if (shape === "hex") {
+                const nonColorColors = TASK_COLORS.filter(
+                    (c) => c !== color
+                );
+                backgroundColorKey = randomChoice(nonColorColors);
+                character = undefined;
+            } else {
+                // circle shape
+                backgroundColorKey = randomChoice(TASK_COLORS);
+                const nonColorCircles = Object.entries(TASK_CIRCLES)
+                    .filter(([c]) => c !== color)
+                    .map(([, ch]) => ch);
+                character = randomChoice(nonColorCircles);
+            }
+        } else {
+            // Other hexes: fully random
+            backgroundColorKey = randomChoice(TASK_COLORS);
+            character = randomChoice(Object.values(TASK_CIRCLES));
+        }
+
+        return {
+            index,
+            backgroundColorKey,
+            character
+        };
+    });
+}
+
+function validateTask02Internals(task, baseAnswerPath, color, shape) {
+    // Basic structural checks are already done by validateGeneratedTask.
+    // Here we just ensure the first and center hex follow the rules.
+
+    const firstIndex = baseAnswerPath[0];
+    const centerIndex = 0;
+
+    const firstCell = task.cells.find(
+        (c) => Number(c.index) === firstIndex
+    );
+    const centerCell = task.cells.find(
+        (c) => Number(c.index) === centerIndex
+    );
+
+    if (!firstCell || !centerCell) {
+        return false;
+    }
+
+    if (shape === "hex") {
+        // First hex must have instructed background color
+        const expectedFirstBg = HexTaskLoader.COLOR_HEX[color];
+        if (firstCell.backgroundColor !== expectedFirstBg) {
+            return false;
+        }
+
+        // Center hex must NOT have instructed background color
+        if (centerCell.backgroundColor === expectedFirstBg) {
+            return false;
+        }
+    } else {
+        // shape === "circle"
+        const expectedFirstChar = TASK_CIRCLES[color];
+        if (firstCell.content !== expectedFirstChar) {
+            return false;
+        }
+
+        const nonColorCircles = Object.entries(TASK_CIRCLES)
+            .filter(([c]) => c !== color)
+            .map(([, ch]) => ch);
+
+        if (!nonColorCircles.includes(centerCell.content)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/* ==========================================================================
+   Task 3
+   ========================================================================== */
 
 async function generateTask03(difficulty) {
     throw new Error("generateTask03 not implemented.");
