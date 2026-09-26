@@ -644,7 +644,7 @@ function validateTaskResponse(task) {
 }
 
 /* ==========================================================================
-   Task instruction rendering
+   Generic task instruction rendering
 ========================================================================== */
 
 function renderTaskInstruction(task) {
@@ -656,137 +656,290 @@ function renderTaskInstruction(task) {
 
     if (
         !instruction ||
-        !Array.isArray(
-            instruction.targetColors
-        )
+        typeof instruction !== "object"
     ) {
         setMessageKey("yourTurn");
         return;
     }
 
-    const templateKey =
-        getInstructionTemplateKey(instruction);
-
-    const template =
-        getNestedValue(
-            languageData,
-            `tasks.templates.${templateKey}`
-        ) ||
-        getNestedValue(
-            languageData,
-            `tasks.task01.${templateKey}`
-        ) ||
-        getUiText("yourTurn") ||
-        "";
+    const template = getInstructionTemplate(
+        instruction
+    );
 
     if (!template) {
         setMessageKey("yourTurn");
         return;
     }
 
-    const colorNames =
-        instruction.targetColors.map(
-            colorKey => {
-                return (
-                    getNestedValue(
-                        languageData,
-                        `tasks.colors.${colorKey}`
-                    ) ||
-                    colorKey
-                );
-            }
-        );
+    const rendered = renderTemplate(
+        template,
+        instruction
+    );
 
-    const displayColorKey =
-        instruction.displayColorKey ||
-        instruction.targetColors[0];
+    message.replaceChildren(...rendered);
+}
 
-    const colorElements =
-        createInstructionColorElements(
-            colorNames,
-            displayColorKey
-        );
+function getInstructionTemplate(instruction) {
+    const templateKey =
+        instruction.template ||
+        instruction.templateKey ||
+        instruction.type;
 
-    const renderedParts =
-        renderInstructionTemplate(
-            template,
-            colorElements
-        );
+    if (!templateKey) {
+        return "";
+    }
 
-    message.replaceChildren(
-        ...renderedParts
+    return getNestedValue(
+        languageData,
+        `tasks.templates.${templateKey}`
     );
 }
 
-function getInstructionTemplateKey(
-    instruction
-) {
-    const isCircleMode =
-        instruction.mode ===
-        "CIRCLE_CHARACTER";
+function renderTemplate(template, values) {
+    const rendered = [];
+    const tokenPattern = /\{([^{}]+)\}/g;
 
-    if (isCircleMode) {
-        return instruction.negated
-            ? "circlesExcept"
-            : "circles";
-    }
+    let lastIndex = 0;
+    let match;
 
-    return instruction.negated
-        ? "hexesExcept"
-        : "hexes";
-}
-
-function createInstructionColorElements(
-    colorNames,
-    displayColorKey
-) {
-    const fragment = document.createDocumentFragment();
-
-    colorNames.forEach((name, index) => {
-        const colorElement =
-            document.createElement("span");
-
-        colorElement.className =
-            `instruction-color-${displayColorKey}`;
-
-        colorElement.textContent = name;
-        fragment.appendChild(colorElement);
-
-        if (index < colorNames.length - 1) {
-            fragment.appendChild(
-                document.createTextNode("\u0000")
+    while (
+        (match = tokenPattern.exec(template))
+    ) {
+        if (match.index > lastIndex) {
+            rendered.push(
+                document.createTextNode(
+                    template.slice(
+                        lastIndex,
+                        match.index
+                    )
+                )
             );
         }
-    });
 
-    return [...fragment.childNodes];
-}
+        const tokenName = match[1];
+        const tokenValue =
+            getInstructionTokenValue(
+                tokenName,
+                values
+            );
 
-function renderInstructionTemplate(
-    template,
-    colorElements
-) {
-    const parts = template.split("{colors}");
-    const rendered = [];
-
-    if (parts[0]) {
         rendered.push(
-            document.createTextNode(parts[0])
+            ...renderInstructionToken(
+                tokenName,
+                tokenValue,
+                values
+            )
         );
+
+        lastIndex =
+            match.index + match[0].length;
     }
 
-    const listElements =
-        translateColorList(colorElements);
-
-    rendered.push(...listElements);
-
-    if (parts[1]) {
+    if (lastIndex < template.length) {
         rendered.push(
-            document.createTextNode(parts[1])
+            document.createTextNode(
+                template.slice(lastIndex)
+            )
         );
     }
 
     return rendered;
+}
+
+function getInstructionTokenValue(
+    tokenName,
+    values
+) {
+    if (tokenName === "colors") {
+        return getInstructionColors(values);
+    }
+
+    if (
+        Object.prototype.hasOwnProperty.call(
+            values,
+            tokenName
+        )
+    ) {
+        return values[tokenName];
+    }
+
+    if (
+        values.parameters &&
+        Object.prototype.hasOwnProperty.call(
+            values.parameters,
+            tokenName
+        )
+    ) {
+        return values.parameters[tokenName];
+    }
+
+    return "";
+}
+
+function getInstructionColors(instruction) {
+    if (Array.isArray(instruction.targetColors)) {
+        return instruction.targetColors;
+    }
+
+    if (Array.isArray(instruction.colors)) {
+        return instruction.colors;
+    }
+
+    if (instruction.color) {
+        return [instruction.color];
+    }
+
+    return [];
+}
+
+function renderInstructionToken(
+    tokenName,
+    tokenValue,
+    instruction
+) {
+    if (tokenName === "colors") {
+        const colorElements =
+            getColorElements(tokenValue);
+
+        return translateColorList(
+            colorElements
+        );
+    }
+
+    if (
+        tokenValue === null ||
+        tokenValue === undefined
+    ) {
+        return [];
+    }
+
+    const values = Array.isArray(tokenValue)
+        ? tokenValue
+        : [tokenValue];
+
+    return values.flatMap(value => {
+        const displayValue =
+            getLocalizedTokenValue(
+                tokenName,
+                value,
+                instruction
+            );
+
+        return [
+            createColoredTermElement(
+                tokenName,
+                value,
+                displayValue
+            )
+        ];
+    });
+}
+
+function getColorElements(colorKeys) {
+    return colorKeys.map(colorKey => {
+        const colorName =
+            getNestedValue(
+                languageData,
+                `tasks.colors.${colorKey}`
+            ) || colorKey;
+
+        return createColoredTermElement(
+            "color",
+            colorKey,
+            colorName
+        );
+    });
+}
+
+function getLocalizedTokenValue(
+    tokenName,
+    value,
+    instruction
+) {
+    const tokenSources = getTokenSources(
+        tokenName,
+        instruction
+    );
+
+    for (const source of tokenSources) {
+        const translated =
+            getNestedValue(
+                languageData,
+                `${source}.${value}`
+            );
+
+        if (translated) {
+            return translated;
+        }
+    }
+
+    return String(value);
+}
+
+function getTokenSources(
+    tokenName,
+    instruction
+) {
+    const sources = [];
+
+    if (tokenName === "color") {
+        sources.push("tasks.colors");
+    }
+
+    if (tokenName === "shape") {
+        sources.push("tasks.shapes");
+    }
+
+    if (tokenName === "direction") {
+        sources.push("tasks.directions");
+    }
+
+    if (tokenName === "number") {
+        sources.push("tasks.numbers");
+    }
+
+    if (
+        instruction.tokenSources &&
+        instruction.tokenSources[tokenName]
+    ) {
+        sources.unshift(
+            instruction.tokenSources[tokenName]
+        );
+    }
+
+    return sources;
+}
+
+function createColoredTermElement(
+    tokenName,
+    tokenValue,
+    displayValue
+) {
+    const element =
+        document.createElement("span");
+
+    const safeTokenName =
+        String(tokenName)
+            .replace(/[^a-zA-Z0-9_-]/g, "");
+
+    const safeTokenValue =
+        String(tokenValue)
+            .replace(/[^a-zA-Z0-9_-]/g, "");
+
+    element.className =
+        `instruction-term instruction-${safeTokenName}`;
+
+    if (safeTokenValue) {
+        element.classList.add(
+            `instruction-${safeTokenName}-${safeTokenValue}`
+        );
+    }
+
+    element.dataset.token = tokenName;
+    element.dataset.value = String(tokenValue);
+    element.textContent = displayValue;
+
+    return element;
 }
 
 /*
@@ -803,41 +956,27 @@ function translateColorList(elements) {
         return elements;
     }
 
-    const colors = [];
-    const separators = [];
-
-    elements.forEach(element => {
-        if (
-            element.nodeType ===
-            Node.TEXT_NODE
-        ) {
-            return;
-        }
-
-        colors.push(element);
-    });
-
-    if (colors.length === 0) {
+    if (elements.length === 0) {
         return [];
     }
 
-    if (colors.length === 1) {
+    if (elements.length === 1) {
         return applyListPattern(
             listData.one,
-            colors
+            elements
         );
     }
 
-    if (colors.length === 2) {
+    if (elements.length === 2) {
         return applyListPattern(
             listData.two,
-            colors
+            elements
         );
     }
 
     return applyListPattern(
         listData.many,
-        colors
+        elements
     );
 }
 
@@ -882,7 +1021,9 @@ function applyListPattern(pattern, elements) {
         }
 
         if (element) {
-            result.push(element.cloneNode(true));
+            result.push(
+                element.cloneNode(true)
+            );
         }
 
         lastIndex =
@@ -1005,6 +1146,10 @@ function validatePath(
             ? "accepted"
             : "notAccepted"
     };
+}
+
+function hasRepeatedValue(values) {
+    return new Set(values).size !== values.length;
 }
 
 function samePath(a, b) {

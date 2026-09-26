@@ -74,12 +74,6 @@ let PATH_DATA = null;
     }
 })();
 
-/* ==========================================================================
-   Task 01 constants and helpers
-   ========================================================================== */
-
-// Task01 uses the shared TASK_COLORS and TASK_CIRCLES constants above.
-
 function randomChoice(array) {
     if (!Array.isArray(array) || array.length === 0) {
         throw new Error(
@@ -133,6 +127,11 @@ const taskGenerators = [
         id: "task01",
         generator: generateTask01,
         difficulties: [0, 1, 2, 3]
+    },
+    {
+        id: "task02",
+        generator: generateTask02,
+        difficulties: [0, 1]
     }
     // Add future generators here.
 ];
@@ -264,7 +263,7 @@ function hasRepeatedValue(values) {
 }
 
 /* ==========================================================================
-   Task 01 generator
+   Task 01 Select all colour
    ========================================================================== */
 
 async function generateTask01(difficulty) {
@@ -389,10 +388,6 @@ async function generateTask01(difficulty) {
     return task;
 }
 
-/* ==========================================================================
-   Task 01 hex generation helpers
-   ========================================================================== */
-
 function createHexes({ boardSize, answerPath, mode, target }) {
     const answerSet = new Set(answerPath);
 
@@ -484,10 +479,6 @@ function createCircleHexes(boardSize, answerSet, target) {
     }));
 }
 
-/* ==========================================================================
-   Task 01 Select all colour
-   ========================================================================== */
-
 function validateTask01Internals(
     task,
     answerPath,
@@ -552,7 +543,7 @@ function matchesTask01Target(hex, target) {
 }
 
 /* ==========================================================================
-   Task 02 edge paths
+   Task 02 edge paths (with "startingFrom" / "endingOn")
    ========================================================================== */
 
 async function generateTask02(difficulty) {
@@ -596,17 +587,25 @@ async function generateTask02(difficulty) {
         );
     }
 
-    // 3. Choose direction, color, and shape for instruction
+    // 3. Choose direction, color, shape, and anchor type
     const direction = randomChoice(["clockwise", "anticlockwise"]);
     const color = randomChoice(TASK_COLORS);
     const shape = randomChoice(["hex", "circle"]);
+
+    // anchorType: "startingFrom" (all difficulties) or "endingOn" (difficulty 1 only)
+    let anchorType = "startingFrom";
+
+    if (difficulty === 1) {
+        anchorType = randomChoice(["startingFrom", "endingOn"]);
+    }
 
     // 4. Populate hexes according to rules
     const hexes = createTask02Hexes({
         boardSize,
         baseAnswerPath,
         color,
-        shape
+        shape,
+        anchorType
     });
 
     // 5. Recompute all valid paths of the same length, excluding any with 0
@@ -643,11 +642,14 @@ async function generateTask02(difficulty) {
         };
     });
 
-    // Build instruction metadata
-    // - mode: "HEX_COLOR" or "CIRCLE_CHARACTER" depending on shape
-    // - targetColors: [color]
-    // - task02: extra fields for rendering the instruction
+    // Build instruction metadata for the generic renderer
     const mode = shape === "hex" ? "HEX_COLOR" : "CIRCLE_CHARACTER";
+
+    // Choose template based on anchorType
+    const template =
+        anchorType === "endingOn"
+            ? "task02_endingOn"
+            : "task02_startingFrom";
 
     const task = {
         type: "findPath",
@@ -655,27 +657,37 @@ async function generateTask02(difficulty) {
         data: {
             difficulty,
             answerLength,
-            mode
+            mode,
+            anchorType
         },
 
         instruction: {
+            template,
             mode,
             negated: false,
             targetColors: [color],
 
-            task02: {
-                length: answerLength,
-                direction,
-                color,
-                shape
-            }
+            // Fields used by the generic instruction renderer
+            color,
+            length: answerLength,
+            direction,
+            shape,
+            anchorType
         },
 
         cells,
         answerPaths: validAnswerPaths
     };
 
-    if (!validateTask02Internals(task, baseAnswerPath, color, shape)) {
+    if (
+        !validateTask02Internals(
+            task,
+            baseAnswerPath,
+            color,
+            shape,
+            anchorType
+        )
+    ) {
         throw new Error(
             "generateTask02 created an invalid task."
         );
@@ -684,17 +696,26 @@ async function generateTask02(difficulty) {
     return task;
 }
 
-function createTask02Hexes({ boardSize, baseAnswerPath, color, shape }) {
-    const answerSet = new Set(baseAnswerPath);
-    const firstIndex = baseAnswerPath[0];
+function createTask02Hexes({
+    boardSize,
+    baseAnswerPath,
+    color,
+    shape,
+    anchorType = "startingFrom"
+}) {
     const centerIndex = 0;
+
+    const anchorIndex =
+        anchorType === "endingOn"
+            ? baseAnswerPath[baseAnswerPath.length - 1]
+            : baseAnswerPath[0];
 
     return Array.from({ length: boardSize }, (_, index) => {
         let backgroundColorKey;
         let character;
 
-        if (index === firstIndex) {
-            // First hex: forced to instructed color/shape
+        if (index === anchorIndex) {
+            // Anchor hex: forced to instructed color/shape
             if (shape === "hex") {
                 backgroundColorKey = color;
                 character = undefined;
@@ -733,39 +754,48 @@ function createTask02Hexes({ boardSize, baseAnswerPath, color, shape }) {
     });
 }
 
-function validateTask02Internals(task, baseAnswerPath, color, shape) {
-    // Basic structural checks are already done by validateGeneratedTask.
-    // Here we just ensure the first and center hex follow the rules.
-
-    const firstIndex = baseAnswerPath[0];
+function validateTask02Internals(
+    task,
+    baseAnswerPath,
+    color,
+    shape,
+    anchorType = "startingFrom"
+) {
     const centerIndex = 0;
+    const anchorIndex =
+        anchorType === "endingOn"
+            ? baseAnswerPath[baseAnswerPath.length - 1]
+            : baseAnswerPath[0];
 
-    const firstCell = task.cells.find(
-        (c) => Number(c.index) === firstIndex
+    const anchorCell = task.cells.find(
+        (c) => Number(c.index) === anchorIndex
     );
     const centerCell = task.cells.find(
         (c) => Number(c.index) === centerIndex
     );
 
-    if (!firstCell || !centerCell) {
+    if (!anchorCell || !centerCell) {
         return false;
     }
 
     if (shape === "hex") {
-        // First hex must have instructed background color
-        const expectedFirstBg = HexTaskLoader.COLOR_HEX[color];
-        if (firstCell.backgroundColor !== expectedFirstBg) {
+        const expectedAnchorBg = HexTaskLoader.COLOR_HEX[color];
+
+        // Anchor hex must have instructed background color
+        if (anchorCell.backgroundColor !== expectedAnchorBg) {
             return false;
         }
 
         // Center hex must NOT have instructed background color
-        if (centerCell.backgroundColor === expectedFirstBg) {
+        if (centerCell.backgroundColor === expectedAnchorBg) {
             return false;
         }
     } else {
         // shape === "circle"
-        const expectedFirstChar = TASK_CIRCLES[color];
-        if (firstCell.content !== expectedFirstChar) {
+        const expectedAnchorChar = TASK_CIRCLES[color];
+
+        // Anchor hex must have instructed circle character
+        if (anchorCell.content !== expectedAnchorChar) {
             return false;
         }
 
@@ -773,6 +803,7 @@ function validateTask02Internals(task, baseAnswerPath, color, shape) {
             .filter(([c]) => c !== color)
             .map(([, ch]) => ch);
 
+        // Center hex must NOT have instructed circle character
         if (!nonColorCircles.includes(centerCell.content)) {
             return false;
         }
@@ -782,7 +813,7 @@ function validateTask02Internals(task, baseAnswerPath, color, shape) {
 }
 
 /* ==========================================================================
-   Task 3
+   Task 03
    ========================================================================== */
 
 async function generateTask03(difficulty) {
