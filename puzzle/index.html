@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title data-i18n="title">Hex Puzzle</title>
+  <!-- your CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <select id="languageSelect">
+    <option value="en">English</option>
+    <option value="es">Español</option>
+    <option value="zh-Hant">繁體中文</option>
+  </select>
+
+  <div>
+    <span data-i18n="score">Score:</span>
+    <span id="round">0</span>
+  </div>
+  <div>
+    <span data-i18n="time">Time:</span>
+    <span id="time">60</span>
+  </div>
+  <div>
+    <span data-i18n="highScore">High Score:</span>
+    <span id="highScore">0</span>
+  </div>
+
+  <p id="message" data-i18n="watchSequence">Watch the sequence</p>
+
+  <div id="board" class="is-disabled" aria-disabled="true">
+    <!-- 7 .hex elements with data-index="0".."6" -->
+  </div>
+
+  <button id="startButton" data-i18n="start">Start Game</button>
+
+  <script src="task.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

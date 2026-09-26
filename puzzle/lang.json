@@ -1,0 +1,119 @@
+{
+  "en": {
+    "ui": {
+      "title": "Hex Puzzle",
+      "instructions": "Swipe across the hexagons to complete the task.",
+      "play": "Play",
+      "playAgain": "Play Again",
+      "gameOver": "Game Over",
+      "tasksCompleted": "Tasks completed:",
+      "finalScore": "Final score:",
+      "bestScore": "Best score:",
+      "level": "Level",
+      "score": "Score",
+      "time": "Time",
+      "correctCount": "Correct",
+      "highScore": "High Score",
+      "correct": "Correct!",
+      "wrong": "Wrong!",
+      "watchSequence": "Watch the sequence",
+      "yourTurn": "Your turn",
+      "wrongSequence": "Wrong sequence",
+      "start": "Start Game",
+      "restart": "Restart Game",
+      "tryAgain": "Try Again",
+      "boardLabel": "Swipe game board"
+    },
+    "tasks": {
+      "task01": {
+        "hexes": "Swipe all {colors} hexes",
+        "hexesExcept": "Swipe all hexes except {colors}",
+        "circles": "Swipe all hexes with {colors} circles",
+        "circlesExcept": "Swipe all hexes with circles except {colors}"
+      },
+      "colors": {
+        "red": "red",
+        "green": "green",
+        "blue": "blue"
+      }
+    }
+  },
+  "es": {
+    "ui": {
+      "title": "Rompecabezas de hexágonos",
+      "instructions": "Desliza sobre los hexágonos para completar la tarea.",
+      "play": "Jugar",
+      "playAgain": "Jugar de nuevo",
+      "gameOver": "Fin del juego",
+      "tasksCompleted": "Tareas completadas:",
+      "finalScore": "Puntuación final:",
+      "bestScore": "Mejor puntuación:",
+      "level": "Nivel",
+      "score": "Puntuación",
+      "time": "Tiempo",
+      "correctCount": "Correctas",
+      "highScore": "Récord",
+      "correct": "¡Correcto!",
+      "wrong": "¡Incorrecto!",
+      "watchSequence": "Observa la secuencia",
+      "yourTurn": "Tu turno",
+      "wrongSequence": "Secuencia incorrecta",
+      "start": "Iniciar juego",
+      "restart": "Reiniciar juego",
+      "tryAgain": "Intentar de nuevo",
+      "boardLabel": "Tablero del juego de deslizar"
+    },
+    "tasks": {
+      "task01": {
+        "hexes": "Desliza todos los hexágonos {colors}",
+        "hexesExcept": "Desliza todos los hexágonos excepto {colors}",
+        "circles": "Desliza todos los hexágonos con círculos {colors}",
+        "circlesExcept": "Desliza todos los hexágonos con círculos excepto {colors}"
+      },
+      "colors": {
+        "red": "rojos",
+        "green": "verdes",
+        "blue": "azules"
+      }
+    }
+  },
+  "zh-Hant": {
+    "ui": {
+      "title": "六邊形拼圖",
+      "instructions": "滑過六邊形來完成任務。",
+      "play": "開始遊戲",
+      "playAgain": "再玩一次",
+      "gameOver": "遊戲結束",
+      "tasksCompleted": "已完成任務：",
+      "finalScore": "最終得分：",
+      "bestScore": "最佳得分：",
+      "level": "關卡",
+      "score": "分數",
+      "time": "時間",
+      "correctCount": "正確",
+      "highScore": "最高分",
+      "correct": "答啱！",
+      "wrong": "錯咗！",
+      "watchSequence": "睇實喇",
+      "yourTurn": "輪到你",
+      "wrongSequence": "錯咗喇",
+      "start": "開始遊戲",
+      "restart": "重新開始",
+      "tryAgain": "再試一次",
+      "boardLabel": "滑動遊戲板"
+    },
+    "tasks": {
+      "task01": {
+        "hexes": "滑動所有{colors}六角形",
+        "hexesExcept": "滑動除了{colors}以外的所有六角形",
+        "circles": "滑動所有帶有{colors}圓形的六角形",
+        "circlesExcept": "滑動所有帶有除了{colors}以外圓形的六角形"
+      },
+      "colors": {
+        "red": "紅色",
+        "green": "綠色",
+        "blue": "藍色"
+      }
+    }
+  }
+}
