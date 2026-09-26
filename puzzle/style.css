@@ -1,6 +1,6 @@
 /* =========================
    Page layout
-========================= */
+   ========================= */
 
 * {
   box-sizing: border-box;
@@ -27,40 +27,44 @@ body {
     sans-serif;
 }
 
-.game-container {
+.game {
   width: min(100%, 440px);
   text-align: center;
 }
 
 /* =========================
-   Header and controls
-========================= */
+   Header and top bar
+   ========================= */
 
-h1 {
-  margin: 0 0 16px;
+.game-header {
+  width: 100%;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.game-title {
+  margin: 0;
   font-size: clamp(1.5rem, 5vw, 2rem);
   line-height: 1.2;
+  text-align: center;
 }
 
-.controls {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 12px;
-  text-align: left;
+.language-control {
+  flex: 0 0 auto;
 }
 
-.controls label {
+.language-control label {
   font-size: 0.95rem;
 }
 
-.controls select {
+.language-control select {
   min-width: 120px;
-}
-
-select,
-button {
   font: inherit;
   border: 1px solid #475569;
   border-radius: 8px;
@@ -69,52 +73,49 @@ button {
   color: #e2e8f0;
 }
 
-button {
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
 /* =========================
-   Statistics
-========================= */
+   Status bar (score / time / high score)
+   ========================= */
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 12px 0;
-}
-
-.stat {
+.status-bar {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0;
   padding: 8px 4px;
   border: 1px solid #334155;
   border-radius: 8px;
   background: #172033;
 }
 
-.stat-label {
+.status-item {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  min-width: 70px;
+}
+
+.status-item span:first-child {
   color: #94a3b8;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.stat-value {
+.status-item strong {
   color: #f8fafc;
   font-size: 1.1rem;
   font-weight: 700;
 }
 
 /* =========================
-   Message
-========================= */
+   Message / instruction
+   ========================= */
 
 #message {
   min-height: 2.8em;
@@ -125,8 +126,69 @@ button:disabled {
 }
 
 /* =========================
+   Instruction tokens
+   ========================= */
+
+.instruction-term {
+  font-weight: 700;
+}
+
+.instruction-color {
+  display: inline-block;
+  padding: 0.05em 0.3em;
+  border-radius: 0.25em;
+  font-weight: 700;
+}
+
+.instruction-color-red {
+  color: #b42318;
+  background-color: #fde2df;
+}
+
+.instruction-color-green {
+  color: #18794e;
+  background-color: #dff5e8;
+}
+
+.instruction-color-blue {
+  color: #1769aa;
+  background-color: #dceeff;
+}
+
+.instruction-shape,
+.instruction-direction {
+  font-weight: 600;
+}
+
+/* =========================
+   Controls (start button area)
+   ========================= */
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+button {
+  font: inherit;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 7px 14px;
+  background: #1e293b;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* =========================
    Board
-========================= */
+   ========================= */
 
 #board {
   position: relative;
@@ -255,7 +317,7 @@ button:disabled {
 
 /* =========================
    Feedback thumb
-========================= */
+   ========================= */
 
 #feedbackThumb {
   position: absolute;
@@ -272,7 +334,8 @@ button:disabled {
    Small helpers / utilities
    ========================= */
 
-.sr-only {
+.sr-only,
+.visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;

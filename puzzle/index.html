@@ -2,43 +2,162 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title data-i18n="title">Hex Puzzle</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+  <title>Hex Puzzle</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-  <select id="languageSelect">
-    <option value="en">English</option>
-    <option value="es">Español</option>
-    <option value="zh-Hant">繁體中文</option>
-  </select>
+  <main id="game" class="game">
+    <header class="game-header">
+      <div class="top-bar">
+        <h1 class="game-title" data-i18n="title">
+          Hex Puzzle
+        </h1>
 
-  <div>
-    <span data-i18n="score">Score:</span>
-    <span id="round">0</span>
-  </div>
-  <div>
-    <span data-i18n="time">Time:</span>
-    <span id="time">60</span>
-  </div>
-  <div>
-    <span data-i18n="highScore">High Score:</span>
-    <span id="highScore">0</span>
-  </div>
+        <label class="language-control">
+          <span class="visually-hidden">
+            Language
+          </span>
 
-  <p id="message" data-i18n="watchSequence">Watch the sequence</p>
+          <select
+            id="languageSelect"
+            aria-label="Language"
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="zh-Hant">繁體中文</option>
+          </select>
+        </label>
+      </div>
 
-  <div id="board" class="is-disabled" aria-disabled="true">
-    <button class="hex hex-0" data-index="0">0</button>
-    <button class="hex hex-1" data-index="1">1</button>
-    <button class="hex hex-2" data-index="2">2</button>
-    <button class="hex hex-3" data-index="3">3</button>
-    <button class="hex hex-4" data-index="4">4</button>
-    <button class="hex hex-5" data-index="5">5</button>
-    <button class="hex hex-6" data-index="6">6</button>
-    <span id="feedbackThumb" aria-hidden="true"></span>
-  </div>
+      <section
+        id="statusBar"
+        class="status-bar"
+        aria-label="Game status"
+      >
+        <div class="status-item">
+          <span data-i18n="score">
+            Score
+          </span>
+          <strong id="round">0</strong>
+        </div>
 
-  <button id="startButton" data-i18n="start">Start Game</button>
+        <div class="status-item">
+          <span data-i18n="time">
+            Time
+          </span>
+          <strong id="time">60</strong>
+        </div>
+
+        <div class="status-item">
+          <span data-i18n="highScore">
+            High Score
+          </span>
+          <strong id="highScore">0</strong>
+        </div>
+      </section>
+
+      <p
+        id="message"
+        class="instruction"
+        data-i18n="watchSequence"
+        aria-live="polite"
+      >
+        Watch the sequence
+      </p>
+    </header>
+
+    <section
+      id="board"
+      class="board is-disabled"
+      aria-disabled="true"
+      aria-label="Swipe game board"
+    >
+      <button
+        type="button"
+        class="hex hex-0"
+        data-index="0"
+        aria-label="Hexagon 1"
+      >
+        0
+      </button>
+
+      <button
+        type="button"
+        class="hex hex-1"
+        data-index="1"
+        aria-label="Hexagon 2"
+      >
+        1
+      </button>
+
+      <button
+        type="button"
+        class="hex hex-2"
+        data-index="2"
+        aria-label="Hexagon 3"
+      >
+        2
+      </button>
+
+      <button
+        type="button"
+        class="hex hex-3"
+        data-index="3"
+        aria-label="Hexagon 4"
+      >
+        3
+      </button>
+
+      <button
+        type="button"
+        class="hex hex-4"
+        data-index="4"
+        aria-label="Hexagon 5"
+      >
+        4
+      </button>
+
+      <button
+        type="button"
+        class="hex hex-5"
+        data-index="5"
+        aria-label="Hexagon 6"
+      >
+        5
+      </button>
+
+      <button
+        type="button"
+        class="hex hex-6"
+        data-index="6"
+        aria-label="Hexagon 7"
+      >
+        6
+      </button>
+
+      <span
+        id="feedbackThumb"
+        class="feedback-thumb"
+        aria-hidden="true"
+      ></span>
+    </section>
+
+    <div class="controls">
+      <button
+        id="startButton"
+        class="start-button"
+        type="button"
+        data-i18n="start"
+      >
+        Start Game
+      </button>
+    </div>
+  </main>
 
   <script src="task.js"></script>
   <script src="script.js"></script>

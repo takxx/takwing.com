@@ -3,7 +3,7 @@
 
 /* ==========================================================================
    DOM
-========================================================================== */
+   ========================================================================== */
 
 const board = document.getElementById("board");
 const startButton = document.getElementById("startButton");
@@ -18,7 +18,7 @@ let hexagons = [];
 
 /* ==========================================================================
    Configuration
-========================================================================== */
+   ========================================================================== */
 
 const HEX_COUNT = 7;
 const SWIPE_THRESHOLD = 8;
@@ -39,14 +39,39 @@ const LANGUAGE_STORAGE_KEY = "hexSwipeLanguage";
 
 /* ==========================================================================
    Language state
-========================================================================== */
+   ========================================================================== */
 
 let language = "en";
 let uiText = {};
 let languageData = {};
+let translations = {};
+
+async function loadTranslations() {
+    const response = await fetch("lang.json", {
+        cache: "no-cache"
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to load lang.json: ${response.status}`
+        );
+    }
+
+    translations = await response.json();
+
+    if (
+        !translations ||
+        typeof translations !== "object"
+    ) {
+        throw new Error(
+            "lang.json has an invalid structure."
+        );
+    }
+
+    window.taskTranslations = translations;
+}
 
 function getInitialLanguage() {
-    const translations = window.taskTranslations || {};
     let savedLanguage = null;
 
     try {
@@ -103,8 +128,6 @@ function getInitialLanguage() {
 }
 
 function setLanguage(newLanguage) {
-    const translations = window.taskTranslations || {};
-
     language = translations[newLanguage]
         ? newLanguage
         : "en";
@@ -196,7 +219,7 @@ function setMessageKey(key) {
 
 /* ==========================================================================
    Audio
-========================================================================== */
+   ========================================================================== */
 
 let audioContext = null;
 
@@ -330,7 +353,7 @@ function playResultSound(isCorrect) {
 
 /* ==========================================================================
    Game state
-========================================================================== */
+   ========================================================================== */
 
 let round = 0;
 let highScore = 0;
@@ -351,7 +374,7 @@ let tasksCompletedTotal = 0;
 
 /* ==========================================================================
    Score and timer
-========================================================================== */
+   ========================================================================== */
 
 function loadHighScore() {
     try {
@@ -428,7 +451,7 @@ function stopTimer() {
 
 /* ==========================================================================
    Game lifecycle
-========================================================================== */
+   ========================================================================== */
 
 function createNewGame() {
     gameId += 1;
@@ -500,7 +523,7 @@ function endGame() {
 
 /* ==========================================================================
    Task loading
-========================================================================== */
+   ========================================================================== */
 
 function calculateNextDifficulty() {
     if (tasksCompletedTotal < 3) {
@@ -644,8 +667,8 @@ function validateTaskResponse(task) {
 }
 
 /* ==========================================================================
-   Generic task instruction rendering
-========================================================================== */
+   Instruction rendering
+   ========================================================================== */
 
 function renderTaskInstruction(task) {
     if (!message) {
@@ -662,21 +685,25 @@ function renderTaskInstruction(task) {
         return;
     }
 
-    const template = getInstructionTemplate(
-        instruction
-    );
+    const template =
+        getInstructionTemplate(instruction);
 
     if (!template) {
+        console.warn(
+            "Instruction template not found:",
+            instruction.template
+        );
+
         setMessageKey("yourTurn");
         return;
     }
 
-    const rendered = renderTemplate(
+    const nodes = renderTemplate(
         template,
         instruction
     );
 
-    message.replaceChildren(...rendered);
+    message.replaceChildren(...nodes);
 }
 
 function getInstructionTemplate(instruction) {
@@ -695,8 +722,8 @@ function getInstructionTemplate(instruction) {
     );
 }
 
-function renderTemplate(template, values) {
-    const rendered = [];
+function renderTemplate(template, instruction) {
+    const nodes = [];
     const tokenPattern = /\{([^{}]+)\}/g;
 
     let lastIndex = 0;
@@ -706,7 +733,7 @@ function renderTemplate(template, values) {
         (match = tokenPattern.exec(template))
     ) {
         if (match.index > lastIndex) {
-            rendered.push(
+            nodes.push(
                 document.createTextNode(
                     template.slice(
                         lastIndex,
@@ -717,17 +744,11 @@ function renderTemplate(template, values) {
         }
 
         const tokenName = match[1];
-        const tokenValue =
-            getInstructionTokenValue(
-                tokenName,
-                values
-            );
 
-        rendered.push(
+        nodes.push(
             ...renderInstructionToken(
                 tokenName,
-                tokenValue,
-                values
+                instruction
             )
         );
 
@@ -736,41 +757,94 @@ function renderTemplate(template, values) {
     }
 
     if (lastIndex < template.length) {
-        rendered.push(
+        nodes.push(
             document.createTextNode(
                 template.slice(lastIndex)
             )
         );
     }
 
-    return rendered;
+    return nodes;
+}
+
+function renderInstructionToken(
+    tokenName,
+    instruction
+) {
+    if (tokenName === "colors") {
+        return renderColorList(
+            getInstructionColors(instruction)
+        );
+    }
+
+    if (tokenName === "color") {
+        const colorKey =
+            instruction.color || "";
+
+        const colorText =
+            getNestedValue(
+                languageData,
+                `tasks.colors.${colorKey}`
+            ) || colorKey;
+
+        return [
+            createInstructionTerm(
+                "color",
+                colorKey,
+                colorText
+            )
+        ];
+    }
+
+    const value = getInstructionTokenValue(
+        tokenName,
+        instruction
+    );
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return [];
+    }
+
+    const displayValue =
+        getLocalizedInstructionValue(
+            tokenName,
+            value,
+            instruction
+        );
+
+    return [
+        createInstructionTerm(
+            tokenName,
+            value,
+            displayValue
+        )
+    ];
 }
 
 function getInstructionTokenValue(
     tokenName,
-    values
+    instruction
 ) {
-    if (tokenName === "colors") {
-        return getInstructionColors(values);
-    }
-
     if (
         Object.prototype.hasOwnProperty.call(
-            values,
+            instruction,
             tokenName
         )
     ) {
-        return values[tokenName];
+        return instruction[tokenName];
     }
 
     if (
-        values.parameters &&
+        instruction.parameters &&
         Object.prototype.hasOwnProperty.call(
-            values.parameters,
+            instruction.parameters,
             tokenName
         )
     ) {
-        return values.parameters[tokenName];
+        return instruction.parameters[tokenName];
     }
 
     return "";
@@ -792,76 +866,35 @@ function getInstructionColors(instruction) {
     return [];
 }
 
-function renderInstructionToken(
-    tokenName,
-    tokenValue,
-    instruction
-) {
-    if (tokenName === "colors") {
-        const colorElements =
-            getColorElements(tokenValue);
-
-        return translateColorList(
-            colorElements
-        );
-    }
-
-    if (
-        tokenValue === null ||
-        tokenValue === undefined
-    ) {
-        return [];
-    }
-
-    const values = Array.isArray(tokenValue)
-        ? tokenValue
-        : [tokenValue];
-
-    return values.flatMap(value => {
-        const displayValue =
-            getLocalizedTokenValue(
-                tokenName,
-                value,
-                instruction
-            );
-
-        return [
-            createColoredTermElement(
-                tokenName,
-                value,
-                displayValue
-            )
-        ];
-    });
-}
-
-function getColorElements(colorKeys) {
-    return colorKeys.map(colorKey => {
-        const colorName =
-            getNestedValue(
-                languageData,
-                `tasks.colors.${colorKey}`
-            ) || colorKey;
-
-        return createColoredTermElement(
-            "color",
-            colorKey,
-            colorName
-        );
-    });
-}
-
-function getLocalizedTokenValue(
+function getLocalizedInstructionValue(
     tokenName,
     value,
     instruction
 ) {
-    const tokenSources = getTokenSources(
-        tokenName,
-        instruction
-    );
+    const sources = [];
 
-    for (const source of tokenSources) {
+    if (tokenName === "shape") {
+        sources.push("tasks.shapes");
+    }
+
+    if (tokenName === "direction") {
+        sources.push("tasks.directions");
+    }
+
+    if (tokenName === "anchorType") {
+        sources.push("tasks.anchors");
+    }
+
+    if (
+        instruction.tokenSources &&
+        instruction.tokenSources[tokenName]
+    ) {
+        sources.unshift(
+            instruction.tokenSources[tokenName]
+        );
+    }
+
+    for (const source of sources) {
         const translated =
             getNestedValue(
                 languageData,
@@ -876,41 +909,7 @@ function getLocalizedTokenValue(
     return String(value);
 }
 
-function getTokenSources(
-    tokenName,
-    instruction
-) {
-    const sources = [];
-
-    if (tokenName === "color") {
-        sources.push("tasks.colors");
-    }
-
-    if (tokenName === "shape") {
-        sources.push("tasks.shapes");
-    }
-
-    if (tokenName === "direction") {
-        sources.push("tasks.directions");
-    }
-
-    if (tokenName === "number") {
-        sources.push("tasks.numbers");
-    }
-
-    if (
-        instruction.tokenSources &&
-        instruction.tokenSources[tokenName]
-    ) {
-        sources.unshift(
-            instruction.tokenSources[tokenName]
-        );
-    }
-
-    return sources;
-}
-
-function createColoredTermElement(
+function createInstructionTerm(
     tokenName,
     tokenValue,
     displayValue
@@ -942,45 +941,36 @@ function createColoredTermElement(
     return element;
 }
 
-/*
-  This function gets the list patterns from lang.json.
+function renderColorList(colorKeys) {
+    const elements = colorKeys.map(colorKey => {
+        const colorText =
+            getNestedValue(
+                languageData,
+                `tasks.colors.${colorKey}`
+            ) || colorKey;
 
-  It does not contain "and", "y", "和", or any other
-  language-specific conjunction.
-*/
-function translateColorList(elements) {
+        return createInstructionTerm(
+            "color",
+            colorKey,
+            colorText
+        );
+    });
+
     const listData =
         languageData.tasks?.list;
 
-    if (!listData) {
+    if (
+        elements.length <= 1 ||
+        !listData
+    ) {
         return elements;
     }
 
-    if (elements.length === 0) {
-        return [];
-    }
+    const pattern =
+        elements.length === 2
+            ? listData.two
+            : listData.many;
 
-    if (elements.length === 1) {
-        return applyListPattern(
-            listData.one,
-            elements
-        );
-    }
-
-    if (elements.length === 2) {
-        return applyListPattern(
-            listData.two,
-            elements
-        );
-    }
-
-    return applyListPattern(
-        listData.many,
-        elements
-    );
-}
-
-function applyListPattern(pattern, elements) {
     if (!pattern) {
         return elements;
     }
@@ -1006,15 +996,14 @@ function applyListPattern(pattern, elements) {
             );
         }
 
-        const token = match[0];
         let element = null;
 
-        if (token === "{last}") {
+        if (match[0] === "{last}") {
             element =
                 elements[elements.length - 1];
         } else {
             const index = Number(
-                token.slice(1, -1)
+                match[0].slice(1, -1)
             );
 
             element = elements[index];
@@ -1027,7 +1016,7 @@ function applyListPattern(pattern, elements) {
         }
 
         lastIndex =
-            match.index + token.length;
+            match.index + match[0].length;
     }
 
     if (lastIndex < pattern.length) {
@@ -1043,7 +1032,7 @@ function applyListPattern(pattern, elements) {
 
 /* ==========================================================================
    Cell rendering
-========================================================================== */
+   ========================================================================== */
 
 function renderGeneratedCells(cells) {
     hexagons.forEach((hex, index) => {
@@ -1052,19 +1041,9 @@ function renderGeneratedCells(cells) {
         hex.style.backgroundColor = "";
         hex.style.color = "";
 
-        hex.classList.remove(
-            "active",
-            "wrong",
-            "hex-0",
-            "hex-1",
-            "hex-2",
-            "hex-3",
-            "hex-4",
-            "hex-5",
-            "hex-6"
-        );
-
+        hex.className = "hex";
         hex.classList.add(`hex-${index}`);
+        hex.dataset.index = String(index);
     });
 
     for (const cell of cells) {
@@ -1077,8 +1056,8 @@ function renderGeneratedCells(cells) {
             continue;
         }
 
-        const hex =
-            hexagons[Number(cell.index)];
+        const index = Number(cell.index);
+        const hex = hexagons[index];
 
         if (!hex) {
             continue;
@@ -1109,7 +1088,7 @@ function renderGeneratedCells(cells) {
 
 /* ==========================================================================
    Path validation
-========================================================================== */
+   ========================================================================== */
 
 function validatePath(
     attemptedPath,
@@ -1194,7 +1173,7 @@ function isPrefixPossible(
 
 /* ==========================================================================
    Feedback
-========================================================================== */
+   ========================================================================== */
 
 let feedbackTimerId = null;
 
@@ -1279,7 +1258,7 @@ function clearCurrentPath() {
 
 /* ==========================================================================
    Accept/reject path
-========================================================================== */
+   ========================================================================== */
 
 function acceptPath() {
     if (
@@ -1385,7 +1364,7 @@ function rejectPath() {
 
 /* ==========================================================================
    Pointer and swipe handling
-========================================================================== */
+   ========================================================================== */
 
 const neighbors = {
     0: [1, 2, 3, 4, 5, 6],
@@ -1710,7 +1689,7 @@ function disableBoard() {
 
 /* ==========================================================================
    Event listeners
-========================================================================== */
+   ========================================================================== */
 
 if (languageSelect) {
     languageSelect.addEventListener(
@@ -1757,9 +1736,9 @@ if (board) {
 
 /* ==========================================================================
    Initialization
-========================================================================== */
+   ========================================================================== */
 
-(function initialize() {
+async function initialize() {
     hexagons = [
         ...document.querySelectorAll(".hex")
     ];
@@ -1768,38 +1747,28 @@ if (board) {
         hex.dataset.index = String(index);
     });
 
-    fetch("lang.json")
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(
-                    `Failed to load lang.json: ` +
-                    `${response.status}`
-                );
-            }
+    highScore = loadHighScore();
+    updateScoreDisplay();
 
-            return response.json();
-        })
-        .then(translations => {
-            window.taskTranslations =
-                translations;
+    try {
+        await loadTranslations();
 
-            setLanguage(
-                getInitialLanguage()
-            );
+        setLanguage(
+            getInitialLanguage()
+        );
 
-            highScore = loadHighScore();
-            updateScoreDisplay();
-            setMessageKey("watchSequence");
-        })
-        .catch(error => {
-            console.error(
-                "Failed to load lang.json:",
-                error
-            );
+        setMessageKey("watchSequence");
+    } catch (error) {
+        console.error(
+            "Failed to initialize translations:",
+            error
+        );
 
-            if (message) {
-                message.textContent =
-                    "Error loading translations.";
-            }
-        });
-})();
+        if (message) {
+            message.textContent =
+                "Error loading translations.";
+        }
+    }
+}
+
+initialize();
