@@ -1,37 +1,8 @@
-* {
-  box-sizing: border-box;
-}
-
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-body {
-  display: grid;
-  place-items: center;
-}
-
-/* Top controls (language, scores) */
-body > select,
-body > div {
-  margin: 4px 8px;
-}
-
-#message {
-  margin: 12px 0 8px;
-  text-align: center;
-  min-height: 1.2em;
-}
-
 /* Board container */
 #board {
   position: relative;
-  width: 260px;
-  height: 260px;
+  width: 210px;   /* adjusted for tight hex packing */
+  height: 210px;
   margin: 16px auto;
   touch-action: none;
 }
@@ -46,7 +17,7 @@ body > div {
 .hex {
   position: absolute;
   width: 70px;
-  height: 80px;
+  height: 78px; /* height for flat-top hex with our clip-path */
   border: none;
   background: #334155;
   color: #f1f5f9;
@@ -54,15 +25,14 @@ body > div {
   cursor: pointer;
   display: grid;
   place-items: center;
-  /* Hexagon shape */
+  /* Flat-top hexagon */
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   transition: transform 0.12s ease, background 0.12s ease, filter 0.12s ease;
-  /* Remove default button styling */
   padding: 0;
   outline: none;
+  /* Important: base transform is just positioning; hover/active add scale on top */
 }
 
-/* Hover / active feedback */
 .hex:not(#board.is-disabled .hex):hover {
   filter: brightness(1.15);
 }
@@ -76,67 +46,59 @@ body > div {
   background: #ef4444;
 }
 
-/* Center the whole board on screen */
-.game,
-body {
-  display: grid;
-  place-items: center;
-}
+/*
+  Flower layout: 1 center + 6 around, no gaps.
+  All positions are calculated so edges touch.
+*/
 
-/* Position the 7 hexes in a flower layout */
-/* Center */
+/* Center hex */
 .hex-0 {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* Around */
+/* Outer hexes: radius ≈ 0.866 * width (for flat-top hexes touching) */
+/* width = 70px, so horizontal step ≈ 60.6px, vertical step ≈ 39px between rows */
+
+/* Top (Hex 1) */
 .hex-1 {
   left: 50%;
-  top: 12%;
-  transform: translate(-50%, 0);
-}
-.hex-2 {
-  left: 85%;
-  top: 30%;
-  transform: translate(-50%, -50%);
-}
-.hex-3 {
-  left: 85%;
-  top: 70%;
-  transform: translate(-50%, -50%);
-}
-.hex-4 {
-  left: 50%;
-  top: 88%;
-  transform: translate(-50%, -50%);
-}
-.hex-5 {
-  left: 15%;
-  top: 70%;
-  transform: translate(-50%, -50%);
-}
-.hex-6 {
-  left: 15%;
-  top: 30%;
+  top: calc(50% - 60.6px);
   transform: translate(-50%, -50%);
 }
 
-/* Instruction colors (optional, used by your task text) */
-.instruction-color-red {
-  color: #f87171;
-  font-weight: 600;
+/* Top-right (Hex 2) */
+.hex-2 {
+  left: calc(50% + 52.5px);
+  top: calc(50% - 30.3px);
+  transform: translate(-50%, -50%);
 }
-.instruction-color-blue {
-  color: #60a5fa;
-  font-weight: 600;
+
+/* Bottom-right (Hex 3) */
+.hex-3 {
+  left: calc(50% + 52.5px);
+  top: calc(50% + 30.3px);
+  transform: translate(-50%, -50%);
 }
-.instruction-color-green {
-  color: #4ade80;
-  font-weight: 600;
+
+/* Bottom (Hex 4) */
+.hex-4 {
+  left: 50%;
+  top: calc(50% + 60.6px);
+  transform: translate(-50%, -50%);
 }
-.instruction-color-yellow {
-  color: #facc15;
-  font-weight: 600;
+
+/* Bottom-left (Hex 5) */
+.hex-5 {
+  left: calc(50% - 52.5px);
+  top: calc(50% + 30.3px);
+  transform: translate(-50%, -50%);
+}
+
+/* Top-left (Hex 6) */
+.hex-6 {
+  left: calc(50% - 52.5px);
+  top: calc(50% - 30.3px);
+  transform: translate(-50%, -50%);
 }
