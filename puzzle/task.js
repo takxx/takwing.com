@@ -352,24 +352,34 @@ async function generateTask01(difficulty) {
     // For the engine, "target" is just the first cell's content.
     const targetChar = cells[baseAnswerPath[0]].content;
 
-    const task = {
-        type: "findPath",
-
-        data: {
-            difficulty,
-            target: targetChar,
-            answerLength
-        },
-
-        instruction: {
-            mode,
-            negated,
-            targetColors
-        },
-
-        cells,
-        answerPaths
-    };
+	const task = {
+		type: "findPath",
+	
+		data: {
+			difficulty,
+			target: targetChar,
+			answerLength
+		},
+	
+		instruction: {
+			// Choose the correct template key:
+			template: negated
+				? (mode === "HEX_COLOR"
+					? "hexesExcept"
+					: "circlesExcept")
+				: (mode === "HEX_COLOR"
+					? "hexes"
+					: "circles"),
+	
+			mode,
+			negated,
+			targetColors,
+			colors: targetColors // renderer expects "colors" for {colors}
+		},
+	
+		cells,
+		answerPaths
+	};
 
     if (
         !validateTask01Internals(
