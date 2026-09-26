@@ -1,8 +1,8 @@
 /* Board container */
 #board {
   position: relative;
-  width: 210px;   /* adjusted for tight hex packing */
-  height: 210px;
+  width: 230px;
+  height: 230px;
   margin: 16px auto;
   touch-action: none;
 }
@@ -16,8 +16,8 @@
 /* Individual hex buttons */
 .hex {
   position: absolute;
-  width: 70px;
-  height: 78px; /* height for flat-top hex with our clip-path */
+  width: 78px;   /* wider than tall for flat-top */
+  height: 70px;
   border: none;
   background: #334155;
   color: #f1f5f9;
@@ -30,7 +30,6 @@
   transition: transform 0.12s ease, background 0.12s ease, filter 0.12s ease;
   padding: 0;
   outline: none;
-  /* Important: base transform is just positioning; hover/active add scale on top */
 }
 
 .hex:not(#board.is-disabled .hex):hover {
@@ -46,9 +45,20 @@
   background: #ef4444;
 }
 
+/* Feedback thumb (👍 / 👎) */
+#feedbackThumb {
+  position: absolute;
+  pointer-events: none;
+  font-size: 28px;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  display: none;
+}
+
 /*
   Flower layout: 1 center + 6 around, no gaps.
-  All positions are calculated so edges touch.
+  Flat-top hexagons, edges touching.
 */
 
 /* Center hex */
@@ -58,8 +68,11 @@
   transform: translate(-50%, -50%);
 }
 
-/* Outer hexes: radius ≈ 0.866 * width (for flat-top hexes touching) */
-/* width = 70px, so horizontal step ≈ 60.6px, vertical step ≈ 39px between rows */
+/* Outer hexes:
+   For flat-top hex:
+     horizontal step ≈ 0.75 * width = 0.75 * 78 ≈ 58.5 → using 52.5–60 range for tightness
+     vertical step ≈ 0.866 * height ≈ 0.866 * 70 ≈ 60.6
+*/
 
 /* Top (Hex 1) */
 .hex-1 {

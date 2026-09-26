@@ -12,6 +12,7 @@ const timeDisplay = document.getElementById("time");
 const highScoreDisplay = document.getElementById("highScore");
 const message = document.getElementById("message");
 const languageSelect = document.getElementById("languageSelect");
+const feedbackThumb = document.getElementById("feedbackThumb");
 
 // Will be filled once DOM is ready
 let hexagons = [];
@@ -471,6 +472,28 @@ function hasRepeatedHex(path) {
    Scoring
 ================================= */
 
+function showFeedbackThumb(isCorrect, hexIndex) {
+  const hex = hexagons[hexIndex];
+  if (!hex || !feedbackThumb) return;
+
+  const rect = hex.getBoundingClientRect();
+  const boardRect = board.getBoundingClientRect();
+
+  // Position relative to board
+  const x = rect.left - boardRect.left + rect.width / 2;
+  const y = rect.top - boardRect.top + rect.height / 2;
+
+  feedbackThumb.textContent = isCorrect ? "👍" : "👎";
+  feedbackThumb.style.left = x + "px";
+  feedbackThumb.style.top = y + "px";
+  feedbackThumb.style.display = "block";
+
+  // Hide after feedback time
+  setTimeout(() => {
+    feedbackThumb.style.display = "none";
+  }, FEEDBACK_TIME);
+}
+
 function acceptPath() {
   acceptingInput = false;
 
@@ -482,6 +505,10 @@ function acceptPath() {
 
   updateRound();
   playHexSound(0);
+
+  // Show thumbs-up at final hex
+  const lastHexIndex = currentPath[currentPath.length - 1];
+  showFeedbackThumb(true, lastHexIndex);
 
   disableBoard();
   setTimeout(() => {
@@ -497,6 +524,10 @@ function rejectPath() {
   timeRemaining = clampTime(timeRemaining - GAME_CONFIG.timePenaltyPerWrongTask);
   updateRound();
   playHexSound(6);
+
+  // Show thumbs-down at final hex
+  const lastHexIndex = currentPath[currentPath.length - 1];
+  showFeedbackThumb(false, lastHexIndex);
 
   if (timeRemaining <= 0) {
     endGame();
