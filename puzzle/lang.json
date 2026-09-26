@@ -25,11 +25,16 @@
       "boardLabel": "Swipe game board"
     },
     "tasks": {
-      "task01": {
+      "templates": {
         "hexes": "Swipe all {colors} hexes",
         "hexesExcept": "Swipe all hexes except {colors}",
         "circles": "Swipe all hexes with {colors} circles",
         "circlesExcept": "Swipe all hexes with circles except {colors}"
+      },
+      "list": {
+        "one": "{0}",
+        "two": "{0} and {1}",
+        "many": "{0}, {1}, and {last}"
       },
       "colors": {
         "red": "red",
@@ -64,11 +69,16 @@
       "boardLabel": "Tablero del juego de deslizar"
     },
     "tasks": {
-      "task01": {
+      "templates": {
         "hexes": "Desliza todos los hexágonos {colors}",
         "hexesExcept": "Desliza todos los hexágonos excepto {colors}",
         "circles": "Desliza todos los hexágonos con círculos {colors}",
         "circlesExcept": "Desliza todos los hexágonos con círculos excepto {colors}"
+      },
+      "list": {
+        "one": "{0}",
+        "two": "{0} y {1}",
+        "many": "{0}, {1} y {last}"
       },
       "colors": {
         "red": "rojos",
@@ -103,11 +113,16 @@
       "boardLabel": "滑動遊戲板"
     },
     "tasks": {
-      "task01": {
+      "templates": {
         "hexes": "滑動所有{colors}六角形",
         "hexesExcept": "滑動除了{colors}以外的所有六角形",
         "circles": "滑動所有帶有{colors}圓形的六角形",
         "circlesExcept": "滑動所有帶有除了{colors}以外圓形的六角形"
+      },
+      "list": {
+        "one": "{0}",
+        "two": "{0}和{1}",
+        "many": "{0}、{1}和{last}"
       },
       "colors": {
         "red": "紅色",

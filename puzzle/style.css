@@ -1,139 +1,138 @@
 /* =========================
-   Base / Reset
-   ========================= */
+   Page layout
+========================= */
 
 * {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  min-height: 100%;
 }
 
 body {
-  display: grid;
-  place-items: center;
   min-height: 100vh;
+  display: grid;
+  place-items: start center;
+  padding: 24px 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
-/* =========================
-   Layout container
-   ========================= */
-
 .game-container {
-  width: 100%;
-  max-width: 420px;
-  padding: 16px;
+  width: min(100%, 440px);
   text-align: center;
 }
 
+/* =========================
+   Header and controls
+========================= */
+
 h1 {
-  margin: 0 0 8px;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  margin: 0 0 16px;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.2;
 }
 
-/* =========================
-   Controls row
-   ========================= */
-
 .controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 12px;
+  align-items: center;
   margin-bottom: 12px;
-  flex-wrap: wrap;
+  text-align: left;
 }
 
 .controls label {
-  font-size: 14px;
-  user-select: none;
+  font-size: 0.95rem;
 }
 
-select, button {
+.controls select {
+  min-width: 120px;
+}
+
+select,
+button {
   font: inherit;
+  border: 1px solid #475569;
   border-radius: 8px;
-  border: 1px solid #334155;
+  padding: 7px 10px;
   background: #1e293b;
   color: #e2e8f0;
-  padding: 6px 10px;
+}
+
+button {
   cursor: pointer;
 }
 
 button:disabled {
-  opacity: 0.6;
   cursor: not-allowed;
+  opacity: 0.55;
 }
 
 /* =========================
-   Stats row
-   ========================= */
+   Statistics
+========================= */
 
 .stats {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 8px;
-  font-size: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
 }
 
 .stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #172033;
+}
+
+.stat-label {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .stat-value {
+  color: #f8fafc;
+  font-size: 1.1rem;
   font-weight: 700;
-  min-width: 1.6em;
-  text-align: right;
 }
 
 /* =========================
-   Message area
-   ========================= */
+   Message
+========================= */
 
 #message {
-  min-height: 1.4em;
-  margin: 8px auto 12px;
-  font-size: 15px;
+  min-height: 2.8em;
+  margin: 12px auto;
+  max-width: 360px;
+  font-size: 1rem;
   line-height: 1.4;
-  max-width: 260px;
-}
-
-/* Instruction color variants (used by task text) */
-.instruction-color-primary {
-  color: #60a5fa;
-  font-weight: 700;
-}
-
-.instruction-color-secondary {
-  color: #f472b6;
-  font-weight: 700;
-}
-
-.instruction-color-accent {
-  color: #34d399;
-  font-weight: 700;
 }
 
 /* =========================
-   Hex board
+   Board
 ========================= */
 
 #board {
   position: relative;
-  width: 230px;
-  height: 230px;
-  margin: 16px auto;
+  width: 250px;
+  height: 250px;
+  margin: 20px auto;
   touch-action: none;
   user-select: none;
 }
@@ -142,16 +141,15 @@ button:disabled {
   position: absolute;
 
   /*
-    Flat-top regular hexagon:
-    width : height = 2 : sqrt(3)
-    80px : 69.28px
+    Regular flat-top hexagon:
+    width = 78px
+    height = 67.55px
   */
-  width: 80px;
-  height: 69.28px;
+  width: 78px;
+  height: 67.55px;
 
   display: grid;
   place-items: center;
-
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -159,11 +157,6 @@ button:disabled {
   background: #334155;
   color: #f8fafc;
 
-  /*
-    Flat top:
-    top-left, top-right,
-    right, bottom-right, bottom-left, left
-  */
   clip-path: polygon(
     25% 0%,
     75% 0%,
@@ -174,10 +167,11 @@ button:disabled {
   );
 
   /*
-    Do not transform the hex when it is selected.
-    Transform was causing it to move during swiping.
+    Never replace this with scale() in .active.
+    These transforms keep each hex centered at its
+    calculated coordinate.
   */
-  transform: none;
+  transform: translate(-50%, -50%);
 
   cursor: pointer;
   touch-action: none;
@@ -189,89 +183,89 @@ button:disabled {
     filter 0.12s ease;
 }
 
-/* Do not use transform here. */
+/*
+  The centers are deliberately farther apart than
+  the hex dimensions. This produces a visible gap
+  of approximately 2px.
+*/
+.hex-0 {
+  left: 50%;
+  top: 50%;
+}
+
+.hex-1 {
+  left: 50%;
+  top: calc(50% - 69.55px);
+}
+
+.hex-2 {
+  left: calc(50% + 60.25px);
+  top: calc(50% - 34.78px);
+}
+
+.hex-3 {
+  left: calc(50% + 60.25px);
+  top: calc(50% + 34.78px);
+}
+
+.hex-4 {
+  left: 50%;
+  top: calc(50% + 69.55px);
+}
+
+.hex-5 {
+  left: calc(50% - 60.25px);
+  top: calc(50% + 34.78px);
+}
+
+.hex-6 {
+  left: calc(50% - 60.25px);
+  top: calc(50% - 34.78px);
+}
+
+/*
+  !important is needed because generated cells may
+  have inline background-color styles.
+*/
 .hex.active {
   background: #ffffff !important;
-  color: #0f172a;
+  color: #0f172a !important;
   filter: brightness(1.08);
 }
 
-/* Wrong-path feedback */
 .hex.wrong {
   background: #ef4444 !important;
-  color: #ffffff;
+  color: #ffffff !important;
+  filter: brightness(1.08);
 }
 
-/* Optional hover feedback, without movement */
 .hex:hover {
   filter: brightness(1.15);
 }
 
-/* Prevent hover from changing a selected hex's shape */
-.hex.active:hover {
+.hex.active:hover,
+.hex.wrong:hover {
   filter: brightness(1.08);
 }
 
-/* Board disabled state */
 #board.is-disabled {
-  opacity: 0.75;
+  opacity: 0.8;
   pointer-events: none;
 }
 
-/*
-  Flat-top hex geometry.
+/* =========================
+   Feedback thumb
+========================= */
 
-  For an 80px × 69.28px regular hex:
-  horizontal center spacing = 80px
-  vertical center spacing   = 69.28px
-*/
-
-.hex-0 {
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-/* Top */
-.hex-1 {
-  left: 50%;
-  top: calc(50% - 69.28px);
-  transform: translate(-50%, -50%);
-}
-
-/* Top-right */
-.hex-2 {
-  left: calc(50% + 60px);
-  top: calc(50% - 34.64px);
-  transform: translate(-50%, -50%);
-}
-
-/* Bottom-right */
-.hex-3 {
-  left: calc(50% + 60px);
-  top: calc(50% + 34.64px);
-  transform: translate(-50%, -50%);
-}
-
-/* Bottom */
-.hex-4 {
-  left: 50%;
-  top: calc(50% + 69.28px);
-  transform: translate(-50%, -50%);
-}
-
-/* Bottom-left */
-.hex-5 {
-  left: calc(50% - 60px);
-  top: calc(50% + 34.64px);
-  transform: translate(-50%, -50%);
-}
-
-/* Top-left */
-.hex-6 {
-  left: calc(50% - 60px);
-  top: calc(50% - 34.64px);
-  transform: translate(-50%, -50%);
+#feedbackThumb {
+  position: absolute;
+  z-index: 20;
+  display: none;
+  pointer-events: none;
+  font-size: 30px;
+  line-height: 1;
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 45%));
 }
 
 /* =========================

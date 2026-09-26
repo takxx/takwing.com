@@ -2,6 +2,18 @@
 "use strict";
 
 /* ==========================================================================
+   Shared task configuration (used by all tasks)
+   ========================================================================== */
+
+const TASK_COLORS = ["red", "green", "blue"];
+
+const TASK_CIRCLES = {
+    red: "🔴",
+    green: "🟢",
+    blue: "🔵"
+};
+
+/* ==========================================================================
    HexTaskLoader (static config, no translation loading here)
    ========================================================================== */
 
@@ -41,7 +53,9 @@ let PATH_DATA = null;
     try {
         const res = await fetch("path.json");
         if (!res.ok) {
-            throw new Error(`Failed to load path.json: ${res.status} ${res.statusText}`);
+            throw new Error(
+                `Failed to load path.json: ${res.status} ${res.statusText}`
+            );
         }
         PATH_DATA = await res.json();
 
@@ -64,17 +78,13 @@ let PATH_DATA = null;
    Task 01 constants and helpers
    ========================================================================== */
 
-const TASK01_COLORS = ["red", "green", "blue"];
-
-const TASK01_CIRCLES = {
-    red: "🔴",
-    green: "🟢",
-    blue: "🔵"
-};
+// Task01 uses the shared TASK_COLORS and TASK_CIRCLES constants above.
 
 function randomChoice(array) {
     if (!Array.isArray(array) || array.length === 0) {
-        throw new Error("randomChoice: array is empty or not an array.");
+        throw new Error(
+            "randomChoice: array is empty or not an array."
+        );
     }
     return array[Math.floor(Math.random() * array.length)];
 }
@@ -89,7 +99,9 @@ function randomBoolean() {
 
 function randomUniqueItems(array, count) {
     if (count > array.length) {
-        throw new Error("Cannot select more unique items than available.");
+        throw new Error(
+            "Cannot select more unique items than available."
+        );
     }
     const copy = [...array];
     const result = [];
@@ -286,8 +298,8 @@ async function generateTask01(difficulty) {
 
     // All permutations of these cells that exist in path.json
     const answerPaths = candidates
-        .filter(path => sameUnorderedCells(path, baseAnswerPath))
-        .map(p => [...p]);
+        .filter((path) => sameUnorderedCells(path, baseAnswerPath))
+        .map((p) => [...p]);
 
     if (answerPaths.length === 0) {
         throw new Error(
@@ -296,22 +308,17 @@ async function generateTask01(difficulty) {
     }
 
     // Choose mode
-    const mode = difficulty < 3
-        ? "HEX_COLOR"
-        : randomChoice(["HEX_COLOR", "CIRCLE_CHARACTER"]);
+    const mode =
+        difficulty < 2
+            ? "HEX_COLOR"
+            : randomChoice(["HEX_COLOR", "CIRCLE_CHARACTER"]);
 
     // Choose target colors (1 or 2)
     const colorCount = difficulty === 0 ? 1 : randomInt(1, 2);
-    const targetColors = randomUniqueItems(TASK01_COLORS, colorCount);
+    const targetColors = randomUniqueItems(TASK_COLORS, colorCount);
 
     // Negated condition allowed for difficulty >= 1
     const negated = difficulty >= 1 && randomBoolean();
-
-    // Instruction color key (used only for instruction rendering)
-    const instructionColorKey = chooseInstructionColor(
-        difficulty,
-        targetColors
-    );
 
     // Build hexes (internal representation)
     const hexes = createHexes({
@@ -330,7 +337,7 @@ async function generateTask01(difficulty) {
 
     const alphabet = "ABCDEFG".split("");
 
-    const cells = hexes.map(hex => {
+    const cells = hexes.map((hex) => {
         const content =
             hex.character !== undefined
                 ? hex.character
@@ -352,15 +359,13 @@ async function generateTask01(difficulty) {
         data: {
             difficulty,
             target: targetChar,
-            answerLength,
+            answerLength
+        },
 
-            // Extra semantic data for instruction rendering
-            _task01: {
-                mode,
-                negated,
-                targetColors,
-                instructionColorKey
-            }
+        instruction: {
+            mode,
+            negated,
+            targetColors
         },
 
         cells,
@@ -376,29 +381,17 @@ async function generateTask01(difficulty) {
             negated
         )
     ) {
-        throw new Error("generateTask01 created an invalid task.");
+        throw new Error(
+            "generateTask01 created an invalid task."
+        );
     }
 
     return task;
 }
 
-function chooseInstructionColor(difficulty, targetColors) {
-    if (difficulty <= 1) {
-        return targetColors[0];
-    }
-
-    const available = TASK01_COLORS.filter(
-        color => !targetColors.includes(color)
-    );
-
-    if (available.length > 0) {
-        return randomChoice(available);
-    }
-
-    return randomChoice(
-        TASK01_COLORS.filter(color => color !== targetColors[0])
-    );
-}
+/* ==========================================================================
+   Task 01 hex generation helpers
+   ========================================================================== */
 
 function createHexes({ boardSize, answerPath, mode, target }) {
     const answerSet = new Set(answerPath);
@@ -427,12 +420,14 @@ function chooseAnswerColor(target) {
         return randomChoice(target.colors);
     }
 
-    const allowed = TASK01_COLORS.filter(
-        color => !target.colors.includes(color)
+    const allowed = TASK_COLORS.filter(
+        (color) => !target.colors.includes(color)
     );
 
     if (allowed.length === 0) {
-        throw new Error("Negated target has no possible answer color.");
+        throw new Error(
+            "Negated target has no possible answer color."
+        );
     }
 
     return randomChoice(allowed);
@@ -440,12 +435,14 @@ function chooseAnswerColor(target) {
 
 function chooseFillerColor(target) {
     if (!target.negated) {
-        const fillers = TASK01_COLORS.filter(
-            color => !target.colors.includes(color)
+        const fillers = TASK_COLORS.filter(
+            (color) => !target.colors.includes(color)
         );
 
         if (fillers.length === 0) {
-            throw new Error("Positive target has no possible filler color.");
+            throw new Error(
+                "Positive target has no possible filler color."
+            );
         }
 
         return randomChoice(fillers);
@@ -456,34 +453,48 @@ function chooseFillerColor(target) {
 
 function createCircleHexes(boardSize, answerSet, target) {
     const answerCharacters = target.negated
-        ? Object.entries(TASK01_CIRCLES)
+        ? Object.entries(TASK_CIRCLES)
             .filter(([color]) => !target.colors.includes(color))
             .map(([, ch]) => ch)
-        : target.colors.map(color => TASK01_CIRCLES[color]);
+        : target.colors.map((color) => TASK_CIRCLES[color]);
 
     const fillerCharacters = target.negated
-        ? target.colors.map(color => TASK01_CIRCLES[color])
-        : Object.entries(TASK01_CIRCLES)
+        ? target.colors.map((color) => TASK_CIRCLES[color])
+        : Object.entries(TASK_CIRCLES)
             .filter(([color]) => !target.colors.includes(color))
             .map(([, ch]) => ch);
 
     if (answerCharacters.length === 0) {
-        throw new Error("Target has no possible answer characters.");
+        throw new Error(
+            "Target has no possible answer characters."
+        );
     }
     if (fillerCharacters.length === 0) {
-        throw new Error("Target has no possible filler characters.");
+        throw new Error(
+            "Target has no possible filler characters."
+        );
     }
 
     return Array.from({ length: boardSize }, (_, index) => ({
         index,
-        backgroundColorKey: randomChoice(TASK01_COLORS),
+        backgroundColorKey: randomChoice(TASK_COLORS),
         character: answerSet.has(index)
             ? randomChoice(answerCharacters)
             : randomChoice(fillerCharacters)
     }));
 }
 
-function validateTask01Internals(task, answerPath, mode, targetColors, negated) {
+/* ==========================================================================
+   Task 01 internal validation
+   ========================================================================== */
+
+function validateTask01Internals(
+    task,
+    answerPath,
+    mode,
+    targetColors,
+    negated
+) {
     const answerSet = new Set(answerPath);
 
     if (task.answerPaths.length === 0) return false;
@@ -496,18 +507,27 @@ function validateTask01Internals(task, answerPath, mode, targetColors, negated) 
         const hex = isCircleMode
             ? {
                   index,
-                  backgroundColorKey: TASK01_COLORS[0], // irrelevant for logic check
+                  backgroundColorKey: TASK_COLORS[0], // irrelevant for logic check
                   character: hexLike.content
               }
             : {
                   index,
-                  backgroundColorKey: Object.keys(HexTaskLoader.COLOR_HEX).find(
-                      key => HexTaskLoader.COLOR_HEX[key] === hexLike.backgroundColor
+                  backgroundColorKey: Object.keys(
+                      HexTaskLoader.COLOR_HEX
+                  ).find(
+                      (key) =>
+                          HexTaskLoader.COLOR_HEX[key] ===
+                          hexLike.backgroundColor
                   ),
                   character: undefined
               };
 
-        const actual = matchesTask01Target(hex, { mode, colors: targetColors, negated });
+        const actual = matchesTask01Target(hex, {
+            mode,
+            colors: targetColors,
+            negated
+        });
+
         if (expected !== actual) return false;
     }
 
@@ -521,7 +541,9 @@ function matchesTask01Target(hex, target) {
     }
 
     if (target.mode === "CIRCLE_CHARACTER") {
-        const targetChars = target.colors.map(c => TASK01_CIRCLES[c]);
+        const targetChars = target.colors.map(
+            (c) => TASK_CIRCLES[c]
+        );
         const matches = targetChars.includes(hex.character);
         return target.negated ? !matches : matches;
     }
@@ -546,4 +568,6 @@ async function generateTask03(difficulty) {
    ========================================================================== */
 
 window.HexTaskLoader = HexTaskLoader;
+window.TASK_COLORS = TASK_COLORS;
+window.TASK_CIRCLES = TASK_CIRCLES;
 window.generateRandomTask = generateRandomTask;
