@@ -6,13 +6,15 @@
 ================================= */
 
 const board = document.getElementById("board");
-const hexagons = [...document.querySelectorAll(".hex")];
 const startButton = document.getElementById("startButton");
 const roundDisplay = document.getElementById("round");
 const timeDisplay = document.getElementById("time");
 const highScoreDisplay = document.getElementById("highScore");
 const message = document.getElementById("message");
 const languageSelect = document.getElementById("languageSelect");
+
+// Will be filled once DOM is ready
+let hexagons = [];
 
 /* =================================
    Configuration
@@ -333,13 +335,11 @@ function validateTaskResponse(task) {
 ================================= */
 
 function renderTaskInstruction(task) {
-  // Task01 uses _task01 metadata
   if (task.data?._task01) {
     renderTask01Instruction(task);
     return;
   }
 
-  // Fallback for other tasks if needed
   setMessageKey("yourTurn");
 }
 
@@ -397,15 +397,20 @@ function getNestedValue(object, path) {
 ================================= */
 
 function renderGeneratedCells(cells) {
+  // Clear text and inline styles
   hexagons.forEach(hex => {
     hex.textContent = "";
     hex.style.backgroundColor = "";
     hex.style.color = "";
-    hex.className = hex.className.replace(/\s*(hex-\d|active|wrong)\s*/g, " ").trim();
   });
 
-  hexagons.forEach((hex, i) => hex.classList.add(`hex-${i}`));
+  // Ensure hex-N classes are correct
+  hexagons.forEach((hex, i) => {
+    hex.classList.remove("hex-0", "hex-1", "hex-2", "hex-3", "hex-4", "hex-5", "hex-6");
+    hex.classList.add(`hex-${i}`);
+  });
 
+  // Apply cell data
   for (const cell of cells) {
     const hex = hexagons[cell.index];
     if (!hex) continue;
@@ -699,21 +704,26 @@ board.addEventListener("pointermove", handlePointerMove);
 board.addEventListener("pointerup", handlePointerUp);
 board.addEventListener("pointercancel", handlePointerCancel);
 
-// Load translations then initialize
-(async function init() {
-  try {
-    const res = await fetch("lang.json");
-    const data = await res.json();
-    window.taskTranslations = data;
+// Initialize after DOM is ready
+(function init() {
+  // Populate hexagons now that .hex elements exist in HTML
+  hexagons = [...document.querySelectorAll(".hex")];
 
-    language = getInitialLanguage();
-    setLanguage(language);
+  (async function loadTranslations() {
+    try {
+      const res = await fetch("lang.json");
+      const data = await res.json();
+      window.taskTranslations = data;
 
-    highScore = loadHighScore();
-    updateRound();
-    setMessageKey("watchSequence");
-  } catch (err) {
-    console.error("Failed to load lang.json:", err);
-    message.textContent = "Error loading translations.";
-  }
+      language = getInitialLanguage();
+      setLanguage(language);
+
+      highScore = loadHighScore();
+      updateRound();
+      setMessageKey("watchSequence");
+    } catch (err) {
+      console.error("Failed to load lang.json:", err);
+      message.textContent = "Error loading translations.";
+    }
+  })();
 })();
