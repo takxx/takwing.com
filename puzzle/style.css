@@ -126,8 +126,8 @@ button:disabled {
 }
 
 /* =========================
-   Board container
-   ========================= */
+   Hex board
+========================= */
 
 #board {
   position: relative;
@@ -135,114 +135,142 @@ button:disabled {
   height: 230px;
   margin: 16px auto;
   touch-action: none;
+  user-select: none;
 }
 
-/* Disabled state */
-#board.is-disabled {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-/* Individual hex buttons */
 .hex {
   position: absolute;
-  width: 78px;   /* wider than tall for flat-top */
-  height: 70px;
-  border: none;
-  background: #334155;
-  color: #f1f5f9;
-  font-size: 14px;
-  cursor: pointer;
+
+  /*
+    Flat-top regular hexagon:
+    width : height = 2 : sqrt(3)
+    80px : 69.28px
+  */
+  width: 80px;
+  height: 69.28px;
+
   display: grid;
   place-items: center;
-  /* Flat-top hexagon */
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  transition: transform 0.12s ease, background 0.12s ease, filter 0.12s ease;
+
   padding: 0;
-  outline: none;
+  border: 0;
+  border-radius: 0;
+
+  background: #334155;
+  color: #f8fafc;
+
+  /*
+    Flat top:
+    top-left, top-right,
+    right, bottom-right, bottom-left, left
+  */
+  clip-path: polygon(
+    25% 0%,
+    75% 0%,
+    100% 50%,
+    75% 100%,
+    25% 100%,
+    0% 50%
+  );
+
+  /*
+    Do not transform the hex when it is selected.
+    Transform was causing it to move during swiping.
+  */
+  transform: none;
+
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    filter 0.12s ease;
 }
 
-.hex:not(#board.is-disabled .hex):hover {
+/* Do not use transform here. */
+.hex.active {
+  background: #ffffff !important;
+  color: #0f172a;
+  filter: brightness(1.08);
+}
+
+/* Wrong-path feedback */
+.hex.wrong {
+  background: #ef4444 !important;
+  color: #ffffff;
+}
+
+/* Optional hover feedback, without movement */
+.hex:hover {
   filter: brightness(1.15);
 }
 
-.hex.active {
-  background: #22c55e;
-  transform: scale(1.05);
+/* Prevent hover from changing a selected hex's shape */
+.hex.active:hover {
+  filter: brightness(1.08);
 }
 
-.hex.wrong {
-  background: #ef4444;
-}
-
-/* Feedback thumb (👍 / 👎) */
-#feedbackThumb {
-  position: absolute;
+/* Board disabled state */
+#board.is-disabled {
+  opacity: 0.75;
   pointer-events: none;
-  font-size: 28px;
-  line-height: 1;
-  transform: translate(-50%, -50%);
-  z-index: 10;
-  display: none;
 }
 
 /*
-  Flower layout: 1 center + 6 around, no gaps.
-  Flat-top hexagons, edges touching.
+  Flat-top hex geometry.
+
+  For an 80px × 69.28px regular hex:
+  horizontal center spacing = 80px
+  vertical center spacing   = 69.28px
 */
 
-/* Center hex */
 .hex-0 {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* Outer hexes:
-   For flat-top hex:
-     horizontal step ≈ 0.75 * width = 0.75 * 78 ≈ 58.5 → using 52.5–60 range for tightness
-     vertical step ≈ 0.866 * height ≈ 0.866 * 70 ≈ 60.6
-*/
-
-/* Top (Hex 1) */
+/* Top */
 .hex-1 {
   left: 50%;
-  top: calc(50% - 60.6px);
+  top: calc(50% - 69.28px);
   transform: translate(-50%, -50%);
 }
 
-/* Top-right (Hex 2) */
+/* Top-right */
 .hex-2 {
-  left: calc(50% + 52.5px);
-  top: calc(50% - 30.3px);
+  left: calc(50% + 60px);
+  top: calc(50% - 34.64px);
   transform: translate(-50%, -50%);
 }
 
-/* Bottom-right (Hex 3) */
+/* Bottom-right */
 .hex-3 {
-  left: calc(50% + 52.5px);
-  top: calc(50% + 30.3px);
+  left: calc(50% + 60px);
+  top: calc(50% + 34.64px);
   transform: translate(-50%, -50%);
 }
 
-/* Bottom (Hex 4) */
+/* Bottom */
 .hex-4 {
   left: 50%;
-  top: calc(50% + 60.6px);
+  top: calc(50% + 69.28px);
   transform: translate(-50%, -50%);
 }
 
-/* Bottom-left (Hex 5) */
+/* Bottom-left */
 .hex-5 {
-  left: calc(50% - 52.5px);
-  top: calc(50% + 30.3px);
+  left: calc(50% - 60px);
+  top: calc(50% + 34.64px);
   transform: translate(-50%, -50%);
 }
 
-/* Top-left (Hex 6) */
+/* Top-left */
 .hex-6 {
-  left: calc(50% - 52.5px);
-  top: calc(50% - 30.3px);
+  left: calc(50% - 60px);
+  top: calc(50% - 34.64px);
   transform: translate(-50%, -50%);
 }
 
