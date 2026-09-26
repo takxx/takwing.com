@@ -29,7 +29,8 @@
         "hexes": "Swipe all {colors} hexes",
         "hexesExcept": "Swipe all hexes except {colors}",
         "circles": "Swipe all hexes with {colors} circles",
-        "circlesExcept": "Swipe all hexes with circles except {colors}"
+        "circlesExcept": "Swipe all hexes without {colors} circles",
+        "task02": "Swipe {length} hex in {direction} direction from {color} {shape}"
       },
       "list": {
         "one": "{0}",
@@ -40,6 +41,14 @@
         "red": "red",
         "green": "green",
         "blue": "blue"
+      },
+      "shapes": {
+        "hex": "hex",
+        "circle": "circle"
+      },
+      "directions": {
+        "clockwise": "clockwise",
+        "anticlockwise": "anticlockwise"
       }
     }
   },
@@ -73,7 +82,8 @@
         "hexes": "Desliza todos los hexágonos {colors}",
         "hexesExcept": "Desliza todos los hexágonos excepto {colors}",
         "circles": "Desliza todos los hexágonos con círculos {colors}",
-        "circlesExcept": "Desliza todos los hexágonos con círculos excepto {colors}"
+        "circlesExcept": "Desliza todos los hexágonos sin círculos {colors}",
+        "task02": "Desliza {length} hex en dirección {direction} desde {color} {shape}"
       },
       "list": {
         "one": "{0}",
@@ -84,6 +94,14 @@
         "red": "rojos",
         "green": "verdes",
         "blue": "azules"
+      },
+      "shapes": {
+        "hex": "hexágono",
+        "circle": "círculo"
+      },
+      "directions": {
+        "clockwise": "horaria",
+        "anticlockwise": "antihoraria"
       }
     }
   },
@@ -117,7 +135,8 @@
         "hexes": "滑動所有{colors}六角形",
         "hexesExcept": "滑動除了{colors}以外的所有六角形",
         "circles": "滑動所有帶有{colors}圓形的六角形",
-        "circlesExcept": "滑動所有帶有除了{colors}以外圓形的六角形"
+        "circlesExcept": "滑動所有不帶{colors}圓形的六角形",
+        "task02": "由{color}{shape}開始，向{direction}方向滑動{length}個六角形"
       },
       "list": {
         "one": "{0}",
@@ -128,6 +147,14 @@
         "red": "紅色",
         "green": "綠色",
         "blue": "藍色"
+      },
+      "shapes": {
+        "hex": "六角形",
+        "circle": "圓形"
+      },
+      "directions": {
+        "clockwise": "順時針",
+        "anticlockwise": "逆時針"
       }
     }
   }
