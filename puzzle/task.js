@@ -556,6 +556,10 @@ function matchesTask01Target(hex, target) {
    Task 02 edge paths (with "startingFrom" / "endingOn")
    ========================================================================== */
 
+/* ==========================================================================
+   Task 02 — Find an ordered matching path
+   ========================================================================== */
+
 async function generateTask02(difficulty) {
     if (![0, 1].includes(difficulty)) {
         throw new RangeError(
@@ -564,73 +568,110 @@ async function generateTask02(difficulty) {
     }
 
     const pathData = PATH_DATA;
-    const boardSize = pathData.boardSize; // 7
+    const boardSize = pathData.boardSize;
     const pathsByLength = pathData.paths;
 
-    // 1. Choose path length (4, 5, or 6)
     const answerLength = randomChoice([4, 5, 6]);
-
     const candidates = pathsByLength[String(answerLength)];
+
     if (!Array.isArray(candidates) || candidates.length === 0) {
         throw new Error(
             `generateTask02: no paths of length ${answerLength} in path.json.`
         );
     }
 
-    // 2. Choose a base path that does NOT contain 0
-    let baseAnswerPath = null;
-    let attempts = 0;
-    const maxAttempts = 200;
+    /*
+     * Select the random reference answer.
+     *
+     * Task02 paths cannot contain the centre cell.
+     */
+    const pathsWithoutCenter = candidates.filter(
+        (path) => !path.includes(0)
+    );
 
-    while (attempts < maxAttempts) {
-        attempts += 1;
-        const candidate = [...randomChoice(candidates)];
-        if (!candidate.includes(0)) {
-            baseAnswerPath = candidate;
-            break;
-        }
-    }
-
-    if (!baseAnswerPath) {
+    if (pathsWithoutCenter.length === 0) {
         throw new Error(
-            "generateTask02: could not find a path without center (0)."
+            "generateTask02: no paths without center cell found."
         );
     }
 
-    // 3. Choose direction, color, shape, and anchor type
-    const direction = randomChoice(["clockwise", "anticlockwise"]);
+    const selectedAnswerPath = [
+        ...randomChoice(pathsWithoutCenter)
+    ];
+
+    const direction = randomChoice([
+        "clockwise",
+        "anticlockwise"
+    ]);
+
     const color = randomChoice(TASK_COLORS);
     const shape = randomChoice(["hex", "circle"]);
 
-    // anchorType: "startingFrom" (all difficulties) or "endingOn" (difficulty 1 only)
-    let anchorType = "startingFrom";
+    const anchorType =
+        difficulty === 1
+            ? randomChoice(["startingFrom", "endingOn"])
+            : "startingFrom";
 
-    if (difficulty === 1) {
-        anchorType = randomChoice(["startingFrom", "endingOn"]);
+    /*
+     * PATH_DATA paths are treated as ordered paths.
+     *
+     * If PATH_DATA stores its paths clockwise, reverse the selected
+     * path only when the instruction says anticlockwise.
+     */
+    const directedSelectedPath =
+        direction === "clockwise"
+            ? [...selectedAnswerPath]
+            : [...selectedAnswerPath].reverse();
+
+    const anchorIndex =
+        anchorType === "endingOn"
+            ? directedSelectedPath[directedSelectedPath.length - 1]
+            : directedSelectedPath[0];
+
+    /*
+     * Find every candidate that contains at least two consecutive cells
+     * from the selected answer, in the same order.
+     */
+    const validAnswerPaths = candidates
+        .filter((path) => !path.includes(0))
+        .filter((path) =>
+            pathContainsOrderedPair(
+                path,
+                directedSelectedPath
+            )
+        )
+        .map((path) => [...path]);
+
+    /*
+     * The selected answer must always be valid.
+     */
+    if (
+        !validAnswerPaths.some((path) =>
+            samePath(path, directedSelectedPath)
+        )
+    ) {
+        validAnswerPaths.push([...directedSelectedPath]);
     }
 
-    // 4. Populate hexes according to rules
-    const hexes = createTask02Hexes({
-        boardSize,
-        baseAnswerPath,
-        color,
-        shape,
-        anchorType
-    });
+    /*
+     * Remove duplicate paths while preserving order.
+     */
+    const uniqueAnswerPaths = deduplicatePaths(validAnswerPaths);
 
-    // 5. Recompute all valid paths of the same length, excluding any with 0
-    const allPathsOfLength = pathsByLength[String(answerLength)] || [];
-    const validAnswerPaths = allPathsOfLength
-        .filter((path) => !path.includes(0))
-        .map((p) => [...p]);
-
-    if (validAnswerPaths.length === 0) {
+    if (uniqueAnswerPaths.length === 0) {
         throw new Error(
-            "generateTask02: no valid answer paths (without 0) exist."
+            "generateTask02: no valid ordered answer paths found."
         );
     }
 
-    // Convert to engine format: cells + answerPaths
+    const hexes = createTask02Hexes({
+        boardSize,
+        answerPath: directedSelectedPath,
+        color,
+        shape,
+        anchorIndex
+    });
+
     const colorMap = {
         red: HexTaskLoader.COLOR_HEX.red,
         green: HexTaskLoader.COLOR_HEX.green,
@@ -648,14 +689,16 @@ async function generateTask02(difficulty) {
         return {
             index: hex.index,
             content,
-            backgroundColor: colorMap[hex.backgroundColorKey] || ""
+            backgroundColor:
+                colorMap[hex.backgroundColorKey] || ""
         };
     });
 
-    // Build instruction metadata for the generic renderer
-    const mode = shape === "hex" ? "HEX_COLOR" : "CIRCLE_CHARACTER";
+    const mode =
+        shape === "hex"
+            ? "HEX_COLOR"
+            : "CIRCLE_CHARACTER";
 
-    // Choose template based on anchorType
     const template =
         anchorType === "endingOn"
             ? "task02_endingOn"
@@ -668,16 +711,18 @@ async function generateTask02(difficulty) {
             difficulty,
             answerLength,
             mode,
-            anchorType
+            anchorType,
+            direction
         },
 
         instruction: {
             template,
             mode,
             negated: false,
-            targetColors: [color],
 
-            // Fields used by the generic instruction renderer
+            targetColors: [color],
+            colors: [color],
+
             color,
             length: answerLength,
             direction,
@@ -686,16 +731,17 @@ async function generateTask02(difficulty) {
         },
 
         cells,
-        answerPaths: validAnswerPaths
+        answerPaths: uniqueAnswerPaths
     };
 
     if (
         !validateTask02Internals(
             task,
-            baseAnswerPath,
+            directedSelectedPath,
             color,
             shape,
-            anchorType
+            anchorType,
+            direction
         )
     ) {
         throw new Error(
@@ -706,54 +752,66 @@ async function generateTask02(difficulty) {
     return task;
 }
 
+
+/* ==========================================================================
+   Task 02 board generation
+   ========================================================================== */
+
 function createTask02Hexes({
     boardSize,
-    baseAnswerPath,
+    answerPath,
     color,
     shape,
-    anchorType = "startingFrom"
+    anchorIndex
 }) {
     const centerIndex = 0;
-
-    const anchorIndex =
-        anchorType === "endingOn"
-            ? baseAnswerPath[baseAnswerPath.length - 1]
-            : baseAnswerPath[0];
 
     return Array.from({ length: boardSize }, (_, index) => {
         let backgroundColorKey;
         let character;
 
         if (index === anchorIndex) {
-            // Anchor hex: forced to instructed color/shape
+            /*
+             * The anchor identifies the required colour or shape.
+             */
             if (shape === "hex") {
                 backgroundColorKey = color;
                 character = undefined;
             } else {
-                // circle shape
                 backgroundColorKey = randomChoice(TASK_COLORS);
                 character = TASK_CIRCLES[color];
             }
         } else if (index === centerIndex) {
-            // Center hex: NOT the instructed color/shape
+            /*
+             * The centre is deliberately not a matching cell.
+             */
             if (shape === "hex") {
-                const nonColorColors = TASK_COLORS.filter(
-                    (c) => c !== color
+                const otherColors = TASK_COLORS.filter(
+                    (candidateColor) => candidateColor !== color
                 );
-                backgroundColorKey = randomChoice(nonColorColors);
+
+                backgroundColorKey = randomChoice(otherColors);
                 character = undefined;
             } else {
-                // circle shape
                 backgroundColorKey = randomChoice(TASK_COLORS);
-                const nonColorCircles = Object.entries(TASK_CIRCLES)
-                    .filter(([c]) => c !== color)
-                    .map(([, ch]) => ch);
-                character = randomChoice(nonColorCircles);
+
+                const otherCharacters = Object.entries(TASK_CIRCLES)
+                    .filter(
+                        ([candidateColor]) =>
+                            candidateColor !== color
+                    )
+                    .map(([, circleCharacter]) => circleCharacter);
+
+                character = randomChoice(otherCharacters);
             }
         } else {
-            // Other hexes: fully random
+            /*
+             * Non-anchor cells are random.
+             */
             backgroundColorKey = randomChoice(TASK_COLORS);
-            character = randomChoice(Object.values(TASK_CIRCLES));
+            character = randomChoice(
+                Object.values(TASK_CIRCLES)
+            );
         }
 
         return {
@@ -764,24 +822,204 @@ function createTask02Hexes({
     });
 }
 
+
+/* ==========================================================================
+   Task 02 path matching
+   ========================================================================== */
+
+/**
+ * Returns true when candidatePath contains at least two consecutive
+ * cells that also occur consecutively in referencePath in the same order.
+ *
+ * Example:
+ *
+ * referencePath: [1, 2, 3, 4]
+ * candidatePath: [6, 1, 2, 5]
+ *
+ * Result: true, because [1, 2] matches in order.
+ *
+ * Reverse-order matches do not count:
+ *
+ * referencePath: [1, 2, 3, 4]
+ * candidatePath: [6, 2, 1, 5]
+ *
+ * Result: false.
+ */
+function pathContainsOrderedPair(
+    candidatePath,
+    referencePath
+) {
+    if (
+        !Array.isArray(candidatePath) ||
+        !Array.isArray(referencePath)
+    ) {
+        return false;
+    }
+
+    if (
+        candidatePath.length < 2 ||
+        referencePath.length < 2
+    ) {
+        return false;
+    }
+
+    for (
+        let referenceIndex = 0;
+        referenceIndex < referencePath.length - 1;
+        referenceIndex += 1
+    ) {
+        const first = Number(
+            referencePath[referenceIndex]
+        );
+
+        const second = Number(
+            referencePath[referenceIndex + 1]
+        );
+
+        for (
+            let candidateIndex = 0;
+            candidateIndex < candidatePath.length - 1;
+            candidateIndex += 1
+        ) {
+            const candidateFirst = Number(
+                candidatePath[candidateIndex]
+            );
+
+            const candidateSecond = Number(
+                candidatePath[candidateIndex + 1]
+            );
+
+            if (
+                candidateFirst === first &&
+                candidateSecond === second
+            ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
+/**
+ * Compares two paths in exact order.
+ */
+function samePath(pathA, pathB) {
+    if (
+        !Array.isArray(pathA) ||
+        !Array.isArray(pathB)
+    ) {
+        return false;
+    }
+
+    if (pathA.length !== pathB.length) {
+        return false;
+    }
+
+    return pathA.every(
+        (cell, index) =>
+            Number(cell) === Number(pathB[index])
+    );
+}
+
+
+/**
+ * Removes duplicate paths while preserving their original order.
+ */
+function deduplicatePaths(paths) {
+    const seen = new Set();
+    const uniquePaths = [];
+
+    for (const path of paths) {
+        const key = path.map(Number).join(",");
+
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniquePaths.push([...path]);
+        }
+    }
+
+    return uniquePaths;
+}
+
+
+/* ==========================================================================
+   Task 02 validation
+   ========================================================================== */
+
 function validateTask02Internals(
     task,
-    baseAnswerPath,
+    selectedAnswerPath,
     color,
     shape,
-    anchorType = "startingFrom"
+    anchorType,
+    direction
 ) {
-    const centerIndex = 0;
+    if (
+        !task ||
+        !Array.isArray(task.cells) ||
+        !Array.isArray(task.answerPaths)
+    ) {
+        return false;
+    }
+
+    if (task.answerPaths.length === 0) {
+        return false;
+    }
+
+    /*
+     * Every stored answer must satisfy the ordered-overlap rule.
+     */
+    for (const answerPath of task.answerPaths) {
+        if (
+            !pathContainsOrderedPair(
+                answerPath,
+                selectedAnswerPath
+            )
+        ) {
+            return false;
+        }
+
+        if (answerPath.includes(0)) {
+            return false;
+        }
+    }
+
+    /*
+     * The selected answer must be included exactly.
+     */
+    if (
+        !task.answerPaths.some((path) =>
+            samePath(path, selectedAnswerPath)
+        )
+    ) {
+        return false;
+    }
+
+    /*
+     * Confirm the direction metadata is present.
+     */
+    if (
+        direction !== "clockwise" &&
+        direction !== "anticlockwise"
+    ) {
+        return false;
+    }
+
     const anchorIndex =
         anchorType === "endingOn"
-            ? baseAnswerPath[baseAnswerPath.length - 1]
-            : baseAnswerPath[0];
+            ? selectedAnswerPath[
+                  selectedAnswerPath.length - 1
+              ]
+            : selectedAnswerPath[0];
 
     const anchorCell = task.cells.find(
-        (c) => Number(c.index) === anchorIndex
+        (cell) => Number(cell.index) === Number(anchorIndex)
     );
+
     const centerCell = task.cells.find(
-        (c) => Number(c.index) === centerIndex
+        (cell) => Number(cell.index) === 0
     );
 
     if (!anchorCell || !centerCell) {
@@ -789,37 +1027,44 @@ function validateTask02Internals(
     }
 
     if (shape === "hex") {
-        const expectedAnchorBg = HexTaskLoader.COLOR_HEX[color];
+        const expectedBackground =
+            HexTaskLoader.COLOR_HEX[color];
 
-        // Anchor hex must have instructed background color
-        if (anchorCell.backgroundColor !== expectedAnchorBg) {
+        if (
+            anchorCell.backgroundColor !==
+            expectedBackground
+        ) {
             return false;
         }
 
-        // Center hex must NOT have instructed background color
-        if (centerCell.backgroundColor === expectedAnchorBg) {
-            return false;
-        }
-    } else {
-        // shape === "circle"
-        const expectedAnchorChar = TASK_CIRCLES[color];
-
-        // Anchor hex must have instructed circle character
-        if (anchorCell.content !== expectedAnchorChar) {
+        if (
+            centerCell.backgroundColor ===
+            expectedBackground
+        ) {
             return false;
         }
 
-        const nonColorCircles = Object.entries(TASK_CIRCLES)
-            .filter(([c]) => c !== color)
-            .map(([, ch]) => ch);
-
-        // Center hex must NOT have instructed circle character
-        if (!nonColorCircles.includes(centerCell.content)) {
-            return false;
-        }
+        return true;
     }
 
-    return true;
+    if (shape === "circle") {
+        const expectedCharacter = TASK_CIRCLES[color];
+
+        if (anchorCell.content !== expectedCharacter) {
+            return false;
+        }
+
+        const otherCharacters = Object.entries(TASK_CIRCLES)
+            .filter(
+                ([candidateColor]) =>
+                    candidateColor !== color
+            )
+            .map(([, circleCharacter]) => circleCharacter);
+
+        return otherCharacters.includes(centerCell.content);
+    }
+
+    return false;
 }
 
 /* ==========================================================================
