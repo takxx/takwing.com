@@ -1,18 +1,453 @@
 // task.js
 "use strict";
 
+
 /* ==========================================================================
-   Shared task configuration (used by all tasks)
+   1. Reusable constants and functions
    ========================================================================== */
 
-const TASK_COLORS = ["red", "green", "blue"];
-
-const TASK_CIRCLES = {red: "🔴",green: "🟢",blue: "🔵"};
-
-const TASK_SQUARES = {red: "🟥",green: "🟩",blue: "🟦"};
 
 /* ==========================================================================
-   HexTaskLoader (static config, no translation loading here)
+   Shared task configuration
+   ========================================================================== */
+
+const TASK_COLORS = Object.freeze([
+    "red",
+    "green",
+    "blue"
+]);
+
+
+const TASK_CIRCLES = Object.freeze({
+    red: "🔴",
+    green: "🟢",
+    blue: "🔵"
+});
+
+
+const TASK_SQUARES = Object.freeze({
+    red: "🟥",
+    green: "🟩",
+    blue: "🟦"
+});
+
+
+/* ==========================================================================
+   Reusable character constants
+   ========================================================================== */
+
+const TASK_DIGITS = Object.freeze({
+    "0": ["0", "0️⃣"],
+    "1": ["1", "1️⃣"],
+    "2": ["2", "2️⃣"],
+    "3": ["3", "3️⃣"],
+    "4": ["4", "4️⃣"],
+    "5": ["5", "5️⃣"],
+    "6": ["6", "6️⃣"],
+    "7": ["7", "7️⃣"],
+    "8": ["8", "8️⃣"],
+    "9": ["9", "9️⃣"]
+});
+
+
+const TASK_ALPHABETS = Object.freeze({
+    A: ["A", "a", "🅰️"],
+    B: ["B", "b", "🅱️"],
+    C: ["C", "c"],
+    D: ["D", "d"],
+    E: ["E", "e"],
+    F: ["F", "f"],
+    G: ["G", "g"],
+    H: ["H", "h"],
+    I: ["I", "i"],
+    J: ["J", "j"],
+    K: ["K", "k"],
+    L: ["L", "l"],
+    M: ["M", "m", "Ⓜ️"],
+    N: ["N", "n"],
+    O: ["O", "o", "🅾️"],
+    P: ["P", "p", "🅿️"],
+    Q: ["Q", "q"],
+    R: ["R", "r"],
+    S: ["S", "s"],
+    T: ["T", "t"],
+    U: ["U", "u"],
+    V: ["V", "v"],
+    W: ["W", "w"],
+    X: ["X", "x", "❎"],
+    Y: ["Y", "y"],
+    Z: ["Z", "z"]
+});
+
+
+const TASK_DIGIT_KEYS = Object.freeze(
+    Object.keys(TASK_DIGITS)
+);
+
+
+const TASK_ALPHABET_KEYS = Object.freeze(
+    Object.keys(TASK_ALPHABETS)
+);
+
+
+/* ==========================================================================
+   Reusable random functions
+   ========================================================================== */
+
+function randomChoice(array) {
+    if (
+        !Array.isArray(array) ||
+        array.length === 0
+    ) {
+        throw new Error(
+            "randomChoice: array is empty or not an array."
+        );
+    }
+
+    return array[
+        Math.floor(
+            Math.random() * array.length
+        )
+    ];
+}
+
+
+function randomInt(min, max) {
+    if (
+        !Number.isInteger(min) ||
+        !Number.isInteger(max) ||
+        min > max
+    ) {
+        throw new RangeError(
+            "randomInt: invalid range."
+        );
+    }
+
+    return Math.floor(
+        Math.random() * (max - min + 1)
+    ) + min;
+}
+
+
+function randomBoolean() {
+    return Math.random() < 0.5;
+}
+
+
+function randomUniqueItems(array, count) {
+    if (!Array.isArray(array)) {
+        throw new TypeError(
+            "randomUniqueItems: array is required."
+        );
+    }
+
+    if (
+        !Number.isInteger(count) ||
+        count < 0 ||
+        count > array.length
+    ) {
+        throw new RangeError(
+            "randomUniqueItems: invalid count."
+        );
+    }
+
+    const available = [...array];
+    const result = [];
+
+    while (result.length < count) {
+        const index =
+            randomInt(0, available.length - 1);
+
+        result.push(
+            available.splice(index, 1)[0]
+        );
+    }
+
+    return result;
+}
+
+
+function sameUnorderedCells(a, b) {
+    if (
+        !Array.isArray(a) ||
+        !Array.isArray(b) ||
+        a.length !== b.length
+    ) {
+        return false;
+    }
+
+    const setA = new Set(a);
+    const setB = new Set(b);
+
+    if (setA.size !== setB.size) {
+        return false;
+    }
+
+    for (const value of setA) {
+        if (!setB.has(value)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+function hasRepeatedValue(values) {
+    return new Set(values).size !== values.length;
+}
+
+
+/* ==========================================================================
+   Reusable character functions
+   ========================================================================== */
+
+function getTaskDigitVariants(digit) {
+    const key = String(digit);
+
+    if (!TASK_DIGITS[key]) {
+        throw new RangeError(
+            `Unknown task digit: ${digit}`
+        );
+    }
+
+    return TASK_DIGITS[key];
+}
+
+
+function getTaskAlphabetVariants(letter) {
+    const key =
+        String(letter).toUpperCase();
+
+    if (!TASK_ALPHABETS[key]) {
+        throw new RangeError(
+            `Unknown task letter: ${letter}`
+        );
+    }
+
+    return TASK_ALPHABETS[key];
+}
+
+
+function getAllTaskDigitCharacters() {
+    return Object.values(TASK_DIGITS).flat();
+}
+
+
+function getAllTaskAlphabetCharacters() {
+    return Object.values(TASK_ALPHABETS).flat();
+}
+
+
+function getRandomTaskDigit() {
+    return randomChoice(TASK_DIGIT_KEYS);
+}
+
+
+function getRandomTaskDigitCharacter() {
+    return randomChoice(
+        getTaskDigitVariants(
+            getRandomTaskDigit()
+        )
+    );
+}
+
+
+function getRandomTaskLetter() {
+    return randomChoice(TASK_ALPHABET_KEYS);
+}
+
+
+function getRandomTaskLetterCharacter() {
+    return randomChoice(
+        getTaskAlphabetVariants(
+            getRandomTaskLetter()
+        )
+    );
+}
+
+
+function getRandomTaskCharacter() {
+    return randomChoice([
+        getRandomTaskDigitCharacter(),
+        getRandomTaskLetterCharacter()
+    ]);
+}
+
+
+function getRandomTaskNumberCharacter() {
+    return getRandomTaskDigitCharacter();
+}
+
+
+function getRandomTaskAlphabetCharacter() {
+    return getRandomTaskLetterCharacter();
+}
+
+
+function createRandomTaskAlphabetCharacters(count) {
+    return Array.from(
+        { length: count },
+        () => getRandomTaskLetterCharacter()
+    );
+}
+
+
+function createRandomTaskDigitCharacters(count) {
+    return Array.from(
+        { length: count },
+        () => getRandomTaskDigitCharacter()
+    );
+}
+
+
+function createRandomTaskCharacters(count) {
+    return Array.from(
+        { length: count },
+        () => getRandomTaskCharacter()
+    );
+}
+
+
+function createUniqueRandomTaskAlphabetCharacters(count) {
+    if (count > TASK_ALPHABET_KEYS.length) {
+        throw new RangeError(
+            "Cannot create more unique alphabet characters than available letters."
+        );
+    }
+
+    const availableLetters = [
+        ...TASK_ALPHABET_KEYS
+    ];
+
+    const characters = [];
+
+    while (characters.length < count) {
+        const index =
+            randomInt(
+                0,
+                availableLetters.length - 1
+            );
+
+        const letter =
+            availableLetters.splice(index, 1)[0];
+
+        characters.push(
+            randomChoice(
+                getTaskAlphabetVariants(letter)
+            )
+        );
+    }
+
+    return characters;
+}
+
+
+/* ==========================================================================
+   Reusable character matching
+   ========================================================================== */
+
+function canonicalizeTaskCharacter(character) {
+    if (
+        character === undefined ||
+        character === null
+    ) {
+        return undefined;
+    }
+
+    const value = String(character);
+
+    for (const digit of TASK_DIGIT_KEYS) {
+        if (
+            TASK_DIGITS[digit].includes(value)
+        ) {
+            return digit;
+        }
+    }
+
+    for (const letter of TASK_ALPHABET_KEYS) {
+        if (
+            TASK_ALPHABETS[letter].includes(value)
+        ) {
+            return letter;
+        }
+    }
+
+    return value;
+}
+
+
+function taskCharactersMatch(
+    characterA,
+    characterB
+) {
+    return (
+        canonicalizeTaskCharacter(characterA) ===
+        canonicalizeTaskCharacter(characterB)
+    );
+}
+
+
+function taskCharacterInGroup(
+    character,
+    characters
+) {
+    const canonicalCharacter =
+        canonicalizeTaskCharacter(character);
+
+    return characters.some(
+        (candidate) =>
+            canonicalizeTaskCharacter(candidate) ===
+            canonicalCharacter
+    );
+}
+
+
+/* ==========================================================================
+   Reusable cell conversion
+   ========================================================================== */
+
+function createTaskCellsFromHexes(
+    hexes,
+    options = {}
+) {
+    if (!Array.isArray(hexes)) {
+        throw new TypeError(
+            "createTaskCellsFromHexes: hexes must be an array."
+        );
+    }
+
+    const {
+        useUniqueAlphabet = false
+    } = options;
+
+    const fallbackCharacters =
+        useUniqueAlphabet
+            ? createUniqueRandomTaskAlphabetCharacters(
+                  hexes.length
+              )
+            : createRandomTaskAlphabetCharacters(
+                  hexes.length
+              );
+
+    return hexes.map((hex, index) => ({
+        index: hex.index,
+
+        content:
+            hex.character !== undefined
+                ? hex.character
+                : fallbackCharacters[index] ?? "",
+
+        backgroundColor:
+            HexTaskLoader.COLOR_HEX[
+                hex.backgroundColorKey
+            ] || ""
+    }));
+}
+
+
+/* ==========================================================================
+   2. Startup loading
    ========================================================================== */
 
 const HexTaskLoader = {
@@ -35,245 +470,69 @@ const HexTaskLoader = {
     },
 
     async loadData() {
-        // If you need to load other JSON here, do it.
-        // Do NOT load lang.json or path.json here anymore.
         return {};
     }
 };
 
-/* ==========================================================================
-   Path data (loaded once)
-   ========================================================================== */
 
 let PATH_DATA = null;
 
-(async function loadPathData() {
+
+async function loadPathData() {
     try {
-        const res = await fetch("path.json");
-        if (!res.ok) {
+        const response =
+            await fetch("path.json");
+
+        if (!response.ok) {
             throw new Error(
-                `Failed to load path.json: ${res.status} ${res.statusText}`
+                `Failed to load path.json: ` +
+                `${response.status} ` +
+                `${response.statusText}`
             );
         }
-        PATH_DATA = await res.json();
+
+        const data =
+            await response.json();
 
         if (
-            !PATH_DATA ||
-            typeof PATH_DATA.boardSize !== "number" ||
-            !PATH_DATA.paths ||
-            typeof PATH_DATA.paths !== "object"
+            !data ||
+            typeof data.boardSize !== "number" ||
+            !data.paths ||
+            typeof data.paths !== "object"
         ) {
-            throw new Error("path.json has an invalid structure.");
+            throw new Error(
+                "path.json has an invalid structure."
+            );
         }
-    } catch (err) {
-        // Re-throw so the game can detect that tasks cannot be generated.
-        console.error("Error loading path.json:", err);
-        throw err;
-    }
-})();
 
-function randomChoice(array) {
-    if (!Array.isArray(array) || array.length === 0) {
-        throw new Error(
-            "randomChoice: array is empty or not an array."
+        PATH_DATA = data;
+    } catch (error) {
+        console.error(
+            "Error loading path.json:",
+            error
         );
+
+        throw error;
     }
-    return array[Math.floor(Math.random() * array.length)];
 }
 
-function randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
 
-function randomBoolean() {
-    return Math.random() < 0.5;
-}
+const pathDataReady =
+    loadPathData();
 
-function randomUniqueItems(array, count) {
-    if (count > array.length) {
-        throw new Error(
-            "Cannot select more unique items than available."
-        );
-    }
-    const copy = [...array];
-    const result = [];
-    while (result.length < count) {
-        const index = Math.floor(Math.random() * copy.length);
-        result.push(copy[index]);
-        copy.splice(index, 1);
-    }
-    return result;
-}
-
-function sameUnorderedCells(a, b) {
-    if (a.length !== b.length) return false;
-    const setA = new Set(a);
-    const setB = new Set(b);
-    if (setA.size !== setB.size) return false;
-    for (const v of setA) {
-        if (!setB.has(v)) return false;
-    }
-    return true;
-}
 
 /* ==========================================================================
-   Generator registry
+   3.01 Task 01 — Select All Colour/Shape
    ========================================================================== */
 
-const taskGenerators = [
-    {
-        id: "task01",
-        generator: generateTask01,
-        difficulties: [0, 1, 2, 3]
-    },
-    {
-        id: "task02",
-        generator: generateTask02,
-        difficulties: [0, 1]
-    }
-    // Add future generators here.
-];
-
-/* ==========================================================================
-   Public random task dispatcher
-   ========================================================================== */
-
-async function generateRandomTask(difficulty) {
-    if (PATH_DATA === null) {
-        throw new Error("path.json has not been loaded yet.");
-    }
-
-    const eligibleGenerators = taskGenerators.filter(
-        (entry) => entry.difficulties.includes(difficulty)
-    );
-
-    if (eligibleGenerators.length === 0) {
-        throw new Error(
-            `No task generator is available for difficulty ${difficulty}.`
-        );
-    }
-
-    const selectedEntry =
-        eligibleGenerators[
-            Math.floor(Math.random() * eligibleGenerators.length)
-        ];
-
-    const task = await selectedEntry.generator(difficulty);
-
-    validateGeneratedTask(task, selectedEntry.id);
-
-    return task;
-}
-
-/* ==========================================================================
-   Generator output validation
-   ========================================================================== */
-
-function validateGeneratedTask(task, generatorId) {
-    if (!task || typeof task !== "object") {
-        throw new Error(
-            `${generatorId} did not return a task object.`
-        );
-    }
-
-    if (!Array.isArray(task.cells)) {
-        throw new Error(
-            `${generatorId} did not return cells.`
-        );
-    }
-
-    if (!Array.isArray(task.answerPaths)) {
-        throw new Error(
-            `${generatorId} did not return answerPaths.`
-        );
-    }
-
-    if (task.answerPaths.length === 0) {
-        throw new Error(
-            `${generatorId} returned no answer paths.`
-        );
-    }
-
-    const cellIndexes = new Set();
-
-    for (const cell of task.cells) {
-        if (!cell || typeof cell !== "object") {
-            throw new Error(
-                `${generatorId} returned an invalid cell.`
-            );
-        }
-
-        if (!Number.isInteger(Number(cell.index))) {
-            throw new Error(
-                `${generatorId} returned a cell without a valid index.`
-            );
-        }
-
-        const index = Number(cell.index);
-
-        if (cellIndexes.has(index)) {
-            throw new Error(
-                `${generatorId} returned duplicate cell index ${index}.`
-            );
-        }
-
-        cellIndexes.add(index);
-
-        if (!("content" in cell)) {
-            throw new Error(
-                `${generatorId} returned a cell without content.`
-            );
-        }
-    }
-
-    for (const answerPath of task.answerPaths) {
-        if (!Array.isArray(answerPath)) {
-            throw new Error(
-                `${generatorId} returned an invalid answer path.`
-            );
-        }
-
-        if (answerPath.length < 2) {
-            throw new Error(
-                `${generatorId} returned an answer path shorter than two hexes.`
-            );
-        }
-
-        if (hasRepeatedValue(answerPath)) {
-            throw new Error(
-                `${generatorId} returned an answer path with repeated hexes.`
-            );
-        }
-
-        for (const index of answerPath) {
-            if (!cellIndexes.has(Number(index))) {
-                throw new Error(
-                    `${generatorId} returned an answer path containing ` +
-                    `unknown cell ${index}.`
-                );
-            }
-        }
-    }
-}
-
-function hasRepeatedValue(values) {
-    return new Set(values).size !== values.length;
-}
-
-// ********************************************************************************************
-// ********************************************************************************************
-/* ==========================================================================
-   Task 01 Select All (Colour/Shape)
-   ========================================================================== */
-
-const TASK01_SHAPES = [
+const TASK01_SHAPES = Object.freeze([
     "circle",
     "square"
-];
+]);
 
 
 /* ==========================================================================
-   Task generation
+   3.01a Task 01 generator
    ========================================================================== */
 
 async function generateTask01(difficulty) {
@@ -282,6 +541,8 @@ async function generateTask01(difficulty) {
             "generateTask01: difficulty must be 0, 1, 2, or 3."
         );
     }
+
+    await pathDataReady;
 
     const {
         boardSize,
@@ -320,7 +581,7 @@ async function generateTask01(difficulty) {
 
     if (answerPaths.length === 0) {
         throw new Error(
-            "generateTask01: no valid answer paths found for chosen cells."
+            "generateTask01: no valid answer paths found."
         );
     }
 
@@ -359,7 +620,10 @@ async function generateTask01(difficulty) {
         difficulty
     });
 
-    const cells = convertTask01HexesToCells(hexes);
+    const cells =
+        createTaskCellsFromHexes(
+            hexes
+        );
 
     const targetCell =
         cells[baseAnswerPath[0]];
@@ -406,7 +670,7 @@ async function generateTask01(difficulty) {
 
 
 /* ==========================================================================
-   Templates
+   3.01b Task 01 templates
    ========================================================================== */
 
 function getTask01Template(
@@ -438,7 +702,7 @@ function getTask01Template(
 
 
 /* ==========================================================================
-   Hex generation
+   3.01c Task 01 hex generation
    ========================================================================== */
 
 function createTask01Hexes({
@@ -502,10 +766,6 @@ function createTask01Hexes({
 }
 
 
-/* ==========================================================================
-   HEX_COLOR mode
-   ========================================================================== */
-
 function createTask01ColorHexes({
     boardSize,
     answerSet,
@@ -523,25 +783,14 @@ function createTask01ColorHexes({
                     ? chooseTask01AnswerColor(target)
                     : chooseTask01FillerColor(target);
 
-            /*
-             * Difficulty 3 adds a random circle or
-             * square character to every generated cell.
-             *
-             * The instruction remains colour-based.
-             */
-            if (difficulty === 3) {
-                return {
-                    index,
-                    backgroundColorKey,
-                    character:
-                        createRandomShapeCharacter()
-                };
-            }
-
             return {
                 index,
                 backgroundColorKey,
-                character: undefined
+
+                character:
+                    difficulty === 3
+                        ? createRandomShapeCharacter()
+                        : undefined
             };
         }
     );
@@ -590,10 +839,6 @@ function chooseTask01FillerColor(target) {
 }
 
 
-/* ==========================================================================
-   Circle and square modes for difficulties 0–2
-   ========================================================================== */
-
 function createTask01SingleShapeHexes({
     boardSize,
     answerSet,
@@ -632,17 +877,14 @@ function createTask01SingleShapeHexes({
             backgroundColorKey:
                 randomChoice(TASK_COLORS),
 
-            character: answerSet.has(index)
-                ? randomChoice(answerCharacters)
-                : randomChoice(fillerCharacters)
+            character:
+                answerSet.has(index)
+                    ? randomChoice(answerCharacters)
+                    : randomChoice(fillerCharacters)
         })
     );
 }
 
-
-/* ==========================================================================
-   Difficulty 3 for circle and square modes
-   ========================================================================== */
 
 function createTask01Difficulty3ShapeHexes({
     boardSize,
@@ -719,16 +961,6 @@ function getTask01AnswerColors(target) {
 }
 
 
-/*
- * Difficulty 3 fillers differ from the target
- * in exactly one property:
- *
- * 1. Same shape, wrong colour.
- * 2. Same colour, wrong shape.
- *
- * A filler cannot have both the wrong shape
- * and the wrong colour.
- */
 function getTask01Difficulty3FillerOptions(
     target,
     targetShape
@@ -740,11 +972,7 @@ function getTask01Difficulty3FillerOptions(
 
     const options = [];
 
-    /*
-     * Option A:
-     * same shape, wrong colour.
-     */
-    const wrongShapeColors =
+    const sameShapeWrongColor =
         target.negated
             ? target.colors
             : TASK_COLORS.filter(
@@ -752,7 +980,7 @@ function getTask01Difficulty3FillerOptions(
                       !target.colors.includes(color)
               );
 
-    for (const color of wrongShapeColors) {
+    for (const color of sameShapeWrongColor) {
         options.push({
             backgroundColorKey: color,
             character:
@@ -763,11 +991,7 @@ function getTask01Difficulty3FillerOptions(
         });
     }
 
-    /*
-     * Option B:
-     * wrong shape, same colour.
-     */
-    const wrongColorColors =
+    const wrongShapeSameColor =
         target.negated
             ? TASK_COLORS.filter(
                   (color) =>
@@ -775,7 +999,7 @@ function getTask01Difficulty3FillerOptions(
               )
             : target.colors;
 
-    for (const color of wrongColorColors) {
+    for (const color of wrongShapeSameColor) {
         options.push({
             backgroundColorKey: color,
             character:
@@ -791,7 +1015,7 @@ function getTask01Difficulty3FillerOptions(
 
 
 /* ==========================================================================
-   Character helpers
+   3.01d Task 01 character helpers
    ========================================================================== */
 
 function createRandomShapeCharacter() {
@@ -871,34 +1095,7 @@ function getTask01NonMatchingCharacters(
 
 
 /* ==========================================================================
-   Engine conversion
-   ========================================================================== */
-
-function convertTask01HexesToCells(hexes) {
-    const colorMap = {
-        red: HexTaskLoader.COLOR_HEX.red,
-        green: HexTaskLoader.COLOR_HEX.green,
-        blue: HexTaskLoader.COLOR_HEX.blue
-    };
-
-    const alphabet = "ABCDEFG".split("");
-
-    return hexes.map((hex) => ({
-        index: hex.index,
-
-        content:
-            hex.character !== undefined
-                ? hex.character
-                : alphabet[hex.index] ?? "",
-
-        backgroundColor:
-            colorMap[hex.backgroundColorKey] || ""
-    }));
-}
-
-
-/* ==========================================================================
-   Validation
+   3.01e Task 01 validation
    ========================================================================== */
 
 function validateTask01(
@@ -920,10 +1117,6 @@ function validateTask01(
     const answerSet =
         new Set(answerPath);
 
-    /*
-     * Every answer path must contain exactly the
-     * same cells as the generated answer path.
-     */
     for (const path of task.answerPaths) {
         if (
             !sameUnorderedCells(
@@ -935,10 +1128,6 @@ function validateTask01(
         }
     }
 
-    /*
-     * Check every board cell against the
-     * instruction target.
-     */
     for (const cell of task.cells) {
         const isAnswer =
             answerSet.has(Number(cell.index));
@@ -1044,33 +1233,15 @@ function getTask01ColorFromBackground(
     );
 }
 
-// ********************************************************************************************
-// ********************************************************************************************
+
 /* ==========================================================================
-   Task 02 — Find an ordered matching path
+   3.02 Task 02
    ========================================================================== */
 
-const TASK_CIRCLES = {
-    red: "🔴",
-    green: "🟢",
-    blue: "🔵"
-};
-
-const TASK_SQUARES = {
-    red: "🟥",
-    green: "🟩",
-    blue: "🟦"
-};
-
-const TASK02_SHAPES = [
+const TASK02_SHAPES = Object.freeze([
     "circle",
     "square"
-];
-
-
-/* ==========================================================================
-   Main task generator
-   ========================================================================== */
+]);
 
 async function generateTask02(difficulty) {
     if (![0, 1, 2].includes(difficulty)) {
@@ -1274,7 +1445,7 @@ async function generateTask02(difficulty) {
 
 
 /* ==========================================================================
-   Board generation
+   3.02a Board generation
    ========================================================================== */
 
 function createTask02Board({
@@ -1328,7 +1499,7 @@ function createTask02Board({
 
 
 /* ==========================================================================
-   Anchor cell
+   3.02b Anchor cell
    ========================================================================== */
 
 function createTask02AnchorCell({
@@ -1357,7 +1528,7 @@ function createTask02AnchorCell({
 
 
 /* ==========================================================================
-   Centre cell
+   3.02c Centre cell
    ========================================================================== */
 
 function createTask02CenterCell({
@@ -1435,7 +1606,7 @@ function createTask02CenterCell({
 
 
 /* ==========================================================================
-   Filler cells
+   3.02d Filler cells
    ========================================================================== */
 
 function createTask02FillerCell({
@@ -1487,7 +1658,7 @@ function createTask02FillerCell({
 
 
 /* ==========================================================================
-   Shape helpers
+   3.02e Shape helpers
    ========================================================================== */
 
 function getShapeCharacter(shape, color) {
@@ -1504,7 +1675,7 @@ function getShapeCharacter(shape, color) {
 
 
 /* ==========================================================================
-   Cell conversion
+   3.02f Cell conversion
    ========================================================================== */
 
 function convertTask02BoardToCells(board) {
@@ -1537,7 +1708,7 @@ function convertTask02BoardToCells(board) {
 
 
 /* ==========================================================================
-   Path helpers
+   3.02g Path helpers
    ========================================================================== */
 
 function pathContainsOrderedPair(
@@ -1641,7 +1812,7 @@ function deduplicatePaths(paths) {
 
 
 /* ==========================================================================
-   Validation
+   3.02h Validation
    ========================================================================== */
 
 function validateTask02(
@@ -1813,21 +1984,169 @@ function validateTask02(
     );
 }
 
-// ********************************************************************************************
-// ********************************************************************************************
 /* ==========================================================================
-   Task 03
+   4. Shared task engine
    ========================================================================== */
 
-async function generateTask03(difficulty) {
-    throw new Error("generateTask03 not implemented.");
+
+/*
+ * This registry belongs to the engine.
+ *
+ * It is not part of Task 01 or Task 02.
+ */
+const taskGenerators = [
+    {
+        id: "task01",
+        generator: generateTask01,
+        difficulties: [0, 1, 2, 3]
+    },
+
+    {
+        id: "task02",
+        generator: generateTask02,
+        difficulties: [0, 1]
+    }
+
+    // Add future task generators here.
+];
+
+
+function validateGeneratedTask(
+    task,
+    generatorId
+) {
+    if (
+        !task ||
+        typeof task !== "object"
+    ) {
+        throw new Error(
+            `${generatorId} did not return a task object.`
+        );
+    }
+
+    if (!Array.isArray(task.cells)) {
+        throw new Error(
+            `${generatorId} did not return cells.`
+        );
+    }
+
+    if (!Array.isArray(task.answerPaths)) {
+        throw new Error(
+            `${generatorId} did not return answerPaths.`
+        );
+    }
+
+    if (task.answerPaths.length === 0) {
+        throw new Error(
+            `${generatorId} returned no answer paths.`
+        );
+    }
+
+    const cellIndexes = new Set();
+
+    for (const cell of task.cells) {
+        if (
+            !cell ||
+            typeof cell !== "object"
+        ) {
+            throw new Error(
+                `${generatorId} returned an invalid cell.`
+            );
+        }
+
+        const index =
+            Number(cell.index);
+
+        if (!Number.isInteger(index)) {
+            throw new Error(
+                `${generatorId} returned a cell without a valid index.`
+            );
+        }
+
+        if (cellIndexes.has(index)) {
+            throw new Error(
+                `${generatorId} returned duplicate cell index ${index}.`
+            );
+        }
+
+        cellIndexes.add(index);
+
+        if (!("content" in cell)) {
+            throw new Error(
+                `${generatorId} returned a cell without content.`
+            );
+        }
+    }
+
+    for (const answerPath of task.answerPaths) {
+        if (!Array.isArray(answerPath)) {
+            throw new Error(
+                `${generatorId} returned an invalid answer path.`
+            );
+        }
+
+        if (answerPath.length < 2) {
+            throw new Error(
+                `${generatorId} returned an answer path shorter than two hexes.`
+            );
+        }
+
+        if (hasRepeatedValue(answerPath)) {
+            throw new Error(
+                `${generatorId} returned an answer path with repeated hexes.`
+            );
+        }
+
+        for (const index of answerPath) {
+            if (!cellIndexes.has(Number(index))) {
+                throw new Error(
+                    `${generatorId} returned an answer path containing ` +
+                    `unknown cell ${index}.`
+                );
+            }
+        }
+    }
 }
 
+
+async function generateRandomTask(difficulty) {
+    await pathDataReady;
+
+    const eligibleGenerators =
+        taskGenerators.filter(
+            (entry) =>
+                entry.difficulties.includes(
+                    difficulty
+                )
+        );
+
+    if (eligibleGenerators.length === 0) {
+        throw new Error(
+            `No task generator is available for difficulty ${difficulty}.`
+        );
+    }
+
+    const selectedEntry =
+        randomChoice(eligibleGenerators);
+
+    const task =
+        await selectedEntry.generator(
+            difficulty
+        );
+
+    validateGeneratedTask(
+        task,
+        selectedEntry.id
+    );
+
+    return task;
+}
+
+
 /* ==========================================================================
-   Exports
+   5. Public exports
    ========================================================================== */
 
-window.HexTaskLoader = HexTaskLoader;
-window.TASK_COLORS = TASK_COLORS;
-window.TASK_CIRCLES = TASK_CIRCLES;
-window.generateRandomTask = generateRandomTask;
+export {
+    generateRandomTask
+};
