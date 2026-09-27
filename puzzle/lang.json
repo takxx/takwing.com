@@ -47,7 +47,7 @@
   "hex": "hex",
   "circle": "circle",
   "square": "square"
-}
+},
       "directions": {
         "clockwise": "clockwise",
         "anticlockwise": "anticlockwise"
@@ -102,7 +102,7 @@
   "hex": "hexágono",
   "circle": "círculo",
   "square": "cuadrado"
-}
+},
       "directions": {
         "clockwise": "horaria",
         "anticlockwise": "antihoraria"
@@ -157,7 +157,8 @@
   "hex": "六角形",
   "circle": "圓形",
   "square": "正方形"
-}      "directions": {
+},
+      "directions": {
         "clockwise": "順時針",
         "anticlockwise": "逆時針"
       }
