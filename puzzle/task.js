@@ -2004,7 +2004,7 @@ const taskGenerators = [
     {
         id: "task02",
         generator: generateTask02,
-        difficulties: [0, 1]
+        difficulties: [0, 1, 2]
     }
 
     // Add future task generators here.
