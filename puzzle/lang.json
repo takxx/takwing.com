@@ -43,10 +43,11 @@
         "green": "green",
         "blue": "blue"
       },
-      "shapes": {
-        "hex": "hex",
-        "circle": "circle"
-      },
+"shapes": {
+  "hex": "hex",
+  "circle": "circle",
+  "square": "square"
+}
       "directions": {
         "clockwise": "clockwise",
         "anticlockwise": "anticlockwise"
@@ -97,10 +98,11 @@
         "green": "verde",
         "blue": "azul"
       },
-      "shapes": {
-        "hex": "hexágono",
-        "circle": "círculo"
-      },
+"shapes": {
+  "hex": "hexágono",
+  "circle": "círculo",
+  "square": "cuadrado"
+}
       "directions": {
         "clockwise": "horaria",
         "anticlockwise": "antihoraria"
@@ -151,11 +153,11 @@
         "green": "綠色",
         "blue": "藍色"
       },
-      "shapes": {
-        "hex": "六角形",
-        "circle": "圓形"
-      },
-      "directions": {
+"shapes": {
+  "hex": "六角形",
+  "circle": "圓形",
+  "square": "正方形"
+}      "directions": {
         "clockwise": "順時針",
         "anticlockwise": "逆時針"
       }
