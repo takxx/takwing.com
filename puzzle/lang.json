@@ -94,8 +94,8 @@
         "hexesExcept": "Desliza todos los hexágonos excepto {colors}",
         "circles": "Desliza todos los hexágonos con círculos {colors}",
         "circlesExcept": "Desliza todos los hexágonos sin círculos {colors}",
-        "task02_startingFrom": "Desliza {length} hexágonos en dirección {direction} empezando por el {shape} {color}",
-        "task02_endingOn": "Desliza {length} hexágonos en dirección {direction} terminando en el {shape} {color}",
+        "task02_startingFrom": "Desliza {length} hexágonos en {direction} empezando por el {shape} {color}",
+        "task02_endingOn": "Desliza {length} hexágonos en {direction} terminando en el {shape} {color}",
         "task03_orderValues": "Desliza todos los {valueType} en orden {order}"
       },
       "list": {
@@ -114,8 +114,8 @@
         "square": "cuadrado"
       },
       "directions": {
-        "clockwise": "horaria",
-        "anticlockwise": "antihoraria"
+        "clockwise": "sentido horario",
+        "anticlockwise": "sentido antihorario"
       },
       "valueTypes": {
         "numbers": "números",
@@ -159,7 +159,7 @@
         "circles": "滑動所有帶有{colors}圓形的六角形",
         "circlesExcept": "滑動所有不帶{colors}圓形的六角形",
         "task02_startingFrom": "由{color}{shape}開始，向{direction}方向滑動{length}個六角形",
-        "task02_endingOn": "以{color}{shape}結束，向{direction}方向滑動{length}個六角形",
+        "task02_endingOn": "沿{direction}方向滑動{length}個六角形，並以{color}{shape}結束",
         "task03_orderValues": "按{order}順序滑動所有{valueType}"
       },
       "list": {
