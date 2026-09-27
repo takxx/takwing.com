@@ -599,6 +599,8 @@ async function requestNextTask() {
     }
 
     currentTask = task;
+    console.log("Task JSON:", JSON.stringify(task, null, 2));
+
 
     renderTaskInstruction(task);
     renderGeneratedCells(task.cells);

@@ -1279,11 +1279,6 @@ const TASK02_ANTICLOCKWISE_RING = Object.freeze([
     6, 5, 4, 3, 2, 1
 ]);
 
-
-/* ==========================================================================
-   3.02 Main generator
-   ========================================================================== */
-
 async function generateTask02(difficulty) {
     if (![0, 1, 2].includes(difficulty)) {
         throw new RangeError(
@@ -1793,7 +1788,7 @@ function deduplicatePaths(paths) {
 
 
 /* ==========================================================================
-   3.02l Rendered-cell matching
+   3.02l Rendered-cell matching (CORRECTED: if / OR logic)
    ========================================================================== */
 
 function isTask02MatchingRenderedCell(cell, difficulty, targetColor, targetShape) {
@@ -1805,12 +1800,19 @@ function isTask02MatchingRenderedCell(cell, difficulty, targetColor, targetShape
         blue: HexTaskLoader.COLOR_HEX.blue
     };
 
+    // Difficulty 0: HEX_COLOR rule
     if (difficulty === 0) {
         return cell.shape === "hex" && cell.backgroundColor === colorMap[targetColor];
     }
 
+    // Difficulties 1–2:
+    // If the rule specifies a shape (e.g. "red square"), the anchor and matches
+    // are defined by that rule. A cell matches if:
+    //   - it has the target shape, OR
+    //   - it has the exact target character (shape + color).
+    // This is an if (OR), not a strict AND.
     return (
-        cell.shape === targetShape &&
+        cell.shape === targetShape ||
         cell.character === getShapeCharacter(targetShape, targetColor)
     );
 }
