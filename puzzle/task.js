@@ -544,15 +544,19 @@ async function generateTask01(difficulty) {
 
     await pathDataReady;
 
-    const {
-        boardSize,
-        paths: pathsByLength
-    } = PATH_DATA;
-
-    const answerLength =
-        difficulty === 0
-            ? randomChoice([2, 6, 7])
-            : randomInt(4, 6);
+	const {
+		boardSize,
+		paths
+	} = PATH_DATA;
+	
+	const answerLength = randomChoice([4, 5, 6]);
+	
+	const candidates =
+		paths[String(answerLength)];
+		const answerLength =
+			difficulty === 0
+				? randomChoice([2, 6, 7])
+				: randomInt(4, 6);
 
     const candidates =
         pathsByLength[String(answerLength)];
@@ -2123,10 +2127,15 @@ function getRenderedTask02AnswerPaths({
     color,
     shape
 }) {
-    const candidates =
-        PATH_DATA.paths[
-            String(task.data.answerLength)
-        ];
+	const {
+		boardSize,
+		paths
+	} = PATH_DATA;
+	
+	const answerLength = randomChoice([4, 5, 6]);
+	
+	const candidates =
+		paths[String(answerLength)];
 
     if (!Array.isArray(candidates)) {
         return [];
