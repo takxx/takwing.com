@@ -1256,7 +1256,7 @@ function getTask01ColorFromBackground(
 }
 
 /* ==========================================================================
-   3.02 Task 02
+   3.02 TASK 02 — FIND PATH
    ========================================================================== */
 
 const TASK02_SHAPES = Object.freeze([
@@ -1274,19 +1274,443 @@ const TASK02_ANCHOR_TYPES = Object.freeze([
     "endingOn"
 ]);
 
+/*
+ * These rings produce paths such as:
+ *
+ * anticlockwise: [2, 3, 4, 5, 6], [4, 5, 6, 1, 2], [6, 1, 2, 3, 4]
+ *
+ * The doubled values allow a path to wrap from 6 back to 1.
+ */
 const TASK02_CLOCKWISE_RING = Object.freeze([
-    1, 2, 3, 4, 5, 6,
-    1, 2, 3, 4, 5, 6
-]);
-
-const TASK02_ANTICLOCKWISE_RING = Object.freeze([
     6, 5, 4, 3, 2, 1,
     6, 5, 4, 3, 2, 1
 ]);
 
+const TASK02_ANTICLOCKWISE_RING = Object.freeze([
+    1, 2, 3, 4, 5, 6,
+    1, 2, 3, 4, 5, 6
+]);
+
 
 /* ==========================================================================
-   3.02a Task generation
+   3.02a Utility functions
+   ========================================================================== */
+
+function task02RandomChoice(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error(
+            "task02RandomChoice: items must be a non-empty array."
+        );
+    }
+
+    return items[
+        Math.floor(Math.random() * items.length)
+    ];
+}
+
+
+function task02RandomBoolean() {
+    return Math.random() < 0.5;
+}
+
+
+function task02SamePath(pathA, pathB) {
+    if (
+        !Array.isArray(pathA) ||
+        !Array.isArray(pathB) ||
+        pathA.length !== pathB.length
+    ) {
+        return false;
+    }
+
+    return pathA.every(
+        (value, index) =>
+            Number(value) === Number(pathB[index])
+    );
+}
+
+
+function task02DeduplicatePaths(paths) {
+    const seen = new Set();
+    const uniquePaths = [];
+
+    for (const path of paths) {
+        const key = path.join("-");
+
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniquePaths.push([...path]);
+        }
+    }
+
+    return uniquePaths;
+}
+
+
+/* ==========================================================================
+   3.02b Directional circular paths
+   ========================================================================== */
+
+function getTask02DirectionalPaths(
+    length,
+    direction
+) {
+    if (
+        !Number.isInteger(length) ||
+        length < 2 ||
+        length > 6
+    ) {
+        return [];
+    }
+
+    const ring =
+        direction === "clockwise"
+            ? TASK02_CLOCKWISE_RING
+            : direction === "anticlockwise"
+                ? TASK02_ANTICLOCKWISE_RING
+                : null;
+
+    if (!ring) {
+        return [];
+    }
+
+    const paths = [];
+
+    /*
+     * There are six possible starting positions around the outer ring.
+     * The doubled ring allows paths to wrap around.
+     */
+    for (let start = 0; start < 6; start += 1) {
+        const path =
+            ring.slice(start, start + length);
+
+        if (
+            path.length === length &&
+            new Set(path).size === path.length
+        ) {
+            paths.push([...path]);
+        }
+    }
+
+    return task02DeduplicatePaths(paths);
+}
+
+
+function getTask02PathDirection(path) {
+    if (!Array.isArray(path) || path.length < 2) {
+        return null;
+    }
+
+    const numericPath = path.map(Number);
+
+    const clockwise =
+        getTask02DirectionalPaths(
+            numericPath.length,
+            "clockwise"
+        );
+
+    const anticlockwise =
+        getTask02DirectionalPaths(
+            numericPath.length,
+            "anticlockwise"
+        );
+
+    if (
+        clockwise.some(candidatePath =>
+            task02SamePath(
+                candidatePath,
+                numericPath
+            )
+        )
+    ) {
+        return "clockwise";
+    }
+
+    if (
+        anticlockwise.some(candidatePath =>
+            task02SamePath(
+                candidatePath,
+                numericPath
+            )
+        )
+    ) {
+        return "anticlockwise";
+    }
+
+    return null;
+}
+
+
+/* ==========================================================================
+   3.02c Cell condition generation
+   ========================================================================== */
+
+function createTask02CellConditions({
+    boardSize,
+    originalPath,
+    anchorIndex
+}) {
+    if (boardSize !== 7) {
+        throw new Error(
+            "createTask02CellConditions: boardSize must be 7."
+        );
+    }
+
+    if (
+        !Array.isArray(originalPath) ||
+        originalPath.length === 0 ||
+        !originalPath.includes(anchorIndex)
+    ) {
+        throw new Error(
+            "createTask02CellConditions: invalid originalPath or anchorIndex."
+        );
+    }
+
+    const conditions = {};
+
+    /*
+     * The center hex always defies the condition.
+     */
+    conditions[0] = false;
+
+    for (let index = 1; index < boardSize; index += 1) {
+        /*
+         * The original path's designated anchor is always true.
+         */
+        if (index === anchorIndex) {
+            conditions[index] = true;
+            continue;
+        }
+
+        /*
+         * Every other hex is independently true or false.
+         */
+        conditions[index] = task02RandomBoolean();
+    }
+
+    return conditions;
+}
+
+
+/* ==========================================================================
+   3.02d Board generation
+   ========================================================================== */
+
+function createTask02Board({
+    boardSize,
+    difficulty,
+    targetColor,
+    targetShape,
+    cellConditions
+}) {
+    return Array.from(
+        { length: boardSize },
+        (_, index) => {
+            const followsCondition =
+                cellConditions[index] === true;
+
+            return followsCondition
+                ? createTask02TrueCell({
+                    index,
+                    difficulty,
+                    targetColor,
+                    targetShape
+                })
+                : createTask02FalseCell({
+                    index,
+                    difficulty,
+                    targetColor,
+                    targetShape
+                });
+        }
+    );
+}
+
+
+function createTask02TrueCell({
+    index,
+    difficulty,
+    targetColor,
+    targetShape
+}) {
+    if (difficulty === 0) {
+        return {
+            index,
+            backgroundColorKey: targetColor,
+            character: undefined,
+            shape: "hex",
+            followsCondition: true
+        };
+    }
+
+    return {
+        index,
+        backgroundColorKey:
+            task02RandomChoice(TASK_COLORS),
+
+        character:
+            getShapeCharacter(
+                targetShape,
+                targetColor
+            ),
+
+        shape: targetShape,
+        followsCondition: true
+    };
+}
+
+
+function createTask02FalseCell({
+    index,
+    difficulty,
+    targetColor,
+    targetShape
+}) {
+    if (difficulty === 0) {
+        const nonTargetColors =
+            TASK_COLORS.filter(
+                color => color !== targetColor
+            );
+
+        return {
+            index,
+            backgroundColorKey:
+                task02RandomChoice(nonTargetColors),
+
+            character: undefined,
+            shape: "hex",
+            followsCondition: false
+        };
+    }
+
+    const nonTargetShapes =
+        TASK02_SHAPES.filter(
+            shape => shape !== targetShape
+        );
+
+    const nonTargetColors =
+        TASK_COLORS.filter(
+            color => color !== targetColor
+        );
+
+    const falseShape =
+        task02RandomChoice(nonTargetShapes);
+
+    const falseColor =
+        task02RandomChoice(nonTargetColors);
+
+    return {
+        index,
+        backgroundColorKey:
+            task02RandomChoice(TASK_COLORS),
+
+        character:
+            getShapeCharacter(
+                falseShape,
+                falseColor
+            ),
+
+        shape: falseShape,
+        followsCondition: false
+    };
+}
+
+
+/* ==========================================================================
+   3.02e Cell conversion
+   ========================================================================== */
+
+function convertTask02BoardToCells(board) {
+    const colorMap = {
+        red: HexTaskLoader.COLOR_HEX.red,
+        green: HexTaskLoader.COLOR_HEX.green,
+        blue: HexTaskLoader.COLOR_HEX.blue
+    };
+
+    const alphabetCharacters =
+        createRandomTaskAlphabetCharacters(
+            board.length
+        );
+
+    return board.map((cell, index) => ({
+        index: cell.index,
+
+        content:
+            cell.character !== undefined
+                ? cell.character
+                : alphabetCharacters[index] ?? "",
+
+        backgroundColor:
+            colorMap[cell.backgroundColorKey] || "",
+
+        shape: cell.shape
+    }));
+}
+
+
+/* ==========================================================================
+   3.02f Answer-path generation
+   ========================================================================== */
+
+function findTask02AnswerPaths({
+    originalPath,
+    cellConditions,
+    answerLength,
+    direction,
+    anchorType
+}) {
+    if (
+        !Array.isArray(originalPath) ||
+        originalPath.length !== answerLength
+    ) {
+        throw new Error(
+            "findTask02AnswerPaths: invalid originalPath length."
+        );
+    }
+
+    const candidatePaths =
+        getTask02DirectionalPaths(
+            answerLength,
+            direction
+        );
+
+    const answerPaths = [];
+
+    /*
+     * The original path is always included.
+     *
+     * Its anchor was forced true during condition generation.
+     */
+    answerPaths.push([
+        ...originalPath
+    ]);
+
+    for (const path of candidatePaths) {
+        const pathAnchorIndex =
+            anchorType === "startingFrom"
+                ? path[0]
+                : path[path.length - 1];
+
+        /*
+         * A path is an answer when its relevant anchor is true.
+         *
+         * Other cells in the path may be true or false.
+         */
+        if (
+            cellConditions[pathAnchorIndex] !== true
+        ) {
+            continue;
+        }
+
+        answerPaths.push([...path]);
+    }
+
+    return task02DeduplicatePaths(answerPaths);
+}
+
+
+/* ==========================================================================
+   3.02g Task generation
    ========================================================================== */
 
 async function generateTask02(difficulty) {
@@ -1307,23 +1731,23 @@ async function generateTask02(difficulty) {
     }
 
     const answerLength =
-        randomChoice([4, 5, 6]);
+        task02RandomChoice([4, 5, 6]);
 
     const direction =
-        randomChoice(TASK02_DIRECTIONS);
+        task02RandomChoice(TASK02_DIRECTIONS);
 
     const anchorType =
         difficulty === 0
             ? "startingFrom"
-            : randomChoice(TASK02_ANCHOR_TYPES);
+            : task02RandomChoice(TASK02_ANCHOR_TYPES);
 
     const targetColor =
-        randomChoice(TASK_COLORS);
+        task02RandomChoice(TASK_COLORS);
 
     const targetShape =
         difficulty === 0
             ? "hex"
-            : randomChoice(TASK02_SHAPES);
+            : task02RandomChoice(TASK02_SHAPES);
 
     const mode =
         difficulty === 0
@@ -1333,7 +1757,7 @@ async function generateTask02(difficulty) {
                 : "MIXED_SHAPES";
 
     /*
-     * Select the original path.
+     * Choose the original path.
      *
      * This path is always included in answerPaths.
      */
@@ -1350,7 +1774,7 @@ async function generateTask02(difficulty) {
     }
 
     const originalPath =
-        [...randomChoice(candidatePaths)];
+        [...task02RandomChoice(candidatePaths)];
 
     const anchorIndex =
         anchorType === "startingFrom"
@@ -1358,10 +1782,11 @@ async function generateTask02(difficulty) {
             : originalPath[originalPath.length - 1];
 
     /*
-     * Create truth values for cells.
+     * Generate true/false conditions.
      *
-     * The original anchor is always true.
-     * Other cells in the original path are random true/false.
+     * - Hex 0 is always false.
+     * - The original anchor is always true.
+     * - Every other hex is random.
      */
     const cellConditions =
         createTask02CellConditions({
@@ -1371,7 +1796,7 @@ async function generateTask02(difficulty) {
         });
 
     /*
-     * Create visual board from the conditions.
+     * Generate the visible board from those conditions.
      */
     const board =
         createTask02Board({
@@ -1386,7 +1811,7 @@ async function generateTask02(difficulty) {
         convertTask02BoardToCells(board);
 
     /*
-     * Generate all valid answer paths from true anchor cells.
+     * Generate all same-length, same-direction paths whose anchor is true.
      */
     const answerPaths =
         findTask02AnswerPaths({
@@ -1405,7 +1830,7 @@ async function generateTask02(difficulty) {
 
     if (
         !answerPaths.some(path =>
-            samePath(path, originalPath)
+            task02SamePath(path, originalPath)
         )
     ) {
         throw new Error(
@@ -1460,6 +1885,9 @@ async function generateTask02(difficulty) {
         ])
     };
 
+    /*
+     * Validate against the exact conditions used to create the board.
+     */
     if (
         !validateTask02({
             task,
@@ -1483,6 +1911,112 @@ async function generateTask02(difficulty) {
 
     return task;
 }
+
+
+/* ==========================================================================
+   3.02h Validation
+   ========================================================================== */
+
+function validateTask02({
+    task,
+    originalPath,
+    cellConditions
+}) {
+    if (!task) {
+        return false;
+    }
+
+    if (
+        !task.data ||
+        !task.instruction ||
+        !Array.isArray(task.cells) ||
+        !Array.isArray(task.answerPaths)
+    ) {
+        return false;
+    }
+
+    const {
+        answerLength,
+        direction,
+        anchorType
+    } = task.data;
+
+    if (
+        !Array.isArray(originalPath) ||
+        originalPath.length !== answerLength
+    ) {
+        return false;
+    }
+
+    if (
+        getTask02PathDirection(originalPath) !==
+        direction
+    ) {
+        return false;
+    }
+
+    /*
+     * The center cell must always be false.
+     */
+    if (cellConditions[0] !== false) {
+        return false;
+    }
+
+    /*
+     * The original path must be included.
+     */
+    if (
+        !task.answerPaths.some(path =>
+            task02SamePath(path, originalPath)
+        )
+    ) {
+        return false;
+    }
+
+    /*
+     * Every answer path must:
+     * - have the requested length;
+     * - use the requested direction;
+     * - have a true anchor.
+     */
+    for (const path of task.answerPaths) {
+        if (
+            !Array.isArray(path) ||
+            path.length !== answerLength
+        ) {
+            return false;
+        }
+
+        if (
+            getTask02PathDirection(path) !==
+            direction
+        ) {
+            return false;
+        }
+
+        const pathAnchorIndex =
+            anchorType === "startingFrom"
+                ? path[0]
+                : path[path.length - 1];
+
+        if (
+            cellConditions[pathAnchorIndex] !== true
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+/* ==========================================================================
+   3.02i Registration
+   ========================================================================== */
+
+const taskGenerators = {
+    2: generateTask02
+};
 
 /* ==========================================================================
    3.03 Task 03
