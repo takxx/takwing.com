@@ -342,6 +342,33 @@ function createUniqueRandomTaskAlphabetCharacters(count) {
     return characters;
 }
 
+/* ==========================================================================
+   1d.1 Shape character helper (used by Task 02)
+   ========================================================================== */
+
+function getShapeCharacter(shape, color) {
+    if (shape === "circle") {
+        if (!TASK_CIRCLES[color]) {
+            throw new RangeError(
+                `getShapeCharacter: unknown circle color "${color}".`
+            );
+        }
+        return TASK_CIRCLES[color];
+    }
+
+    if (shape === "square") {
+        if (!TASK_SQUARES[color]) {
+            throw new RangeError(
+                `getShapeCharacter: unknown square color "${color}".`
+            );
+        }
+        return TASK_SQUARES[color];
+    }
+
+    throw new RangeError(
+        `getShapeCharacter: unknown shape "${shape}".`
+    );
+}
 
 /* ==========================================================================
    1e Reusable character matching
