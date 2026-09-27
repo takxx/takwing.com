@@ -666,7 +666,11 @@ async function generateTask01(difficulty) {
             negated,
 
             targetColors,
-            colors: targetColors
+            colors: targetColors,
+
+            tokenSources: {
+                colors: "tasks.colors"
+            }
         },
 
         cells,
@@ -1449,37 +1453,45 @@ async function generateTask02(difficulty) {
             ? "task02_endingOn"
             : "task02_startingFrom";
 
-    const task = {
-        type: "findPath",
-
-        data: {
-            difficulty,
-            answerLength,
-            mode,
-            shape,
-            anchorType,
-            direction,
-            anchorIndex
-        },
-
-        instruction: {
-            template,
-            mode,
-            negated: false,
-
-            targetColors: [color],
-            colors: [color],
-
-            color,
-            shape,
-            length: answerLength,
-            direction,
-            anchorType
-        },
-
-        cells,
-        answerPaths
-    };
+	const task = {
+		type: "findPath",
+	
+		data: {
+			difficulty,
+			answerLength,
+			mode,
+			shape,
+			anchorType,
+			direction,
+			anchorIndex
+		},
+	
+		instruction: {
+			template,
+			mode,
+			negated: false,
+	
+			targetColors: [color],
+			colors: [color],
+	
+			color,
+			shape,
+			length: answerLength,
+			direction,
+			anchorType,
+	
+			tokenSources: {
+				color: "tasks.colors",
+				colors: "tasks.colors",
+				shape: "tasks.shapes",
+				direction: "tasks.directions",
+				anchorType: "tasks.anchors"
+			}
+		},
+	
+		cells,
+		answerPaths
+	};
 
     if (!validateTask02(task, selectedClockwisePath)) {
         throw new Error(
@@ -2309,9 +2321,15 @@ function generateTask03(difficulty) {
 
         instruction: {
             template: "task03_orderValues",
-            valueType,
-            order,
-            length: answerLength
+
+                valueType,
+                    order,
+                    length: answerLength,
+
+            tokenSources: {
+                valueType: "tasks.valueTypes",
+                order: "tasks.orders"
+            }
         },
 
         cells,

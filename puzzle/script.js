@@ -877,29 +877,19 @@ function getLocalizedInstructionValue(
 ) {
     const sources = [];
 
-    if (tokenName === "shape") {
-        sources.push("tasks.shapes");
-    }
-
-    if (tokenName === "direction") {
-        sources.push("tasks.directions");
-    }
-
-    if (tokenName === "anchorType") {
-        sources.push("tasks.anchors");
-    }
-
-    if (tokenName === "valueType") {
-        sources.push("tasks.valueTypes");
-    }
-
     if (
         instruction.tokenSources &&
-        instruction.tokenSources[tokenName]
+        typeof instruction.tokenSources === "object" &&
+        Object.prototype.hasOwnProperty.call(
+            instruction.tokenSources,
+            tokenName
+        )
     ) {
-        sources.unshift(
-            instruction.tokenSources[tokenName]
-        );
+        const source = instruction.tokenSources[tokenName];
+
+        if (typeof source === "string" && source) {
+            sources.push(source);
+        }
     }
 
     for (const source of sources) {
