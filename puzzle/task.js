@@ -1251,7 +1251,6 @@ function getTask01ColorFromBackground(
     );
 }
 
-
 /* ==========================================================================
    3.02 Task 02
    ========================================================================== */
@@ -1260,6 +1259,16 @@ const TASK02_SHAPES = Object.freeze([
     "circle",
     "square"
 ]);
+
+const TASK02_DIRECTIONS = Object.freeze([
+    "clockwise",
+    "anticlockwise"
+]);
+
+
+/* ==========================================================================
+   3.02 Main generator
+   ========================================================================== */
 
 async function generateTask02(difficulty) {
     if (![0, 1, 2].includes(difficulty)) {
@@ -1289,43 +1298,54 @@ async function generateTask02(difficulty) {
     }
 
     /*
-     * Task 02 never permits paths through the centre cell.
-     * PATH_DATA paths are kept in canonical clockwise order.
+     * Task02 paths never use centre index 0.
      */
-    const pathsWithoutCenter = candidates.filter(
-        path => !path.includes(0)
+    const candidatesWithoutCenter = candidates.filter(
+        path =>
+            Array.isArray(path) &&
+            path.length === answerLength &&
+            !path.map(Number).includes(0)
     );
 
-    if (pathsWithoutCenter.length === 0) {
+    if (candidatesWithoutCenter.length === 0) {
         throw new Error(
-            "generateTask02: no paths without centre found."
+            "generateTask02: no usable paths without centre found."
         );
     }
 
-    const selectedClockwisePath = [
-        ...randomChoice(pathsWithoutCenter)
-    ];
-
-    const direction = randomChoice([
-        "clockwise",
-        "anticlockwise"
-    ]);
-
     /*
-     * This is the sequence the user must submit.
-     * It is used to identify the start/end anchor.
+     * PATH_DATA paths are assumed to be defined in clockwise order.
      *
-     * answerPaths below remain stored clockwise regardless
-     * of this instruction direction.
+     * Select one as the path used to force target cells on the board.
      */
-    const directedSelectedPath =
-        direction === "clockwise"
-            ? [...selectedClockwisePath]
-            : [...selectedClockwisePath].reverse();
+    const selectedClockwisePath = [
+        ...randomChoice(candidatesWithoutCenter)
+    ].map(Number);
 
     /*
-     * Difficulty 0: choose coloured hexes.
-     * Difficulties 1 and 2: choose coloured circles or squares.
+     * The direction is derived from the selected path itself.
+     *
+     * Example:
+     * [3, 4, 5, 6] => clockwise
+     * [6, 5, 4, 3] => anticlockwise
+     *
+     * The wrap 6 → 1 is treated as ascending clockwise.
+     */
+    const direction = getTask02PathDirection(
+        selectedClockwisePath,
+        boardSize
+    );
+
+    if (!direction) {
+        throw new Error(
+            "generateTask02: selected path has no valid direction."
+        );
+    }
+
+    /*
+     * Difficulty 0 uses coloured hexagons.
+     * Difficulty 1 uses one coloured shape type.
+     * Difficulty 2 permits circle/square distractors.
      */
     const shape =
         difficulty === 0
@@ -1335,8 +1355,8 @@ async function generateTask02(difficulty) {
     const color = randomChoice(TASK_COLORS);
 
     /*
-     * Difficulty 0 always begins at its anchor.
-     * Difficulties 1 and 2 may start from or end on the anchor.
+     * Difficulty 0 always starts at the key.
+     * Difficulties 1 and 2 may start at or end on the key.
      */
     const anchorType =
         difficulty === 0
@@ -1347,28 +1367,20 @@ async function generateTask02(difficulty) {
               ]);
 
     /*
-     * The anchor is evaluated in player-traversal order.
-     *
-     * Clockwise example:
-     * canonical path: [1, 2, 3, 4]
-     * directed path:  [1, 2, 3, 4]
-     *
-     * Anticlockwise example:
-     * canonical path: [1, 2, 3, 4]
-     * directed path:  [4, 3, 2, 1]
+     * The selected path is already directional.
      */
     const anchorIndex =
         anchorType === "startingFrom"
-            ? directedSelectedPath[0]
-            : directedSelectedPath[
-                  directedSelectedPath.length - 1
+            ? selectedClockwisePath[0]
+            : selectedClockwisePath[
+                  selectedClockwisePath.length - 1
               ];
 
     /*
-     * Membership in the answer path has no direction.
+     * All chosen-path cells are forcibly matching.
      */
     const selectedPathIndexes = new Set(
-        selectedClockwisePath.map(Number)
+        selectedClockwisePath
     );
 
     const board = createTask02Board({
@@ -1383,41 +1395,45 @@ async function generateTask02(difficulty) {
     const cells = convertTask02BoardToCells(board);
 
     /*
-     * Find every path that matches the completed board.
+     * Answer detection:
      *
-     * All stored paths are canonical clockwise paths from PATH_DATA.
-     * The selected path is guaranteed to be present because all its
-     * cells were forced to match the target condition.
+     * 1. Consider only paths with the selected answer length
+     * 2. Drop every path containing centre cell 0
+     * 3. Keep paths where every cell matches the target
+     * 4. Keep only paths that use the same direction as the
+     *    generated selected path
+     * 5. Require paths to start on a matching cell
+     *
+     * Step 5 is naturally true after Step 3, but remains explicit
+     * because it is part of the Task02 contract.
      */
     const answerPaths = findTask02AnswerPaths({
-        candidates,
+        candidates: candidatesWithoutCenter,
         board,
         difficulty,
         color,
         shape,
-        selectedClockwisePath
+        answerLength,
+        direction,
+        boardSize
     });
 
     if (answerPaths.length === 0) {
         throw new Error(
-            "generateTask02: no answer paths found for generated board."
+            "generateTask02: no answer paths found."
         );
     }
 
     /*
-     * Confirm that the path used to construct the board is present.
-     * This compares cells without assuming traversal direction.
+     * The selected path must be among the valid answers.
      */
     if (
         !answerPaths.some(path =>
-            sameUnorderedCells(
-                path,
-                selectedClockwisePath
-            )
+            samePath(path, selectedClockwisePath)
         )
     ) {
         throw new Error(
-            "generateTask02: selected path is not a valid answer."
+            "generateTask02: selected path is missing from answers."
         );
     }
 
@@ -1465,11 +1481,7 @@ async function generateTask02(difficulty) {
         answerPaths
     };
 
-    /*
-     * Validate using the path in the direction the user is asked
-     * to trace, not the canonical stored path.
-     */
-    if (!validateTask02(task, directedSelectedPath)) {
+    if (!validateTask02(task, selectedClockwisePath)) {
         throw new Error(
             "generateTask02 created an invalid task."
         );
@@ -1496,9 +1508,6 @@ function createTask02Board({
     return Array.from(
         { length: boardSize },
         (_, index) => {
-            /*
-             * The anchor must visibly match the requested item.
-             */
             if (index === anchorIndex) {
                 return createTask02AnchorCell({
                     index,
@@ -1507,9 +1516,6 @@ function createTask02Board({
                 });
             }
 
-            /*
-             * Every selected answer-path cell must visibly match.
-             */
             if (selectedPathIndexes.has(index)) {
                 return createTask02MatchingCell({
                     index,
@@ -1520,8 +1526,7 @@ function createTask02Board({
             }
 
             /*
-             * Task 02 excludes the centre. Ensure it cannot match
-             * the requested target by accident.
+             * Centre must never satisfy the requested condition.
              */
             if (index === centerIndex) {
                 return createTask02CenterCell({
@@ -1573,7 +1578,7 @@ function createTask02AnchorCell({
 
 
 /* ==========================================================================
-   3.02c Matching path cell
+   3.02c Matching cells
    ========================================================================== */
 
 function createTask02MatchingCell({
@@ -1613,42 +1618,41 @@ function createTask02CenterCell({
     targetShape
 }) {
     if (difficulty === 0) {
-        const otherColors = TASK_COLORS.filter(
-            candidateColor =>
-                candidateColor !== targetColor
+        const nonTargetColors = TASK_COLORS.filter(
+            color => color !== targetColor
         );
 
         return {
             index,
             backgroundColorKey:
-                randomChoice(otherColors),
+                randomChoice(nonTargetColors),
             character: undefined,
             shape: "hex"
         };
     }
 
     /*
-     * At difficulty 1 fillers use the selected shape, so preserve
-     * that pattern at the centre but choose a different colour.
+     * Difficulty 1 preserves the target shape but uses a different
+     * foreground colour, so the centre cannot be a target.
      *
-     * At difficulty 2 the centre can be either supported shape,
-     * but it must never be the requested colour/shape combination.
+     * Difficulty 2 may use either shape, but cannot use the exact
+     * requested colour/shape combination.
      */
     const centerShape =
         difficulty === 1
             ? targetShape
             : randomChoice(TASK02_SHAPES);
 
-    const permittedColors = TASK_COLORS.filter(
-        candidateColor =>
+    const allowedColors = TASK_COLORS.filter(
+        color =>
             !(
                 centerShape === targetShape &&
-                candidateColor === targetColor
+                color === targetColor
             )
     );
 
     const centerColor =
-        randomChoice(permittedColors);
+        randomChoice(allowedColors);
 
     return {
         index,
@@ -1762,7 +1766,9 @@ function findTask02AnswerPaths({
     difficulty,
     color,
     shape,
-    selectedClockwisePath
+    answerLength,
+    direction,
+    boardSize
 }) {
     const matchingIndexes = new Set(
         board
@@ -1777,74 +1783,146 @@ function findTask02AnswerPaths({
             .map(cell => Number(cell.index))
     );
 
-    /*
-     * Keep all answers in the canonical direction supplied by
-     * PATH_DATA: clockwise.
-     */
     const answerPaths = candidates
         .filter(path =>
             Array.isArray(path) &&
-            !path.includes(0)
+            path.length === answerLength
         )
         .filter(path =>
+            !path.map(Number).includes(0)
+        )
+        .map(path => path.map(Number))
+        .filter(path =>
             path.every(index =>
-                matchingIndexes.has(Number(index))
+                matchingIndexes.has(index)
             )
         )
-        .map(path => [...path]);
-
-    /*
-     * The generator forces all selected-path cells to match.
-     * This fallback protects against unusual path-data formatting
-     * and ensures the chosen canonical path remains an answer.
-     */
-    if (
-        !answerPaths.some(path =>
-            samePath(
+        .filter(path =>
+            getTask02PathDirection(
                 path,
-                selectedClockwisePath
-            )
+                boardSize
+            ) === direction
         )
-    ) {
-        answerPaths.push([
-            ...selectedClockwisePath
-        ]);
-    }
+        .filter(path =>
+            matchingIndexes.has(path[0])
+        );
 
     return deduplicatePaths(answerPaths);
 }
 
 
-function isTask02MatchingCell(
-    cell,
-    difficulty,
-    targetColor,
-    targetShape
+/* ==========================================================================
+   3.02i Direction helpers
+   ========================================================================== */
+
+/*
+ * Task02 outer-ring values are 1 through boardSize - 1.
+ *
+ * A clockwise step is:
+ *
+ * 1 → 2 → 3 → ... → last → 1
+ *
+ * An anticlockwise step is:
+ *
+ * 1 → last → ... → 3 → 2 → 1
+ *
+ * Index 0 is the centre and is never valid in Task02 paths.
+ */
+function getTask02PathDirection(
+    path,
+    boardSize
 ) {
-    if (!cell) {
-        return false;
+    if (
+        !Array.isArray(path) ||
+        path.length < 2
+    ) {
+        return null;
     }
 
-    if (difficulty === 0) {
-        return (
-            cell.shape === "hex" &&
-            cell.backgroundColorKey === targetColor
-        );
+    const numericPath = path.map(Number);
+
+    if (numericPath.includes(0)) {
+        return null;
     }
 
-    return (
-        cell.shape === targetShape &&
-        cell.character ===
-            getShapeCharacter(
-                targetShape,
-                targetColor
-            )
+    const outerCellCount = boardSize - 1;
+
+    const clockwise = numericPath.every(
+        (index, position) => {
+            if (position === numericPath.length - 1) {
+                return true;
+            }
+
+            const nextIndex =
+                numericPath[position + 1];
+
+            return isTask02ClockwiseStep(
+                index,
+                nextIndex,
+                outerCellCount
+            );
+        }
     );
+
+    if (clockwise) {
+        return "clockwise";
+    }
+
+    const anticlockwise = numericPath.every(
+        (index, position) => {
+            if (position === numericPath.length - 1) {
+                return true;
+            }
+
+            const nextIndex =
+                numericPath[position + 1];
+
+            return isTask02AnticlockwiseStep(
+                index,
+                nextIndex,
+                outerCellCount
+            );
+        }
+    );
+
+    if (anticlockwise) {
+        return "anticlockwise";
+    }
+
+    return null;
+}
+
+
+function isTask02ClockwiseStep(
+    fromIndex,
+    toIndex,
+    outerCellCount
+) {
+    const expectedIndex =
+        fromIndex === outerCellCount
+            ? 1
+            : fromIndex + 1;
+
+    return toIndex === expectedIndex;
+}
+
+
+function isTask02AnticlockwiseStep(
+    fromIndex,
+    toIndex,
+    outerCellCount
+) {
+    const expectedIndex =
+        fromIndex === 1
+            ? outerCellCount
+            : fromIndex - 1;
+
+    return toIndex === expectedIndex;
 }
 
 
 /* ==========================================================================
-   3.02i Path helpers
+   3.02j General path helpers
    ========================================================================== */
 
 function samePath(pathA, pathB) {
@@ -1887,7 +1965,39 @@ function deduplicatePaths(paths) {
 
 
 /* ==========================================================================
-   3.02j Validation
+   3.02k Internal board matching
+   ========================================================================== */
+
+function isTask02MatchingCell(
+    cell,
+    difficulty,
+    targetColor,
+    targetShape
+) {
+    if (!cell) {
+        return false;
+    }
+
+    if (difficulty === 0) {
+        return (
+            cell.shape === "hex" &&
+            cell.backgroundColorKey === targetColor
+        );
+    }
+
+    return (
+        cell.shape === targetShape &&
+        cell.character ===
+            getShapeCharacter(
+                targetShape,
+                targetColor
+            )
+    );
+}
+
+
+/* ==========================================================================
+   3.02l Task validation
    ========================================================================== */
 
 function validateTask02(
@@ -1920,7 +2030,7 @@ function validateTask02(
     if (
         ![0, 1, 2].includes(difficulty) ||
         !Number.isInteger(answerLength) ||
-        !["clockwise", "anticlockwise"].includes(direction) ||
+        !TASK02_DIRECTIONS.includes(direction) ||
         !["startingFrom", "endingOn"].includes(anchorType) ||
         !Array.isArray(userPath)
     ) {
@@ -1929,44 +2039,38 @@ function validateTask02(
 
     if (
         userPath.length !== answerLength ||
-        userPath.includes(0)
+        userPath.map(Number).includes(0)
     ) {
         return false;
     }
 
     /*
-     * The player submission has to equal a stored canonical path
-     * when going clockwise, or the reverse of one when going
-     * anticlockwise.
+     * A submission must exactly match one stored answer path.
+     * Reversed order is intentionally not accepted.
      */
-    let matchingAnswerPath = null;
-
-    for (const candidate of task.answerPaths) {
-        if (
-            !Array.isArray(candidate) ||
-            candidate.length !== userPath.length
-        ) {
-            continue;
-        }
-
-        const expectedUserPath =
-            direction === "clockwise"
-                ? candidate
-                : [...candidate].reverse();
-
-        if (samePath(expectedUserPath, userPath)) {
-            matchingAnswerPath = candidate;
-            break;
-        }
-    }
+    const matchingAnswerPath = task.answerPaths.find(
+        candidate =>
+            samePath(candidate, userPath)
+    );
 
     if (!matchingAnswerPath) {
         return false;
     }
 
     /*
-     * Re-create the board representation used for visual checks.
+     * The answer itself must follow the task's direction.
      */
+    const boardSize = task.cells.length;
+
+    if (
+        getTask02PathDirection(
+            matchingAnswerPath,
+            boardSize
+        ) !== direction
+    ) {
+        return false;
+    }
+
     const board = task.cells.map(cell => ({
         index: Number(cell.index),
         backgroundColor: cell.backgroundColor,
@@ -1974,9 +2078,6 @@ function validateTask02(
         shape: cell.shape
     }));
 
-    /*
-     * Every stored answer cell must match the visual target.
-     */
     for (const index of matchingAnswerPath) {
         const cell = board.find(
             candidate =>
@@ -1996,14 +2097,12 @@ function validateTask02(
         }
     }
 
-    /*
-     * Anchor placement is based on the direction in which the user
-     * is instructed to draw the path, not the canonical path order.
-     */
     const expectedAnchorIndex =
         anchorType === "startingFrom"
-            ? userPath[0]
-            : userPath[userPath.length - 1];
+            ? matchingAnswerPath[0]
+            : matchingAnswerPath[
+                  matchingAnswerPath.length - 1
+              ];
 
     if (
         Number(anchorIndex) !==
@@ -2046,7 +2145,7 @@ function validateTask02(
 
 
 /* ==========================================================================
-   3.02k Rendered-cell validation
+   3.02m Rendered-cell matching
    ========================================================================== */
 
 function isTask02MatchingRenderedCell(
