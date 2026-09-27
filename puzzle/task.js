@@ -1273,7 +1273,7 @@ async function generateTask02(difficulty) {
      * Task 02 paths cannot include the centre.
      */
     const pathsWithoutCenter = candidates.filter(
-        (path) => !path.includes(0)
+        path => !path.includes(0)
     );
 
     if (pathsWithoutCenter.length === 0) {
@@ -1295,8 +1295,7 @@ async function generateTask02(difficulty) {
     ]);
 
     /*
-     * Convert the stored clockwise path into the
-     * direction used by the instruction.
+     * Reverse the stored path for anticlockwise tasks.
      */
     const directedSelectedPath =
         direction === "clockwise"
@@ -1304,8 +1303,8 @@ async function generateTask02(difficulty) {
             : [...selectedClockwisePath].reverse();
 
     /*
-     * Difficulty 0 uses hex colours.
-     * Difficulties 1 and 2 use a circle or square anchor.
+     * Difficulty 0 uses coloured hexes.
+     * Difficulties 1 and 2 use coloured shapes.
      */
     const shape =
         difficulty === 0
@@ -1326,9 +1325,6 @@ async function generateTask02(difficulty) {
                   "endingOn"
               ]);
 
-    /*
-     * The anchor is calculated from the directed path.
-     */
     const anchorIndex =
         anchorType === "endingOn"
             ? directedSelectedPath[
@@ -1336,54 +1332,61 @@ async function generateTask02(difficulty) {
               ]
             : directedSelectedPath[0];
 
-    /*
-     * Every valid answer:
-     * - has the requested length,
-     * - excludes the centre,
-     * - shares at least one ordered pair with the
-     *   directed selected path.
-     */
-    const validAnswerPaths = candidates
-        .filter((path) => !path.includes(0))
-        .filter((path) =>
-            pathContainsOrderedPair(
-                path,
-                directedSelectedPath
-            )
-        )
-        .map((path) => [...path]);
+    const selectedPathIndexes = new Set(
+        directedSelectedPath.map(Number)
+    );
 
     /*
-     * The selected path must always be an answer.
+     * Generate the board after selecting the path.
+     *
+     * Every cell on the selected path is forced to match
+     * the task condition. Random filler cells may also match.
      */
-    if (
-        !validAnswerPaths.some((path) =>
-            samePath(path, directedSelectedPath)
-        )
-    ) {
-        validAnswerPaths.push([
-            ...directedSelectedPath
-        ]);
-    }
-
-    const answerPaths =
-        deduplicatePaths(validAnswerPaths);
-
-    if (answerPaths.length === 0) {
-        throw new Error(
-            "generateTask02: no answer paths found."
-        );
-    }
-
     const board = createTask02Board({
         boardSize,
         difficulty,
         color,
         shape,
-        anchorIndex
+        anchorIndex,
+        selectedPathIndexes
     });
 
     const cells = convertTask02BoardToCells(board);
+
+    /*
+     * Calculate answers from the completed board.
+     *
+     * This is intentionally based on the actual generated cells,
+     * not only on the selected path. Therefore, any filler path that
+     * also satisfies the task condition is included.
+     */
+    const answerPaths = findTask02AnswerPaths({
+        candidates,
+        board,
+        difficulty,
+        color,
+        shape,
+        selectedPath: directedSelectedPath
+    });
+
+    if (answerPaths.length === 0) {
+        throw new Error(
+            "generateTask02: no answer paths found for generated board."
+        );
+    }
+
+    /*
+     * The selected path must always be valid.
+     */
+    if (
+        !answerPaths.some(path =>
+            samePath(path, directedSelectedPath)
+        )
+    ) {
+        throw new Error(
+            "generateTask02: selected path is not a valid answer."
+        );
+    }
 
     const mode =
         difficulty === 0
@@ -1453,7 +1456,8 @@ function createTask02Board({
     difficulty,
     color,
     shape,
-    anchorIndex
+    anchorIndex,
+    selectedPathIndexes
 }) {
     const centerIndex = 0;
 
@@ -1461,8 +1465,7 @@ function createTask02Board({
         { length: boardSize },
         (_, index) => {
             /*
-             * The anchor always uses the requested
-             * colour and requested shape.
+             * The anchor is always the requested colour/shape.
              */
             if (index === anchorIndex) {
                 return createTask02AnchorCell({
@@ -1473,8 +1476,24 @@ function createTask02Board({
             }
 
             /*
-             * The centre must not match the requested
-             * colour and shape.
+             * Every other cell in the selected path must also
+             * satisfy the task condition.
+             */
+            if (
+                selectedPathIndexes.has(index) &&
+                index !== anchorIndex
+            ) {
+                return createTask02MatchingCell({
+                    index,
+                    difficulty,
+                    color,
+                    shape
+                });
+            }
+
+            /*
+             * The centre is excluded from Task 02 paths and must
+             * not accidentally become the requested target.
              */
             if (index === centerIndex) {
                 return createTask02CenterCell({
@@ -1486,11 +1505,12 @@ function createTask02Board({
             }
 
             /*
-             * All other cells are fillers.
+             * All remaining cells are random fillers.
              */
             return createTask02FillerCell({
                 index,
                 difficulty,
+                targetColor: color,
                 targetShape: shape
             });
         }
@@ -1528,7 +1548,43 @@ function createTask02AnchorCell({
 
 
 /* ==========================================================================
-   3.02c Centre cell
+   3.02c Matching path cell
+   ========================================================================== */
+
+function createTask02MatchingCell({
+    index,
+    difficulty,
+    color,
+    shape
+}) {
+    /*
+     * Difficulty 0 matches by hex colour.
+     */
+    if (difficulty === 0) {
+        return {
+            index,
+            backgroundColorKey: color,
+            character: undefined,
+            shape: "hex"
+        };
+    }
+
+    /*
+     * Difficulties 1 and 2 match by exact colour/shape character.
+     */
+    return {
+        index,
+        backgroundColorKey:
+            randomChoice(TASK_COLORS),
+        character:
+            getShapeCharacter(shape, color),
+        shape
+    };
+}
+
+
+/* ==========================================================================
+   3.02d Centre cell
    ========================================================================== */
 
 function createTask02CenterCell({
@@ -1538,12 +1594,12 @@ function createTask02CenterCell({
     targetShape
 }) {
     /*
-     * Difficulty 0 uses coloured hexes.
+     * Difficulty 0 uses a different hex colour.
      */
-    if (targetShape === "hex") {
+    if (difficulty === 0) {
         const otherColors =
             TASK_COLORS.filter(
-                (candidateColor) =>
+                candidateColor =>
                     candidateColor !== targetColor
             );
 
@@ -1557,39 +1613,24 @@ function createTask02CenterCell({
     }
 
     /*
-     * Difficulty 1:
-     * the centre uses the same shape family as
-     * the target, but not the target colour.
-     *
-     * Difficulty 2:
-     * the centre can use either circle or square,
-     * but never the target colour and target shape.
+     * Difficulty 1 keeps the same shape but changes colour.
      */
     const centerShape =
-        difficulty === 2
-            ? randomChoice(TASK02_SHAPES)
-            : targetShape;
+        difficulty === 1
+            ? targetShape
+            : randomChoice(TASK02_SHAPES);
 
-    let centerColor =
-        randomChoice(TASK_COLORS);
+    const availableColors =
+        TASK_COLORS.filter(
+            candidateColor =>
+                !(
+                    centerShape === targetShape &&
+                    candidateColor === targetColor
+                )
+        );
 
-    /*
-     * Prevent the exact target colour/shape
-     * combination from appearing at the centre.
-     */
-    if (
-        centerShape === targetShape &&
-        centerColor === targetColor
-    ) {
-        const otherColors =
-            TASK_COLORS.filter(
-                (candidateColor) =>
-                    candidateColor !== targetColor
-            );
-
-        centerColor =
-            randomChoice(otherColors);
-    }
+    const centerColor =
+        randomChoice(availableColors);
 
     return {
         index,
@@ -1606,18 +1647,22 @@ function createTask02CenterCell({
 
 
 /* ==========================================================================
-   3.02d Filler cells
+   3.02e Filler cells
    ========================================================================== */
 
 function createTask02FillerCell({
     index,
     difficulty,
+    targetColor,
     targetShape
 }) {
     /*
-     * Difficulty 0 has only hex-colour cells.
+     * Difficulty 0: fillers are coloured hexes.
+     *
+     * They may randomly use the target colour. If they do,
+     * paths through them will be detected as answers later.
      */
-    if (targetShape === "hex") {
+    if (difficulty === 0) {
         return {
             index,
             backgroundColorKey:
@@ -1628,12 +1673,9 @@ function createTask02FillerCell({
     }
 
     /*
-     * Difficulty 1:
-     * all fillers use the selected shape.
+     * Difficulty 1: every filler uses the selected shape.
      *
-     * Difficulty 2:
-     * each filler independently becomes either
-     * a circle or a square.
+     * Difficulty 2: fillers may be circles or squares.
      */
     const fillerShape =
         difficulty === 2
@@ -1658,7 +1700,7 @@ function createTask02FillerCell({
 
 
 /* ==========================================================================
-   3.02e Shape helpers
+   3.02f Shape helpers
    ========================================================================== */
 
 function getShapeCharacter(shape, color) {
@@ -1675,7 +1717,7 @@ function getShapeCharacter(shape, color) {
 
 
 /* ==========================================================================
-   3.02f Cell conversion
+   3.02g Cell conversion
    ========================================================================== */
 
 function convertTask02BoardToCells(board) {
@@ -1687,13 +1729,9 @@ function convertTask02BoardToCells(board) {
 
     const alphabet = "ABCDEFG".split("");
 
-    return board.map((cell) => ({
+    return board.map(cell => ({
         index: cell.index,
 
-        /*
-         * Characters are used for circle and square cells.
-         * Hex-colour cells receive the normal fallback content.
-         */
         content:
             cell.character !== undefined
                 ? cell.character
@@ -1708,86 +1746,106 @@ function convertTask02BoardToCells(board) {
 
 
 /* ==========================================================================
-   3.02g Path helpers
+   3.02h Answer detection
    ========================================================================== */
 
-function pathContainsOrderedPair(
-    candidatePath,
-    referencePath
-) {
+function findTask02AnswerPaths({
+    candidates,
+    board,
+    difficulty,
+    color,
+    shape,
+    selectedPath
+}) {
+    const matchingIndexes = new Set(
+        board
+            .filter(cell =>
+                isTask02MatchingCell(
+                    cell,
+                    difficulty,
+                    color,
+                    shape
+                )
+            )
+            .map(cell => Number(cell.index))
+    );
+
+    const answerPaths = candidates
+        .filter(path => !path.includes(0))
+        .filter(path =>
+            path.every(index =>
+                matchingIndexes.has(Number(index))
+            )
+        )
+        .map(path => [...path]);
+
+    /*
+     * This should normally already be present because the selected
+     * path was forced to match, but retain the check defensively.
+     */
     if (
-        !Array.isArray(candidatePath) ||
-        !Array.isArray(referencePath)
+        !answerPaths.some(path =>
+            samePath(path, selectedPath)
+        )
     ) {
-        return false;
+        answerPaths.push([...selectedPath]);
     }
 
-    if (
-        candidatePath.length < 2 ||
-        referencePath.length < 2
-    ) {
-        return false;
-    }
-
-    for (
-        let referenceIndex = 0;
-        referenceIndex < referencePath.length - 1;
-        referenceIndex += 1
-    ) {
-        const firstReference =
-            Number(
-                referencePath[referenceIndex]
-            );
-
-        const secondReference =
-            Number(
-                referencePath[referenceIndex + 1]
-            );
-
-        for (
-            let candidateIndex = 0;
-            candidateIndex < candidatePath.length - 1;
-            candidateIndex += 1
-        ) {
-            const firstCandidate =
-                Number(
-                    candidatePath[candidateIndex]
-                );
-
-            const secondCandidate =
-                Number(
-                    candidatePath[candidateIndex + 1]
-                );
-
-            if (
-                firstCandidate === firstReference &&
-                secondCandidate === secondReference
-            ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    return deduplicatePaths(answerPaths);
 }
 
+
+function isTask02MatchingCell(
+    cell,
+    difficulty,
+    targetColor,
+    targetShape
+) {
+    if (!cell) {
+        return false;
+    }
+
+    /*
+     * Difficulty 0 matches coloured hexes.
+     */
+    if (difficulty === 0) {
+        return (
+            cell.shape === "hex" &&
+            cell.backgroundColorKey === targetColor
+        );
+    }
+
+    /*
+     * Difficulties 1 and 2 match the exact requested
+     * colour/shape combination.
+     */
+    return (
+        cell.shape === targetShape &&
+        cell.character ===
+            getShapeCharacter(
+                targetShape,
+                targetColor
+            )
+    );
+}
+
+
+/* ==========================================================================
+   3.02i Path helpers
+   ========================================================================== */
 
 function samePath(pathA, pathB) {
     if (
         !Array.isArray(pathA) ||
-        !Array.isArray(pathB)
+        !Array.isArray(pathB) ||
+        pathA.length !== pathB.length
     ) {
-        return false;
-    }
-
-    if (pathA.length !== pathB.length) {
         return false;
     }
 
     return pathA.every(
         (cell, index) =>
-            Number(cell) ===
-            Number(pathB[index])
+            Number(cell) === Number(pathB[index])
     );
 }
 
@@ -1812,7 +1870,7 @@ function deduplicatePaths(paths) {
 
 
 /* ==========================================================================
-   3.02h Validation
+   3.02j Validation
    ========================================================================== */
 
 function validateTask02(
@@ -1822,7 +1880,29 @@ function validateTask02(
     if (
         !task ||
         !Array.isArray(task.cells) ||
-        !Array.isArray(task.answerPaths)
+        !Array.isArray(task.answerPaths) ||
+        !task.data ||
+        !task.instruction
+    ) {
+        return false;
+    }
+
+    const {
+        difficulty,
+        answerLength,
+        anchorType,
+        anchorIndex
+    } = task.data;
+
+    const {
+        color,
+        shape
+    } = task.instruction;
+
+    if (
+        ![0, 1, 2].includes(difficulty) ||
+        !Number.isInteger(answerLength) ||
+        !Array.isArray(selectedAnswerPath)
     ) {
         return false;
     }
@@ -1832,10 +1912,39 @@ function validateTask02(
     }
 
     /*
+     * Build a board representation from the generated task.
+     */
+    const board = task.cells.map(cell => ({
+        index: Number(cell.index),
+        backgroundColor:
+            cell.backgroundColor,
+        character:
+            cell.content,
+        shape:
+            cell.shape
+    }));
+
+    /*
+     * The selected path must be the requested length.
+     */
+    if (
+        selectedAnswerPath.length !== answerLength
+    ) {
+        return false;
+    }
+
+    /*
+     * The selected path cannot include the centre.
+     */
+    if (selectedAnswerPath.includes(0)) {
+        return false;
+    }
+
+    /*
      * The selected path must be one of the answers.
      */
     if (
-        !task.answerPaths.some((path) =>
+        !task.answerPaths.some(path =>
             samePath(path, selectedAnswerPath)
         )
     ) {
@@ -1843,25 +1952,62 @@ function validateTask02(
     }
 
     /*
-     * Every answer must have the requested length,
-     * exclude the centre, and share an ordered pair.
+     * Verify that every listed answer is genuinely valid
+     * against the generated board.
      */
     for (const answerPath of task.answerPaths) {
         if (
-            answerPath.length !==
-            task.data.answerLength
+            !Array.isArray(answerPath) ||
+            answerPath.length !== answerLength ||
+            answerPath.includes(0)
         ) {
             return false;
         }
 
-        if (answerPath.includes(0)) {
-            return false;
-        }
+        for (const index of answerPath) {
+            const cell =
+                board.find(
+                    candidate =>
+                        candidate.index === Number(index)
+                );
 
+            if (
+                !cell ||
+                !isTask02MatchingRenderedCell(
+                    cell,
+                    difficulty,
+                    color,
+                    shape
+                )
+            ) {
+                return false;
+            }
+        }
+    }
+
+    /*
+     * Verify that every geometrically valid matching path
+     * appears in answerPaths. This catches omitted filler answers.
+     */
+    const expectedPaths = getRenderedTask02AnswerPaths({
+        task,
+        board,
+        difficulty,
+        color,
+        shape
+    });
+
+    if (
+        expectedPaths.length !==
+        task.answerPaths.length
+    ) {
+        return false;
+    }
+
+    for (const expectedPath of expectedPaths) {
         if (
-            !pathContainsOrderedPair(
-                answerPath,
-                selectedAnswerPath
+            !task.answerPaths.some(path =>
+                samePath(path, expectedPath)
             )
         ) {
             return false;
@@ -1869,118 +2015,149 @@ function validateTask02(
     }
 
     /*
-     * Confirm that the anchor is calculated from
-     * the directed path.
+     * Confirm the anchor position.
      */
     const expectedAnchorIndex =
-        task.data.anchorType === "endingOn"
+        anchorType === "endingOn"
             ? selectedAnswerPath[
                   selectedAnswerPath.length - 1
               ]
             : selectedAnswerPath[0];
 
     if (
-        Number(task.data.anchorIndex) !==
+        Number(anchorIndex) !==
         Number(expectedAnchorIndex)
     ) {
         return false;
     }
 
-    const anchorCell = task.cells.find(
-        (cell) =>
-            Number(cell.index) ===
-            Number(task.data.anchorIndex)
-    );
+    const anchorCell =
+        board.find(
+            cell =>
+                cell.index === Number(anchorIndex)
+        );
 
-    const centerCell = task.cells.find(
-        (cell) => Number(cell.index) === 0
-    );
+    const centerCell =
+        board.find(cell => cell.index === 0);
 
     if (!anchorCell || !centerCell) {
         return false;
     }
 
     /*
-     * Difficulty 0: anchor is a colour-matching hex.
+     * The centre must not match the requested target.
      */
-    if (task.data.difficulty === 0) {
-        const expectedBackground =
-            HexTaskLoader.COLOR_HEX[
-                task.instruction.color
-            ];
-
-        if (
-            anchorCell.backgroundColor !==
-            expectedBackground
-        ) {
-            return false;
-        }
-
-        if (
-            centerCell.backgroundColor ===
-            expectedBackground
-        ) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /*
-     * Difficulty 1 and 2:
-     * anchor must be the requested colour/shape.
-     */
-    const expectedAnchorCharacter =
-        getShapeCharacter(
-            task.instruction.shape,
-            task.instruction.color
-        );
-
     if (
-        anchorCell.content !==
-        expectedAnchorCharacter
+        isTask02MatchingRenderedCell(
+            centerCell,
+            difficulty,
+            color,
+            shape
+        )
     ) {
         return false;
     }
 
     /*
-     * Difficulty 1 requires the centre to use the
-     * same shape family but a different colour.
+     * The anchor must match the requested target.
      */
-    if (task.data.difficulty === 1) {
-        const otherCharacters =
-            TASK_COLORS
-                .filter(
-                    (candidateColor) =>
-                        candidateColor !==
-                        task.instruction.color
-                )
-                .map((candidateColor) =>
-                    getShapeCharacter(
-                        task.instruction.shape,
-                        candidateColor
-                    )
-                );
+    return isTask02MatchingRenderedCell(
+        anchorCell,
+        difficulty,
+        color,
+        shape
+    );
+}
 
-        return otherCharacters.includes(
-            centerCell.content
-        );
+
+/* ==========================================================================
+   3.02k Rendered-cell validation
+   ========================================================================== */
+
+function isTask02MatchingRenderedCell(
+    cell,
+    difficulty,
+    targetColor,
+    targetShape
+) {
+    if (!cell) {
+        return false;
     }
 
     /*
-     * Difficulty 2 allows either shape in the centre,
-     * provided the exact target character is absent.
+     * Convert the target colour into the rendered CSS colour.
      */
-    const allNonTargetCharacters = [
-        ...Object.values(TASK_CIRCLES),
-        ...Object.values(TASK_SQUARES)
-    ].filter(
-        (character) =>
-            character !== expectedAnchorCharacter
-    );
+    const colorMap = {
+        red: HexTaskLoader.COLOR_HEX.red,
+        green: HexTaskLoader.COLOR_HEX.green,
+        blue: HexTaskLoader.COLOR_HEX.blue
+    };
 
-    return allNonTargetCharacters.includes(
-        centerCell.content
+    if (difficulty === 0) {
+        return (
+            cell.shape === "hex" &&
+            cell.backgroundColor ===
+                colorMap[targetColor]
+        );
+    }
+
+    return (
+        cell.shape === targetShape &&
+        cell.character ===
+            getShapeCharacter(
+                targetShape,
+                targetColor
+            )
+    );
+}
+
+
+/* ==========================================================================
+   3.02l Rendered answer-path discovery
+   ========================================================================== */
+
+function getRenderedTask02AnswerPaths({
+    task,
+    board,
+    difficulty,
+    color,
+    shape
+}) {
+    const candidates =
+        PATH_DATA.paths[
+            String(task.data.answerLength)
+        ];
+
+    if (!Array.isArray(candidates)) {
+        return [];
+    }
+
+    return deduplicatePaths(
+        candidates.filter(path => {
+            if (
+                path.includes(0) ||
+                path.length !==
+                    task.data.answerLength
+            ) {
+                return false;
+            }
+
+            return path.every(index => {
+                const cell =
+                    board.find(
+                        candidate =>
+                            candidate.index ===
+                            Number(index)
+                    );
+
+                return isTask02MatchingRenderedCell(
+                    cell,
+                    difficulty,
+                    color,
+                    shape
+                );
+            });
+        })
     );
 }
 
