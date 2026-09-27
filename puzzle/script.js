@@ -563,7 +563,7 @@ async function requestNextTask() {
         nextTask = null;
     } else {
         try {
-            task = await window.generateRandomTask(
+            task = await generateRandomTask(
                 calculateNextDifficulty()
             );
         } catch (error) {
@@ -621,7 +621,7 @@ async function preGenerateNextTask(
 
     try {
         const task =
-            await window.generateRandomTask(
+            await generateRandomTask(
                 calculateNextDifficulty()
             );
 
