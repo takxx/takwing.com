@@ -544,22 +544,22 @@ async function generateTask01(difficulty) {
 
     await pathDataReady;
 
-	const {
-		boardSize,
-		paths
-	} = PATH_DATA;
-	
-	const answerLength = randomChoice([4, 5, 6]);
-	
-	const candidates =
-		paths[String(answerLength)];
-		const answerLength =
-			difficulty === 0
-				? randomChoice([2, 6, 7])
-				: randomInt(4, 6);
+    const {
+        boardSize,
+        paths
+    } = PATH_DATA;
+
+    /*
+     * Difficulty 0 uses the specified lengths.
+     * Difficulties 1–3 use paths of length 4, 5, or 6.
+     */
+    const answerLength =
+        difficulty === 0
+            ? randomChoice([2, 6, 7])
+            : randomInt(4, 6);
 
     const candidates =
-        pathsByLength[String(answerLength)];
+        paths[String(answerLength)];
 
     if (
         !Array.isArray(candidates) ||
@@ -570,18 +570,23 @@ async function generateTask01(difficulty) {
         );
     }
 
+    /*
+     * Select one canonical path, then retain every candidate
+     * containing the same cells. This allows equivalent path
+     * representations while preventing unrelated answers.
+     */
     const baseAnswerPath = [
         ...randomChoice(candidates)
     ];
 
     const answerPaths = candidates
-        .filter((path) =>
+        .filter(path =>
             sameUnorderedCells(
                 path,
                 baseAnswerPath
             )
         )
-        .map((path) => [...path]);
+        .map(path => [...path]);
 
     if (answerPaths.length === 0) {
         throw new Error(
@@ -589,6 +594,10 @@ async function generateTask01(difficulty) {
         );
     }
 
+    /*
+     * Difficulties 0 and 1 use coloured hexes only.
+     * Difficulties 2 and 3 may use hexes, circles, or squares.
+     */
     const mode =
         difficulty < 2
             ? "HEX_COLOR"
@@ -598,6 +607,10 @@ async function generateTask01(difficulty) {
                   "SQUARE_CHARACTER"
               ]);
 
+    /*
+     * Difficulty 0 always has one target colour.
+     * Other difficulties can use one or two target colours.
+     */
     const colorCount =
         difficulty === 0
             ? 1
@@ -609,6 +622,10 @@ async function generateTask01(difficulty) {
             colorCount
         );
 
+    /*
+     * Difficulty 0 never uses negation.
+     * Difficulties 1–3 may ask for target items or all except targets.
+     */
     const negated =
         difficulty >= 1 &&
         randomBoolean();
@@ -625,9 +642,7 @@ async function generateTask01(difficulty) {
     });
 
     const cells =
-        createTaskCellsFromHexes(
-            hexes
-        );
+        createTaskCellsFromHexes(hexes);
 
     const targetCell =
         cells[baseAnswerPath[0]];
@@ -671,7 +686,6 @@ async function generateTask01(difficulty) {
 
     return task;
 }
-
 
 /* ==========================================================================
    3.01b Task 01 templates
