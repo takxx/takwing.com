@@ -1302,7 +1302,7 @@ async function generateTask02(difficulty) {
 
     if (boardSize !== 7) {
         throw new Error(
-            "generateTask02 requires a board with centre index 0 and outer indexes 1–6."
+            "generateTask02 requires a seven-cell board."
         );
     }
 
@@ -1312,39 +1312,18 @@ async function generateTask02(difficulty) {
     const direction =
         randomChoice(TASK02_DIRECTIONS);
 
-    const directionalPaths =
-        getTask02DirectionalPaths(
-            answerLength,
-            direction
-        );
-
-    if (directionalPaths.length === 0) {
-        throw new Error(
-            `generateTask02: no paths found for length ${answerLength}.`
-        );
-    }
-
-    const selectedPath = [
-        ...randomChoice(directionalPaths)
-    ];
-
-    const shape =
-        difficulty === 0
-            ? "hex"
-            : randomChoice(TASK02_SHAPES);
-
-    const color =
-        randomChoice(TASK_COLORS);
-
     const anchorType =
         difficulty === 0
             ? "startingFrom"
             : randomChoice(TASK02_ANCHOR_TYPES);
 
-    const anchorIndex =
-        anchorType === "startingFrom"
-            ? selectedPath[0]
-            : selectedPath[selectedPath.length - 1];
+    const targetColor =
+        randomChoice(TASK_COLORS);
+
+    const targetShape =
+        difficulty === 0
+            ? "hex"
+            : randomChoice(TASK02_SHAPES);
 
     const mode =
         difficulty === 0
@@ -1353,32 +1332,66 @@ async function generateTask02(difficulty) {
                 ? "SINGLE_SHAPE"
                 : "MIXED_SHAPES";
 
-    const template =
-        anchorType === "endingOn"
-            ? "task02_endingOn"
-            : "task02_startingFrom";
+    /*
+     * Select the original path.
+     *
+     * This path is always included in answerPaths.
+     */
+    const candidatePaths =
+        getTask02DirectionalPaths(
+            answerLength,
+            direction
+        );
 
-    const selectedPathIndexes =
-        new Set(selectedPath);
+    if (candidatePaths.length === 0) {
+        throw new Error(
+            "generateTask02: no candidate paths available."
+        );
+    }
 
+    const originalPath =
+        [...randomChoice(candidatePaths)];
+
+    const anchorIndex =
+        anchorType === "startingFrom"
+            ? originalPath[0]
+            : originalPath[originalPath.length - 1];
+
+    /*
+     * Create truth values for cells.
+     *
+     * The original anchor is always true.
+     * Other cells in the original path are random true/false.
+     */
+    const cellConditions =
+        createTask02CellConditions({
+            boardSize,
+            originalPath,
+            anchorIndex
+        });
+
+    /*
+     * Create visual board from the conditions.
+     */
     const board =
         createTask02Board({
             boardSize,
             difficulty,
-            color,
-            shape,
-            selectedPathIndexes
+            targetColor,
+            targetShape,
+            cellConditions
         });
 
     const cells =
         convertTask02BoardToCells(board);
 
+    /*
+     * Generate all valid answer paths from true anchor cells.
+     */
     const answerPaths =
         findTask02AnswerPaths({
-            cells,
-            difficulty,
-            color,
-            shape,
+            originalPath,
+            cellConditions,
             answerLength,
             direction,
             anchorType
@@ -1386,17 +1399,17 @@ async function generateTask02(difficulty) {
 
     if (answerPaths.length === 0) {
         throw new Error(
-            "generateTask02: no valid answer paths found."
+            "generateTask02: no answer paths were generated."
         );
     }
 
     if (
         !answerPaths.some(path =>
-            samePath(path, selectedPath)
+            samePath(path, originalPath)
         )
     ) {
         throw new Error(
-            "generateTask02: selected path is missing from answer paths."
+            "generateTask02: original path is missing from answer paths."
         );
     }
 
@@ -1407,22 +1420,26 @@ async function generateTask02(difficulty) {
             difficulty,
             answerLength,
             mode,
-            shape,
+            shape: targetShape,
             anchorType,
             direction,
             anchorIndex
         },
 
         instruction: {
-            template,
+            template:
+                anchorType === "endingOn"
+                    ? "task02_endingOn"
+                    : "task02_startingFrom",
+
             mode,
             negated: false,
 
-            targetColors: [color],
-            colors: [color],
+            targetColors: [targetColor],
+            colors: [targetColor],
 
-            color,
-            shape,
+            color: targetColor,
+            shape: targetShape,
             length: answerLength,
             direction,
             anchorType,
@@ -1443,690 +1460,28 @@ async function generateTask02(difficulty) {
         ])
     };
 
-    if (!validateTask02(task, selectedPath)) {
+    if (
+        !validateTask02({
+            task,
+            originalPath,
+            cellConditions
+        })
+    ) {
+        console.error(
+            "Task 02 validation failed:",
+            {
+                task,
+                originalPath,
+                cellConditions
+            }
+        );
+
         throw new Error(
             "generateTask02 created an invalid task."
         );
     }
 
     return task;
-}
-
-
-/* ==========================================================================
-   3.02b Directional path generation
-   ========================================================================== */
-
-function getTask02DirectionalPaths(
-    length,
-    direction
-) {
-    if (
-        !Number.isInteger(length) ||
-        length < 2 ||
-        length > 6
-    ) {
-        return [];
-    }
-
-    let ring;
-
-    if (direction === "clockwise") {
-        ring = TASK02_CLOCKWISE_RING;
-    } else if (direction === "anticlockwise") {
-        ring = TASK02_ANTICLOCKWISE_RING;
-    } else {
-        return [];
-    }
-
-    const paths = [];
-
-    for (
-        let start = 0;
-        start <= ring.length - length;
-        start += 1
-    ) {
-        paths.push(
-            ring.slice(start, start + length)
-        );
-    }
-
-    return deduplicatePaths(paths);
-}
-
-
-/* ==========================================================================
-   3.02c Board generation
-   ========================================================================== */
-
-function createTask02Board({
-    boardSize,
-    difficulty,
-    color,
-    shape,
-    selectedPathIndexes
-}) {
-    const centerIndex = 0;
-
-    return Array.from(
-        { length: boardSize },
-        (_, index) => {
-            if (index === centerIndex) {
-                return createTask02CenterCell({
-                    index,
-                    difficulty,
-                    targetColor: color,
-                    targetShape: shape
-                });
-            }
-
-            if (selectedPathIndexes.has(index)) {
-                return createTask02MatchingCell({
-                    index,
-                    difficulty,
-                    color,
-                    shape
-                });
-            }
-
-            return createTask02FillerCell({
-                index,
-                difficulty,
-                targetColor: color,
-                targetShape: shape
-            });
-        }
-    );
-}
-
-
-/* ==========================================================================
-   3.02d Matching cells
-   ========================================================================== */
-
-function createTask02MatchingCell({
-    index,
-    difficulty,
-    color,
-    shape
-}) {
-    if (difficulty === 0) {
-        return {
-            index,
-            backgroundColorKey: color,
-            character: undefined,
-            shape: "hex"
-        };
-    }
-
-    return {
-        index,
-        backgroundColorKey: randomChoice(TASK_COLORS),
-        character: getShapeCharacter(shape, color),
-        shape
-    };
-}
-
-
-/* ==========================================================================
-   3.02e Centre cell
-   ========================================================================== */
-
-function createTask02CenterCell({
-    index,
-    difficulty,
-    targetColor,
-    targetShape
-}) {
-    if (difficulty === 0) {
-        const nonTargetColors =
-            TASK_COLORS.filter(
-                color => color !== targetColor
-            );
-
-        return {
-            index,
-            backgroundColorKey:
-                randomChoice(nonTargetColors),
-            character: undefined,
-            shape: "hex"
-        };
-    }
-
-    const centerShape =
-        difficulty === 1
-            ? targetShape
-            : randomChoice(TASK02_SHAPES);
-
-    let centerColor;
-
-    do {
-        centerColor =
-            randomChoice(TASK_COLORS);
-    } while (
-        centerShape === targetShape &&
-        centerColor === targetColor
-    );
-
-    return {
-        index,
-        backgroundColorKey:
-            randomChoice(TASK_COLORS),
-        character:
-            getShapeCharacter(
-                centerShape,
-                centerColor
-            ),
-        shape: centerShape
-    };
-}
-
-
-/* ==========================================================================
-   3.02f Filler cells
-   ========================================================================== */
-
-function createTask02FillerCell({
-    index,
-    difficulty,
-    targetColor,
-    targetShape
-}) {
-    if (difficulty === 0) {
-        return {
-            index,
-            backgroundColorKey:
-                randomChoice(TASK_COLORS),
-            character: undefined,
-            shape: "hex"
-        };
-    }
-
-    const fillerShape =
-        difficulty === 1
-            ? targetShape
-            : randomChoice(TASK02_SHAPES);
-
-    const fillerColor =
-        randomChoice(TASK_COLORS);
-
-    return {
-        index,
-        backgroundColorKey:
-            randomChoice(TASK_COLORS),
-        character:
-            getShapeCharacter(
-                fillerShape,
-                fillerColor
-            ),
-        shape: fillerShape
-    };
-}
-
-
-/* ==========================================================================
-   3.02g Shape helpers
-   ========================================================================== */
-
-function getShapeCharacter(shape, color) {
-    if (shape === "circle") {
-        return TASK_CIRCLES[color];
-    }
-
-    if (shape === "square") {
-        return TASK_SQUARES[color];
-    }
-
-    return undefined;
-}
-
-
-/* ==========================================================================
-   3.02h Cell conversion (uses TASK_ALPHABETS)
-   ========================================================================== */
-
-function convertTask02BoardToCells(board) {
-    const colorMap = {
-        red: HexTaskLoader.COLOR_HEX.red,
-        green: HexTaskLoader.COLOR_HEX.green,
-        blue: HexTaskLoader.COLOR_HEX.blue
-    };
-
-    // Pre-generate 7 random alphabet characters for indexes 0–6
-    const alphabetChars =
-        createRandomTaskAlphabetCharacters(
-            board.length
-        );
-
-    return board.map((cell, index) => ({
-        index: cell.index,
-
-        content:
-            cell.character !== undefined
-                ? cell.character
-                : alphabetChars[index] ?? "",
-
-        backgroundColor:
-            colorMap[cell.backgroundColorKey] || "",
-
-        shape: cell.shape
-    }));
-}
-
-
-/* ==========================================================================
-   3.02i Answer detection
-   ========================================================================== */
-
-function findTask02AnswerPaths({
-    cells,
-    difficulty,
-    color,
-    shape,
-    answerLength,
-    direction,
-    anchorType
-}) {
-    const matchingIndexes =
-        getTask02MatchingRenderedIndexes({
-            cells,
-            difficulty,
-            color,
-            shape
-        });
-
-    const directionalPaths =
-        getTask02DirectionalPaths(
-            answerLength,
-            direction
-        );
-
-    return directionalPaths
-        .filter(path =>
-            path.every(index =>
-                matchingIndexes.has(Number(index))
-            )
-        )
-        .filter(path =>
-            matchesTask02AnchorCondition(
-                path,
-                anchorType,
-                matchingIndexes
-            )
-        )
-        .map(path => [...path]);
-}
-
-
-/*
- * Every cell in a returned path must match the rule.
- *
- * The original anchorIndex is intentionally not used here.
- * Any matching start/end cell is a valid anchor.
- */
-function matchesTask02AnchorCondition(
-    path,
-    anchorType,
-    matchingIndexes
-) {
-    if (
-        !Array.isArray(path) ||
-        path.length === 0
-    ) {
-        return false;
-    }
-
-    if (anchorType === "startingFrom") {
-        return matchingIndexes.has(
-            Number(path[0])
-        );
-    }
-
-    if (anchorType === "endingOn") {
-        return matchingIndexes.has(
-            Number(path[path.length - 1])
-        );
-    }
-
-    return false;
-}
-
-
-function getTask02MatchingRenderedIndexes({
-    cells,
-    difficulty,
-    color,
-    shape
-}) {
-    return new Set(
-        cells
-            .filter(cell =>
-                isTask02MatchingRenderedCell(
-                    {
-                        index: Number(cell.index),
-                        backgroundColor:
-                            cell.backgroundColor,
-                        character: cell.content,
-                        shape: cell.shape
-                    },
-                    difficulty,
-                    color,
-                    shape
-                )
-            )
-            .map(cell => Number(cell.index))
-    );
-}
-
-
-/* ==========================================================================
-   3.02j Direction detection
-   ========================================================================== */
-
-function getTask02PathDirection(path) {
-    if (
-        !Array.isArray(path) ||
-        path.length < 2
-    ) {
-        return null;
-    }
-
-    const numericPath =
-        path.map(Number);
-
-    if (
-        numericPath.some(index =>
-            !Number.isInteger(index) ||
-            index < 1 ||
-            index > 6
-        )
-    ) {
-        return null;
-    }
-
-    if (
-        isTask02ContiguousSegment(
-            numericPath,
-            TASK02_CLOCKWISE_RING
-        )
-    ) {
-        return "clockwise";
-    }
-
-    if (
-        isTask02ContiguousSegment(
-            numericPath,
-            TASK02_ANTICLOCKWISE_RING
-        )
-    ) {
-        return "anticlockwise";
-    }
-
-    return null;
-}
-
-
-function isTask02ContiguousSegment(
-    path,
-    ring
-) {
-    for (
-        let start = 0;
-        start <= ring.length - path.length;
-        start += 1
-    ) {
-        const candidate =
-            ring.slice(
-                start,
-                start + path.length
-            );
-
-        if (
-            candidate.every(
-                (value, index) =>
-                    value === path[index]
-            )
-        ) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-
-/* ==========================================================================
-   3.02k General path helpers
-   ========================================================================== */
-
-function samePath(pathA, pathB) {
-    if (
-        !Array.isArray(pathA) ||
-        !Array.isArray(pathB) ||
-        pathA.length !== pathB.length
-    ) {
-        return false;
-    }
-
-    return pathA.every(
-        (cell, index) =>
-            Number(cell) ===
-            Number(pathB[index])
-    );
-}
-
-
-function deduplicatePaths(paths) {
-    const seen = new Set();
-    const uniquePaths = [];
-
-    for (const path of paths) {
-        if (!Array.isArray(path)) {
-            continue;
-        }
-
-        const numericPath =
-            path.map(Number);
-
-        const key =
-            numericPath.join(",");
-
-        if (!seen.has(key)) {
-            seen.add(key);
-            uniquePaths.push(numericPath);
-        }
-    }
-
-    return uniquePaths;
-}
-
-
-/* ==========================================================================
-   3.02l Rendered-cell matching
-   ========================================================================== */
-
-function isTask02MatchingRenderedCell(
-    cell,
-    difficulty,
-    targetColor,
-    targetShape
-) {
-    if (!cell) {
-        return false;
-    }
-
-    const colorMap = {
-        red: HexTaskLoader.COLOR_HEX.red,
-        green: HexTaskLoader.COLOR_HEX.green,
-        blue: HexTaskLoader.COLOR_HEX.blue
-    };
-
-    if (difficulty === 0) {
-        return (
-            cell.shape === "hex" &&
-            cell.backgroundColor ===
-                colorMap[targetColor]
-        );
-    }
-
-    /*
-     * Task 02 difficulty 1–2 uses OR logic:
-     *
-     * - target shape matches, OR
-     * - exact target shape + target color character matches.
-     */
-    return (
-        cell.shape === targetShape ||
-        cell.character ===
-            getShapeCharacter(
-                targetShape,
-                targetColor
-            )
-    );
-}
-
-
-/* ==========================================================================
-   3.02m Task validation
-   ========================================================================== */
-
-function validateTask02(
-    task,
-    userPath
-) {
-    if (
-        !task ||
-        !Array.isArray(task.cells) ||
-        !Array.isArray(task.answerPaths) ||
-        !task.data ||
-        !task.instruction
-    ) {
-        return false;
-    }
-
-    const {
-        difficulty,
-        answerLength,
-        direction,
-        anchorType
-    } = task.data;
-
-    const {
-        color,
-        shape
-    } = task.instruction;
-
-    if (
-        ![0, 1, 2].includes(difficulty) ||
-        !Number.isInteger(answerLength) ||
-        !TASK02_DIRECTIONS.includes(direction) ||
-        !TASK02_ANCHOR_TYPES.includes(anchorType) ||
-        !Array.isArray(userPath)
-    ) {
-        return false;
-    }
-
-    const numericUserPath =
-        userPath.map(Number);
-
-    if (
-        numericUserPath.length !== answerLength ||
-        numericUserPath.some(index =>
-            !Number.isInteger(index) ||
-            index === 0
-        )
-    ) {
-        return false;
-    }
-
-    const matchingAnswerPath =
-        task.answerPaths.find(path =>
-            samePath(path, numericUserPath)
-    );
-
-    if (!matchingAnswerPath) {
-        return false;
-    }
-
-    if (
-        getTask02PathDirection(
-            matchingAnswerPath
-        ) !== direction
-    ) {
-        return false;
-    }
-
-    const renderedBoard =
-        task.cells.map(cell => ({
-            index: Number(cell.index),
-            backgroundColor:
-                cell.backgroundColor,
-            character: cell.content,
-            shape: cell.shape
-        }));
-
-    const matchingIndexes =
-        getTask02MatchingRenderedIndexes({
-            cells: task.cells,
-            difficulty,
-            color,
-            shape
-        });
-
-    if (
-        !matchesTask02AnchorCondition(
-            matchingAnswerPath,
-            anchorType,
-            matchingIndexes
-        )
-    ) {
-        return false;
-    }
-
-    // Every cell in the chosen answer path must match the rule
-    for (const index of matchingAnswerPath) {
-        const cell =
-            renderedBoard.find(
-                candidate =>
-                    candidate.index ===
-                    Number(index)
-            );
-
-        if (
-            !cell ||
-            !isTask02MatchingRenderedCell(
-                cell,
-                difficulty,
-                color,
-                shape
-            )
-        ) {
-            return false;
-        }
-    }
-
-    // Centre cell must NOT match the rule
-    const centerCell =
-        renderedBoard.find(
-            cell => cell.index === 0
-        );
-
-    if (!centerCell) {
-        return false;
-    }
-
-    if (
-        isTask02MatchingRenderedCell(
-            centerCell,
-            difficulty,
-            color,
-            shape
-        )
-    ) {
-        return false;
-    }
-
-    return true;
 }
 
 /* ==========================================================================
