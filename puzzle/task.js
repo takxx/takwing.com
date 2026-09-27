@@ -2042,7 +2042,7 @@ function validateTask02(
     const matchingAnswerPath =
         task.answerPaths.find(path =>
             samePath(path, numericUserPath)
-        );
+    );
 
     if (!matchingAnswerPath) {
         return false;
@@ -2083,6 +2083,7 @@ function validateTask02(
         return false;
     }
 
+    // Every cell in the chosen answer path must match the rule
     for (const index of matchingAnswerPath) {
         const cell =
             renderedBoard.find(
@@ -2104,6 +2105,7 @@ function validateTask02(
         }
     }
 
+    // Centre cell must NOT match the rule
     const centerCell =
         renderedBoard.find(
             cell => cell.index === 0
