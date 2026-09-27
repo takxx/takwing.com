@@ -1301,19 +1301,13 @@ const TASK02_ANCHOR_TYPES = Object.freeze([
     "endingOn"
 ]);
 
-/*
- * These rings produce paths such as:
- *
- * anticlockwise: [2, 3, 4, 5, 6], [4, 5, 6, 1, 2], [6, 1, 2, 3, 4]
- *
- * The doubled values allow a path to wrap from 6 back to 1.
- */
-const TASK02_CLOCKWISE_RING = Object.freeze([
+
+const TASK02_ANTICLOCKWISE_RING = Object.freeze([
     6, 5, 4, 3, 2, 1,
     6, 5, 4, 3, 2, 1
 ]);
 
-const TASK02_ANTICLOCKWISE_RING = Object.freeze([
+const TASK02_CLOCKWISE_RING = Object.freeze([
     1, 2, 3, 4, 5, 6,
     1, 2, 3, 4, 5, 6
 ]);
