@@ -2758,20 +2758,11 @@ function getRenderedTask03AnswerPaths(task) {
 /*
  * This registry belongs to the engine.
  *
- * It is not part of Task 01 or Task 02.
  */
 const taskGenerators = [
-    {
-        id: "task01",
-        generator: generateTask01,
-        difficulties: [0, 1, 2, 3]
-    },
-
-    {
-        id: "task02",
-        generator: generateTask02,
-        difficulties: [0, 1, 2]
-    }
+    { id: "task01", generator: generateTask01, difficulties: [0,1,2,3]},
+    { id: "task02", generator: generateTask02, difficulties: [0,1,2]},
+    { id: "task03", generator: generateTask03, difficulties: [0,1,2,3]}
 
     // Add future task generators here.
 ];

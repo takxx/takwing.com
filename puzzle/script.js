@@ -889,6 +889,10 @@ function getLocalizedInstructionValue(
         sources.push("tasks.anchors");
     }
 
+    if (tokenName === "valueType") {
+        sources.push("tasks.valueTypes");
+    }
+
     if (
         instruction.tokenSources &&
         instruction.tokenSources[tokenName]
