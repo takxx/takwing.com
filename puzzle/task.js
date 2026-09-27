@@ -2014,9 +2014,21 @@ function validateTask02({
    3.02i Registration
    ========================================================================== */
 
-const taskGenerators = {
-    2: generateTask02
-};
+/*
+ * Do not declare a new taskGenerators object here.
+ *
+ * Register into the existing one defined elsewhere in task.js:
+ *
+ *     const taskGenerators = { ... };
+ */
+if (
+    typeof window !== "undefined" &&
+    typeof window.taskGenerators === "object" &&
+    window.taskGenerators !== null
+) {
+    window.taskGenerators[2] =
+        generateTask02;
+}
 
 /* ==========================================================================
    3.03 Task 03
