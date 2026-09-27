@@ -34,7 +34,7 @@
 		"squaresExcept": "Swipe all hexes without {colors} squares",
         "task02_startingFrom": "Swipe {length} hexes in the {direction} direction starting from the {color} {shape}",
         "task02_endingOn": "Swipe {length} hexes in the {direction} direction ending on the {color} {shape}",
-        "task03_orderValues": "Swipe all the {valueType} in {order}"
+        "task03_orderValues": "Swipe all the {valueType} in {order} order"
       },
       "list": {
         "one": "{0}",
@@ -166,7 +166,7 @@
         "squaresExcept": "滑動所有不帶{colors}正方形的六角形",
         "task02_startingFrom": "由{color}{shape}開始，向{direction}方向滑動{length}個六角形",
         "task02_endingOn": "沿{direction}方向滑動{length}個六角形，並以{color}{shape}結束",
-        "task03_orderValues": "按{order}順序滑動所有{valueType}"
+        "task03_orderValues": "按{order}滑動所有{valueType}"
       },
       "list": {
         "one": "{0}",
@@ -192,8 +192,8 @@
         "alphabets": "字母"
       },
       "orders": {
-        "ascending": "升序",
-        "descending": "降序"
+        "ascending": "順序",
+        "descending": "倒序"
       }
     }
   }

@@ -2196,7 +2196,7 @@ const TASK03_VALUE_TYPES = Object.freeze([
     "alphabets"
 ]);
 
-const TASK03_DIRECTIONS = Object.freeze([
+const TASK03_ORDERS = Object.freeze([
     "ascending",
     "descending"
 ]);
@@ -2249,13 +2249,13 @@ function generateTask03(difficulty) {
     const valueType =
         getTask03ValueType(difficulty);
 
-    const direction =
-        getTask03Direction(difficulty);
+    const order =
+        getTask03Order(difficulty);
 
     const answerValues =
         createTask03AnswerValues({
             valueType,
-            direction,
+            order,
             count: answerLength
         });
 
@@ -2302,7 +2302,7 @@ function generateTask03(difficulty) {
             difficulty,
             answerLength,
             valueType,
-            direction,
+            order,
             answerPath: [...answerPath],
             answerValues: [...answerValues]
         },
@@ -2310,7 +2310,7 @@ function generateTask03(difficulty) {
         instruction: {
             template: "task03_orderValues",
             valueType,
-            direction,
+            order,
             length: answerLength
         },
 
@@ -2362,7 +2362,7 @@ function getTask03ValueType(difficulty) {
 }
 
 
-function getTask03Direction(difficulty) {
+function getTask03Order(difficulty) {
     if (
         difficulty === 0 ||
         difficulty === 1
@@ -2370,7 +2370,7 @@ function getTask03Direction(difficulty) {
         return "ascending";
     }
 
-    return randomChoice(TASK03_DIRECTIONS);
+    return randomChoice(TASK03_ORDERS);
 }
 
 
@@ -2380,7 +2380,7 @@ function getTask03Direction(difficulty) {
 
 function createTask03AnswerValues({
     valueType,
-    direction,
+    order,
     count
 }) {
     if (
@@ -2392,10 +2392,10 @@ function createTask03AnswerValues({
     }
 
     if (
-        !TASK03_DIRECTIONS.includes(direction)
+        !TASK03_ORDERS.includes(order)
     ) {
         throw new RangeError(
-            `Unknown Task03 direction: ${direction}`
+            `Unknown Task03 order: ${order}`
         );
     }
 
@@ -2430,7 +2430,7 @@ function createTask03AnswerValues({
         return a.localeCompare(b);
     });
 
-    if (direction === "descending") {
+    if (order === "descending") {
         selectedKeys.reverse();
     }
 
@@ -2464,11 +2464,11 @@ function createTask03AnswerCells({
         const character =
             valueType === "numbers"
                 ? randomChoice(
-                      getTaskDigitVariants(value)
-                  )
+                    getTaskDigitVariants(value)
+                )
                 : randomChoice(
-                      getTaskAlphabetVariants(value)
-                  );
+                    getTaskAlphabetVariants(value)
+                );
 
         return {
             index: Number(index),
@@ -2578,7 +2578,7 @@ function validateTask03(
         difficulty,
         answerLength,
         valueType,
-        direction,
+        order,
         answerPath
     } = task.data;
 
@@ -2586,7 +2586,7 @@ function validateTask03(
         ![0, 1, 2, 3].includes(difficulty) ||
         !Number.isInteger(answerLength) ||
         !TASK03_VALUE_TYPES.includes(valueType) ||
-        !TASK03_DIRECTIONS.includes(direction) ||
+        !TASK03_ORDERS.includes(order) ||
         !Array.isArray(answerPath)
     ) {
         return false;
@@ -2657,7 +2657,7 @@ function validateTask03(
     return isTask03OrderedValues(
         values,
         valueType,
-        direction
+        order
     );
 }
 
@@ -2714,7 +2714,7 @@ function getTask03CellValue(
 function isTask03OrderedValues(
     values,
     valueType,
-    direction
+    order
 ) {
     if (
         !Array.isArray(values) ||
@@ -2740,14 +2740,14 @@ function isTask03OrderedValues(
                 : current.localeCompare(previous);
 
         if (
-            direction === "ascending" &&
+            order === "ascending" &&
             comparison <= 0
         ) {
             return false;
         }
 
         if (
-            direction === "descending" &&
+            order === "descending" &&
             comparison >= 0
         ) {
             return false;
