@@ -8,7 +8,7 @@
 
 
 /* ==========================================================================
-   Shared task configuration
+   1a Shared task configuration
    ========================================================================== */
 
 const TASK_COLORS = Object.freeze([
@@ -33,7 +33,7 @@ const TASK_SQUARES = Object.freeze({
 
 
 /* ==========================================================================
-   Reusable character constants
+   1b Reusable character constants
    ========================================================================== */
 
 const TASK_DIGITS = Object.freeze({
@@ -91,7 +91,7 @@ const TASK_ALPHABET_KEYS = Object.freeze(
 
 
 /* ==========================================================================
-   Reusable random functions
+   1c Reusable random functions
    ========================================================================== */
 
 function randomChoice(array) {
@@ -199,7 +199,7 @@ function hasRepeatedValue(values) {
 
 
 /* ==========================================================================
-   Reusable character functions
+   1d Reusable character functions
    ========================================================================== */
 
 function getTaskDigitVariants(digit) {
@@ -344,7 +344,7 @@ function createUniqueRandomTaskAlphabetCharacters(count) {
 
 
 /* ==========================================================================
-   Reusable character matching
+   1e Reusable character matching
    ========================================================================== */
 
 function canonicalizeTaskCharacter(character) {
@@ -404,7 +404,7 @@ function taskCharacterInGroup(
 
 
 /* ==========================================================================
-   Reusable cell conversion
+   1f Reusable cell conversion
    ========================================================================== */
 
 function createTaskCellsFromHexes(
@@ -1256,13 +1256,12 @@ async function generateTask02(difficulty) {
 
     const {
         boardSize,
-        paths: pathsByLength
+        paths
     } = PATH_DATA;
 
     const answerLength = randomChoice([4, 5, 6]);
 
-    const candidates =
-        pathsByLength[String(answerLength)];
+    const candidates = paths[String(answerLength)];
 
     if (
         !Array.isArray(candidates) ||
@@ -1274,7 +1273,7 @@ async function generateTask02(difficulty) {
     }
 
     /*
-     * Task 02 paths cannot include the centre.
+     * Task 02 paths cannot include the centre (index 0).
      */
     const pathsWithoutCenter = candidates.filter(
         path => !path.includes(0)
@@ -1299,7 +1298,8 @@ async function generateTask02(difficulty) {
     ]);
 
     /*
-     * Reverse the stored path for anticlockwise tasks.
+     * Convert the stored clockwise path into the direction
+     * used by the instruction.
      */
     const directedSelectedPath =
         direction === "clockwise"
@@ -1363,6 +1363,10 @@ async function generateTask02(difficulty) {
      * This is intentionally based on the actual generated cells,
      * not only on the selected path. Therefore, any filler path that
      * also satisfies the task condition is included.
+     *
+     * Additional constraint:
+     * Every valid answer path must share at least one ordered pair
+     * (adjacent step) with the directedSelectedPath.
      */
     const answerPaths = findTask02AnswerPaths({
         candidates,
@@ -1774,7 +1778,7 @@ function findTask02AnswerPaths({
             .map(cell => Number(cell.index))
     );
 
-    const answerPaths = candidates
+    const baseAnswerPaths = candidates
         .filter(path => !path.includes(0))
         .filter(path =>
             path.every(index =>
@@ -1784,18 +1788,32 @@ function findTask02AnswerPaths({
         .map(path => [...path]);
 
     /*
-     * This should normally already be present because the selected
-     * path was forced to match, but retain the check defensively.
+     * Enforce the constraint:
+     * Every valid answer path must share at least one ordered pair
+     * (adjacent step) with the originally generated directed path.
+     */
+    const filteredAnswerPaths = baseAnswerPaths.filter(path =>
+        pathContainsOrderedPair(path, selectedPath)
+    );
+
+    let answerPaths = deduplicatePaths(filteredAnswerPaths);
+
+    /*
+     * The selected path must be present. If it was filtered out
+     * somehow, re‑add it (this should not happen in normal operation).
      */
     if (
         !answerPaths.some(path =>
             samePath(path, selectedPath)
         )
     ) {
-        answerPaths.push([...selectedPath]);
+        answerPaths = deduplicatePaths([
+            ...answerPaths,
+            [...selectedPath]
+        ]);
     }
 
-    return deduplicatePaths(answerPaths);
+    return answerPaths;
 }
 
 
@@ -1854,6 +1872,48 @@ function samePath(pathA, pathB) {
 }
 
 
+function pathContainsOrderedPair(
+    candidatePath,
+    referencePath
+) {
+    if (
+        !Array.isArray(candidatePath) ||
+        !Array.isArray(referencePath) ||
+        candidatePath.length < 2 ||
+        referencePath.length < 2
+    ) {
+        return false;
+    }
+
+    for (
+        let refIndex = 0;
+        refIndex < referencePath.length - 1;
+        refIndex += 1
+    ) {
+        const firstRef = Number(referencePath[refIndex]);
+        const secondRef = Number(referencePath[refIndex + 1]);
+
+        for (
+            let candIndex = 0;
+            candIndex < candidatePath.length - 1;
+            candIndex += 1
+        ) {
+            const firstCand = Number(candidatePath[candIndex]);
+            const secondCand = Number(candidatePath[candIndex + 1]);
+
+            if (
+                firstCand === firstRef &&
+                secondCand === secondRef
+            ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
 function deduplicatePaths(paths) {
     const seen = new Set();
     const uniquePaths = [];
@@ -1879,7 +1939,7 @@ function deduplicatePaths(paths) {
 
 function validateTask02(
     task,
-    selectedAnswerPath
+    userPath
 ) {
     if (
         !task ||
@@ -1894,6 +1954,7 @@ function validateTask02(
     const {
         difficulty,
         answerLength,
+        direction,
         anchorType,
         anchorIndex
     } = task.data;
@@ -1906,12 +1967,18 @@ function validateTask02(
     if (
         ![0, 1, 2].includes(difficulty) ||
         !Number.isInteger(answerLength) ||
-        !Array.isArray(selectedAnswerPath)
+        !Array.isArray(userPath)
     ) {
         return false;
     }
 
-    if (task.answerPaths.length === 0) {
+    /*
+     * Basic length and centre checks.
+     */
+    if (
+        userPath.length !== answerLength ||
+        userPath.includes(0)
+    ) {
         return false;
     }
 
@@ -1920,98 +1987,84 @@ function validateTask02(
      */
     const board = task.cells.map(cell => ({
         index: Number(cell.index),
-        backgroundColor:
-            cell.backgroundColor,
-        character:
-            cell.content,
-        shape:
-            cell.shape
+        backgroundColor: cell.backgroundColor,
+        character: cell.content,
+        shape: cell.shape
     }));
 
     /*
-     * The selected path must be the requested length.
+     * 1) The user path must be geometrically identical
+     *    to one of the stored answerPaths (ignoring direction).
+     *
+     * 2) Its order must match the required direction.
+     *
+     * PATH_DATA paths are clockwise. answerPaths are stored
+     * in that same clockwise orientation.
+     *
+     * Therefore:
+     * - If direction === "clockwise", userPath must match
+     *   an answerPath in the same order.
+     * - If direction === "anticlockwise", userPath must match
+     *   the reverse of an answerPath.
      */
-    if (
-        selectedAnswerPath.length !== answerLength
-    ) {
-        return false;
-    }
+    let matchingAnswerPath = null;
 
-    /*
-     * The selected path cannot include the centre.
-     */
-    if (selectedAnswerPath.includes(0)) {
-        return false;
-    }
-
-    /*
-     * The selected path must be one of the answers.
-     */
-    if (
-        !task.answerPaths.some(path =>
-            samePath(path, selectedAnswerPath)
-        )
-    ) {
-        return false;
-    }
-
-    /*
-     * Verify that every listed answer is genuinely valid
-     * against the generated board.
-     */
-    for (const answerPath of task.answerPaths) {
-        if (
-            !Array.isArray(answerPath) ||
-            answerPath.length !== answerLength ||
-            answerPath.includes(0)
-        ) {
-            return false;
+    for (const candidate of task.answerPaths) {
+        if (!Array.isArray(candidate)) {
+            continue;
         }
 
-        for (const index of answerPath) {
-            const cell =
-                board.find(
-                    candidate =>
-                        candidate.index === Number(index)
-                );
-
-            if (
-                !cell ||
-                !isTask02MatchingRenderedCell(
-                    cell,
-                    difficulty,
-                    color,
-                    shape
-                )
-            ) {
-                return false;
-            }
+        if (candidate.length !== userPath.length) {
+            continue;
         }
-    }
 
-    /*
-     * Verify that every geometrically valid matching path
-     * appears in answerPaths. This catches omitted filler answers.
-     */
-    const expectedPaths = getRenderedTask02AnswerPaths({
-        task,
-        board,
-        difficulty,
-        color,
-        shape
-    });
+        const forwardMatch = candidate.every(
+            (idx, i) => Number(idx) === Number(userPath[i])
+        );
 
-    if (
-        expectedPaths.length !==
-        task.answerPaths.length
-    ) {
+        const reversedCandidate = [...candidate].reverse();
+        const reverseMatch = reversedCandidate.every(
+            (idx, i) => Number(idx) === Number(userPath[i])
+        );
+
+        if (!forwardMatch && !reverseMatch) {
+            continue;
+        }
+
+        if (direction === "clockwise" && forwardMatch) {
+            matchingAnswerPath = candidate;
+            break;
+        }
+
+        if (direction === "anticlockwise" && reverseMatch) {
+            matchingAnswerPath = candidate;
+            break;
+        }
+
+        // Geometry matches but direction is wrong.
         return false;
     }
 
-    for (const expectedPath of expectedPaths) {
+    if (!matchingAnswerPath) {
+        return false;
+    }
+
+    /*
+     * Verify that every cell in the chosen path actually matches
+     * the visual condition (colour/shape) on the rendered board.
+     */
+    for (const index of matchingAnswerPath) {
+        const cell = board.find(
+            c => c.index === Number(index)
+        );
+
         if (
-            !task.answerPaths.some(path =>
-                samePath(path, expectedPath)
+            !cell ||
+            !isTask02MatchingRenderedCell(
+                cell,
+                difficulty,
+                color,
+                shape
             )
         ) {
             return false;
@@ -2019,37 +2072,31 @@ function validateTask02(
     }
 
     /*
-     * Confirm the anchor position.
+     * Anchor position check.
      */
     const expectedAnchorIndex =
         anchorType === "endingOn"
-            ? selectedAnswerPath[
-                  selectedAnswerPath.length - 1
-              ]
-            : selectedAnswerPath[0];
+            ? matchingAnswerPath[matchingAnswerPath.length - 1]
+            : matchingAnswerPath[0];
 
     if (
-        Number(anchorIndex) !==
-        Number(expectedAnchorIndex)
+        Number(anchorIndex) !== Number(expectedAnchorIndex)
     ) {
         return false;
     }
 
-    const anchorCell =
-        board.find(
-            cell =>
-                cell.index === Number(anchorIndex)
-        );
+    const anchorCell = board.find(
+        c => c.index === Number(anchorIndex)
+    );
 
-    const centerCell =
-        board.find(cell => cell.index === 0);
+    const centerCell = board.find(c => c.index === 0);
 
     if (!anchorCell || !centerCell) {
         return false;
     }
 
     /*
-     * The centre must not match the requested target.
+     * Centre must not match the target.
      */
     if (
         isTask02MatchingRenderedCell(
@@ -2063,7 +2110,7 @@ function validateTask02(
     }
 
     /*
-     * The anchor must match the requested target.
+     * Anchor must match the target.
      */
     return isTask02MatchingRenderedCell(
         anchorCell,
@@ -2088,9 +2135,6 @@ function isTask02MatchingRenderedCell(
         return false;
     }
 
-    /*
-     * Convert the target colour into the rendered CSS colour.
-     */
     const colorMap = {
         red: HexTaskLoader.COLOR_HEX.red,
         green: HexTaskLoader.COLOR_HEX.green,
@@ -2115,59 +2159,595 @@ function isTask02MatchingRenderedCell(
     );
 }
 
-
 /* ==========================================================================
-   3.02l Rendered answer-path discovery
+   3.03 Task 03
    ========================================================================== */
 
-function getRenderedTask02AnswerPaths({
-    task,
-    board,
-    difficulty,
-    color,
-    shape
-}) {
-	const {
-		boardSize,
-		paths
-	} = PATH_DATA;
-	
-	const answerLength = randomChoice([4, 5, 6]);
-	
-	const candidates =
-		paths[String(answerLength)];
 
-    if (!Array.isArray(candidates)) {
+/* ==========================================================================
+   3.03a Configuration
+   ========================================================================== */
+
+const TASK03_VALUE_TYPES = Object.freeze([
+    "numbers",
+    "alphabets"
+]);
+
+const TASK03_DIRECTIONS = Object.freeze([
+    "ascending",
+    "descending"
+]);
+
+
+/* ==========================================================================
+   3.03b Task generation
+   ========================================================================== */
+
+function generateTask03(difficulty) {
+    if (![0, 1, 2, 3].includes(difficulty)) {
+        throw new RangeError(
+            "generateTask03: difficulty must be 0, 1, 2, or 3."
+        );
+    }
+
+    const {
+        boardSize,
+        paths
+    } = PATH_DATA;
+
+    const answerLength =
+        getTask03AnswerLength(difficulty);
+
+    const pathCandidates =
+        paths[String(answerLength)];
+
+    if (
+        !Array.isArray(pathCandidates) ||
+        pathCandidates.length === 0
+    ) {
+        throw new Error(
+            `generateTask03: no paths found for length ${answerLength}.`
+        );
+    }
+
+    const answerPath = [
+        ...randomChoice(pathCandidates)
+    ];
+
+    if (
+        new Set(answerPath).size !==
+        answerPath.length
+    ) {
+        throw new Error(
+            "generateTask03: answer path contains repeated cells."
+        );
+    }
+
+    const valueType =
+        getTask03ValueType(difficulty);
+
+    const direction =
+        getTask03Direction(difficulty);
+
+    const answerValues =
+        createTask03AnswerValues({
+            valueType,
+            direction,
+            count: answerLength
+        });
+
+    const answerCells =
+        createTask03AnswerCells({
+            answerPath,
+            answerValues,
+            valueType
+        });
+
+    const answerCellMap =
+        new Map(
+            answerCells.map(cell => [
+                Number(cell.index),
+                cell
+            ])
+        );
+
+    const hexes =
+        Array.from(
+            { length: boardSize },
+            (_, index) => {
+                if (answerCellMap.has(index)) {
+                    return answerCellMap.get(index);
+                }
+
+                return createTask03FillerHex({
+                    difficulty,
+                    answerValueType: valueType
+                });
+            }
+        ).map((hex, index) => ({
+            ...hex,
+            index
+        }));
+
+    const cells =
+        createTaskCellsFromHexes(hexes);
+
+    const task = {
+        type: "task03",
+
+        data: {
+            difficulty,
+            answerLength,
+            valueType,
+            direction,
+            answerPath: [...answerPath],
+            answerValues: [...answerValues]
+        },
+
+        instruction: {
+            template: "task03_orderValues",
+            valueType,
+            direction,
+            length: answerLength
+        },
+
+        cells,
+
+        answerPaths: [
+            [...answerPath]
+        ]
+    };
+
+    if (
+        !validateTask03(
+            task,
+            answerPath
+        )
+    ) {
+        throw new Error(
+            "generateTask03: generated task failed validation."
+        );
+    }
+
+    return task;
+}
+
+
+/* ==========================================================================
+   3.03c Difficulty rules
+   ========================================================================== */
+
+function getTask03AnswerLength(difficulty) {
+    if (difficulty === 0) {
+        return 3;
+    }
+
+    if (difficulty === 1) {
+        return randomChoice([4, 5]);
+    }
+
+    return randomChoice([6, 7]);
+}
+
+
+function getTask03ValueType(difficulty) {
+    if (difficulty === 0) {
+        return "numbers";
+    }
+
+    return randomChoice(TASK03_VALUE_TYPES);
+}
+
+
+function getTask03Direction(difficulty) {
+    if (
+        difficulty === 0 ||
+        difficulty === 1
+    ) {
+        return "ascending";
+    }
+
+    return randomChoice(TASK03_DIRECTIONS);
+}
+
+
+/* ==========================================================================
+   3.03d Answer-value generation
+   ========================================================================== */
+
+function createTask03AnswerValues({
+    valueType,
+    direction,
+    count
+}) {
+    if (
+        !TASK03_VALUE_TYPES.includes(valueType)
+    ) {
+        throw new RangeError(
+            `Unknown Task03 value type: ${valueType}`
+        );
+    }
+
+    if (
+        !TASK03_DIRECTIONS.includes(direction)
+    ) {
+        throw new RangeError(
+            `Unknown Task03 direction: ${direction}`
+        );
+    }
+
+    if (
+        !Number.isInteger(count) ||
+        count < 1
+    ) {
+        throw new RangeError(
+            "createTask03AnswerValues: invalid count."
+        );
+    }
+
+    const keys =
+        valueType === "numbers"
+            ? TASK_DIGIT_KEYS
+            : TASK_ALPHABET_KEYS;
+
+    if (count > keys.length) {
+        throw new RangeError(
+            "createTask03AnswerValues: not enough unique values."
+        );
+    }
+
+    const selectedKeys =
+        randomUniqueItems(keys, count);
+
+    selectedKeys.sort((a, b) => {
+        if (valueType === "numbers") {
+            return Number(a) - Number(b);
+        }
+
+        return a.localeCompare(b);
+    });
+
+    if (direction === "descending") {
+        selectedKeys.reverse();
+    }
+
+    return selectedKeys;
+}
+
+
+/* ==========================================================================
+   3.03e Answer-cell generation
+   ========================================================================== */
+
+function createTask03AnswerCells({
+    answerPath,
+    answerValues,
+    valueType
+}) {
+    if (
+        !Array.isArray(answerPath) ||
+        !Array.isArray(answerValues) ||
+        answerPath.length !== answerValues.length
+    ) {
+        throw new Error(
+            "createTask03AnswerCells: path/value length mismatch."
+        );
+    }
+
+    return answerPath.map((index, position) => {
+        const value =
+            answerValues[position];
+
+        const character =
+            valueType === "numbers"
+                ? randomChoice(
+                      getTaskDigitVariants(value)
+                  )
+                : randomChoice(
+                      getTaskAlphabetVariants(value)
+                  );
+
+        return {
+            index: Number(index),
+            character,
+            backgroundColorKey:
+                randomChoice(TASK_COLORS)
+        };
+    });
+}
+
+
+/* ==========================================================================
+   3.03f Filler generation
+   ========================================================================== */
+
+function createTask03FillerHex({
+    difficulty,
+    answerValueType
+}) {
+    const fillerMode =
+        getTask03FillerMode({
+            difficulty,
+            answerValueType
+        });
+
+    if (fillerMode === "shapes") {
+        const shape =
+            randomChoice(["circle", "square"]);
+
+        const color =
+            randomChoice(TASK_COLORS);
+
+        return {
+            character:
+                shape === "circle"
+                    ? TASK_CIRCLES[color]
+                    : TASK_SQUARES[color],
+
+            backgroundColorKey:
+                color,
+
+            shape
+        };
+    }
+
+    const fillerValueType =
+        fillerMode === "numbers"
+            ? "numbers"
+            : "alphabets";
+
+    const character =
+        fillerValueType === "numbers"
+            ? getRandomTaskNumberCharacter()
+            : getRandomTaskAlphabetCharacter();
+
+    return {
+        character,
+        backgroundColorKey:
+            randomChoice(TASK_COLORS)
+    };
+}
+
+
+function getTask03FillerMode({
+    difficulty,
+    answerValueType
+}) {
+    if (difficulty === 0) {
+        return "shapes";
+    }
+
+    if (difficulty === 1) {
+        return randomChoice([
+            "shapes",
+            answerValueType === "numbers"
+                ? "alphabets"
+                : "numbers"
+        ]);
+    }
+
+    return answerValueType === "numbers"
+        ? "alphabets"
+        : "numbers";
+}
+
+
+/* ==========================================================================
+   3.03g Validation
+   ========================================================================== */
+
+function validateTask03(
+    task,
+    userPath
+) {
+    if (
+        !task ||
+        !task.data ||
+        !task.instruction ||
+        !Array.isArray(task.cells) ||
+        !Array.isArray(task.answerPaths) ||
+        !Array.isArray(userPath)
+    ) {
+        return false;
+    }
+
+    const {
+        difficulty,
+        answerLength,
+        valueType,
+        direction,
+        answerPath
+    } = task.data;
+
+    if (
+        ![0, 1, 2, 3].includes(difficulty) ||
+        !Number.isInteger(answerLength) ||
+        !TASK03_VALUE_TYPES.includes(valueType) ||
+        !TASK03_DIRECTIONS.includes(direction) ||
+        !Array.isArray(answerPath)
+    ) {
+        return false;
+    }
+
+    if (
+        userPath.length !== answerLength ||
+        answerPath.length !== answerLength
+    ) {
+        return false;
+    }
+
+    /*
+     * Task03 accepts only the originally selected path,
+     * in the originally selected order.
+     */
+    if (!sameOrderedTask03Path(userPath, answerPath)) {
+        return false;
+    }
+
+    /*
+     * The task must expose only one valid answer path.
+     */
+    if (task.answerPaths.length !== 1) {
+        return false;
+    }
+
+    if (
+        !sameOrderedTask03Path(
+            task.answerPaths[0],
+            answerPath
+        )
+    ) {
+        return false;
+    }
+
+    const values = [];
+
+    for (const index of userPath) {
+        const cell =
+            task.cells.find(
+                candidate =>
+                    Number(candidate.index) ===
+                    Number(index)
+            );
+
+        if (!cell) {
+            return false;
+        }
+
+        const canonicalValue =
+            getTask03CellValue(
+                cell.content,
+                valueType
+            );
+
+        if (canonicalValue === undefined) {
+            return false;
+        }
+
+        values.push(canonicalValue);
+    }
+
+    if (hasRepeatedValue(values)) {
+        return false;
+    }
+
+    return isTask03OrderedValues(
+        values,
+        valueType,
+        direction
+    );
+}
+
+
+function sameOrderedTask03Path(pathA, pathB) {
+    if (
+        !Array.isArray(pathA) ||
+        !Array.isArray(pathB) ||
+        pathA.length !== pathB.length
+    ) {
+        return false;
+    }
+
+    return pathA.every(
+        (value, index) =>
+            Number(value) === Number(pathB[index])
+    );
+}
+
+
+/* ==========================================================================
+   3.03h Value extraction and ordering
+   ========================================================================== */
+
+function getTask03CellValue(
+    character,
+    valueType
+) {
+    const canonical =
+        canonicalizeTaskCharacter(character);
+
+    if (canonical === undefined) {
+        return undefined;
+    }
+
+    if (
+        valueType === "numbers" &&
+        TASK_DIGIT_KEYS.includes(canonical)
+    ) {
+        return canonical;
+    }
+
+    if (
+        valueType === "alphabets" &&
+        TASK_ALPHABET_KEYS.includes(canonical)
+    ) {
+        return canonical;
+    }
+
+    return undefined;
+}
+
+
+function isTask03OrderedValues(
+    values,
+    valueType,
+    direction
+) {
+    if (
+        !Array.isArray(values) ||
+        values.length < 2
+    ) {
+        return true;
+    }
+
+    for (
+        let index = 1;
+        index < values.length;
+        index += 1
+    ) {
+        const previous =
+            values[index - 1];
+
+        const current =
+            values[index];
+
+        const comparison =
+            valueType === "numbers"
+                ? Number(current) - Number(previous)
+                : current.localeCompare(previous);
+
+        if (
+            direction === "ascending" &&
+            comparison <= 0
+        ) {
+            return false;
+        }
+
+        if (
+            direction === "descending" &&
+            comparison >= 0
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+/* ==========================================================================
+   3.03i Rendering helpers
+   ========================================================================== */
+
+function getRenderedTask03AnswerPaths(task) {
+    if (
+        !task ||
+        !Array.isArray(task.answerPaths)
+    ) {
         return [];
     }
 
-    return deduplicatePaths(
-        candidates.filter(path => {
-            if (
-                path.includes(0) ||
-                path.length !==
-                    task.data.answerLength
-            ) {
-                return false;
-            }
-
-            return path.every(index => {
-                const cell =
-                    board.find(
-                        candidate =>
-                            candidate.index ===
-                            Number(index)
-                    );
-
-                return isTask02MatchingRenderedCell(
-                    cell,
-                    difficulty,
-                    color,
-                    shape
-                );
-            });
-        })
-    );
+    return task.answerPaths.map(path => [...path]);
 }
 
 /* ==========================================================================
@@ -2327,6 +2907,7 @@ async function generateRandomTask(difficulty) {
 
     return task;
 }
+
 
 
 /* ==========================================================================
