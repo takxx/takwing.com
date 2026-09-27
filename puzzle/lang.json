@@ -31,7 +31,8 @@
         "circles": "Swipe all hexes with {colors} circles",
         "circlesExcept": "Swipe all hexes without {colors} circles",
         "task02_startingFrom": "Swipe {length} hexes in the {direction} direction starting from the {color} {shape}",
-        "task02_endingOn": "Swipe {length} hexes in the {direction} direction ending on the {color} {shape}"
+        "task02_endingOn": "Swipe {length} hexes in the {direction} direction ending on the {color} {shape}",
+        "task03_orderValues": "Swipe all the {valueType} in {order}"
       },
       "list": {
         "one": "{0}",
@@ -43,14 +44,22 @@
         "green": "green",
         "blue": "blue"
       },
-"shapes": {
-  "hex": "hex",
-  "circle": "circle",
-  "square": "square"
-},
+      "shapes": {
+        "hex": "hex",
+        "circle": "circle",
+        "square": "square"
+      },
       "directions": {
         "clockwise": "clockwise",
         "anticlockwise": "anticlockwise"
+      },
+      "valueTypes": {
+        "numbers": "numbers",
+        "alphabets": "letters"
+      },
+      "orders": {
+        "ascending": "ascending",
+        "descending": "descending"
       }
     }
   },
@@ -86,7 +95,8 @@
         "circles": "Desliza todos los hexágonos con círculos {colors}",
         "circlesExcept": "Desliza todos los hexágonos sin círculos {colors}",
         "task02_startingFrom": "Desliza {length} hexágonos en dirección {direction} empezando por el {shape} {color}",
-        "task02_endingOn": "Desliza {length} hexágonos en dirección {direction} terminando en el {shape} {color}"
+        "task02_endingOn": "Desliza {length} hexágonos en dirección {direction} terminando en el {shape} {color}",
+        "task03_orderValues": "Desliza todos los {valueType} en orden {order}"
       },
       "list": {
         "one": "{0}",
@@ -98,14 +108,22 @@
         "green": "verde",
         "blue": "azul"
       },
-"shapes": {
-  "hex": "hexágono",
-  "circle": "círculo",
-  "square": "cuadrado"
-},
+      "shapes": {
+        "hex": "hexágono",
+        "circle": "círculo",
+        "square": "cuadrado"
+      },
       "directions": {
         "clockwise": "horaria",
         "anticlockwise": "antihoraria"
+      },
+      "valueTypes": {
+        "numbers": "números",
+        "alphabets": "letras"
+      },
+      "orders": {
+        "ascending": "ascendente",
+        "descending": "descendente"
       }
     }
   },
@@ -141,7 +159,8 @@
         "circles": "滑動所有帶有{colors}圓形的六角形",
         "circlesExcept": "滑動所有不帶{colors}圓形的六角形",
         "task02_startingFrom": "由{color}{shape}開始，向{direction}方向滑動{length}個六角形",
-        "task02_endingOn": "以{color}{shape}結束，向{direction}方向滑動{length}個六角形"
+        "task02_endingOn": "以{color}{shape}結束，向{direction}方向滑動{length}個六角形",
+        "task03_orderValues": "按{order}順序滑動所有{valueType}"
       },
       "list": {
         "one": "{0}",
@@ -153,14 +172,22 @@
         "green": "綠色",
         "blue": "藍色"
       },
-"shapes": {
-  "hex": "六角形",
-  "circle": "圓形",
-  "square": "正方形"
-},
+      "shapes": {
+        "hex": "六角形",
+        "circle": "圓形",
+        "square": "正方形"
+      },
       "directions": {
         "clockwise": "順時針",
         "anticlockwise": "逆時針"
+      },
+      "valueTypes": {
+        "numbers": "數字",
+        "alphabets": "字母"
+      },
+      "orders": {
+        "ascending": "升序",
+        "descending": "降序"
       }
     }
   }
