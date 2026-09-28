@@ -1,4 +1,4 @@
-// task.js
+// task.js v280926a
 "use strict";
 
 
@@ -2786,6 +2786,12 @@ function generateTask04(difficulty) {
         );
     }
 
+    /*
+     * Choose a random colour key for the instruction word.
+     */
+    const instructionColorKey =
+        randomChoice(TASK_COLORS);
+
     const task = {
         type: "task04",
 
@@ -2800,6 +2806,9 @@ function generateTask04(difficulty) {
             template: "task04_swipeWord",
             target,
             length: answerLength,
+
+            // Colour key for the instruction word: "red" | "green" | "blue"
+            color: instructionColorKey,
 
             // No tokenSources for word list; it's pure game data.
             tokenSources: {}
@@ -3152,15 +3161,6 @@ function validateTask04(task) {
     }
 
     if (
-        !sameOrderedTask04Path(
-            task.answerPaths[0],
-            answerPath
-        )
-    ) {
-        return false;
-    }
-
-    if (
         task.answerPaths.length < 1
     ) {
         return false;
@@ -3214,6 +3214,16 @@ function validateTask04(task) {
         ) {
             return false;
         }
+    }
+
+    /*
+     * Validate instruction colour key.
+     */
+    if (
+        !task.instruction.color ||
+        !TASK_COLORS.includes(task.instruction.color)
+    ) {
+        return false;
     }
 
     return true;
