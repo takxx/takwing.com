@@ -3282,7 +3282,7 @@ function getRenderedTask04AnswerPaths(task) {
 }
 
 /* ==========================================================================
-   3.05. Task 05
+   3.05 Task 05 — Swipe Line from A to B
    ========================================================================== */
 
 
@@ -3296,14 +3296,18 @@ const TASK05_START_CASES = Object.freeze([
     "colorShapeColorShape"
 ]);
 
+
 function getTask05Length(difficulty) {
     switch (difficulty) {
         case 1:
             return 3;
+
         case 2:
             return randomChoice([4, 5]);
+
         case 3:
             return randomChoice([6, 7]);
+
         default:
             throw new RangeError(
                 "getTask05Length: difficulty must be 1, 2, or 3."
@@ -3313,15 +3317,87 @@ function getTask05Length(difficulty) {
 
 
 /* ==========================================================================
-   3.05b Task-specific cell conversion (preserves metadata)
+   3.05b Task 05 colour helpers (CSS-class based)
    ========================================================================== */
 
 /**
- * Convert Task05 hexes → cells while preserving:
- * - backgroundColorKey
- * - shape
- * - content (from hex.character)
+ * Choose a random display colour key for A or B.
+ *
+ * The chosen colour:
+ * - comes from TASK_COLORS ("red", "green", "blue")
+ * - must not match any of the excluded colour keys
  */
+function chooseTask05DisplayColorKey({
+    excludedColorKeys = []
+} = {}) {
+    const excludedKeys =
+        new Set(excludedColorKeys);
+
+    const allowedKeys =
+        TASK_COLORS.filter(
+            key => !excludedKeys.has(key)
+        );
+
+    if (allowedKeys.length === 0) {
+        throw new Error(
+            "chooseTask05DisplayColorKey: no allowed colours."
+        );
+    }
+
+    return randomChoice(allowedKeys);
+}
+
+
+/**
+ * Generate display colour keys for A and B.
+ *
+ * These are stored in instruction.colors as keys like "red", "green", "blue".
+ * The renderer will apply .instruction-color-{key} to the A/B tokens.
+ */
+function createTask05InstructionColors(
+    startDescriptor,
+    endDescriptor
+) {
+    const excludedKeys = [];
+
+    if (
+        startDescriptor.type === "color" ||
+        startDescriptor.type === "colorShape"
+    ) {
+        excludedKeys.push(startDescriptor.color);
+    }
+
+    if (
+        endDescriptor.type === "color" ||
+        endDescriptor.type === "colorShape"
+    ) {
+        excludedKeys.push(endDescriptor.color);
+    }
+
+    const colorKeyA =
+        chooseTask05DisplayColorKey({
+            excludedColorKeys: excludedKeys
+        });
+
+    const colorKeyB =
+        chooseTask05DisplayColorKey({
+            excludedColorKeys: [
+                ...excludedKeys,
+                colorKeyA
+            ]
+        });
+
+    return {
+        A: colorKeyA,
+        B: colorKeyB
+    };
+}
+
+
+/* ==========================================================================
+   3.05c Task-specific cell conversion
+   ========================================================================== */
+
 function createTask05CellsFromHexes(hexes) {
     if (!Array.isArray(hexes)) {
         throw new TypeError(
@@ -3333,25 +3409,19 @@ function createTask05CellsFromHexes(hexes) {
         index: hex.index,
         content: hex.character ?? "",
         backgroundColorKey: hex.backgroundColorKey ?? "",
-        backgroundColor: HexTaskLoader.COLOR_HEX[hex.backgroundColorKey] || "",
+        backgroundColor:
+            HexTaskLoader.COLOR_HEX[
+                hex.backgroundColorKey
+            ] || "",
         shape: hex.shape || undefined
     }));
 }
 
 
 /* ==========================================================================
-   3.05c Descriptor → instruction token conversion
+   3.05d Descriptor → instruction data
    ========================================================================== */
 
-/**
- * Convert a descriptor into a token value and source path for the renderer.
- *
- * Returns:
- * {
- *   value: string,      // e.g. "red", "A", "circle"
- *   source: string      // e.g. "tasks.colors", "tasks.shapes"
- * }
- */
 function descriptorToInstructionData(descriptor) {
     if (!descriptor || typeof descriptor !== "object") {
         return {
@@ -3368,7 +3438,6 @@ function descriptorToInstructionData(descriptor) {
     }
 
     if (descriptor.type === "number") {
-        // Numbers are shown as-is; no localization source needed.
         return {
             value: String(descriptor.value),
             source: ""
@@ -3376,7 +3445,6 @@ function descriptorToInstructionData(descriptor) {
     }
 
     if (descriptor.type === "character") {
-        // Letters are shown as-is; no localization source needed.
         return {
             value: String(descriptor.value),
             source: ""
@@ -3384,7 +3452,6 @@ function descriptorToInstructionData(descriptor) {
     }
 
     if (descriptor.type === "colorShape") {
-        // For now, use the color as the primary token.
         return {
             value: descriptor.color || "",
             source: "tasks.colors"
@@ -3399,24 +3466,28 @@ function descriptorToInstructionData(descriptor) {
 
 
 /* ==========================================================================
-   3.05d Task generation
+   3.05e Task generation
    ========================================================================== */
 
-function generateTask05(difficulty) {
+async function generateTask05(difficulty) {
     if (![1, 2, 3].includes(difficulty)) {
         throw new RangeError(
             "generateTask05: difficulty must be 1, 2, or 3."
         );
     }
 
+    await pathDataReady;
+
     const {
         boardSize,
         paths
     } = PATH_DATA;
 
-    const length = getTask05Length(difficulty);
+    const length =
+        getTask05Length(difficulty);
 
-    const pathCandidates = paths[String(length)];
+    const pathCandidates =
+        paths[String(length)];
 
     if (
         !Array.isArray(pathCandidates) ||
@@ -3427,115 +3498,162 @@ function generateTask05(difficulty) {
         );
     }
 
-    // Choose start case based on difficulty
-    let startCase;
-    if (difficulty === 1) {
-        // case 1: colorColor, case 2: valueValue (number or character)
-        startCase = randomChoice(["colorColor", "valueValue"]);
-    } else {
-        // difficulty 2/3: case 1: colorColor, case 2: colorShapeColorShape
-        startCase = randomChoice(["colorColor", "colorShapeColorShape"]);
-    }
+    const startCase =
+        difficulty === 1
+            ? randomChoice([
+                  "colorColor",
+                  "valueValue"
+              ])
+            : randomChoice([
+                  "colorColor",
+                  "colorShapeColorShape"
+              ]);
 
-    const defaultAnswerPath = [...randomChoice(pathCandidates)];
+    const baseAnswerPath = [
+        ...randomChoice(pathCandidates)
+    ];
 
-    if (new Set(defaultAnswerPath).size !== defaultAnswerPath.length) {
+    if (
+        new Set(baseAnswerPath).size !==
+        baseAnswerPath.length
+    ) {
         throw new Error(
-            "generateTask05: default answer path contains repeated cells."
+            "generateTask05: selected path contains repeated cells."
         );
     }
 
-    // Generate A and B descriptors
-    const { startDescriptor, endDescriptor } = createTask05Descriptors({
+    const {
+        startDescriptor,
+        endDescriptor
+    } = createTask05Descriptors({
         difficulty,
         startCase
     });
 
-    // Populate board ensuring:
-    // - first hex satisfies startDescriptor
-    // - last hex satisfies endDescriptor
-    // - fillers may also satisfy A, B, or neither
-    const answerHexes = createTask05AnswerHexes({
-        startDescriptor,
-        endDescriptor,
-        answerPath: defaultAnswerPath
-    });
+    const answerHexes =
+        createTask05AnswerHexes({
+            startDescriptor,
+            endDescriptor,
+            answerPath: baseAnswerPath
+        });
 
-    const answerCellMap = new Map(
-        answerHexes.map(hex => [Number(hex.index), hex])
-    );
+    const answerHexMap =
+        new Map(
+            answerHexes.map(
+                hex => [Number(hex.index), hex]
+            )
+        );
 
-    const hexes = Array.from(
-        { length: boardSize },
-        (_, index) => {
-            if (answerCellMap.has(index)) {
-                return answerCellMap.get(index);
+    const hexes =
+        Array.from(
+            { length: boardSize },
+            (_, index) => {
+                if (answerHexMap.has(index)) {
+                    return answerHexMap.get(index);
+                }
+
+                return createTask05FillerHex({
+                    difficulty,
+                    startDescriptor,
+                    endDescriptor
+                });
             }
-            return createTask05FillerHex({
-                difficulty,
-                startDescriptor,
-                endDescriptor
-            });
-        }
-    ).map((hex, index) => ({
-        ...hex,
-        index
-    }));
+        ).map(
+            (hex, index) => ({
+                ...hex,
+                index
+            })
+        );
 
-    const cells = createTask05CellsFromHexes(hexes);
+    const cells =
+        createTask05CellsFromHexes(hexes);
 
-    // ---- INVARIANT: seed path start/end must match descriptors ----
+    const startIndex =
+        Number(baseAnswerPath[0]);
 
-    const startIndex = Number(defaultAnswerPath[0]);
-    const endIndex = Number(defaultAnswerPath[defaultAnswerPath.length - 1]);
+    const endIndex =
+        Number(
+            baseAnswerPath[
+                baseAnswerPath.length - 1
+            ]
+        );
 
-    const startCell = cells.find(c => Number(c.index) === startIndex);
-    const endCell = cells.find(c => Number(c.index) === endIndex);
+    const startCell =
+        cells.find(
+            cell => Number(cell.index) === startIndex
+        );
+
+    const endCell =
+        cells.find(
+            cell => Number(cell.index) === endIndex
+        );
 
     if (!startCell || !endCell) {
         throw new Error(
-            "generateTask05: seed path start/end cell not found on board."
+            "generateTask05: seed path start/end cell not found."
         );
     }
 
-    if (!matchesTask05Descriptor(startCell, startDescriptor)) {
+    if (
+        !matchesTask05Descriptor(
+            startCell,
+            startDescriptor
+        )
+    ) {
         throw new Error(
-            "generateTask05: seed path start cell does not match startDescriptor."
+            "generateTask05: seed path start cell does not match A."
         );
     }
 
-    if (!matchesTask05Descriptor(endCell, endDescriptor)) {
+    if (
+        !matchesTask05Descriptor(
+            endCell,
+            endDescriptor
+        )
+    ) {
         throw new Error(
-            "generateTask05: seed path end cell does not match endDescriptor."
+            "generateTask05: seed path end cell does not match B."
         );
     }
-
-    // ---- Compute A/B indices (guaranteed non-empty by invariant) ----
 
     const aIndices = [];
     const bIndices = [];
 
     for (const cell of cells) {
-        if (matchesTask05Descriptor(cell, startDescriptor)) {
+        if (
+            matchesTask05Descriptor(
+                cell,
+                startDescriptor
+            )
+        ) {
             aIndices.push(Number(cell.index));
         }
-        if (matchesTask05Descriptor(cell, endDescriptor)) {
+
+        if (
+            matchesTask05Descriptor(
+                cell,
+                endDescriptor
+            )
+        ) {
             bIndices.push(Number(cell.index));
         }
     }
 
-    if (aIndices.length === 0 || bIndices.length === 0) {
+    if (
+        aIndices.length === 0 ||
+        bIndices.length === 0
+    ) {
         throw new Error(
-            "generateTask05: no A or no B hexes on board (invariant violated)."
+            "generateTask05: no A or B cells found."
         );
     }
 
-    // Find all valid paths of the same length that start on any A and end on any B
-    const answerPaths = createTask05AnswerPaths({
-        pathCandidates,
-        aIndices,
-        bIndices
-    });
+    const answerPaths =
+        createTask05AnswerPaths({
+            pathCandidates,
+            aIndices,
+            bIndices
+        });
 
     if (answerPaths.length === 0) {
         throw new Error(
@@ -3543,25 +3661,52 @@ function generateTask05(difficulty) {
         );
     }
 
-    // ---- Build instruction with A/B tokens ----
+    const startToken =
+        descriptorToInstructionData(
+            startDescriptor
+        );
 
-    const startToken = descriptorToInstructionData(startDescriptor);
-    const endToken = descriptorToInstructionData(endDescriptor);
+    const endToken =
+        descriptorToInstructionData(
+            endDescriptor
+        );
+
+    /*
+     * This matches Task 01’s structure:
+     *
+     * instruction.A
+     * instruction.B
+     * instruction.colors.A  -> "red" | "green" | "blue"
+     * instruction.colors.B  -> "red" | "green" | "blue"
+     * instruction.tokenSources
+     */
+    const tokenColors =
+        createTask05InstructionColors(
+            startDescriptor,
+            endDescriptor
+        );
 
     const instruction = {
         template: "task05_swipeLine",
+
         length,
+
         A: startToken.value,
         B: endToken.value,
+
+        colors: tokenColors,
+
         tokenSources: {}
     };
 
     if (startToken.source) {
-        instruction.tokenSources.A = startToken.source;
+        instruction.tokenSources.A =
+            startToken.source;
     }
 
     if (endToken.source) {
-        instruction.tokenSources.B = endToken.source;
+        instruction.tokenSources.B =
+            endToken.source;
     }
 
     const task = {
@@ -3579,12 +3724,15 @@ function generateTask05(difficulty) {
 
         cells,
 
-        answerPaths: answerPaths.map(path => [...path])
+        answerPaths:
+            answerPaths.map(
+                path => [...path]
+            )
     };
 
     if (!validateTask05(task)) {
         throw new Error(
-            "generateTask05: generated task failed validation."
+            "generateTask05 created an invalid task."
         );
     }
 
@@ -3593,20 +3741,23 @@ function generateTask05(difficulty) {
 
 
 /* ==========================================================================
-   3.05e Descriptor generation
+   3.05f Descriptor generation
    ========================================================================== */
 
-function createTask05Descriptors({ difficulty, startCase }) {
-    // startCase is one of:
-    // "colorColor", "valueValue", "colorShapeColorShape"
-
+function createTask05Descriptors({
+    difficulty,
+    startCase
+}) {
     if (startCase === "colorColor") {
-        const startColor = randomChoice(TASK_COLORS);
-        let endColor = randomChoice(TASK_COLORS);
+        const startColor =
+            randomChoice(TASK_COLORS);
 
-        // Ensure start and end are distinguishable in description
+        let endColor =
+            randomChoice(TASK_COLORS);
+
         while (endColor === startColor) {
-            endColor = randomChoice(TASK_COLORS);
+            endColor =
+                randomChoice(TASK_COLORS);
         }
 
         return {
@@ -3614,6 +3765,7 @@ function createTask05Descriptors({ difficulty, startCase }) {
                 type: "color",
                 color: startColor
             },
+
             endDescriptor: {
                 type: "color",
                 color: endColor
@@ -3622,52 +3774,78 @@ function createTask05Descriptors({ difficulty, startCase }) {
     }
 
     if (startCase === "valueValue") {
-        // difficulty 1 only
-        const useNumbers = Math.random() < 0.5;
+        const useNumbers =
+            Math.random() < 0.5;
 
-        const startValue = useNumbers
-            ? randomChoice(TASK_DIGIT_KEYS)
-            : getRandomTaskLetter();
+        const startValue =
+            useNumbers
+                ? randomChoice(TASK_DIGIT_KEYS)
+                : getRandomTaskLetter();
 
         let endValue;
+
         if (useNumbers) {
-            endValue = randomChoice(TASK_DIGIT_KEYS);
+            endValue =
+                randomChoice(TASK_DIGIT_KEYS);
+
             while (endValue === startValue) {
-                endValue = randomChoice(TASK_DIGIT_KEYS);
+                endValue =
+                    randomChoice(TASK_DIGIT_KEYS);
             }
         } else {
-            endValue = getRandomTaskLetter();
+            endValue =
+                getRandomTaskLetter();
+
             while (endValue === startValue) {
-                endValue = getRandomTaskLetter();
+                endValue =
+                    getRandomTaskLetter();
             }
         }
 
         return {
             startDescriptor: {
-                type: useNumbers ? "number" : "character",
+                type: useNumbers
+                    ? "number"
+                    : "character",
                 value: startValue
             },
+
             endDescriptor: {
-                type: useNumbers ? "number" : "character",
+                type: useNumbers
+                    ? "number"
+                    : "character",
                 value: endValue
             }
         };
     }
 
     if (startCase === "colorShapeColorShape") {
-        // difficulty 2/3
-        const shapes = ["circle", "square"];
+        const shapes = [
+            "circle",
+            "square"
+        ];
 
-        const startColor = randomChoice(TASK_COLORS);
-        const startShape = randomChoice(shapes);
+        const startColor =
+            randomChoice(TASK_COLORS);
 
-        let endColor = randomChoice(TASK_COLORS);
-        let endShape = randomChoice(shapes);
+        const startShape =
+            randomChoice(shapes);
 
-        // Ensure (color, shape) pair is different for A and B
-        while (endColor === startColor && endShape === startShape) {
-            endColor = randomChoice(TASK_COLORS);
-            endShape = randomChoice(shapes);
+        let endColor =
+            randomChoice(TASK_COLORS);
+
+        let endShape =
+            randomChoice(shapes);
+
+        while (
+            endColor === startColor &&
+            endShape === startShape
+        ) {
+            endColor =
+                randomChoice(TASK_COLORS);
+
+            endShape =
+                randomChoice(shapes);
         }
 
         return {
@@ -3676,6 +3854,7 @@ function createTask05Descriptors({ difficulty, startCase }) {
                 color: startColor,
                 shape: startShape
             },
+
             endDescriptor: {
                 type: "colorShape",
                 color: endColor,
@@ -3691,7 +3870,7 @@ function createTask05Descriptors({ difficulty, startCase }) {
 
 
 /* ==========================================================================
-   3.05f Answer-hex generation
+   3.05g Answer-hex generation
    ========================================================================== */
 
 function createTask05AnswerHexes({
@@ -3699,78 +3878,92 @@ function createTask05AnswerHexes({
     endDescriptor,
     answerPath
 }) {
-    const startIndex = Number(answerPath[0]);
-    const endIndex = Number(answerPath[answerPath.length - 1]);
+    const startIndex =
+        Number(answerPath[0]);
 
-    const result = [];
+    const endIndex =
+        Number(
+            answerPath[
+                answerPath.length - 1
+            ]
+        );
 
-    // Start hex must satisfy startDescriptor
-    result.push(
+    return [
         createTask05HexForDescriptor({
             descriptor: startDescriptor,
             index: startIndex
-        })
-    );
+        }),
 
-    // End hex must satisfy endDescriptor
-    result.push(
         createTask05HexForDescriptor({
             descriptor: endDescriptor,
             index: endIndex
         })
-    );
-
-    return result;
+    ];
 }
 
 
-function createTask05HexForDescriptor({ descriptor, index }) {
+function createTask05HexForDescriptor({
+    descriptor,
+    index
+}) {
     const base = {
         index: Number(index),
-        backgroundColorKey: randomChoice(TASK_COLORS)
+        backgroundColorKey:
+            randomChoice(TASK_COLORS)
     };
 
     if (descriptor.type === "color") {
         return {
             ...base,
-            character: getRandomTaskCharacter(),
-            backgroundColorKey: descriptor.color
+            character:
+                getRandomTaskCharacter(),
+            backgroundColorKey:
+                descriptor.color
         };
     }
 
     if (descriptor.type === "number") {
-        const variants = getTaskDigitVariants(descriptor.value);
-        const character = randomChoice(variants);
+        const variants =
+            getTaskDigitVariants(
+                descriptor.value
+            );
 
         return {
             ...base,
-            character,
-            backgroundColorKey: randomChoice(TASK_COLORS)
+            character:
+                randomChoice(variants),
+            backgroundColorKey:
+                randomChoice(TASK_COLORS)
         };
     }
 
     if (descriptor.type === "character") {
-        const variants = getTaskAlphabetVariants(descriptor.value);
-        const character = randomChoice(variants);
+        const variants =
+            getTaskAlphabetVariants(
+                descriptor.value
+            );
 
         return {
             ...base,
-            character,
-            backgroundColorKey: randomChoice(TASK_COLORS)
+            character:
+                randomChoice(variants),
+            backgroundColorKey:
+                randomChoice(TASK_COLORS)
         };
     }
 
     if (descriptor.type === "colorShape") {
-        const shapeChar = getShapeCharacter(
-            descriptor.shape,
-            descriptor.color
-        );
-
         return {
             ...base,
-            character: shapeChar,
-            backgroundColorKey: descriptor.color,
-            shape: descriptor.shape
+            character:
+                getShapeCharacter(
+                    descriptor.shape,
+                    descriptor.color
+                ),
+            backgroundColorKey:
+                descriptor.color,
+            shape:
+                descriptor.shape
         };
     }
 
@@ -3781,79 +3974,114 @@ function createTask05HexForDescriptor({ descriptor, index }) {
 
 
 /* ==========================================================================
-   3.05g Filler generation
+   3.05h Filler generation
    ========================================================================== */
 
-function createTask05FillerHex({ difficulty, startDescriptor, endDescriptor }) {
-    // Fillers may satisfy A, B, or neither.
-    const roll = Math.random();
+function createTask05FillerHex({
+    difficulty,
+    startDescriptor,
+    endDescriptor
+}) {
+    const roll =
+        Math.random();
 
-    // 20% chance to intentionally match A, 20% to match B, 60% neither
     if (roll < 0.2) {
-        const hex = createTask05HexForDescriptor({
-            descriptor: startDescriptor,
-            index: -1 // placeholder
-        });
+        const hex =
+            createTask05HexForDescriptor({
+                descriptor: startDescriptor,
+                index: -1
+            });
+
         delete hex.index;
         return hex;
     }
 
     if (roll < 0.4) {
-        const hex = createTask05HexForDescriptor({
-            descriptor: endDescriptor,
-            index: -1
-        });
+        const hex =
+            createTask05HexForDescriptor({
+                descriptor: endDescriptor,
+                index: -1
+            });
+
         delete hex.index;
         return hex;
     }
 
-    // Neither: random character from full pool, random color, optional shape
-    const shapes = [null, "circle", "square"];
-    const shape = randomChoice(shapes);
+    const shape =
+        randomChoice([
+            null,
+            "circle",
+            "square"
+        ]);
 
-    let character;
-    let backgroundColorKey = randomChoice(TASK_COLORS);
-
-    if (shape) {
-        character = getShapeCharacter(shape, backgroundColorKey);
-    } else {
-        character = getRandomTaskCharacter();
-    }
+    const backgroundColorKey =
+        randomChoice(TASK_COLORS);
 
     return {
-        character,
+        character:
+            shape
+                ? getShapeCharacter(
+                      shape,
+                      backgroundColorKey
+                  )
+                : getRandomTaskCharacter(),
+
         backgroundColorKey,
-        shape: shape || undefined
+
+        shape:
+            shape || undefined
     };
 }
 
 
 /* ==========================================================================
-   3.05h Matching helpers
+   3.05i Matching helpers
    ========================================================================== */
 
-function matchesTask05Descriptor(cell, descriptor) {
+function matchesTask05Descriptor(
+    cell,
+    descriptor
+) {
     if (descriptor.type === "color") {
-        return cell.backgroundColorKey === descriptor.color;
+        return (
+            cell.backgroundColorKey ===
+            descriptor.color
+        );
     }
 
-    if (descriptor.type === "number") {
-        const cellCanonical = canonicalizeTaskCharacter(cell.content);
-        const descCanonical = canonicalizeTaskCharacter(descriptor.value);
-        return cellCanonical === descCanonical;
-    }
+    if (
+        descriptor.type === "number" ||
+        descriptor.type === "character"
+    ) {
+        const cellCanonical =
+            canonicalizeTaskCharacter(
+                cell.content
+            );
 
-    if (descriptor.type === "character") {
-        const cellCanonical = canonicalizeTaskCharacter(cell.content);
-        const descCanonical = canonicalizeTaskCharacter(descriptor.value);
-        return cellCanonical === descCanonical;
+        const descriptorCanonical =
+            canonicalizeTaskCharacter(
+                descriptor.value
+            );
+
+        return (
+            cellCanonical ===
+            descriptorCanonical
+        );
     }
 
     if (descriptor.type === "colorShape") {
-        const colorMatch = cell.backgroundColorKey === descriptor.color;
-        const cellShape = cell.shape || null;
-        const shapeMatch = cellShape === descriptor.shape;
-        return colorMatch && shapeMatch;
+        const colorMatches =
+            cell.backgroundColorKey ===
+            descriptor.color;
+
+        const shapeMatches =
+            (cell.shape || null) ===
+            descriptor.shape;
+
+        return (
+            colorMatches &&
+            shapeMatches
+        );
     }
 
     return false;
@@ -3861,20 +4089,35 @@ function matchesTask05Descriptor(cell, descriptor) {
 
 
 /* ==========================================================================
-   3.05i Answer-path generation
+   3.05j Answer-path generation
    ========================================================================== */
 
-function createTask05AnswerPaths({ pathCandidates, aIndices, bIndices }) {
-    const aSet = new Set(aIndices);
-    const bSet = new Set(bIndices);
+function createTask05AnswerPaths({
+    pathCandidates,
+    aIndices,
+    bIndices
+}) {
+    const aSet =
+        new Set(aIndices);
+
+    const bSet =
+        new Set(bIndices);
 
     const result = [];
 
     for (const path of pathCandidates) {
-        const start = Number(path[0]);
-        const end = Number(path[path.length - 1]);
+        const start =
+            Number(path[0]);
 
-        if (aSet.has(start) && bSet.has(end)) {
+        const end =
+            Number(
+                path[path.length - 1]
+            );
+
+        if (
+            aSet.has(start) &&
+            bSet.has(end)
+        ) {
             result.push([...path]);
         }
     }
@@ -3884,11 +4127,17 @@ function createTask05AnswerPaths({ pathCandidates, aIndices, bIndices }) {
 
 
 /* ==========================================================================
-   3.05j Descriptor display strings (for UI / localization)
+   3.05k Descriptor display strings
    ========================================================================== */
 
-function getTask05DescriptorDisplayString(descriptor, localeTasks) {
-    const { colors, shapes } = localeTasks;
+function getTask05DescriptorDisplayString(
+    descriptor,
+    localeTasks
+) {
+    const {
+        colors,
+        shapes
+    } = localeTasks;
 
     if (descriptor.type === "color") {
         return colors[descriptor.color];
@@ -3903,8 +4152,12 @@ function getTask05DescriptorDisplayString(descriptor, localeTasks) {
     }
 
     if (descriptor.type === "colorShape") {
-        const colorText = colors[descriptor.color];
-        const shapeText = shapes[descriptor.shape];
+        const colorText =
+            colors[descriptor.color];
+
+        const shapeText =
+            shapes[descriptor.shape];
+
         return `a ${colorText} ${shapeText}`;
     }
 
@@ -3913,17 +4166,31 @@ function getTask05DescriptorDisplayString(descriptor, localeTasks) {
     );
 }
 
-function getTask05ADisplayString(descriptor, localeTasks) {
-    return getTask05DescriptorDisplayString(descriptor, localeTasks);
+
+function getTask05ADisplayString(
+    descriptor,
+    localeTasks
+) {
+    return getTask05DescriptorDisplayString(
+        descriptor,
+        localeTasks
+    );
 }
 
-function getTask05BDisplayString(descriptor, localeTasks) {
-    return getTask05DescriptorDisplayString(descriptor, localeTasks);
+
+function getTask05BDisplayString(
+    descriptor,
+    localeTasks
+) {
+    return getTask05DescriptorDisplayString(
+        descriptor,
+        localeTasks
+    );
 }
 
 
 /* ==========================================================================
-   3.05k Validation
+   3.05l Validation
    ========================================================================== */
 
 function validateTask05(task) {
@@ -3956,36 +4223,105 @@ function validateTask05(task) {
         return false;
     }
 
+    if (
+        typeof task.instruction.A !== "string" ||
+        typeof task.instruction.B !== "string"
+    ) {
+        return false;
+    }
+
+    if (
+        !task.instruction.colors ||
+        typeof task.instruction.colors.A !== "string" ||
+        typeof task.instruction.colors.B !== "string"
+    ) {
+        return false;
+    }
+
+    /*
+     * Display colour keys must not match the wording colour keys.
+     */
+    const wordingColorKeys = [];
+
+    if (
+        startDescriptor.type === "color" ||
+        startDescriptor.type === "colorShape"
+    ) {
+        wordingColorKeys.push(startDescriptor.color);
+    }
+
+    if (
+        endDescriptor.type === "color" ||
+        endDescriptor.type === "colorShape"
+    ) {
+        wordingColorKeys.push(endDescriptor.color);
+    }
+
+    for (const key of wordingColorKeys) {
+        if (
+            task.instruction.colors.A === key ||
+            task.instruction.colors.B === key
+        ) {
+            return false;
+        }
+    }
+
     if (task.answerPaths.length === 0) {
         return false;
     }
 
-    const boardCells = new Map(
-        task.cells.map(cell => [Number(cell.index), cell])
-    );
+    const boardCells =
+        new Map(
+            task.cells.map(
+                cell => [
+                    Number(cell.index),
+                    cell
+                ]
+            )
+        );
 
     for (const path of task.answerPaths) {
-        if (!Array.isArray(path) || path.length !== length) {
+        if (
+            !Array.isArray(path) ||
+            path.length !== length
+        ) {
             return false;
         }
 
-        if (new Set(path).size !== path.length) {
+        if (
+            new Set(path).size !==
+            path.length
+        ) {
             return false;
         }
 
-        const start = Number(path[0]);
-        const end = Number(path[path.length - 1]);
+        const start =
+            Number(path[0]);
 
-        const startCell = boardCells.get(start);
-        const endCell = boardCells.get(end);
+        const end =
+            Number(
+                path[path.length - 1]
+            );
+
+        const startCell =
+            boardCells.get(start);
+
+        const endCell =
+            boardCells.get(end);
 
         if (!startCell || !endCell) {
             return false;
         }
 
         if (
-            !matchesTask05Descriptor(startCell, startDescriptor) ||
-            !matchesTask05Descriptor(endCell, endDescriptor)
+            !matchesTask05Descriptor(
+                startCell,
+                startDescriptor
+            ) ||
+            !matchesTask05Descriptor(
+                endCell,
+                endDescriptor
+            )
         ) {
             return false;
         }
@@ -3996,15 +4332,20 @@ function validateTask05(task) {
 
 
 /* ==========================================================================
-   3.05l Rendering helpers
+   3.05m Rendering helpers
    ========================================================================== */
 
 function getRenderedTask05AnswerPaths(task) {
-    if (!task || !Array.isArray(task.answerPaths)) {
+    if (
+        !task ||
+        !Array.isArray(task.answerPaths)
+    ) {
         return [];
     }
 
-    return task.answerPaths.map(path => [...path]);
+    return task.answerPaths.map(
+        path => [...path]
+    );
 }
 
 /* ==========================================================================
