@@ -1,7 +1,7 @@
 {
   "en": {
     "ui": {
-      "title": "Hex Puzzle",
+      "title": "Puzzle Swipe",
       "instructions": "Swipe across the hexagons to complete the task.",
       "play": "Play",
       "playAgain": "Play Again",
@@ -16,7 +16,7 @@
       "highScore": "High Score",
       "correct": "Correct!",
       "wrong": "Wrong!",
-      "watchSequence": "Watch the sequence",
+      "watchSequence": "Are you ready?",
       "yourTurn": "Your turn",
       "wrongSequence": "Wrong sequence",
       "start": "Start Game",
@@ -69,7 +69,7 @@
   },
   "es": {
     "ui": {
-      "title": "Rompecabezas de hexágonos",
+      "title": "Dolor en la Cabehexa",
       "instructions": "Desliza sobre los hexágonos para completar la tarea.",
       "play": "Jugar",
       "playAgain": "Jugar de nuevo",
@@ -84,7 +84,7 @@
       "highScore": "Récord",
       "correct": "¡Correcto!",
       "wrong": "¡Incorrecto!",
-      "watchSequence": "Observa la secuencia",
+      "watchSequence": "¿Todo listo?",
       "yourTurn": "Tu turno",
       "wrongSequence": "Secuencia incorrecta",
       "start": "Iniciar juego",
@@ -137,7 +137,7 @@
   },
   "zh-Hant": {
     "ui": {
-      "title": "六邊形拼圖",
+      "title": "猜猜滑滑",
       "instructions": "滑過六邊形來完成任務。",
       "play": "開始遊戲",
       "playAgain": "再玩一次",
@@ -152,7 +152,7 @@
       "highScore": "最高分",
       "correct": "答啱！",
       "wrong": "錯咗！",
-      "watchSequence": "睇實喇",
+      "watchSequence": "準備好未？",
       "yourTurn": "輪到你",
       "wrongSequence": "錯咗喇",
       "start": "開始遊戲",

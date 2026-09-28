@@ -1,4 +1,4 @@
-// task.js v280926a
+// task.js v280926b
 "use strict";
 
 
@@ -2660,6 +2660,8 @@ function getRenderedTask03AnswerPaths(task) {
 const TASK04_WORDS = Object.freeze([
     "TORONTO",
     "MEXICO",
+    "PANAMA",
+    "BAHAMAS",
     "CARACAS",
     "LIMA",
     "HAVANA",
@@ -3327,7 +3329,7 @@ function getTask05Length(difficulty) {
 
 
 /* ==========================================================================
-   3.05b Task 05 colour helpers (CSS-class based)
+   3.05b Task 05 colour helpers (CSS-class based, safe)
    ========================================================================== */
 
 /**
@@ -3336,25 +3338,43 @@ function getTask05Length(difficulty) {
  * The chosen colour:
  * - comes from TASK_COLORS ("red", "green", "blue")
  * - must not match any of the excluded colour keys
+ *
+ * If no colours are allowed after exclusions, we relax the rule and allow
+ * any colour except the strictly required ones (wording colours).
  */
 function chooseTask05DisplayColorKey({
-    excludedColorKeys = []
+    excludedColorKeys = [],
+    requiredExcludedColorKeys = []
 } = {}) {
     const excludedKeys =
         new Set(excludedColorKeys);
 
+    const requiredExcludedSet =
+        new Set(requiredExcludedColorKeys);
+
+    // First try: respect all exclusions
     const allowedKeys =
         TASK_COLORS.filter(
             key => !excludedKeys.has(key)
         );
 
-    if (allowedKeys.length === 0) {
-        throw new Error(
-            "chooseTask05DisplayColorKey: no allowed colours."
-        );
+    if (allowedKeys.length > 0) {
+        return randomChoice(allowedKeys);
     }
 
-    return randomChoice(allowedKeys);
+    // Fallback: only enforce the required exclusions (wording colours)
+    const fallbackAllowedKeys =
+        TASK_COLORS.filter(
+            key => !requiredExcludedSet.has(key)
+        );
+
+    if (fallbackAllowedKeys.length > 0) {
+        return randomChoice(fallbackAllowedKeys);
+    }
+
+    // Absolute fallback: just pick something; this should never happen
+    // with only three colours and sane logic, but keeps the code safe.
+    return randomChoice(TASK_COLORS);
 }
 
 
@@ -3363,38 +3383,50 @@ function chooseTask05DisplayColorKey({
  *
  * These are stored in instruction.colors as keys like "red", "green", "blue".
  * The renderer will apply .instruction-color-{key} to the A/B tokens.
+ *
+ * Rules:
+ * - instruction.colors.A and .B must not match any wording colour keys
+ *   (i.e. colours used in startDescriptor / endDescriptor wording).
+ * - They may match each other if necessary.
  */
 function createTask05InstructionColors(
     startDescriptor,
     endDescriptor
 ) {
-    const excludedKeys = [];
+    const wordingColorKeys = [];
 
     if (
         startDescriptor.type === "color" ||
         startDescriptor.type === "colorShape"
     ) {
-        excludedKeys.push(startDescriptor.color);
+        wordingColorKeys.push(startDescriptor.color);
     }
 
     if (
         endDescriptor.type === "color" ||
         endDescriptor.type === "colorShape"
     ) {
-        excludedKeys.push(endDescriptor.color);
+        wordingColorKeys.push(endDescriptor.color);
     }
 
+    const uniqueWordingKeys =
+        [...new Set(wordingColorKeys)];
+
+    // Try to pick A and B different from wording keys.
     const colorKeyA =
         chooseTask05DisplayColorKey({
-            excludedColorKeys: excludedKeys
+            excludedColorKeys: uniqueWordingKeys,
+            requiredExcludedColorKeys: uniqueWordingKeys
         });
 
+    // For B, we’d like it different from A as well, but that’s optional.
     const colorKeyB =
         chooseTask05DisplayColorKey({
             excludedColorKeys: [
-                ...excludedKeys,
+                ...uniqueWordingKeys,
                 colorKeyA
-            ]
+            ],
+            requiredExcludedColorKeys: uniqueWordingKeys
         });
 
     return {
@@ -3682,19 +3714,30 @@ async function generateTask05(difficulty) {
         );
 
     /*
-     * This matches Task 01’s structure:
+     * instruction.colors.A and .B are colour keys ("red" | "green" | "blue").
      *
-     * instruction.A
-     * instruction.B
-     * instruction.colors.A  -> "red" | "green" | "blue"
-     * instruction.colors.B  -> "red" | "green" | "blue"
-     * instruction.tokenSources
+     * For display, we SWAP them:
+     * - The token for A uses B's colour key.
+     * - The token for B uses A's colour key.
+     *
+     * The renderer will apply:
+     *   .instruction-color-{instruction.colors.A} to {A}
+     *   .instruction-color-{instruction.colors.B} to {B}
+     *
+     * So to make A appear in B's colour and vice versa, we store:
+     *   colors.A = colourKeyForB
+     *   colors.B = colourKeyForA
      */
-    const tokenColors =
+    const baseColors =
         createTask05InstructionColors(
             startDescriptor,
             endDescriptor
         );
+
+    const swappedColors = {
+        A: baseColors.B,
+        B: baseColors.A
+    };
 
     const instruction = {
         template: "task05_swipeLine",
@@ -3704,7 +3747,7 @@ async function generateTask05(difficulty) {
         A: startToken.value,
         B: endToken.value,
 
-        colors: tokenColors,
+        colors: swappedColors,
 
         tokenSources: {}
     };
@@ -4267,7 +4310,10 @@ function validateTask05(task) {
         wordingColorKeys.push(endDescriptor.color);
     }
 
-    for (const key of wordingColorKeys) {
+    const uniqueWordingKeys =
+        [...new Set(wordingColorKeys)];
+
+    for (const key of uniqueWordingKeys) {
         if (
             task.instruction.colors.A === key ||
             task.instruction.colors.B === key
