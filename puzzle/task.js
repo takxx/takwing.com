@@ -1,4 +1,4 @@
-// task.js v280926b
+// task.js v280926c
 "use strict";
 
 
@@ -2660,8 +2660,6 @@ function getRenderedTask03AnswerPaths(task) {
 const TASK04_WORDS = Object.freeze([
     "TORONTO",
     "MEXICO",
-    "PANAMA",
-    "BAHAMAS",
     "CARACAS",
     "LIMA",
     "HAVANA",
@@ -2790,6 +2788,9 @@ function generateTask04(difficulty) {
 
     /*
      * Choose a random colour key for the instruction word.
+     * We follow the same pattern as your working example:
+     * - instruction.colors is an array of colour keys.
+     * - instruction.tokenSources.colors points to "tasks.colors".
      */
     const instructionColorKey =
         randomChoice(TASK_COLORS);
@@ -2809,11 +2810,13 @@ function generateTask04(difficulty) {
             target,
             length: answerLength,
 
-            // Colour key for the instruction word: "red" | "green" | "blue"
-            color: instructionColorKey,
+            // Colours used in the instruction text (array of keys).
+            colors: [instructionColorKey],
 
-            // No tokenSources for word list; it's pure game data.
-            tokenSources: {}
+            // Tells the renderer to look up colour names in tasks.colors.
+            tokenSources: {
+                colors: "tasks.colors"
+            }
         },
 
         cells,
@@ -2838,10 +2841,6 @@ function generateTask04(difficulty) {
    ========================================================================== */
 
 function getTask04Target(difficulty) {
-    /*
-     * No length-based difficulty mapping.
-     * Just pick a random word from the curated list.
-     */
     return randomChoice(TASK04_WORDS);
 }
 
@@ -3219,11 +3218,21 @@ function validateTask04(task) {
     }
 
     /*
-     * Validate instruction colour key.
+     * Validate instruction colours: must be a non-empty array of valid keys.
      */
     if (
-        !task.instruction.color ||
-        !TASK_COLORS.includes(task.instruction.color)
+        !Array.isArray(task.instruction.colors) ||
+        task.instruction.colors.length === 0 ||
+        !task.instruction.colors.every(
+            c => TASK_COLORS.includes(c)
+        )
+    ) {
+        return false;
+    }
+
+    if (
+        !task.instruction.tokenSources ||
+        task.instruction.tokenSources.colors !== "tasks.colors"
     ) {
         return false;
     }
@@ -3332,16 +3341,6 @@ function getTask05Length(difficulty) {
    3.05b Task 05 colour helpers (CSS-class based, safe)
    ========================================================================== */
 
-/**
- * Choose a random display colour key for A or B.
- *
- * The chosen colour:
- * - comes from TASK_COLORS ("red", "green", "blue")
- * - must not match any of the excluded colour keys
- *
- * If no colours are allowed after exclusions, we relax the rule and allow
- * any colour except the strictly required ones (wording colours).
- */
 function chooseTask05DisplayColorKey({
     excludedColorKeys = [],
     requiredExcludedColorKeys = []
@@ -3352,7 +3351,6 @@ function chooseTask05DisplayColorKey({
     const requiredExcludedSet =
         new Set(requiredExcludedColorKeys);
 
-    // First try: respect all exclusions
     const allowedKeys =
         TASK_COLORS.filter(
             key => !excludedKeys.has(key)
@@ -3362,7 +3360,6 @@ function chooseTask05DisplayColorKey({
         return randomChoice(allowedKeys);
     }
 
-    // Fallback: only enforce the required exclusions (wording colours)
     const fallbackAllowedKeys =
         TASK_COLORS.filter(
             key => !requiredExcludedSet.has(key)
@@ -3372,23 +3369,10 @@ function chooseTask05DisplayColorKey({
         return randomChoice(fallbackAllowedKeys);
     }
 
-    // Absolute fallback: just pick something; this should never happen
-    // with only three colours and sane logic, but keeps the code safe.
     return randomChoice(TASK_COLORS);
 }
 
 
-/**
- * Generate display colour keys for A and B.
- *
- * These are stored in instruction.colors as keys like "red", "green", "blue".
- * The renderer will apply .instruction-color-{key} to the A/B tokens.
- *
- * Rules:
- * - instruction.colors.A and .B must not match any wording colour keys
- *   (i.e. colours used in startDescriptor / endDescriptor wording).
- * - They may match each other if necessary.
- */
 function createTask05InstructionColors(
     startDescriptor,
     endDescriptor
@@ -3412,14 +3396,12 @@ function createTask05InstructionColors(
     const uniqueWordingKeys =
         [...new Set(wordingColorKeys)];
 
-    // Try to pick A and B different from wording keys.
     const colorKeyA =
         chooseTask05DisplayColorKey({
             excludedColorKeys: uniqueWordingKeys,
             requiredExcludedColorKeys: uniqueWordingKeys
         });
 
-    // For B, we’d like it different from A as well, but that’s optional.
     const colorKeyB =
         chooseTask05DisplayColorKey({
             excludedColorKeys: [
@@ -3714,19 +3696,7 @@ async function generateTask05(difficulty) {
         );
 
     /*
-     * instruction.colors.A and .B are colour keys ("red" | "green" | "blue").
-     *
-     * For display, we SWAP them:
-     * - The token for A uses B's colour key.
-     * - The token for B uses A's colour key.
-     *
-     * The renderer will apply:
-     *   .instruction-color-{instruction.colors.A} to {A}
-     *   .instruction-color-{instruction.colors.B} to {B}
-     *
-     * So to make A appear in B's colour and vice versa, we store:
-     *   colors.A = colourKeyForB
-     *   colors.B = colourKeyForA
+     * Base colours for A and B (not matching wording colours).
      */
     const baseColors =
         createTask05InstructionColors(
@@ -3734,10 +3704,23 @@ async function generateTask05(difficulty) {
             endDescriptor
         );
 
-    const swappedColors = {
+    /*
+     * SWAP display colours:
+     * - A token should appear in B's colour.
+     * - B token should appear in A's colour.
+     *
+     * We store these in instruction.colorsAB for the renderer.
+     */
+    const colorsAB = {
         A: baseColors.B,
         B: baseColors.A
     };
+
+    /*
+     * For generic {color}/{colors} tokens in the template, we still provide
+     * a simple colors array, as in your working example.
+     */
+    const instructionColors = [baseColors.A];
 
     const instruction = {
         template: "task05_swipeLine",
@@ -3747,7 +3730,11 @@ async function generateTask05(difficulty) {
         A: startToken.value,
         B: endToken.value,
 
-        colors: swappedColors,
+        // For any {colors} usage in the template
+        colors: instructionColors,
+
+        // For A/B token colouring (renderer must read this)
+        colorsAB,
 
         tokenSources: {}
     };
@@ -3760,6 +3747,11 @@ async function generateTask05(difficulty) {
     if (endToken.source) {
         instruction.tokenSources.B =
             endToken.source;
+    }
+
+    if (instructionColors.length > 0) {
+        instruction.tokenSources.colors =
+            "tasks.colors";
     }
 
     const task = {
@@ -4180,70 +4172,7 @@ function createTask05AnswerPaths({
 
 
 /* ==========================================================================
-   3.05k Descriptor display strings
-   ========================================================================== */
-
-function getTask05DescriptorDisplayString(
-    descriptor,
-    localeTasks
-) {
-    const {
-        colors,
-        shapes
-    } = localeTasks;
-
-    if (descriptor.type === "color") {
-        return colors[descriptor.color];
-    }
-
-    if (descriptor.type === "number") {
-        return String(descriptor.value);
-    }
-
-    if (descriptor.type === "character") {
-        return descriptor.value;
-    }
-
-    if (descriptor.type === "colorShape") {
-        const colorText =
-            colors[descriptor.color];
-
-        const shapeText =
-            shapes[descriptor.shape];
-
-        return `a ${colorText} ${shapeText}`;
-    }
-
-    throw new Error(
-        "getTask05DescriptorDisplayString: unknown descriptor type."
-    );
-}
-
-
-function getTask05ADisplayString(
-    descriptor,
-    localeTasks
-) {
-    return getTask05DescriptorDisplayString(
-        descriptor,
-        localeTasks
-    );
-}
-
-
-function getTask05BDisplayString(
-    descriptor,
-    localeTasks
-) {
-    return getTask05DescriptorDisplayString(
-        descriptor,
-        localeTasks
-    );
-}
-
-
-/* ==========================================================================
-   3.05l Validation
+   3.05k Validation
    ========================================================================== */
 
 function validateTask05(task) {
@@ -4283,10 +4212,34 @@ function validateTask05(task) {
         return false;
     }
 
+    /*
+     * Validate generic instruction colours (for {colors} tokens).
+     */
     if (
-        !task.instruction.colors ||
-        typeof task.instruction.colors.A !== "string" ||
-        typeof task.instruction.colors.B !== "string"
+        !Array.isArray(task.instruction.colors) ||
+        !task.instruction.colors.every(
+            c => TASK_COLORS.includes(c)
+        )
+    ) {
+        return false;
+    }
+
+    if (
+        task.instruction.tokenSources?.colors !==
+        "tasks.colors"
+    ) {
+        return false;
+    }
+
+    /*
+     * Validate A/B display colours.
+     */
+    if (
+        !task.instruction.colorsAB ||
+        typeof task.instruction.colorsAB.A !== "string" ||
+        typeof task.instruction.colorsAB.B !== "string" ||
+        !TASK_COLORS.includes(task.instruction.colorsAB.A) ||
+        !TASK_COLORS.includes(task.instruction.colorsAB.B)
     ) {
         return false;
     }
@@ -4315,8 +4268,8 @@ function validateTask05(task) {
 
     for (const key of uniqueWordingKeys) {
         if (
-            task.instruction.colors.A === key ||
-            task.instruction.colors.B === key
+            task.instruction.colorsAB.A === key ||
+            task.instruction.colorsAB.B === key
         ) {
             return false;
         }
@@ -4388,7 +4341,7 @@ function validateTask05(task) {
 
 
 /* ==========================================================================
-   3.05m Rendering helpers
+   3.05l Rendering helpers
    ========================================================================== */
 
 function getRenderedTask05AnswerPaths(task) {
