@@ -3321,9 +3321,6 @@ function getTask05Length(difficulty) {
  * - backgroundColorKey
  * - shape
  * - content (from hex.character)
- *
- * This is used instead of the generic createTaskCellsFromHexes so that
- * matchesTask05Descriptor can rely on backgroundColorKey and shape.
  */
 function createTask05CellsFromHexes(hexes) {
     if (!Array.isArray(hexes)) {
@@ -3343,7 +3340,66 @@ function createTask05CellsFromHexes(hexes) {
 
 
 /* ==========================================================================
-   3.05c Task generation
+   3.05c Descriptor → instruction token conversion
+   ========================================================================== */
+
+/**
+ * Convert a descriptor into a token value and source path for the renderer.
+ *
+ * Returns:
+ * {
+ *   value: string,      // e.g. "red", "A", "circle"
+ *   source: string      // e.g. "tasks.colors", "tasks.shapes"
+ * }
+ */
+function descriptorToInstructionData(descriptor) {
+    if (!descriptor || typeof descriptor !== "object") {
+        return {
+            value: "",
+            source: ""
+        };
+    }
+
+    if (descriptor.type === "color") {
+        return {
+            value: descriptor.color || "",
+            source: "tasks.colors"
+        };
+    }
+
+    if (descriptor.type === "number") {
+        // Numbers are shown as-is; no localization source needed.
+        return {
+            value: String(descriptor.value),
+            source: ""
+        };
+    }
+
+    if (descriptor.type === "character") {
+        // Letters are shown as-is; no localization source needed.
+        return {
+            value: String(descriptor.value),
+            source: ""
+        };
+    }
+
+    if (descriptor.type === "colorShape") {
+        // For now, use the color as the primary token.
+        return {
+            value: descriptor.color || "",
+            source: "tasks.colors"
+        };
+    }
+
+    return {
+        value: "",
+        source: ""
+    };
+}
+
+
+/* ==========================================================================
+   3.05d Task generation
    ========================================================================== */
 
 function generateTask05(difficulty) {
@@ -3469,7 +3525,6 @@ function generateTask05(difficulty) {
     }
 
     if (aIndices.length === 0 || bIndices.length === 0) {
-        // Should never happen due to invariant checks above
         throw new Error(
             "generateTask05: no A or no B hexes on board (invariant violated)."
         );
@@ -3488,6 +3543,27 @@ function generateTask05(difficulty) {
         );
     }
 
+    // ---- Build instruction with A/B tokens ----
+
+    const startToken = descriptorToInstructionData(startDescriptor);
+    const endToken = descriptorToInstructionData(endDescriptor);
+
+    const instruction = {
+        template: "task05_swipeLine",
+        length,
+        A: startToken.value,
+        B: endToken.value,
+        tokenSources: {}
+    };
+
+    if (startToken.source) {
+        instruction.tokenSources.A = startToken.source;
+    }
+
+    if (endToken.source) {
+        instruction.tokenSources.B = endToken.source;
+    }
+
     const task = {
         type: "task05",
 
@@ -3499,13 +3575,7 @@ function generateTask05(difficulty) {
             endDescriptor
         },
 
-        instruction: {
-            template: "task05_swipeLine",
-            length,
-            startDescriptor,
-            endDescriptor,
-            tokenSources: {}
-        },
+        instruction,
 
         cells,
 
@@ -3523,7 +3593,7 @@ function generateTask05(difficulty) {
 
 
 /* ==========================================================================
-   3.05d Descriptor generation
+   3.05e Descriptor generation
    ========================================================================== */
 
 function createTask05Descriptors({ difficulty, startCase }) {
@@ -3621,7 +3691,7 @@ function createTask05Descriptors({ difficulty, startCase }) {
 
 
 /* ==========================================================================
-   3.05e Answer-hex generation (uses character utilities + shape helper)
+   3.05f Answer-hex generation
    ========================================================================== */
 
 function createTask05AnswerHexes({
@@ -3661,8 +3731,6 @@ function createTask05HexForDescriptor({ descriptor, index }) {
     };
 
     if (descriptor.type === "color") {
-        // Color-only descriptor: ensure background color matches.
-        // Character can be any random character from the full pool.
         return {
             ...base,
             character: getRandomTaskCharacter(),
@@ -3671,7 +3739,6 @@ function createTask05HexForDescriptor({ descriptor, index }) {
     }
 
     if (descriptor.type === "number") {
-        // Use the full digit variants pool.
         const variants = getTaskDigitVariants(descriptor.value);
         const character = randomChoice(variants);
 
@@ -3683,7 +3750,6 @@ function createTask05HexForDescriptor({ descriptor, index }) {
     }
 
     if (descriptor.type === "character") {
-        // Use the full alphabet variants pool.
         const variants = getTaskAlphabetVariants(descriptor.value);
         const character = randomChoice(variants);
 
@@ -3695,7 +3761,6 @@ function createTask05HexForDescriptor({ descriptor, index }) {
     }
 
     if (descriptor.type === "colorShape") {
-        // Use shape helper to get the emoji for this color+shape.
         const shapeChar = getShapeCharacter(
             descriptor.shape,
             descriptor.color
@@ -3716,7 +3781,7 @@ function createTask05HexForDescriptor({ descriptor, index }) {
 
 
 /* ==========================================================================
-   3.05f Filler generation (uses character utilities + shape helper)
+   3.05g Filler generation
    ========================================================================== */
 
 function createTask05FillerHex({ difficulty, startDescriptor, endDescriptor }) {
@@ -3750,7 +3815,6 @@ function createTask05FillerHex({ difficulty, startDescriptor, endDescriptor }) {
     let backgroundColorKey = randomChoice(TASK_COLORS);
 
     if (shape) {
-        // If we decide to show a shape, use the shape helper and tie color to it.
         character = getShapeCharacter(shape, backgroundColorKey);
     } else {
         character = getRandomTaskCharacter();
@@ -3765,7 +3829,7 @@ function createTask05FillerHex({ difficulty, startDescriptor, endDescriptor }) {
 
 
 /* ==========================================================================
-   3.05g Matching helpers
+   3.05h Matching helpers
    ========================================================================== */
 
 function matchesTask05Descriptor(cell, descriptor) {
@@ -3797,7 +3861,7 @@ function matchesTask05Descriptor(cell, descriptor) {
 
 
 /* ==========================================================================
-   3.05h Answer-path generation
+   3.05i Answer-path generation
    ========================================================================== */
 
 function createTask05AnswerPaths({ pathCandidates, aIndices, bIndices }) {
@@ -3820,7 +3884,7 @@ function createTask05AnswerPaths({ pathCandidates, aIndices, bIndices }) {
 
 
 /* ==========================================================================
-   3.05i Descriptor display strings (for UI / localization)
+   3.05j Descriptor display strings (for UI / localization)
    ========================================================================== */
 
 function getTask05DescriptorDisplayString(descriptor, localeTasks) {
@@ -3859,7 +3923,7 @@ function getTask05BDisplayString(descriptor, localeTasks) {
 
 
 /* ==========================================================================
-   3.05j Validation
+   3.05k Validation
    ========================================================================== */
 
 function validateTask05(task) {
@@ -3932,7 +3996,7 @@ function validateTask05(task) {
 
 
 /* ==========================================================================
-   3.05k Rendering helpers
+   3.05l Rendering helpers
    ========================================================================== */
 
 function getRenderedTask05AnswerPaths(task) {
