@@ -3282,6 +3282,625 @@ function getRenderedTask04AnswerPaths(task) {
 }
 
 /* ==========================================================================
+   3.05. Task 05
+   ========================================================================== */
+
+
+/* ==========================================================================
+   3.05a Configuration
+   ========================================================================== */
+
+const TASK05_START_CASES = Object.freeze([
+    "colorColor",
+    "valueValue",
+    "colorShapeColorShape"
+]);
+
+// Difficulty → allowed lengths
+function getTask05Length(difficulty) {
+    switch (difficulty) {
+        case 1:
+            return 3;
+        case 2:
+            return randomChoice([4, 5]);
+        case 3:
+            return randomChoice([6, 7]);
+        default:
+            throw new RangeError(
+                "getTask05Length: difficulty must be 1, 2, or 3."
+            );
+    }
+}
+
+
+/* ==========================================================================
+   3.05b Task generation
+   ========================================================================== */
+
+function generateTask05(difficulty) {
+    if (![1, 2, 3].includes(difficulty)) {
+        throw new RangeError(
+            "generateTask05: difficulty must be 1, 2, or 3."
+        );
+    }
+
+    const {
+        boardSize,
+        paths
+    } = PATH_DATA;
+
+    const length = getTask05Length(difficulty);
+
+    const pathCandidates = paths[String(length)];
+
+    if (
+        !Array.isArray(pathCandidates) ||
+        pathCandidates.length === 0
+    ) {
+        throw new Error(
+            `generateTask05: no paths found for length ${length}.`
+        );
+    }
+
+    // Choose start case based on difficulty
+    let startCase;
+    if (difficulty === 1) {
+        // case 1: colorColor, case 2: valueValue (number or character)
+        startCase = randomChoice(["colorColor", "valueValue"]);
+    } else {
+        // difficulty 2/3: case 1: colorColor, case 2: colorShapeColorShape
+        startCase = randomChoice(["colorColor", "colorShapeColorShape"]);
+    }
+
+    const defaultAnswerPath = [...randomChoice(pathCandidates)];
+
+    if (new Set(defaultAnswerPath).size !== defaultAnswerPath.length) {
+        throw new Error(
+            "generateTask05: default answer path contains repeated cells."
+        );
+    }
+
+    // Generate A and B descriptors
+    const { startDescriptor, endDescriptor } = createTask05Descriptors({
+        difficulty,
+        startCase
+    });
+
+    // Populate board ensuring:
+    // - first hex satisfies startDescriptor
+    // - last hex satisfies endDescriptor
+    // - fillers may also satisfy A, B, or neither
+    const answerCharacters = createTask05AnswerHexes({
+        startDescriptor,
+        endDescriptor,
+        answerPath: defaultAnswerPath
+    });
+
+    const answerCellMap = new Map(
+        answerCharacters.map(hex => [Number(hex.index), hex])
+    );
+
+    const hexes = Array.from(
+        { length: boardSize },
+        (_, index) => {
+            if (answerCellMap.has(index)) {
+                return answerCellMap.get(index);
+            }
+            return createTask05FillerHex({
+                difficulty,
+                startDescriptor,
+                endDescriptor
+            });
+        }
+    ).map((hex, index) => ({
+        ...hex,
+        index
+    }));
+
+    const cells = createTaskCellsFromHexes(hexes);
+
+    // Determine which cells satisfy A and which satisfy B
+    const aIndices = [];
+    const bIndices = [];
+
+    for (const cell of cells) {
+        if (matchesTask05Descriptor(cell, startDescriptor)) {
+            aIndices.push(Number(cell.index));
+        }
+        if (matchesTask05Descriptor(cell, endDescriptor)) {
+            bIndices.push(Number(cell.index));
+        }
+    }
+
+    if (aIndices.length === 0 || bIndices.length === 0) {
+        throw new Error(
+            "generateTask05: no A or no B hexes on board."
+        );
+    }
+
+    // Find all valid paths of the same length that start on any A and end on any B
+    const answerPaths = createTask05AnswerPaths({
+        pathCandidates,
+        aIndices,
+        bIndices
+    });
+
+    if (answerPaths.length === 0) {
+        throw new Error(
+            "generateTask05: no valid answer paths found."
+        );
+    }
+
+    const task = {
+        type: "task05",
+
+        data: {
+            difficulty,
+            length,
+            startCase,
+            startDescriptor,
+            endDescriptor
+        },
+
+        instruction: {
+            template: "task05_swipeLine",
+            length,
+            // These are NOT localized strings yet; they are descriptor objects.
+            // Localization happens in the UI when building the final instruction.
+            startDescriptor,
+            endDescriptor,
+            tokenSources: {}
+        },
+
+        cells,
+
+        answerPaths: answerPaths.map(path => [...path])
+    };
+
+    if (!validateTask05(task)) {
+        throw new Error(
+            "generateTask05: generated task failed validation."
+        );
+    }
+
+    return task;
+}
+
+
+/* ==========================================================================
+   3.05c Descriptor generation
+   ========================================================================== */
+
+function createTask05Descriptors({ difficulty, startCase }) {
+    // startCase is one of:
+    // "colorColor", "valueValue", "colorShapeColorShape"
+
+    if (startCase === "colorColor") {
+        const startColor = randomChoice(TASK_COLORS);
+        let endColor = randomChoice(TASK_COLORS);
+
+        // Ensure start and end are distinguishable in description
+        while (endColor === startColor) {
+            endColor = randomChoice(TASK_COLORS);
+        }
+
+        return {
+            startDescriptor: {
+                type: "color",
+                color: startColor
+            },
+            endDescriptor: {
+                type: "color",
+                color: endColor
+            }
+        };
+    }
+
+    if (startCase === "valueValue") {
+        // difficulty 1 only
+        const useNumbers = Math.random() < 0.5;
+
+        const startValue = useNumbers
+            ? randomChoice(TASK_DIGIT_KEYS)
+            : getRandomTaskLetter();
+
+        let endValue;
+        if (useNumbers) {
+            endValue = randomChoice(TASK_DIGIT_KEYS);
+            while (endValue === startValue) {
+                endValue = randomChoice(TASK_DIGIT_KEYS);
+            }
+        } else {
+            endValue = getRandomTaskLetter();
+            while (endValue === startValue) {
+                endValue = getRandomTaskLetter();
+            }
+        }
+
+        return {
+            startDescriptor: {
+                type: useNumbers ? "number" : "character",
+                value: startValue
+            },
+            endDescriptor: {
+                type: useNumbers ? "number" : "character",
+                value: endValue
+            }
+        };
+    }
+
+    if (startCase === "colorShapeColorShape") {
+        // difficulty 2/3
+        const shapes = ["circle", "square"];
+
+        const startColor = randomChoice(TASK_COLORS);
+        const startShape = randomChoice(shapes);
+
+        let endColor = randomChoice(TASK_COLORS);
+        let endShape = randomChoice(shapes);
+
+        // Ensure (color, shape) pair is different for A and B
+        while (endColor === startColor && endShape === startShape) {
+            endColor = randomChoice(TASK_COLORS);
+            endShape = randomChoice(shapes);
+        }
+
+        return {
+            startDescriptor: {
+                type: "colorShape",
+                color: startColor,
+                shape: startShape
+            },
+            endDescriptor: {
+                type: "colorShape",
+                color: endColor,
+                shape: endShape
+            }
+        };
+    }
+
+    throw new Error(
+        "createTask05Descriptors: unknown startCase."
+    );
+}
+
+
+/* ==========================================================================
+   3.05d Answer-hex generation (uses character utilities + shape helper)
+   ========================================================================== */
+
+function createTask05AnswerHexes({
+    startDescriptor,
+    endDescriptor,
+    answerPath
+}) {
+    const startIndex = Number(answerPath[0]);
+    const endIndex = Number(answerPath[answerPath.length - 1]);
+
+    const result = [];
+
+    // Start hex must satisfy startDescriptor
+    result.push(
+        createTask05HexForDescriptor({
+            descriptor: startDescriptor,
+            index: startIndex
+        })
+    );
+
+    // End hex must satisfy endDescriptor
+    result.push(
+        createTask05HexForDescriptor({
+            descriptor: endDescriptor,
+            index: endIndex
+        })
+    );
+
+    return result;
+}
+
+
+function createTask05HexForDescriptor({ descriptor, index }) {
+    const base = {
+        index: Number(index),
+        backgroundColorKey: randomChoice(TASK_COLORS)
+    };
+
+    if (descriptor.type === "color") {
+        // Color-only descriptor: ensure background color matches.
+        // Character can be any random character from the full pool.
+        return {
+            ...base,
+            character: getRandomTaskCharacter(),
+            backgroundColorKey: descriptor.color
+        };
+    }
+
+    if (descriptor.type === "number") {
+        // Use the full digit variants pool.
+        const variants = getTaskDigitVariants(descriptor.value);
+        const character = randomChoice(variants);
+
+        return {
+            ...base,
+            character,
+            backgroundColorKey: randomChoice(TASK_COLORS)
+        };
+    }
+
+    if (descriptor.type === "character") {
+        // Use the full alphabet variants pool.
+        const variants = getTaskAlphabetVariants(descriptor.value);
+        const character = randomChoice(variants);
+
+        return {
+            ...base,
+            character,
+            backgroundColorKey: randomChoice(TASK_COLORS)
+        };
+    }
+
+    if (descriptor.type === "colorShape") {
+        // Use shape helper to get the emoji for this color+shape.
+        const shapeChar = getShapeCharacter(
+            descriptor.shape,
+            descriptor.color
+        );
+
+        return {
+            ...base,
+            character: shapeChar,
+            backgroundColorKey: descriptor.color,
+            shape: descriptor.shape
+        };
+    }
+
+    throw new Error(
+        "createTask05HexForDescriptor: unknown descriptor type."
+    );
+}
+
+
+/* ==========================================================================
+   3.05e Filler generation (uses character utilities + shape helper)
+   ========================================================================== */
+
+function createTask05FillerHex({ difficulty, startDescriptor, endDescriptor }) {
+    // Fillers may satisfy A, B, or neither.
+    const roll = Math.random();
+
+    // 20% chance to intentionally match A, 20% to match B, 60% neither
+    if (roll < 0.2) {
+        const hex = createTask05HexForDescriptor({
+            descriptor: startDescriptor,
+            index: -1 // placeholder
+        });
+        delete hex.index;
+        return hex;
+    }
+
+    if (roll < 0.4) {
+        const hex = createTask05HexForDescriptor({
+            descriptor: endDescriptor,
+            index: -1
+        });
+        delete hex.index;
+        return hex;
+    }
+
+    // Neither: random character from full pool, random color, optional shape
+    const shapes = [null, "circle", "square"];
+    const shape = randomChoice(shapes);
+
+    let character;
+    let backgroundColorKey = randomChoice(TASK_COLORS);
+
+    if (shape) {
+        // If we decide to show a shape, use the shape helper and tie color to it.
+        // We can either:
+        // - use descriptor color, or
+        // - pick a random color and use that for both background and shape.
+        // Here we keep background and shape color consistent.
+        character = getShapeCharacter(shape, backgroundColorKey);
+    } else {
+        character = getRandomTaskCharacter();
+    }
+
+    return {
+        character,
+        backgroundColorKey,
+        shape: shape || undefined
+    };
+}
+
+
+/* ==========================================================================
+   3.05f Matching helpers
+   ========================================================================== */
+
+function matchesTask05Descriptor(cell, descriptor) {
+    if (descriptor.type === "color") {
+        return cell.backgroundColorKey === descriptor.color;
+    }
+
+    if (descriptor.type === "number") {
+        // Match any variant of the digit.
+        const cellCanonical = canonicalizeTaskCharacter(cell.content);
+        const descCanonical = canonicalizeTaskCharacter(descriptor.value);
+        return cellCanonical === descCanonical;
+    }
+
+    if (descriptor.type === "character") {
+        const cellCanonical = canonicalizeTaskCharacter(cell.content);
+        const descCanonical = canonicalizeTaskCharacter(descriptor.value);
+        return cellCanonical === descCanonical;
+    }
+
+    if (descriptor.type === "colorShape") {
+        const colorMatch = cell.backgroundColorKey === descriptor.color;
+
+        const cellShape = cell.shape || null;
+        const shapeMatch = cellShape === descriptor.shape;
+
+        return colorMatch && shapeMatch;
+    }
+
+    return false;
+}
+
+
+/* ==========================================================================
+   3.05g Answer-path generation
+   ========================================================================== */
+
+function createTask05AnswerPaths({ pathCandidates, aIndices, bIndices }) {
+    const aSet = new Set(aIndices);
+    const bSet = new Set(bIndices);
+
+    const result = [];
+
+    for (const path of pathCandidates) {
+        const start = Number(path[0]);
+        const end = Number(path[path.length - 1]);
+
+        if (aSet.has(start) && bSet.has(end)) {
+            result.push([...path]);
+        }
+    }
+
+    return result;
+}
+
+
+/* ==========================================================================
+   3.05h Descriptor display strings (for UI / localization)
+   ========================================================================== */
+
+function getTask05DescriptorDisplayString(descriptor, localeTasks) {
+    const { colors, shapes } = localeTasks;
+
+    if (descriptor.type === "color") {
+        // e.g. "red"
+        return colors[descriptor.color];
+    }
+
+    if (descriptor.type === "number") {
+        // e.g. "6"
+        return String(descriptor.value);
+    }
+
+    if (descriptor.type === "character") {
+        // e.g. "M"
+        return descriptor.value;
+    }
+
+    if (descriptor.type === "colorShape") {
+        // e.g. "a blue circle"
+        const colorText = colors[descriptor.color];
+        const shapeText = shapes[descriptor.shape];
+        return `a ${colorText} ${shapeText}`;
+    }
+
+    throw new Error(
+        "getTask05DescriptorDisplayString: unknown descriptor type."
+    );
+}
+
+// A and B use the same function; naming helpers for clarity in UI code:
+function getTask05ADisplayString(descriptor, localeTasks) {
+    return getTask05DescriptorDisplayString(descriptor, localeTasks);
+}
+
+function getTask05BDisplayString(descriptor, localeTasks) {
+    return getTask05DescriptorDisplayString(descriptor, localeTasks);
+}
+
+
+/* ==========================================================================
+   3.05i Validation
+   ========================================================================== */
+
+function validateTask05(task) {
+    if (
+        !task ||
+        task.type !== "task05" ||
+        !task.data ||
+        !task.instruction ||
+        !Array.isArray(task.cells) ||
+        !Array.isArray(task.answerPaths)
+    ) {
+        return false;
+    }
+
+    const {
+        difficulty,
+        length,
+        startCase,
+        startDescriptor,
+        endDescriptor
+    } = task.data;
+
+    if (
+        ![1, 2, 3].includes(difficulty) ||
+        ![3, 4, 5, 6, 7].includes(length) ||
+        !TASK05_START_CASES.includes(startCase) ||
+        !startDescriptor ||
+        !endDescriptor
+    ) {
+        return false;
+    }
+
+    if (task.answerPaths.length === 0) {
+        return false;
+    }
+
+    const boardCells = new Map(
+        task.cells.map(cell => [Number(cell.index), cell])
+    );
+
+    for (const path of task.answerPaths) {
+        if (!Array.isArray(path) || path.length !== length) {
+            return false;
+        }
+
+        if (new Set(path).size !== path.length) {
+            return false;
+        }
+
+        const start = Number(path[0]);
+        const end = Number(path[path.length - 1]);
+
+        const startCell = boardCells.get(start);
+        const endCell = boardCells.get(end);
+
+        if (!startCell || !endCell) {
+            return false;
+        }
+
+        if (
+            !matchesTask05Descriptor(startCell, startDescriptor) ||
+            !matchesTask05Descriptor(endCell, endDescriptor)
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+/* ==========================================================================
+   3.05j Rendering helpers
+   ========================================================================== */
+
+function getRenderedTask05AnswerPaths(task) {
+    if (!task || !Array.isArray(task.answerPaths)) {
+        return [];
+    }
+
+    return task.answerPaths.map(path => [...path]);
+}
+
+/* ==========================================================================
    4. Shared task engine
    ========================================================================== */
 
@@ -3295,6 +3914,7 @@ const taskGenerators = [
     { id: "task02", generator: generateTask02, difficulties: [0,1,2]},
     { id: "task03", generator: generateTask03, difficulties: [0,1,2,3]},
     { id: "task04", generator: generateTask04, difficulties: [0,1]}
+    { id: "task05", generator: generateTask05, difficulties:   [1,2,3]}
 
     // Add future task generators here.
 ];
