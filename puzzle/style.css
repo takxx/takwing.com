@@ -1,5 +1,5 @@
 /* =========================
-   Page layout
+   Global reset and layout
    ========================= */
 
 * {
@@ -17,19 +17,68 @@ body {
   display: grid;
   place-items: start center;
   padding: 24px 12px;
+
   background: #0f172a;
   color: #e2e8f0;
+
+  /*
+    General interface font.
+    This remains proportional and uses installed system fonts.
+  */
   font-family:
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
     sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .game {
   width: min(100%, 440px);
   text-align: center;
+}
+
+/* =========================
+   Character readability
+   ========================= */
+
+/*
+  System monospace stack:
+
+  - ui-monospace: operating-system monospace choice
+  - SFMono-Regular: Apple platforms
+  - Menlo / Monaco: older Apple platforms
+  - Consolas / Cascadia Mono: Windows
+  - Liberation Mono / DejaVu Sans Mono: Linux and Android-like systems
+  - monospace: final generic fallback
+
+  Use this only for puzzle characters and values.
+*/
+.hex,
+.puzzle-character,
+.instruction-value,
+.character-value,
+.number-value {
+  font-family:
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    Monaco,
+    Consolas,
+    "Cascadia Mono",
+    "Liberation Mono",
+    "DejaVu Sans Mono",
+    monospace;
+
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 /* =========================
@@ -65,16 +114,21 @@ body {
 
 .language-control select {
   min-width: 120px;
+  padding: 7px 10px;
+
   font: inherit;
+
   border: 1px solid #475569;
   border-radius: 8px;
-  padding: 7px 10px;
+
   background: #1e293b;
   color: #e2e8f0;
+
+  cursor: pointer;
 }
 
 /* =========================
-   Status bar (score / time / high score)
+   Status bar
    ========================= */
 
 .status-bar {
@@ -83,10 +137,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: 12px;
+
   margin: 12px 0;
   padding: 8px 4px;
+
   border: 1px solid #334155;
   border-radius: 8px;
+
   background: #172033;
 }
 
@@ -96,8 +153,9 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
+
   min-width: 70px;
+  padding: 4px 8px;
 }
 
 .status-item span:first-child {
@@ -114,13 +172,14 @@ body {
 }
 
 /* =========================
-   Message / instruction
+   Message and instruction
    ========================= */
 
 #message {
   min-height: 2.8em;
-  margin: 12px auto;
   max-width: 360px;
+  margin: 12px auto;
+
   font-size: 1rem;
   line-height: 1.4;
 }
@@ -133,26 +192,32 @@ body {
   font-weight: 700;
 }
 
+/*
+  Color words have no colored background.
+  The !important prevents inline or inherited backgrounds
+  from reappearing on generated instruction elements.
+*/
 .instruction-color {
-  display: inline-block;
-  padding: 0.05em 0.3em;
-  border-radius: 0.25em;
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+
   font-weight: 700;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .instruction-color-red {
-  color: #b42318;
-  background-color: #fde2df;
+  color: #ff6b6b;
 }
 
 .instruction-color-green {
-  color: #18794e;
-  background-color: #dff5e8;
+  color: #51cf66;
 }
 
 .instruction-color-blue {
-  color: #1769aa;
-  background-color: #dceeff;
+  color: #4dabf7;
 }
 
 .instruction-shape,
@@ -160,8 +225,19 @@ body {
   font-weight: 600;
 }
 
+/*
+  If the renderer creates generic highlighted token elements,
+  this removes their backgrounds without affecting the board.
+*/
+.instruction-token,
+.hint-token,
+.message-token {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 /* =========================
-   Controls (start button area)
+   Controls
    ========================= */
 
 .controls {
@@ -172,13 +248,32 @@ body {
 }
 
 button {
+  padding: 7px 14px;
+
   font: inherit;
+
   border: 1px solid #475569;
   border-radius: 8px;
-  padding: 7px 14px;
+
   background: #1e293b;
   color: #e2e8f0;
+
   cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    filter 0.12s ease;
+}
+
+button:hover:not(:disabled) {
+  background: #293b55;
+  border-color: #64748b;
+}
+
+button:focus-visible,
+.language-control select:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
 }
 
 button:disabled {
@@ -192,9 +287,12 @@ button:disabled {
 
 #board {
   position: relative;
+
   width: 250px;
   height: 250px;
+
   margin: 20px auto;
+
   touch-action: none;
   user-select: none;
 }
@@ -204,7 +302,7 @@ button:disabled {
 
   /*
     Regular flat-top hexagon:
-    width = 78px
+    width  = 78px
     height = 67.55px
   */
   width: 78px;
@@ -212,6 +310,7 @@ button:disabled {
 
   display: grid;
   place-items: center;
+
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -229,11 +328,14 @@ button:disabled {
   );
 
   /*
-    Never replace this with scale() in .active.
-    These transforms keep each hex centered at its
-    calculated coordinate.
+    Preserve the calculated center of every hex.
+    Do not replace this with scale() in .active.
   */
   transform: translate(-50%, -50%);
+
+  font-size: 1.25rem;
+  line-height: 1;
+  text-align: center;
 
   cursor: pointer;
   touch-action: none;
@@ -247,9 +349,9 @@ button:disabled {
 
 /*
   The centers are deliberately farther apart than
-  the hex dimensions. This produces a visible gap
-  of approximately 2px.
+  the hex dimensions, creating a visible gap.
 */
+
 .hex-0 {
   left: 50%;
   top: 50%;
@@ -285,10 +387,10 @@ button:disabled {
   top: calc(50% - 34.78px);
 }
 
-/*
-  !important is needed because generated cells may
-  have inline background-color styles.
-*/
+/* =========================
+   Board states
+   ========================= */
+
 .hex.active {
   background: #ffffff !important;
   color: #0f172a !important;
@@ -310,6 +412,11 @@ button:disabled {
   filter: brightness(1.08);
 }
 
+.hex:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 3px;
+}
+
 #board.is-disabled {
   opacity: 0.8;
   pointer-events: none;
@@ -322,27 +429,85 @@ button:disabled {
 #feedbackThumb {
   position: absolute;
   z-index: 20;
+
   display: none;
+
   pointer-events: none;
+
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+
   font-size: 30px;
   line-height: 1;
+
   transform: translate(-50%, -100%);
   filter: drop-shadow(0 2px 2px rgb(0 0 0 / 45%));
 }
 
 /* =========================
-   Small helpers / utilities
+   Small helpers and utilities
    ========================= */
 
 .sr-only,
 .visually-hidden {
   position: absolute;
+
   width: 1px;
   height: 1px;
   padding: 0;
   margin: -1px;
+
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
+
   white-space: nowrap;
   border: 0;
+}
+
+/* =========================
+   Small-screen adjustments
+   ========================= */
+
+@media (max-width: 360px) {
+  body {
+    padding: 18px 8px;
+  }
+
+  .top-bar {
+    align-items: flex-start;
+  }
+
+  .game-title {
+    font-size: 1.4rem;
+  }
+
+  .language-control select {
+    min-width: 100px;
+  }
+
+  #board {
+    transform: scale(0.9);
+    transform-origin: top center;
+    margin-bottom: -24px;
+  }
+}
+
+/* =========================
+   Reduced motion
+   ========================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
