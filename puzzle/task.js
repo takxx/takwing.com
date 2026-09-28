@@ -343,7 +343,7 @@ function createUniqueRandomTaskAlphabetCharacters(count) {
 }
 
 /* ==========================================================================
-   1d.1 Shape character helper (used by Task 02)
+   1e Shape character helper
    ========================================================================== */
 
 function getShapeCharacter(shape, color) {
@@ -371,7 +371,7 @@ function getShapeCharacter(shape, color) {
 }
 
 /* ==========================================================================
-   1e Reusable character matching
+   1f Reusable character matching
    ========================================================================== */
 
 function canonicalizeTaskCharacter(character) {
@@ -431,7 +431,7 @@ function taskCharacterInGroup(
 
 
 /* ==========================================================================
-   1f Reusable cell conversion
+   1g Reusable cell conversion
    ========================================================================== */
 
 function createTaskCellsFromHexes(
@@ -2649,6 +2649,639 @@ function getRenderedTask03AnswerPaths(task) {
 }
 
 /* ==========================================================================
+   3.04. Task 04
+   ========================================================================== */
+
+
+/* ==========================================================================
+   3.04a Configuration
+   ========================================================================== */
+
+const TASK04_WORDS = Object.freeze([
+    "TORONTO",
+    "MEXICO",
+    "CARACAS",
+    "LIMA",
+    "HAVANA",
+    "MADRID",
+    "BILBAO",
+    "MALTA",
+    "PARIS",
+    "BERLIN",
+    "EDAM",
+    "GOUDA",
+    "OSLO",
+    "DUBAI",
+    "NAIROBI",
+    "BANGKOK",
+    "MANILA",
+    "TAIPEI",
+    "OKINAWA",
+    "OSAKA"
+]);
+
+
+/* ==========================================================================
+   3.04b Task generation
+   ========================================================================== */
+
+function generateTask04(difficulty) {
+    if (![0, 1].includes(difficulty)) {
+        throw new RangeError(
+            "generateTask04: difficulty must be 0 or 1."
+        );
+    }
+
+    const {
+        boardSize,
+        paths
+    } = PATH_DATA;
+
+    const target =
+        getTask04Target(difficulty);
+
+    const answerLength =
+        target.length;
+
+    const pathCandidates =
+        paths[String(answerLength)];
+
+    if (
+        !Array.isArray(pathCandidates) ||
+        pathCandidates.length === 0
+    ) {
+        throw new Error(
+            `generateTask04: no paths found for length ${answerLength}.`
+        );
+    }
+
+    const answerPath = [
+        ...randomChoice(pathCandidates)
+    ];
+
+    if (
+        new Set(answerPath).size !==
+        answerPath.length
+    ) {
+        throw new Error(
+            "generateTask04: answer path contains repeated cells."
+        );
+    }
+
+    const answerCharacters =
+        createTask04AnswerCharacters({
+            target,
+            answerPath
+        });
+
+    const answerCellMap =
+        new Map(
+            answerCharacters.map(cell => [
+                Number(cell.index),
+                cell
+            ])
+        );
+
+    const hexes =
+        Array.from(
+            { length: boardSize },
+            (_, index) => {
+                if (answerCellMap.has(index)) {
+                    return answerCellMap.get(index);
+                }
+
+                return createTask04FillerHex({
+                    difficulty,
+                    target
+                });
+            }
+        ).map((hex, index) => ({
+            ...hex,
+            index
+        }));
+
+    const cells =
+        createTaskCellsFromHexes(hexes);
+
+    const candidatePaths =
+        createTask04CandidatePaths({
+            target,
+            answerPath,
+            pathCandidates
+        });
+
+    const answerPaths =
+        candidatePaths.filter(candidatePath =>
+            pathCandidates.some(path =>
+                sameOrderedTask04Path(
+                    path,
+                    candidatePath
+                )
+            )
+        );
+
+    if (answerPaths.length === 0) {
+        throw new Error(
+            "generateTask04: no valid answer paths were generated."
+        );
+    }
+
+    const task = {
+        type: "task04",
+
+        data: {
+            difficulty,
+            target,
+            answerLength,
+            answerPath: [...answerPath]
+        },
+
+        instruction: {
+            template: "task04_swipeWord",
+            target,
+            length: answerLength,
+
+            // No tokenSources for word list; it's pure game data.
+            tokenSources: {}
+        },
+
+        cells,
+
+        answerPaths: answerPaths.map(path => [...path])
+    };
+
+    if (
+        !validateTask04(task)
+    ) {
+        throw new Error(
+            "generateTask04: generated task failed validation."
+        );
+    }
+
+    return task;
+}
+
+
+/* ==========================================================================
+   3.04c Difficulty rules
+   ========================================================================== */
+
+function getTask04Target(difficulty) {
+    /*
+     * No length-based difficulty mapping.
+     * Just pick a random word from the curated list.
+     */
+    return randomChoice(TASK04_WORDS);
+}
+
+
+/* ==========================================================================
+   3.04d Answer-cell generation
+   ========================================================================== */
+
+function createTask04AnswerCharacters({
+    target,
+    answerPath
+}) {
+    if (
+        typeof target !== "string" ||
+        !Array.isArray(answerPath) ||
+        target.length !== answerPath.length
+    ) {
+        throw new Error(
+            "createTask04AnswerCharacters: target/path length mismatch."
+        );
+    }
+
+    return answerPath.map((index, position) => ({
+        index: Number(index),
+
+        character:
+            getRandomTask04Character(
+                target[position]
+            ),
+
+        backgroundColorKey:
+            randomChoice(TASK_COLORS)
+    }));
+}
+
+
+function getRandomTask04Character(character) {
+    const canonical =
+        canonicalizeTaskCharacter(character);
+
+    if (
+        TASK_ALPHABET_KEYS.includes(canonical)
+    ) {
+        return randomChoice(
+            getTaskAlphabetVariants(canonical)
+        );
+    }
+
+    throw new Error(
+        `getRandomTask04Character: "${character}" is not an alphabet character.`
+    );
+}
+
+
+/* ==========================================================================
+   3.04e Candidate-path generation
+   ========================================================================== */
+
+function createTask04CandidatePaths({
+    target,
+    answerPath,
+    pathCandidates
+}) {
+    const targetCharacters =
+        target.split("");
+
+    const indicesByCharacter =
+        new Map();
+
+    for (
+        let position = 0;
+        position < targetCharacters.length;
+        position += 1
+    ) {
+        const canonical =
+            canonicalizeTaskCharacter(
+                targetCharacters[position]
+            );
+
+        if (!indicesByCharacter.has(canonical)) {
+            indicesByCharacter.set(canonical, []);
+        }
+
+        indicesByCharacter
+            .get(canonical)
+            .push(Number(answerPath[position]));
+    }
+
+    const characterKeys =
+        [...indicesByCharacter.keys()];
+
+    const permutationsByCharacter =
+        characterKeys.map(character => {
+        const indices =
+            indicesByCharacter.get(character);
+
+        return createUniquePermutations(indices);
+    });
+
+    const combinations =
+        createTask04CartesianProduct(
+            permutationsByCharacter
+        );
+
+    const candidates = [];
+
+    for (const combination of combinations) {
+        const permutationMap =
+            new Map();
+
+        characterKeys.forEach(
+            (character, characterIndex) => {
+                permutationMap.set(
+                    character,
+                    [...combination[characterIndex]]
+                );
+            }
+        );
+
+        const usageCounters =
+            new Map();
+
+        const candidatePath =
+            targetCharacters.map(character => {
+                const canonical =
+                    canonicalizeTaskCharacter(
+                        character
+                    );
+
+                const values =
+                    permutationMap.get(canonical);
+
+                const usageCount =
+                    usageCounters.get(canonical) || 0;
+
+                usageCounters.set(
+                    canonical,
+                    usageCount + 1
+                );
+
+                return values[usageCount];
+            });
+
+        if (
+            pathCandidates.some(path =>
+                sameOrderedTask04Path(
+                    path,
+                    candidatePath
+                )
+            )
+        ) {
+            candidates.push(candidatePath);
+        }
+    }
+
+    return removeDuplicateTask04Paths(candidates);
+}
+
+
+function createUniquePermutations(values) {
+    const result = [];
+    const seen = new Set();
+
+    function visit(remaining, current) {
+        if (remaining.length === 0) {
+            const key =
+                JSON.stringify(current);
+
+            if (!seen.has(key)) {
+                seen.add(key);
+                result.push([...current]);
+            }
+
+            return;
+        }
+
+        for (
+            let index = 0;
+            index < remaining.length;
+            index += 1
+        ) {
+            const nextRemaining =
+                [
+                    ...remaining.slice(0, index),
+                    ...remaining.slice(index + 1)
+                ];
+
+            visit(
+                nextRemaining,
+                [
+                    ...current,
+                    remaining[index]
+                ]
+            );
+        }
+    }
+
+    visit([...values], []);
+
+    return result;
+}
+
+
+function createTask04CartesianProduct(groups) {
+    if (groups.length === 0) {
+        return [[]];
+    }
+
+    const [first, ...rest] =
+        groups;
+
+    const suffixes =
+        createTask04CartesianProduct(rest);
+
+    const result = [];
+
+    for (const value of first) {
+        for (const suffix of suffixes) {
+            result.push([
+                value,
+                ...suffix
+            ]);
+        }
+    }
+
+    return result;
+}
+
+
+function removeDuplicateTask04Paths(paths) {
+    const seen = new Set();
+    const result = [];
+
+    for (const path of paths) {
+        const key =
+            JSON.stringify(path);
+
+        if (!seen.has(key)) {
+            seen.add(key);
+            result.push([...path]);
+        }
+    }
+
+    return result;
+}
+
+
+/* ==========================================================================
+   3.04f Filler generation
+   ========================================================================== */
+
+function createTask04FillerHex({
+    difficulty,
+    target
+}) {
+    const targetCharacters =
+        target
+            .split("")
+            .map(character =>
+                canonicalizeTaskCharacter(character)
+            );
+
+    const availableCharacters =
+        getAllTaskAlphabetCharacters()
+            .filter(character =>
+                !targetCharacters.includes(
+                    canonicalizeTaskCharacter(character)
+                )
+            );
+
+    const characterPool =
+        availableCharacters.length > 0
+            ? availableCharacters
+            : getAllTaskAlphabetCharacters();
+
+    return {
+        character:
+            randomChoice(characterPool),
+
+        backgroundColorKey:
+            randomChoice(TASK_COLORS)
+    };
+}
+
+
+/* ==========================================================================
+   3.04g Validation
+   ========================================================================== */
+
+function validateTask04(task) {
+    if (
+        !task ||
+        task.type !== "task04" ||
+        !task.data ||
+        !task.instruction ||
+        !Array.isArray(task.cells) ||
+        !Array.isArray(task.answerPaths)
+    ) {
+        return false;
+    }
+
+    const {
+        difficulty,
+        target,
+        answerLength,
+        answerPath
+    } = task.data;
+
+    if (
+        ![0, 1].includes(difficulty) ||
+        typeof target !== "string" ||
+        target.length === 0 ||
+        !Number.isInteger(answerLength) ||
+        answerLength !== target.length ||
+        !Array.isArray(answerPath) ||
+        answerPath.length !== answerLength
+    ) {
+        return false;
+    }
+
+    if (
+        !sameOrderedTask04Path(
+            task.answerPaths[0],
+            answerPath
+        )
+    ) {
+        return false;
+    }
+
+    if (
+        task.answerPaths.length < 1
+    ) {
+        return false;
+    }
+
+    const boardCells =
+        new Map(
+            task.cells.map(cell => [
+                Number(cell.index),
+                cell
+            ])
+        );
+
+    for (const path of task.answerPaths) {
+        if (
+            !Array.isArray(path) ||
+            path.length !== answerLength
+        ) {
+            return false;
+        }
+
+        if (
+            new Set(path).size !== path.length
+        ) {
+            return false;
+        }
+
+        const values =
+            path.map(index => {
+                const cell =
+                    boardCells.get(Number(index));
+
+                return cell
+                    ? canonicalizeTaskCharacter(
+                        cell.content
+                    )
+                    : undefined;
+            });
+
+        if (
+            values.some(value => value === undefined)
+        ) {
+            return false;
+        }
+
+        if (
+            !sameUnorderedTask04Characters(
+                values,
+                target
+            )
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+function sameOrderedTask04Path(pathA, pathB) {
+    if (
+        !Array.isArray(pathA) ||
+        !Array.isArray(pathB) ||
+        pathA.length !== pathB.length
+    ) {
+        return false;
+    }
+
+    return pathA.every(
+        (value, index) =>
+            Number(value) === Number(pathB[index])
+    );
+}
+
+
+function sameUnorderedTask04Characters(
+    values,
+    target
+) {
+    if (
+        !Array.isArray(values) ||
+        typeof target !== "string" ||
+        values.length !== target.length
+    ) {
+        return false;
+    }
+
+    const expected =
+        target
+            .split("")
+            .map(character =>
+                canonicalizeTaskCharacter(character)
+            )
+            .sort();
+
+    const actual =
+        [...values].sort();
+
+    return expected.every(
+        (value, index) =>
+            value === actual[index]
+    );
+}
+
+
+/* ==========================================================================
+   3.04h Rendering helpers
+   ========================================================================== */
+
+function getRenderedTask04AnswerPaths(task) {
+    if (
+        !task ||
+        !Array.isArray(task.answerPaths)
+    ) {
+        return [];
+    }
+
+    return task.answerPaths.map(path => [...path]);
+}
+
+/* ==========================================================================
    4. Shared task engine
    ========================================================================== */
 
@@ -2661,6 +3294,7 @@ const taskGenerators = [
     { id: "task01", generator: generateTask01, difficulties: [0,1,2,3]},
     { id: "task02", generator: generateTask02, difficulties: [0,1,2]},
     { id: "task03", generator: generateTask03, difficulties: [0,1,2,3]}
+    { id: "task04", generator: generateTask04, difficulties: [0,1]}
 
     // Add future task generators here.
 ];
