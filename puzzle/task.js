@@ -3913,7 +3913,7 @@ const taskGenerators = [
     { id: "task01", generator: generateTask01, difficulties: [0,1,2,3]},
     { id: "task02", generator: generateTask02, difficulties: [0,1,2]},
     { id: "task03", generator: generateTask03, difficulties: [0,1,2,3]},
-    { id: "task04", generator: generateTask04, difficulties: [0,1]}
+    { id: "task04", generator: generateTask04, difficulties: [0,1]},
     { id: "task05", generator: generateTask05, difficulties:   [1,2,3]}
 
     // Add future task generators here.
