@@ -374,7 +374,7 @@ function findAllValidAnswers(boardLetters, words, paths) {
 }
 
 function blankBar(length) {
-  return Array(length).fill("_").join(" ");
+  return Array(length).fill("_").join("");
 }
 
 function createHintSlots(answersByWord) {
