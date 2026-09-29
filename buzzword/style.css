@@ -18,8 +18,8 @@ body {
   place-items: start center;
   padding: 24px 12px;
 
-  background: #0f172a;        /* dark page background */
-  color: #e2e8f0;              /* default text outside hex (white-ish) */
+  background: #0f172a;
+  color: #e2e8f0;
 
   font-family:
     system-ui,
@@ -108,9 +108,13 @@ body {
 }
 
 .status-value {
-  color: #FFD54A;           /* yellow numbers */
+  color: #FFD54A;
   font-size: 1.1rem;
   font-weight: 800;
+
+  /* Ensure 2-digit look (monospace + fixed min-width) */
+  min-width: 2ch;
+  text-align: center;
 }
 
 .game-message {
@@ -132,7 +136,6 @@ body {
   margin: 10px auto 16px;
 }
 
-/* Match the other game’s board geometry exactly */
 .hex-board {
   position: relative;
   width: 250px;
@@ -143,7 +146,6 @@ body {
   user-select: none;
 }
 
-/* Flat-top hexagon, same size as the other game */
 .hex {
   position: absolute;
 
@@ -157,8 +159,8 @@ body {
   border: 0;
   border-radius: 0;
 
-  background: #FFD54A;       /* yellow hex */
-  color: #000000;            /* black letter inside hex */
+  background: #FFD54A;
+  color: #000000;
 
   clip-path: polygon(
     25% 0%,
@@ -169,7 +171,6 @@ body {
     0% 50%
   );
 
-  /* Center each hex on its left/top coordinates */
   transform: translate(-50%, -50%);
 
   font-size: 1.25rem;
@@ -186,7 +187,6 @@ body {
     filter 0.12s ease;
 }
 
-/* Highlighted hexes: slightly lighter yellow */
 .hex.is-highlighted {
   background: #FFE082 !important;
   color: #000000 !important;
@@ -202,7 +202,7 @@ body {
   outline-offset: 3px;
 }
 
-/* Exact positions from the other game (flat-top ring) */
+/* Flat-top ring positions (same as other game) */
 .hex-0 {
   left: 50%;
   top: 50%;
@@ -238,7 +238,6 @@ body {
   top: calc(50% - 34.78px);
 }
 
-/* Current word display (outside hex) */
 .current-word {
   margin-top: 8px;
   font-size: 1.1rem;
@@ -246,10 +245,9 @@ body {
   letter-spacing: 0.15em;
   min-height: 1.4em;
   text-align: center;
-  color: #FFFFFF;          /* white */
+  color: #FFFFFF;
 }
 
-/* Feedback icons */
 .feedback {
   position: absolute;
   z-index: 20;
@@ -363,19 +361,15 @@ body {
   letter-spacing: 0.2em;
   user-select: none;
 
-  color: #FFFFFF;          /* white outside hex */
+  color: #FFFFFF;
 }
 
 .word-hint--found {
   background: #1b3a1b;
   border-color: #2f5a2f;
-  color: #98fb98;          /* light green for found words */
+  color: #98fb98;
   font-weight: 700;
 }
-
-/* =========================
-   Small-screen adjustments
-   ========================= */
 
 @media (max-width: 360px) {
   body {
@@ -388,10 +382,6 @@ body {
     margin-bottom: -24px;
   }
 }
-
-/* =========================
-   Reduced motion
-   ========================= */
 
 @media (prefers-reduced-motion: reduce) {
   *,

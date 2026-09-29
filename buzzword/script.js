@@ -1,5 +1,4 @@
-// script.js v261029 – flat-top honeycomb matching the other game
-
+// script.js – v260929c
 // ---------- Data loading ----------
 
 async function loadWordData(language = "en") {
@@ -238,6 +237,7 @@ function startRound() {
 
   gameState.hintSlots = createHintSlots(round.answersByWord);
 
+  // Reset per-round counters, keep cumulative score
   gameState.timeRemaining = 80;
   gameState.wordsFound = 0;
 
@@ -251,19 +251,10 @@ function startRound() {
   startTimer();
 }
 
-function completeRound() {
-  gameState.active = false;
-  clearInterval(gameState.timerId);
-
-  showMessage(
-    `Buzzword solved: ${gameState.targetWord}! Total score: ${gameState.score}.`
-  );
-
-  disableBoardInput();
-
-  setTimeout(() => {
-    startRound();
-  }, 1200);
+function nextRound() {
+  // Called when time is up but at least one 7-letter word was found.
+  // Keep score, start a fresh puzzle.
+  startRound();
 }
 
 function endGame() {
@@ -271,7 +262,7 @@ function endGame() {
   clearInterval(gameState.timerId);
 
   showMessage(
-    `Time is up. The hidden word was ${gameState.targetWord}.`
+    `Time is up. The hidden word was ${gameState.targetWord}. Final score: ${gameState.score}.`
   );
 
   disableBoardInput();
@@ -279,18 +270,46 @@ function endGame() {
 
 // ---------- Timer ----------
 
+function clampTimer(value) {
+  if (value < 0) return 0;
+  if (value > 99) return 99;
+  return value;
+}
+
+function formatTimer(value) {
+  return String(clampTimer(value)).padStart(2, "0");
+}
+
 function startTimer() {
   clearInterval(gameState.timerId);
   gameState.timerId = setInterval(() => {
     if (!gameState.active) return;
 
     gameState.timeRemaining -= 1;
+    gameState.timeRemaining = clampTimer(gameState.timeRemaining);
     updateTimerDisplay(gameState.timeRemaining);
 
     if (gameState.timeRemaining <= 0) {
-      endGame();
+      handleTimeUp();
     }
   }, 1000);
+}
+
+function handleTimeUp() {
+  clearInterval(gameState.timerId);
+
+  // Check if any 7-letter word has been found
+  const hasSevenLetterWord = [...gameState.answersByWord.values()].some(
+    a => a.length === 7 && a.found
+  );
+
+  if (hasSevenLetterWord) {
+    // Proceed to next puzzle
+    nextRound();
+  } else {
+    // Game over
+    endGame();
+  }
 }
 
 // ---------- Rendering ----------
@@ -299,8 +318,6 @@ function renderBoard(boardLetters) {
   const boardEl = document.getElementById("board");
   boardEl.innerHTML = "";
 
-  // We use the same 7 positions as the other game:
-  // hex-0 .. hex-6 with fixed classes for layout.
   boardLetters.forEach((letter, index) => {
     const hex = document.createElement("button");
     hex.type = "button";
@@ -335,7 +352,8 @@ function updateScoreDisplay(score) {
 }
 
 function updateTimerDisplay(time) {
-  document.getElementById("timerDisplay").textContent = Math.max(0, time);
+  const el = document.getElementById("timerDisplay");
+  el.textContent = formatTimer(time);
 }
 
 function updateCurrentWordDisplay() {
@@ -497,9 +515,7 @@ function handlePointerUp(e) {
     `${result.word}: +${result.points} points, +${result.bonusSeconds} seconds`
   );
 
-  if (result.isTargetWord) {
-    completeRound();
-  }
+  // No immediate round completion on 7-letter word; timer controls flow.
 }
 
 function highlightSelectedPath() {
@@ -560,10 +576,11 @@ function submitPath(selectedPath) {
   answer.found = true;
 
   const points = answer.score;
-  const bonusSeconds = Math.floor(points / 3);
+  const bonusSeconds = Math.min(99 - gameState.timeRemaining, Math.floor(points / 3));
+  // Ensure we never push timer above 99
+  gameState.timeRemaining = clampTimer(gameState.timeRemaining + bonusSeconds);
 
   gameState.score += points;
-  gameState.timeRemaining += bonusSeconds;
   gameState.wordsFound += 1;
 
   revealFirstHintForLength(gameState.hintSlots, word);
