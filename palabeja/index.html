@@ -1,49 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Buzzword</title>
+  <title>Palabeja</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="hive-game">
     <header class="game-header">
-      <h1 class="game-title">Buzzword</h1>
+      <h1 class="game-title">Palabeja</h1>
 
-      <div class="top-controls" aria-label="Game controls">
+      <div class="top-controls" aria-label="Controles del juego">
         <button
           id="muteButton"
           type="button"
           aria-pressed="false"
-          aria-label="Toggle sound"
-          title="Toggle sound"
+          aria-label="Activar o desactivar sonido"
+          title="Activar o desactivar sonido"
         >🔊</button>
 
         <a
           id="langButton"
           class="language-link"
-          href="/palabeja"
-          lang="es"
-          hreflang="es"
-          aria-label="Cambiar a la versión en español"
-          title="Versión en español"
-        >🇪🇸</a>
+          href="/buzzword"
+          lang="en"
+          hreflang="en"
+          aria-label="Switch to the English version"
+          title="English version"
+        >🇬🇧</a>
       </div>
 
       <div class="status-bar">
         <div class="status-item">
-          <span class="status-label">TIME</span>
+          <span class="status-label">TIEMPO</span>
           <strong id="timerDisplay" class="status-value">80</strong>
         </div>
 
         <div class="status-item">
-          <span class="status-label">SCORE</span>
+          <span class="status-label">PUNTOS</span>
           <strong id="scoreDisplay" class="status-value">0</strong>
         </div>
 
         <div class="status-item">
-          <span class="status-label">BEST</span>
+          <span class="status-label">RÉCORD</span>
           <strong id="highScoreDisplay" class="status-value">0</strong>
         </div>
       </div>
@@ -52,8 +52,8 @@
     </header>
 
     <section class="board-section">
-      <div id="board" class="hex-board" aria-label="Buzzword board">
-        <!-- Hexes injected by JavaScript -->
+      <div id="board" class="hex-board" aria-label="Tablero de Palabeja">
+        <!-- Hexágonos inyectados por JavaScript -->
       </div>
 
       <div id="currentWord" class="current-word" aria-live="polite"></div>
@@ -85,23 +85,23 @@
         aria-modal="true"
       >
         <div class="round-overlay-content">
-          <h2 class="round-overlay-title">How to play</h2>
+          <h2 class="round-overlay-title">Cómo jugar</h2>
           <ol class="start-instructions">
-            <li>Spell a word by swiping across the letters.</li>
-            <li>Each letter can only be used once per word.</li>
-            <li>Find a 7-letter word to advance to the next round.</li>
+            <li>Forma una palabra deslizando el dedo o el ratón por las letras.</li>
+            <li>Cada letra solo puede usarse una vez por palabra.</li>
+            <li>Encuentra una palabra de 7 letras para pasar a la siguiente ronda.</li>
           </ol>
           <button
             id="startButton"
             class="round-overlay-button"
             type="button"
-          >Start game</button>
+          >Empezar</button>
         </div>
       </div>
     </section>
 
     <section class="word-bank">
-      <h2 class="section-title">Words found</h2>
+      <h2 class="section-title">Palabras encontradas</h2>
       <div id="hintList" class="hint-list"></div>
     </section>
   </main>
