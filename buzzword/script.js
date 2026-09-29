@@ -1,4 +1,4 @@
-// script.js v261029a
+// script.js v261029 – flat-top honeycomb matching the other game
 
 // ---------- Data loading ----------
 
@@ -6,7 +6,7 @@ async function loadWordData(language = "en") {
   const res = await fetch(`/util/wordlist/${language}.json`);
   if (!res.ok) throw new Error(`Failed to load ${language}.json`);
 
-  const rawWords = await res.json(); // full dictionary, all lengths
+  const rawWords = await res.json();
   return buildWordDataForHive(rawWords, 3, 7);
 }
 
@@ -61,7 +61,6 @@ const gameState = {
   wordsFound: 0,
   timerId: null,
 
-  // Swipe state
   isSwiping: false,
   selectedPath: [],
   startHexIndex: null
@@ -300,61 +299,20 @@ function renderBoard(boardLetters) {
   const boardEl = document.getElementById("board");
   boardEl.innerHTML = "";
 
-  const positions = getHexPositions(gameState.boardSize);
-
+  // We use the same 7 positions as the other game:
+  // hex-0 .. hex-6 with fixed classes for layout.
   boardLetters.forEach((letter, index) => {
-    const hex = document.createElement("div");
-    hex.className = "hex";
-    hex.textContent = letter;
+    const hex = document.createElement("button");
+    hex.type = "button";
+    hex.className = `hex hex-${index}`;
     hex.dataset.index = index;
-
-    const pos = positions[index];
-    hex.style.left = `${pos.left}px`;
-    hex.style.top = `${pos.top}px`;
+    hex.textContent = letter;
+    hex.setAttribute("aria-label", `Hexagon ${index + 1}`);
 
     boardEl.appendChild(hex);
   });
 
   updateCurrentWordDisplay();
-}
-
-function getHexPositions(boardSize) {
-  // 7-hex honeycomb (pointy-top), indices:
-  //       [0] [1]
-  //    [2] [3] [4]
-  //       [5] [6]
-
-  const hexSize = parseInt(
-    getComputedStyle(document.documentElement)
-      .getPropertyValue("--hex-size")
-  ) || 60;
-
-  const gap = parseInt(
-    getComputedStyle(document.documentElement)
-      .getPropertyValue("--hex-gap")
-  ) || 6;
-
-  const w = hexSize * 2;                 // full width of hex
-  const h = hexSize * 1.732;             // full height (sqrt(3))
-  const rowHeight = h * 0.75;            // vertical step
-  const halfW = w / 2;
-
-  const positions = [];
-
-  // Row 0: 0,1
-  positions[0] = { left: halfW + gap, top: gap };
-  positions[1] = { left: halfW * 3 + gap * 2, top: gap };
-
-  // Row 1: 2,3,4 (shifted left by halfW relative to row 0)
-  positions[2] = { left: 0 + gap, top: rowHeight + gap };
-  positions[3] = { left: halfW + gap, top: rowHeight + gap };
-  positions[4] = { left: halfW * 3 + gap * 2, top: rowHeight + gap };
-
-  // Row 2: 5,6 (aligned with row 0)
-  positions[5] = { left: halfW + gap, top: rowHeight * 2 + gap };
-  positions[6] = { left: halfW * 3 + gap * 2, top: rowHeight * 2 + gap };
-
-  return positions;
 }
 
 function renderHintSlots(hintSlots) {
@@ -402,11 +360,11 @@ function showMessage(text) {
 function showFeedback(isGood) {
   const feedbackEl = document.getElementById("feedback");
 
-  feedbackEl.textContent = isGood ? "🐝" : "👎🏾";
+  feedbackEl.textContent = isGood ? "🐝" : "👎";
 
   feedbackEl.classList.remove("show-good", "show-bad");
 
-  // Force reflow to restart animation
+  // Force reflow
   // eslint-disable-next-line no-unused-expressions
   void feedbackEl.offsetWidth;
 
@@ -495,9 +453,7 @@ function handlePointerMove(e) {
     if (hasExtension) break;
   }
 
-  if (!hasExtension) {
-    return;
-  }
+  if (!hasExtension) return;
 
   path.push(index);
   highlightSelectedPath();
@@ -516,9 +472,7 @@ function handlePointerUp(e) {
   clearHexHighlights();
   document.getElementById("currentWord").textContent = "";
 
-  if (path.length < 3) {
-    return;
-  }
+  if (path.length < 3) return;
 
   const result = submitPath(path);
 
