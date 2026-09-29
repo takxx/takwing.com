@@ -36,7 +36,8 @@
         "task02_endingOn": "Swipe {length} hexes in the {direction} direction ending on the {color} {shape}",
         "task03_orderValues": "Swipe all the {valueType} in {order} order",
         "task04_swipeWord": "Swipe the word: {target}",
-        "task05_swipeLine": "Swipe a line of {length} hexagons from {A} to {B}."
+        "task05_swipeLine": "Swipe a line of {length} hexagons from {A} to {B}.",
+        "task05_swipeLineColorShape": "Swipe a line of {length} hexagons from {A} {shapeA} to {B} {shapeB}."
       },
       "list": {
         "one": "{0}",
@@ -104,7 +105,8 @@
         "task02_endingOn": "Desliza {length} hexágonos en {direction} terminando en el {shape} {color}",
         "task03_orderValues": "Desliza todos los {valueType} en orden {order}",
         "task04_swipeWord": "Desliza la palabra: {target}",
-        "task05_swipeLine": "Desliza una línea de {length} hexágonos desde {A} hasta {B}."
+        "task05_swipeLine": "Desliza una línea de {length} hexágonos desde {A} hasta {B}.",
+        "task05_swipeLineColorShape": "Desliza una línea de {length} hexágonos desde {A} {shapeA} hasta {B} {shapeB}."
       },
       "list": {
         "one": "{0}",
@@ -172,7 +174,8 @@
         "task02_endingOn": "沿{direction}方向滑動{length}個六角形，並以{color}{shape}結束",
         "task03_orderValues": "{order}滑動所有{valueType}",
         "task04_swipeWord": "滑出單字：{target}",
-        "task05_swipeLine": "由 {A} 到 {B} 滑動一條 {length} 個六角形嘅線。"
+        "task05_swipeLine": "由 {A} 到 {B} 滑動一條 {length} 個六角形嘅線。",
+        "task05_swipeLineColorShape": "由 {A} {shapeA} 到 {B} {shapeB} 滑動一條 {length} 個六角形嘅線。"
       },
       "list": {
         "one": "{0}",
