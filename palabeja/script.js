@@ -1,10 +1,17 @@
-// script.js – Palabeja (versión en español, con sonido y mute)
+// script.js v261029a
 
-// ---------- Carga de datos ----------
+// ---------- Configuration ----------
 
-async function loadWordData(language = "es") {
+const LANGUAGE = "es";
+const GAME_NAME = "palabeja";
+const DISPLAY_NAME = "Palabeja";
+const LANGUAGE_ERROR_MESSAGE = "No se pudo cargar Palabeja.";
+
+// ---------- Data loading ----------
+
+async function loadWordData(language = LANGUAGE) {
   const res = await fetch(`/util/wordlist/${language}.json`);
-  if (!res.ok) throw new Error(`No se pudo cargar ${language}.json`);
+  if (!res.ok) throw new Error(`Failed to load ${language}.json`);
 
   const rawWords = await res.json();
   return buildWordDataForHive(rawWords, 3, 7);
@@ -12,7 +19,7 @@ async function loadWordData(language = "es") {
 
 async function loadPathData() {
   const res = await fetch("path.json");
-  if (!res.ok) throw new Error("No se pudo cargar path.json");
+  if (!res.ok) throw new Error("Failed to load path.json");
   return res.json();
 }
 
@@ -27,7 +34,8 @@ function buildWordDataForHive(rawWords, minLength = 3, maxLength = 7) {
 
   for (const raw of rawWords) {
     const word = String(raw).trim().toUpperCase();
-    if (!/^[A-Z]+$/.test(word)) continue;
+
+    if (!/^[A-ZÁÉÍÓÚÜÑ]+$/.test(word)) continue;
 
     const len = word.length;
     if (len < minLength || len > maxLength) continue;
@@ -42,7 +50,7 @@ function buildWordDataForHive(rawWords, minLength = 3, maxLength = 7) {
   return { setsByLength, arraysByLength };
 }
 
-// ---------- Estado del juego ----------
+// ---------- Game state ----------
 
 const gameState = {
   active: false,
@@ -52,10 +60,10 @@ const gameState = {
   targetPath: [],
   boardLetters: [],
 
-  answersByWord: new Map(),      // word -> answer entry
-  wordByPathKey: new Map(),      // pathKey -> word
-  wordToSlotIndex: new Map(),    // word -> index in hintSlots
-  hintSlots: [],                 // [{ id, word, length, found }]
+  answersByWord: new Map(),
+  wordByPathKey: new Map(),
+  wordToSlotIndex: new Map(),
+  hintSlots: [],
 
   score: 0,
   highScore: 0,
@@ -67,112 +75,143 @@ const gameState = {
   selectedPath: [],
   startHexIndex: null,
 
-  // Estado de superposición
-  overlayMode: null // "gameOver" | "nextRound" | "roundComplete" | null
+  overlayMode: null
 };
 
 let wordData = null;
 let pathData = null;
 
-// ---------- Audio (beeps integrados) ----------
+// ---------- Audio ----------
 
-const AudioSFX = (function () {
+const AudioSFX = (() => {
   let ctx = null;
   let enabled = true;
+
+  const HEX_NOTES = [
+    329.63,
+    261.63,
+    293.66,
+    261.63,
+    293.66,
+    261.63,
+    293.66
+  ];
 
   function ensureContext() {
     if (!ctx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (Ctx) {
-        ctx = new Ctx();
-      }
+      if (Ctx) ctx = new Ctx();
     }
+
     if (ctx && ctx.state === "suspended") {
       ctx.resume().catch(() => {});
     }
   }
 
   function setEnabled(value) {
-    enabled = !!value;
+    enabled = Boolean(value);
   }
 
   function isEnabled() {
     return enabled;
   }
 
-  function playTone(freq, duration = 0.08, type = "sine", volume = 0.07) {
+  function playTone(
+    frequency,
+    duration = 0.08,
+    type = "sine",
+    volume = 0.07
+  ) {
     if (!enabled) return;
+
     ensureContext();
     if (!ctx) return;
 
-    const osc = ctx.createOscillator();
+    const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = type;
-    osc.frequency.value = freq;
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
 
     gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      ctx.currentTime + duration
+    );
 
-    osc.connect(gain);
+    oscillator.connect(gain);
     gain.connect(ctx.destination);
 
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + duration);
   }
 
   function playGood() {
     if (!enabled) return;
+
     ensureContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-    notes.forEach((freq, i) => {
-      const t = now + i * 0.06;
-      const osc = ctx.createOscillator();
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+
+    notes.forEach((frequency, index) => {
+      const time = now + index * 0.06;
+      const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.05, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      osc.connect(gain);
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+
+      gain.gain.setValueAtTime(0.05, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.12);
+
+      oscillator.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.12);
+
+      oscillator.start(time);
+      oscillator.stop(time + 0.12);
     });
   }
 
   function playBad() {
     if (!enabled) return;
+
     playTone(200, 0.09, "triangle", 0.06);
     setTimeout(() => playTone(150, 0.12, "triangle", 0.06), 70);
   }
 
   function playRoundComplete() {
     if (!enabled) return;
+
     ensureContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
-    notes.forEach((freq, i) => {
-      const t = now + i * 0.07;
-      const osc = ctx.createOscillator();
+    const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+
+    notes.forEach((frequency, index) => {
+      const time = now + index * 0.07;
+      const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.06, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
-      osc.connect(gain);
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+
+      gain.gain.setValueAtTime(0.06, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.15);
+
+      oscillator.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.15);
+
+      oscillator.start(time);
+      oscillator.stop(time + 0.15);
     });
   }
 
   function playGameOver() {
     if (!enabled) return;
+
     playTone(180, 0.12, "triangle", 0.07);
     setTimeout(() => playTone(140, 0.14, "triangle", 0.07), 110);
     setTimeout(() => playTone(110, 0.18, "triangle", 0.07), 240);
@@ -183,27 +222,12 @@ const AudioSFX = (function () {
     playTone(900, 0.04, "square", 0.03);
   }
 
-  // Tonos por hexágono: índice -> nota
-  // 0: mi (E4), 1: do (C4), 2: re (D4), 3: do, 4: re, 5: do, 6: re
-  const HEX_NOTES = [
-    329.63, // E4 (mi)
-    261.63, // C4 (do)
-    293.66, // D4 (re)
-    261.63, // C4
-    293.66, // D4
-    261.63, // C4
-    293.66  // D4
-  ];
-
   function playHexTone(index) {
-    const freq = HEX_NOTES[index];
-    if (freq == null) return;
-    playTone(freq, 0.07, "sine", 0.05);
-  }
+    const frequency = HEX_NOTES[index];
+    if (frequency == null) return;
 
-  Object.defineProperty(AudioSFX, "enabled", {
-    get: () => enabled
-  });
+    playTone(frequency, 0.07, "sine", 0.05);
+  }
 
   return {
     setEnabled,
@@ -213,22 +237,26 @@ const AudioSFX = (function () {
     playRoundComplete,
     playGameOver,
     playClick,
-    playHexTone
+    playHexTone,
+
+    get enabled() {
+      return enabled;
+    }
   };
 })();
 
-// ---------- Inicialización ----------
+// ---------- Initialization ----------
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     [wordData, pathData] = await Promise.all([
-      loadWordData("es"),
+      loadWordData(LANGUAGE),
       loadPathData()
     ]);
 
     gameState.boardSize = pathData.boardSize || 7;
 
-    const storedHigh = localStorage.getItem("palabejaHighScore");
+    const storedHigh = localStorage.getItem(`${GAME_NAME}HighScore`);
     if (storedHigh) {
       gameState.highScore = parseInt(storedHigh, 10) || 0;
     }
@@ -240,14 +268,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     attachInputHandlers();
     attachOverlayHandlers();
     attachMuteHandler();
-    attachLangHandler();
   } catch (error) {
     console.error(error);
-    showMessage("No se pudo cargar Palabeja.");
+    showMessage(LANGUAGE_ERROR_MESSAGE);
   }
 });
 
-// ---------- Lógica de ronda ----------
+// ---------- Round logic ----------
 
 function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
@@ -255,25 +282,28 @@ function randomItem(items) {
 
 function isUsablePath(path, expectedLength, boardSize) {
   if (!Array.isArray(path) || path.length !== expectedLength) return false;
+
   const used = new Set(path);
   if (used.size !== expectedLength) return false;
+
   return path.every(
-    i => Number.isInteger(i) && i >= 0 && i < boardSize
+    index => Number.isInteger(index) && index >= 0 && index < boardSize
   );
 }
 
-function choosePuzzle(wordData, pathData) {
-  const boardSize = pathData.boardSize || 7;
-  const candidateWords = wordData.arraysByLength.get(boardSize);
-  const candidatePaths = (pathData.paths[String(boardSize)] || []).filter(
-    p => isUsablePath(p, boardSize, boardSize)
+function choosePuzzle(words, paths) {
+  const boardSize = paths.boardSize || 7;
+  const candidateWords = words.arraysByLength.get(boardSize);
+  const candidatePaths = (paths.paths[String(boardSize)] || []).filter(
+    path => isUsablePath(path, boardSize, boardSize)
   );
 
   if (!candidateWords || candidateWords.length === 0) {
-    throw new Error(`No hay palabras de ${boardSize} letras en el diccionario.`);
+    throw new Error(`No hay palabras de ${boardSize} letras.`);
   }
+
   if (candidatePaths.length === 0) {
-    throw new Error(`No hay caminos válidos de ${boardSize} hexágonos en path.json.`);
+    throw new Error("No hay caminos válidos en path.json.");
   }
 
   return {
@@ -284,12 +314,15 @@ function choosePuzzle(wordData, pathData) {
 
 function createBoardLetters(targetWord, targetPath, boardSize) {
   const boardLetters = Array(boardSize).fill("");
-  targetPath.forEach((hexIndex, letterPos) => {
-    boardLetters[hexIndex] = targetWord[letterPos];
+
+  targetPath.forEach((hexIndex, letterPosition) => {
+    boardLetters[hexIndex] = targetWord[letterPosition];
   });
-  if (boardLetters.some(l => !l)) {
-    throw new Error("El camino objetivo no llenó todos los hexágonos.");
+
+  if (boardLetters.some(letter => !letter)) {
+    throw new Error("El camino no rellenó todos los hexágonos.");
   }
+
   return boardLetters;
 }
 
@@ -301,23 +334,23 @@ function scoreForLength(length) {
   return (length * (length + 1)) / 2;
 }
 
-function findAllValidAnswers(boardLetters, wordData, pathData) {
-  const boardSize = pathData.boardSize || 7;
+function findAllValidAnswers(boardLetters, words, paths) {
+  const boardSize = paths.boardSize || 7;
   const answersByWord = new Map();
   const wordByPathKey = new Map();
 
   for (let length = 3; length <= boardSize; length++) {
-    const validWords = wordData.setsByLength.get(length);
+    const validWords = words.setsByLength.get(length);
     if (!validWords || validWords.size === 0) continue;
 
-    const candidatePaths = pathData.paths[String(length)] || [];
+    const candidatePaths = paths.paths[String(length)] || [];
 
     for (const path of candidatePaths) {
       if (path.length !== length) continue;
       if (new Set(path).size !== length) continue;
-      if (!path.every(i => i >= 0 && i < boardSize)) continue;
+      if (!path.every(index => index >= 0 && index < boardSize)) continue;
 
-      const word = path.map(i => boardLetters[i]).join("");
+      const word = path.map(index => boardLetters[index]).join("");
       if (!validWords.has(word)) continue;
 
       const key = pathKey(path);
@@ -346,14 +379,16 @@ function blankBar(length) {
 
 function createHintSlots(answersByWord) {
   const uniqueWords = [...answersByWord.keys()].sort((a, b) => {
-    const lenA = answersByWord.get(a).length;
-    const lenB = answersByWord.get(b).length;
-    if (lenA !== lenB) return lenA - lenB;
+    const lengthA = answersByWord.get(a).length;
+    const lengthB = answersByWord.get(b).length;
+
+    if (lengthA !== lengthB) return lengthA - lengthB;
     return a.localeCompare(b);
   });
 
   const slots = uniqueWords.map((word, index) => {
     const entry = answersByWord.get(word);
+
     return {
       id: `word-hint-${index}`,
       word,
@@ -363,8 +398,9 @@ function createHintSlots(answersByWord) {
   });
 
   const wordToSlotIndex = new Map();
-  slots.forEach((slot, i) => {
-    wordToSlotIndex.set(slot.word, i);
+
+  slots.forEach((slot, index) => {
+    wordToSlotIndex.set(slot.word, index);
   });
 
   return { slots, wordToSlotIndex };
@@ -372,6 +408,7 @@ function createHintSlots(answersByWord) {
 
 function buildRound() {
   const { targetWord, targetPath } = choosePuzzle(wordData, pathData);
+
   const boardLetters = createBoardLetters(
     targetWord,
     targetPath,
@@ -385,7 +422,7 @@ function buildRound() {
   );
 
   if (!answersByWord.has(targetWord)) {
-    throw new Error(`La palabra objetivo "${targetWord}" no es alcanzable.`);
+    throw new Error(`La palabra objetivo "${targetWord}" no es válida.`);
   }
 
   return {
@@ -407,7 +444,10 @@ function startRound() {
   gameState.answersByWord = round.answersByWord;
   gameState.wordByPathKey = round.wordByPathKey;
 
-  const { slots, wordToSlotIndex } = createHintSlots(round.answersByWord);
+  const { slots, wordToSlotIndex } = createHintSlots(
+    round.answersByWord
+  );
+
   gameState.hintSlots = slots;
   gameState.wordToSlotIndex = wordToSlotIndex;
 
@@ -433,7 +473,7 @@ function nextRound() {
   revealUnfoundWords();
 
   showRoundOverlay({
-    title: "¡Bien hecho!",
+    title: "¡Buen trabajo!",
     message: `Encontraste una palabra de 7 letras. Puntos: ${gameState.score}.`,
     buttonLabel: "Siguiente ronda"
   });
@@ -445,7 +485,10 @@ function endGame() {
 
   if (gameState.score > gameState.highScore) {
     gameState.highScore = gameState.score;
-    localStorage.setItem("palabejaHighScore", String(gameState.highScore));
+    localStorage.setItem(
+      `${GAME_NAME}HighScore`,
+      String(gameState.highScore)
+    );
     updateHighScoreDisplay(gameState.highScore);
   }
 
@@ -453,9 +496,9 @@ function endGame() {
   revealUnfoundWords();
 
   showRoundOverlay({
-    title: "Fin del juego",
-    message: `No se encontró palabra de 7 letras. Puntos finales: ${gameState.score}.`,
-    buttonLabel: "Nuevo juego"
+    title: "Fin de la partida",
+    message: `No encontraste una palabra de 7 letras. Puntuación final: ${gameState.score}.`,
+    buttonLabel: "Nueva partida"
   });
 }
 
@@ -465,11 +508,15 @@ function roundComplete() {
 
   const bonus = 100;
   gameState.score += bonus;
+
   updateScoreDisplay(gameState.score);
 
   if (gameState.score > gameState.highScore) {
     gameState.highScore = gameState.score;
-    localStorage.setItem("palabejaHighScore", String(gameState.highScore));
+    localStorage.setItem(
+      `${GAME_NAME}HighScore`,
+      String(gameState.highScore)
+    );
     updateHighScoreDisplay(gameState.highScore);
   }
 
@@ -478,12 +525,12 @@ function roundComplete() {
 
   showRoundOverlay({
     title: "¡Ronda completada!",
-    message: `¡Todas las palabras encontradas! +${bonus} de bonificación. Puntos: ${gameState.score}.`,
+    message: `Encontraste todas las palabras. +${bonus} de bonus. Puntos: ${gameState.score}.`,
     buttonLabel: "Siguiente ronda"
   });
 }
 
-// ---------- Temporizador ----------
+// ---------- Timer ----------
 
 function clampTimer(value) {
   if (value < 0) return 0;
@@ -497,11 +544,13 @@ function formatTimer(value) {
 
 function startTimer() {
   clearInterval(gameState.timerId);
+
   gameState.timerId = setInterval(() => {
     if (!gameState.active) return;
 
     gameState.timeRemaining -= 1;
     gameState.timeRemaining = clampTimer(gameState.timeRemaining);
+
     updateTimerDisplay(gameState.timeRemaining);
 
     if (gameState.timeRemaining <= 0) {
@@ -514,7 +563,7 @@ function handleTimeUp() {
   clearInterval(gameState.timerId);
 
   const hasSevenLetterWord = [...gameState.answersByWord.values()].some(
-    a => a.length === 7 && a.found
+    answer => answer.length === 7 && answer.found
   );
 
   if (hasSevenLetterWord) {
@@ -528,27 +577,29 @@ function handleTimeUp() {
 
 function checkRoundComplete() {
   const allFound = gameState.hintSlots.every(slot => slot.found);
+
   if (allFound && gameState.active) {
     AudioSFX.playRoundComplete();
     roundComplete();
   }
 }
 
-// ---------- Renderizado ----------
+// ---------- Rendering ----------
 
 function renderBoard(boardLetters) {
-  const boardEl = document.getElementById("board");
-  boardEl.innerHTML = "";
+  const boardElement = document.getElementById("board");
+  boardElement.innerHTML = "";
 
   boardLetters.forEach((letter, index) => {
     const hex = document.createElement("button");
+
     hex.type = "button";
     hex.className = `hex hex-${index}`;
     hex.dataset.index = index;
     hex.textContent = letter;
     hex.setAttribute("aria-label", `Hexágono ${index + 1}`);
 
-    boardEl.appendChild(hex);
+    boardElement.appendChild(hex);
   });
 
   updateCurrentWordDisplay();
@@ -559,13 +610,15 @@ function renderHintSlots(hintSlots) {
   hintList.innerHTML = "";
 
   hintSlots.forEach(slot => {
-    const el = document.createElement("div");
-    el.id = slot.id;
-    el.className = "word-hint";
-    el.dataset.word = slot.word;
-    el.dataset.length = slot.length;
-    el.textContent = blankBar(slot.length);
-    hintList.appendChild(el);
+    const element = document.createElement("div");
+
+    element.id = slot.id;
+    element.className = "word-hint";
+    element.dataset.word = slot.word;
+    element.dataset.length = slot.length;
+    element.textContent = blankBar(slot.length);
+
+    hintList.appendChild(element);
   });
 }
 
@@ -578,88 +631,89 @@ function updateHighScoreDisplay(score) {
 }
 
 function updateTimerDisplay(time) {
-  const el = document.getElementById("timerDisplay");
-  el.textContent = formatTimer(time);
+  document.getElementById("timerDisplay").textContent = formatTimer(time);
 }
 
 function updateCurrentWordDisplay() {
-  const currentWordEl = document.getElementById("currentWord");
-  if (!gameState.isSwiping || gameState.selectedPath.length === 0) {
-    currentWordEl.textContent = "";
+  const currentWordElement = document.getElementById("currentWord");
+
+  if (
+    !gameState.isSwiping ||
+    gameState.selectedPath.length === 0
+  ) {
+    currentWordElement.textContent = "";
     return;
   }
 
   const word = gameState.selectedPath
-    .map(i => gameState.boardLetters[i])
+    .map(index => gameState.boardLetters[index])
     .join("");
 
-  currentWordEl.textContent = word;
+  currentWordElement.textContent = word;
 }
 
 function showMessage(text) {
-  const msgEl = document.getElementById("message");
-  msgEl.textContent = text || "";
+  document.getElementById("message").textContent = text || "";
 }
 
 function showFeedback(isGood) {
-  const feedbackEl = document.getElementById("feedback");
+  const feedbackElement = document.getElementById("feedback");
 
-  feedbackEl.textContent = isGood ? "🐝" : "👎🏾";
+  feedbackElement.textContent = isGood ? "🐝" : "👎🏾";
+  feedbackElement.classList.remove("show-good", "show-bad");
 
-  feedbackEl.classList.remove("show-good", "show-bad");
+  void feedbackElement.offsetWidth;
 
-  // Force reflow
-  // eslint-disable-next-line no-unused-expressions
-  void feedbackEl.offsetWidth;
-
-  feedbackEl.classList.add(isGood ? "show-good" : "show-bad");
+  feedbackElement.classList.add(
+    isGood ? "show-good" : "show-bad"
+  );
 }
 
 function revealUnfoundWords() {
   gameState.hintSlots.forEach(slot => {
-    const el = document.getElementById(slot.id);
-    if (!el) return;
+    const element = document.getElementById(slot.id);
+    if (!element || slot.found) return;
 
-    if (!slot.found) {
-      el.textContent = slot.word;
-      el.classList.add("word-hint--unfound");
-      el.setAttribute("aria-label", `Palabra no encontrada: ${slot.word}`);
-    }
+    element.textContent = slot.word;
+    element.classList.add("word-hint--unfound");
+    element.setAttribute("aria-label", `Palabra no encontrada: ${slot.word}`);
   });
 }
 
-// ---------- Superposiciones ----------
+// ---------- Overlays ----------
 
 function showRoundOverlay({ title, message, buttonLabel }) {
   const overlay = document.getElementById("roundOverlay");
-  const titleEl = document.getElementById("roundOverlayTitle");
-  const messageEl = document.getElementById("roundOverlayMessage");
-  const buttonEl = document.getElementById("roundOverlayButton");
+  const titleElement = document.getElementById("roundOverlayTitle");
+  const messageElement = document.getElementById("roundOverlayMessage");
+  const buttonElement = document.getElementById("roundOverlayButton");
 
-  titleEl.textContent = title;
-  messageEl.textContent = message;
-  buttonEl.textContent = buttonLabel;
+  titleElement.textContent = title;
+  messageElement.textContent = message;
+  buttonElement.textContent = buttonLabel;
 
   overlay.hidden = false;
 }
 
 function hideRoundOverlay() {
-  const overlay = document.getElementById("roundOverlay");
-  overlay.hidden = true;
+  document.getElementById("roundOverlay").hidden = true;
 }
 
 function attachOverlayHandlers() {
   const startButton = document.getElementById("startButton");
+
   startButton.addEventListener("click", () => {
     AudioSFX.playClick();
-    const startOverlay = document.getElementById("startOverlay");
-    startOverlay.hidden = true;
+
+    document.getElementById("startOverlay").hidden = true;
     startRound();
   });
 
-  const buttonEl = document.getElementById("roundOverlayButton");
-  buttonEl.addEventListener("click", () => {
+  const roundButton = document.getElementById("roundOverlayButton");
+
+  roundButton.addEventListener("click", () => {
     AudioSFX.playClick();
+
     if (
       gameState.overlayMode === "gameOver" ||
       gameState.overlayMode === "nextRound" ||
@@ -669,82 +723,81 @@ function attachOverlayHandlers() {
         gameState.score = 0;
         updateScoreDisplay(0);
       }
+
       startRound();
     }
   });
 }
 
-// ---------- Manejo de mute y lenguaje ----------
+// ---------- Mute handler ----------
 
 function attachMuteHandler() {
-  const muteBtn = document.getElementById("muteButton");
-  if (!muteBtn) return;
+  const muteButton = document.getElementById("muteButton");
+  if (!muteButton) return;
 
-  const storedMuted = localStorage.getItem("palabejaMuted");
+  const storedMuted = localStorage.getItem(`${GAME_NAME}Muted`);
   const initiallyMuted = storedMuted === "true";
 
   AudioSFX.setEnabled(!initiallyMuted);
-  updateMuteButtonState(muteBtn, initiallyMuted);
+  updateMuteButtonState(muteButton, initiallyMuted);
 
-  muteBtn.addEventListener("click", () => {
-    const isCurrentlyMuted = !AudioSFX.isEnabled();
-    const newMuted = !isCurrentlyMuted;
+  muteButton.addEventListener("click", () => {
+    const currentlyMuted = !AudioSFX.isEnabled();
+    const newMuted = !currentlyMuted;
 
     AudioSFX.setEnabled(!newMuted);
-    localStorage.setItem("palabejaMuted", String(newMuted));
-    updateMuteButtonState(muteBtn, newMuted);
+    localStorage.setItem(`${GAME_NAME}Muted`, String(newMuted));
+
+    updateMuteButtonState(muteButton, newMuted);
   });
 }
 
-function updateMuteButtonState(btn, isMuted) {
-  btn.textContent = isMuted ? "🔇" : "🔊";
-  btn.setAttribute("aria-pressed", String(isMuted));
+function updateMuteButtonState(button, isMuted) {
+  button.textContent = isMuted ? "🔇" : "🔊";
+  button.setAttribute("aria-pressed", String(isMuted));
 }
 
-function attachLangHandler() {
-  const langBtn = document.getElementById("langButton");
-  if (!langBtn) return;
-
-  langBtn.addEventListener("click", () => {
-    // TODO: navegar a la versión en inglés más adelante
-    // e.g. window.location.href = "/?lang=en";
-  });
-}
-
-// ---------- Manejo de entrada ----------
+// ---------- Input handling ----------
 
 function attachInputHandlers() {
   const board = document.getElementById("board");
 
   board.addEventListener("mousedown", handlePointerDown);
-  board.addEventListener("touchstart", handlePointerDown, { passive: false });
+  board.addEventListener("touchstart", handlePointerDown, {
+    passive: false
+  });
 
   window.addEventListener("mousemove", handlePointerMove);
-  window.addEventListener("touchmove", handlePointerMove, { passive: false });
+  window.addEventListener("touchmove", handlePointerMove, {
+    passive: false
+  });
 
   window.addEventListener("mouseup", handlePointerUp);
   window.addEventListener("touchend", handlePointerUp);
 }
 
-function getHexIndexFromEvent(e) {
-  const target =
-    e.type.startsWith("touch")
-      ? document.elementFromPoint(
-          e.touches[0].clientX,
-          e.touches[0].clientY
-        )
-      : e.target;
+function getHexIndexFromEvent(event) {
+  const target = event.type.startsWith("touch")
+    ? document.elementFromPoint(
+        event.touches[0].clientX,
+        event.touches[0].clientY
+      )
+    : event.target;
 
-  if (!target || !target.classList.contains("hex")) return null;
+  if (!target || !target.classList.contains("hex")) {
+    return null;
+  }
+
   const index = parseInt(target.dataset.index, 10);
   return Number.isNaN(index) ? null : index;
 }
 
-function handlePointerDown(e) {
+function handlePointerDown(event) {
   if (!gameState.active) return;
-  e.preventDefault();
 
-  const index = getHexIndexFromEvent(e);
+  event.preventDefault();
+
+  const index = getHexIndexFromEvent(event);
   if (index === null) return;
 
   AudioSFX.playHexTone(index);
@@ -757,20 +810,26 @@ function handlePointerDown(e) {
   updateCurrentWordDisplay();
 }
 
-function handlePointerMove(e) {
+function handlePointerMove(event) {
   if (!gameState.isSwiping || !gameState.active) return;
-  if (e.type.startsWith("touch")) e.preventDefault();
 
-  const index = getHexIndexFromEvent(e);
+  if (event.type.startsWith("touch")) {
+    event.preventDefault();
+  }
+
+  const index = getHexIndexFromEvent(event);
   if (index === null) return;
 
   const path = gameState.selectedPath;
-  const last = path[path.length - 1];
+  const lastIndex = path[path.length - 1];
 
-  if (index === last) return;
+  if (index === lastIndex) return;
 
-  const prevIndex = path.length > 1 ? path[path.length - 2] : null;
-  if (index === prevIndex) {
+  const previousIndex = path.length > 1
+    ? path[path.length - 2]
+    : null;
+
+  if (index === previousIndex) {
     path.pop();
     highlightSelectedPath();
     updateCurrentWordDisplay();
@@ -780,18 +839,27 @@ function handlePointerMove(e) {
   if (path.includes(index)) return;
 
   const candidate = [...path, index];
-  const maxLen = gameState.boardSize;
-
+  const maxLength = gameState.boardSize;
   let hasExtension = false;
 
-  for (let len = candidate.length; len <= maxLen; len++) {
-    const pathsOfLen = pathData.paths[String(len)] || [];
-    for (const p of pathsOfLen) {
-      if (candidate.every((v, i) => v === p[i])) {
+  for (
+    let length = candidate.length;
+    length <= maxLength;
+    length++
+  ) {
+    const pathsOfLength = pathData.paths[String(length)] || [];
+
+    for (const possiblePath of pathsOfLength) {
+      if (
+        candidate.every(
+          (value, position) => value === possiblePath[position]
+        )
+      ) {
         hasExtension = true;
         break;
       }
     }
+
     if (hasExtension) break;
   }
 
@@ -804,11 +872,13 @@ function handlePointerMove(e) {
   updateCurrentWordDisplay();
 }
 
-function handlePointerUp(e) {
+function handlePointerUp(event) {
   if (!gameState.isSwiping || !gameState.active) return;
-  e.preventDefault();
+
+  event.preventDefault();
 
   const path = gameState.selectedPath.slice();
+
   gameState.isSwiping = false;
   gameState.selectedPath = [];
   gameState.startHexIndex = null;
@@ -823,13 +893,15 @@ function handlePointerUp(e) {
   if (!result.accepted) {
     AudioSFX.playBad();
     showFeedback(false);
+
     if (result.reason === "alreadyFound") {
-      showMessage(`${result.word} ya ha sido encontrada.`);
+      showMessage(`${result.word} ya se ha encontrado.`);
     } else if (result.reason === "notAValidWord") {
       showMessage("Ese camino no forma una palabra válida.");
     } else {
-      showMessage("Camino inválido.");
+      showMessage("Camino no válido.");
     }
+
     return;
   }
 
@@ -848,6 +920,7 @@ function handlePointerUp(e) {
 
 function highlightSelectedPath() {
   clearHexHighlights();
+
   const hexes = document.querySelectorAll(".hex");
 
   gameState.selectedPath.forEach(index => {
@@ -857,19 +930,12 @@ function highlightSelectedPath() {
 }
 
 function clearHexHighlights() {
-  document.querySelectorAll(".hex.is-highlighted").forEach(hex => {
-    hex.classList.remove("is-highlighted");
-  });
+  document
+    .querySelectorAll(".hex.is-highlighted")
+    .forEach(hex => hex.classList.remove("is-highlighted"));
 }
 
-function disableBoardInput() {
-  gameState.active = false;
-  gameState.isSwiping = false;
-  gameState.selectedPath = [];
-  clearHexHighlights();
-}
-
-// ---------- Envío de camino ----------
+// ---------- Path submission ----------
 
 function submitPath(selectedPath) {
   if (!gameState.active) {
@@ -877,7 +943,11 @@ function submitPath(selectedPath) {
   }
 
   const boardSize = gameState.boardSize;
-  if (selectedPath.length < 3 || selectedPath.length > boardSize) {
+
+  if (
+    selectedPath.length < 3 ||
+    selectedPath.length > boardSize
+  ) {
     return { accepted: false, reason: "invalidLength" };
   }
 
@@ -893,6 +963,7 @@ function submitPath(selectedPath) {
   }
 
   const answer = gameState.answersByWord.get(word);
+
   if (!answer || answer.found) {
     return {
       accepted: false,
@@ -904,8 +975,14 @@ function submitPath(selectedPath) {
   answer.found = true;
 
   const points = answer.score;
-  const bonusSeconds = Math.min(99 - gameState.timeRemaining, Math.floor(points / 3));
-  gameState.timeRemaining = clampTimer(gameState.timeRemaining + bonusSeconds);
+  const bonusSeconds = Math.min(
+    99 - gameState.timeRemaining,
+    Math.floor(points / 3)
+  );
+
+  gameState.timeRemaining = clampTimer(
+    gameState.timeRemaining + bonusSeconds
+  );
 
   gameState.score += points;
   gameState.wordsFound += 1;
@@ -931,6 +1008,7 @@ function revealFirstHintForLength(hintSlots, word) {
   slot.found = true;
 
   const element = document.getElementById(slot.id);
+
   if (element) {
     element.textContent = word;
     element.classList.add("word-hint--found");
