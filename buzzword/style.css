@@ -1,0 +1,239 @@
+:root {
+  --hex-size: 64px;
+  --hex-gap: 6px;
+  --bg-color: #fffbe6;
+
+  /* Base hex color (already yellow) */
+  --hex-fill: #ffd54a;
+  --hex-stroke: #c9a227;
+
+  /* Highlight: a lighter, brighter yellow/cream to stand out from base */
+  --highlight-color: #fff1a8;
+
+  --letter-color: #b00020;
+  --text-color: #222;
+  --muted-color: #666;
+  --found-word-bg: #e8f5e9;
+  --found-word-color: #2e7d32;
+
+  --feedback-size: 44px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+.hive-game {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.game-header {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.status-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 16px;
+  text-align: center;
+  min-width: 80px;
+}
+
+.status-label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted-color);
+  letter-spacing: 0.06em;
+}
+
+.status-value {
+  display: block;
+  font-size: 24px;
+  margin-top: 4px;
+}
+
+.board-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.hex-board {
+  position: relative;
+  width: calc(var(--hex-size) * 3 + var(--hex-gap) * 2);
+  height: calc(var(--hex-size) * 3 + var(--hex-gap) * 2);
+  margin-bottom: 12px;
+  user-select: none;
+  touch-action: none;
+}
+
+.hex {
+  position: absolute;
+  width: var(--hex-size);
+  height: var(--hex-size);
+  background: var(--hex-fill);
+  border: 2px solid var(--hex-stroke);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--letter-color);
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+/* Highlighted hexes: lighter yellow/cream */
+.hex.is-highlighted {
+  background: var(--highlight-color);
+  transform: scale(1.06);
+}
+
+.current-word {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  min-height: 28px;
+  text-align: center;
+}
+
+/* Feedback icons: bee (good) / thumb down (bad) */
+.feedback {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--feedback-size);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease, transform 200ms ease;
+}
+
+/* Start slightly above center, then drop down a bit when shown */
+.feedback.show-good,
+.feedback.show-bad {
+  opacity: 1;
+}
+
+/* Bee: starts higher, drops a little */
+.feedback.show-good {
+  animation: feedbackDropGood 600ms ease forwards;
+}
+
+/* Thumb down: starts similar, drops more */
+.feedback.show-bad {
+  animation: feedbackDropBad 600ms ease forwards;
+}
+
+@keyframes feedbackDropGood {
+  0% {
+    transform: translate(-50%, -70%) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -60%) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -40%) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes feedbackDropBad {
+  0% {
+    transform: translate(-50%, -70%) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -60%) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -30%) scale(1);
+    opacity: 0;
+  }
+}
+
+.word-bank {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.word-bank h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: var(--muted-color);
+  font-weight: 600;
+}
+
+.hint-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.word-hint {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  text-align: center;
+  letter-spacing: 0.2em;
+  user-select: none;
+}
+
+.word-hint--found {
+  background: var(--found-word-bg);
+  border-color: #c8e6c9;
+  color: var(--found-word-color);
+  font-weight: 700;
+}
+
+.game-message {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted-color);
+  min-height: 20px;
+}
+
+@media (max-width: 420px) {
+  :root {
+    --hex-size: 52px;
+    --hex-gap: 4px;
+  }
+
+  .status-value {
+    font-size: 20px;
+  }
+
+  .hex {
+    font-size: 18px;
+  }
+
+  .current-word {
+    font-size: 18px;
+  }
+}

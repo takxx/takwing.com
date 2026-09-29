@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Buzzword</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="hive-game">
+    <header class="game-header">
+      <div class="status-card">
+        <span class="status-label">TIME</span>
+        <strong id="timerDisplay" class="status-value">80</strong>
+      </div>
+
+      <div class="status-card">
+        <span class="status-label">SCORE</span>
+        <strong id="scoreDisplay" class="status-value">0</strong>
+      </div>
+    </header>
+
+    <section class="board-section">
+      <div id="board" class="hex-board" aria-label="Buzzword board"></div>
+      <div id="currentWord" class="current-word" aria-live="polite"></div>
+
+      <!-- Feedback icons: bee (good) / thumb down (bad) -->
+      <div id="feedback" class="feedback" aria-hidden="true"></div>
+    </section>
+
+    <section class="word-bank">
+      <h2>Words found</h2>
+      <div id="hintList" class="hint-list"></div>
+    </section>
+
+    <p id="message" class="game-message" aria-live="polite"></p>
+  </main>
+
+  <script src="script.js" type="module"></script>
+</body>
+</html>
