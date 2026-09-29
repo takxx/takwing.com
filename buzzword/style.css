@@ -66,11 +66,21 @@ body {
 }
 
 /* =========================
-   Header
+   Header & title
    ========================= */
 
 .game-header {
   width: 100%;
+}
+
+.game-title {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  color: #FFD54A;
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .status-bar {
@@ -96,23 +106,22 @@ body {
   align-items: center;
   gap: 2px;
 
-  min-width: 70px;
+  min-width: 60px;
   padding: 4px 8px;
 }
 
 .status-label {
   color: #94a3b8;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .status-value {
   color: #FFD54A;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
 
-  /* Ensure 2-digit look (monospace + fixed min-width) */
   min-width: 2ch;
   text-align: center;
 }
@@ -202,7 +211,7 @@ body {
   outline-offset: 3px;
 }
 
-/* Flat-top ring positions (same as other game) */
+/* Flat-top ring positions */
 .hex-0 {
   left: 50%;
   top: 50%;
@@ -371,9 +380,96 @@ body {
   font-weight: 700;
 }
 
+.word-hint--unfound {
+  background: #3a1b1b;
+  border-color: #5a2f2f;
+  color: #ff6b6b;
+  font-weight: 700;
+}
+
+/* =========================
+   Round overlay (game over / congratulations)
+   ========================= */
+
+.round-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgb(0 0 0 / 60%);
+  border-radius: 8px;
+}
+
+.round-overlay[hidden] {
+  display: none;
+}
+
+.round-overlay-content {
+  width: min(90%, 220px);
+  padding: 14px 12px;
+
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+
+  text-align: center;
+  color: #e2e8f0;
+}
+
+.round-overlay-title {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #FFD54A; /* yellow title */
+}
+
+.round-overlay-message {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: #cbd5e1;
+}
+
+.round-overlay-button {
+  padding: 7px 14px;
+
+  font: inherit;
+  font-weight: 700;
+
+  border: 1px solid #475569;
+  border-radius: 8px;
+
+  background: #293b55;
+  color: #FFD54A;
+
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    filter 0.12s ease;
+}
+
+.round-overlay-button:hover {
+  background: #355070;
+  border-color: #64748b;
+}
+
+.round-overlay-button:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
 @media (max-width: 360px) {
   body {
     padding: 18px 8px;
+  }
+
+  .game-title {
+    font-size: 1.2rem;
   }
 
   .hex-board {

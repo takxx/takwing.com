@@ -1,4 +1,5 @@
-// script.js – v260929c
+// script.js v260929d
+
 // ---------- Data loading ----------
 
 async function loadWordData(language = "en") {
@@ -56,13 +57,17 @@ const gameState = {
   hintSlots: [],
 
   score: 0,
+  highScore: 0,
   timeRemaining: 80,
   wordsFound: 0,
   timerId: null,
 
   isSwiping: false,
   selectedPath: [],
-  startHexIndex: null
+  startHexIndex: null,
+
+  // Overlay state
+  overlayMode: null // "gameOver" | "nextRound" | null
 };
 
 let wordData = null;
@@ -79,8 +84,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     gameState.boardSize = pathData.boardSize || 7;
 
+    const storedHigh = localStorage.getItem("buzzwordHighScore");
+    if (storedHigh) {
+      gameState.highScore = parseInt(storedHigh, 10) || 0;
+    }
+
     startRound();
     attachInputHandlers();
+    attachOverlayHandlers();
   } catch (error) {
     console.error(error);
     showMessage("Unable to load Buzzword.");
@@ -237,35 +248,55 @@ function startRound() {
 
   gameState.hintSlots = createHintSlots(round.answersByWord);
 
-  // Reset per-round counters, keep cumulative score
   gameState.timeRemaining = 80;
   gameState.wordsFound = 0;
+  gameState.overlayMode = null;
 
   renderBoard(gameState.boardLetters);
   renderHintSlots(gameState.hintSlots);
 
   updateScoreDisplay(gameState.score);
+  updateHighScoreDisplay(gameState.highScore);
   updateTimerDisplay(gameState.timeRemaining);
+
+  hideRoundOverlay();
   showMessage("");
 
   startTimer();
 }
 
 function nextRound() {
-  // Called when time is up but at least one 7-letter word was found.
-  // Keep score, start a fresh puzzle.
-  startRound();
+  // Called when time is up and at least one 7-letter word was found.
+  // Show congratulations overlay with "Next round" button.
+  gameState.overlayMode = "nextRound";
+  revealUnfoundWords();
+
+  showRoundOverlay({
+    title: "Great job!",
+    message: `You found at least one 7‑letter word. Score: ${gameState.score}.`,
+    buttonLabel: "Next round"
+  });
 }
 
 function endGame() {
   gameState.active = false;
   clearInterval(gameState.timerId);
 
-  showMessage(
-    `Time is up. The hidden word was ${gameState.targetWord}. Final score: ${gameState.score}.`
-  );
+  if (gameState.score > gameState.highScore) {
+    gameState.highScore = gameState.score;
+    localStorage.setItem("buzzwordHighScore", String(gameState.highScore));
+    updateHighScoreDisplay(gameState.highScore);
+  }
 
-  disableBoardInput();
+  // Show game over overlay with "New game" button (resets score).
+  gameState.overlayMode = "gameOver";
+  revealUnfoundWords();
+
+  showRoundOverlay({
+    title: "Game over",
+    message: `No 7‑letter word found. Final score: ${gameState.score}.`,
+    buttonLabel: "New game"
+  });
 }
 
 // ---------- Timer ----------
@@ -298,16 +329,13 @@ function startTimer() {
 function handleTimeUp() {
   clearInterval(gameState.timerId);
 
-  // Check if any 7-letter word has been found
   const hasSevenLetterWord = [...gameState.answersByWord.values()].some(
     a => a.length === 7 && a.found
   );
 
   if (hasSevenLetterWord) {
-    // Proceed to next puzzle
     nextRound();
   } else {
-    // Game over
     endGame();
   }
 }
@@ -351,6 +379,10 @@ function updateScoreDisplay(score) {
   document.getElementById("scoreDisplay").textContent = score;
 }
 
+function updateHighScoreDisplay(score) {
+  document.getElementById("highScoreDisplay").textContent = score;
+}
+
 function updateTimerDisplay(time) {
   const el = document.getElementById("timerDisplay");
   el.textContent = formatTimer(time);
@@ -378,7 +410,7 @@ function showMessage(text) {
 function showFeedback(isGood) {
   const feedbackEl = document.getElementById("feedback");
 
-  feedbackEl.textContent = isGood ? "🐝" : "👎";
+  feedbackEl.textContent = isGood ? "🐝" : "👎🏾";
 
   feedbackEl.classList.remove("show-good", "show-bad");
 
@@ -387,6 +419,54 @@ function showFeedback(isGood) {
   void feedbackEl.offsetWidth;
 
   feedbackEl.classList.add(isGood ? "show-good" : "show-bad");
+}
+
+function revealUnfoundWords() {
+  gameState.hintSlots.forEach(slot => {
+    const el = document.getElementById(slot.id);
+    if (!el) return;
+
+    if (!slot.found) {
+      el.textContent = slot.word;
+      el.classList.add("word-hint--unfound");
+      el.setAttribute("aria-label", `Unfound word: ${slot.word}`);
+    }
+  });
+}
+
+// ---------- Overlay ----------
+
+function showRoundOverlay({ title, message, buttonLabel }) {
+  const overlay = document.getElementById("roundOverlay");
+  const titleEl = document.getElementById("roundOverlayTitle");
+  const messageEl = document.getElementById("roundOverlayMessage");
+  const buttonEl = document.getElementById("roundOverlayButton");
+
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  buttonEl.textContent = buttonLabel;
+
+  overlay.hidden = false;
+}
+
+function hideRoundOverlay() {
+  const overlay = document.getElementById("roundOverlay");
+  overlay.hidden = true;
+}
+
+function attachOverlayHandlers() {
+  const buttonEl = document.getElementById("roundOverlayButton");
+  buttonEl.addEventListener("click", () => {
+    if (gameState.overlayMode === "gameOver") {
+      // Reset score for new game, keep high score
+      gameState.score = 0;
+      updateScoreDisplay(0);
+      startRound();
+    } else if (gameState.overlayMode === "nextRound") {
+      // Keep score, go to next puzzle
+      startRound();
+    }
+  });
 }
 
 // ---------- Input handling ----------
@@ -514,8 +594,6 @@ function handlePointerUp(e) {
   showMessage(
     `${result.word}: +${result.points} points, +${result.bonusSeconds} seconds`
   );
-
-  // No immediate round completion on 7-letter word; timer controls flow.
 }
 
 function highlightSelectedPath() {
@@ -577,7 +655,6 @@ function submitPath(selectedPath) {
 
   const points = answer.score;
   const bonusSeconds = Math.min(99 - gameState.timeRemaining, Math.floor(points / 3));
-  // Ensure we never push timer above 99
   gameState.timeRemaining = clampTimer(gameState.timeRemaining + bonusSeconds);
 
   gameState.score += points;

@@ -9,6 +9,8 @@
 <body>
   <main class="hive-game">
     <header class="game-header">
+      <h1 class="game-title">Buzzword</h1>
+
       <div class="status-bar">
         <div class="status-item">
           <span class="status-label">TIME</span>
@@ -18,6 +20,11 @@
         <div class="status-item">
           <span class="status-label">SCORE</span>
           <strong id="scoreDisplay" class="status-value">0</strong>
+        </div>
+
+        <div class="status-item">
+          <span class="status-label">BEST</span>
+          <strong id="highScoreDisplay" class="status-value">0</strong>
         </div>
       </div>
 
@@ -33,6 +40,15 @@
 
       <!-- Feedback icons: bee (good) / thumb down (bad) -->
       <div id="feedback" class="feedback" aria-hidden="true"></div>
+
+      <!-- End-of-round overlay -->
+      <div id="roundOverlay" class="round-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="round-overlay-content">
+          <h2 id="roundOverlayTitle" class="round-overlay-title"></h2>
+          <p id="roundOverlayMessage" class="round-overlay-message"></p>
+          <button id="roundOverlayButton" class="round-overlay-button" type="button"></button>
+        </div>
+      </div>
     </section>
 
     <section class="word-bank">
