@@ -1,4 +1,4 @@
-// script.js v261029
+// script.js v261029a
 
 // ---------- Data loading ----------
 
@@ -11,7 +11,6 @@ async function loadWordData(language = "en") {
 }
 
 async function loadPathData() {
-  // path.json is in the same folder as index.html
   const res = await fetch("path.json");
   if (!res.ok) throw new Error("Failed to load path.json");
   return res.json();
@@ -240,7 +239,6 @@ function startRound() {
 
   gameState.hintSlots = createHintSlots(round.answersByWord);
 
-  // Keep cumulative score; reset per-round counters.
   gameState.timeRemaining = 80;
   gameState.wordsFound = 0;
 
@@ -321,22 +319,24 @@ function renderBoard(boardLetters) {
 }
 
 function getHexPositions(boardSize) {
-  // 7-hex layout:
+  // 7-hex honeycomb (pointy-top), indices:
   //       [0] [1]
   //    [2] [3] [4]
   //       [5] [6]
+
   const hexSize = parseInt(
     getComputedStyle(document.documentElement)
       .getPropertyValue("--hex-size")
-  ) || 64;
+  ) || 60;
+
   const gap = parseInt(
     getComputedStyle(document.documentElement)
       .getPropertyValue("--hex-gap")
   ) || 6;
 
-  const w = hexSize;
-  const h = hexSize;
-  const rowHeight = h * 0.75;
+  const w = hexSize * 2;                 // full width of hex
+  const h = hexSize * 1.732;             // full height (sqrt(3))
+  const rowHeight = h * 0.75;            // vertical step
   const halfW = w / 2;
 
   const positions = [];
@@ -345,12 +345,12 @@ function getHexPositions(boardSize) {
   positions[0] = { left: halfW + gap, top: gap };
   positions[1] = { left: halfW * 3 + gap * 2, top: gap };
 
-  // Row 1: 2,3,4
-  positions[2] = { left: 0, top: rowHeight + gap };
+  // Row 1: 2,3,4 (shifted left by halfW relative to row 0)
+  positions[2] = { left: 0 + gap, top: rowHeight + gap };
   positions[3] = { left: halfW + gap, top: rowHeight + gap };
   positions[4] = { left: halfW * 3 + gap * 2, top: rowHeight + gap };
 
-  // Row 2: 5,6
+  // Row 2: 5,6 (aligned with row 0)
   positions[5] = { left: halfW + gap, top: rowHeight * 2 + gap };
   positions[6] = { left: halfW * 3 + gap * 2, top: rowHeight * 2 + gap };
 
@@ -402,10 +402,8 @@ function showMessage(text) {
 function showFeedback(isGood) {
   const feedbackEl = document.getElementById("feedback");
 
-  // Bee for good, thumb down for bad
-  feedbackEl.textContent = isGood ? "🐝" : "👎";
+  feedbackEl.textContent = isGood ? "🐝" : "👎🏾";
 
-  // Reset classes
   feedbackEl.classList.remove("show-good", "show-bad");
 
   // Force reflow to restart animation
@@ -469,9 +467,8 @@ function handlePointerMove(e) {
   const path = gameState.selectedPath;
   const last = path[path.length - 1];
 
-  if (index === last) return; // still on same hex
+  if (index === last) return;
 
-  // Allow moving back along the current path (undo)
   const prevIndex = path.length > 1 ? path[path.length - 2] : null;
   if (index === prevIndex) {
     path.pop();
@@ -480,14 +477,11 @@ function handlePointerMove(e) {
     return;
   }
 
-  // Cannot reuse a hex that is already in the path (except via undo above)
   if (path.includes(index)) return;
 
-  // Optional: enforce adjacency via path data
   const candidate = [...path, index];
   const maxLen = gameState.boardSize;
 
-  // Check if there exists any valid path in pathData that starts with this prefix
   let hasExtension = false;
 
   for (let len = candidate.length; len <= maxLen; len++) {
@@ -502,7 +496,6 @@ function handlePointerMove(e) {
   }
 
   if (!hasExtension) {
-    // Invalid move: not part of any allowed path
     return;
   }
 
@@ -523,16 +516,14 @@ function handlePointerUp(e) {
   clearHexHighlights();
   document.getElementById("currentWord").textContent = "";
 
-  // Validation only happens here, after swipe ends
   if (path.length < 3) {
-    // Too short: just ignore, no feedback needed
     return;
   }
 
   const result = submitPath(path);
 
   if (!result.accepted) {
-    showFeedback(false); // thumb down
+    showFeedback(false);
     if (result.reason === "alreadyFound") {
       showMessage(`${result.word} has already been found.`);
     } else if (result.reason === "notAValidWord") {
@@ -543,7 +534,7 @@ function handlePointerUp(e) {
     return;
   }
 
-  showFeedback(true); // bee
+  showFeedback(true);
 
   updateScoreDisplay(gameState.score);
   updateTimerDisplay(gameState.timeRemaining);

@@ -1,20 +1,24 @@
 :root {
-  --hex-size: 64px;
+  /* Hex geometry */
+  --hex-size: 60px;          /* “radius” from center to corner */
   --hex-gap: 6px;
-  --bg-color: #fffbe6;
 
-  /* Base hex color (already yellow) */
-  --hex-fill: #ffd54a;
-  --hex-stroke: #c9a227;
+  /* Colors – dark theme, yellow hex, black font inside */
+  --bg-page: #121212;
+  --bg-panel: #1e1e1e;
 
-  /* Highlight: a lighter, brighter yellow/cream to stand out from base */
-  --highlight-color: #fff1a8;
+  --hex-fill: #FFD54A;       /* yellow hex */
+  --hex-stroke: #000000;     /* black border */
+  --hex-letter: #000000;     /* black letter inside hex */
 
-  --letter-color: #b00020;
-  --text-color: #222;
-  --muted-color: #666;
-  --found-word-bg: #e8f5e9;
-  --found-word-color: #2e7d32;
+  --highlight-hex: #FFE082;  /* slightly lighter yellow for selected hexes */
+
+  --text-outside: #FFFFFF;   /* white text outside hex */
+  --text-muted: #CCCCCC;     /* lighter text for labels */
+  --text-accent: #FFD54A;    /* yellow accent for some outside text */
+
+  --found-word-bg: #1b3a1b;
+  --found-word-color: #98fb98;
 
   --feedback-size: 44px;
 }
@@ -26,8 +30,8 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg-color);
-  color: var(--text-color);
+  background: var(--bg-page);
+  color: var(--text-outside);
 }
 
 .hive-game {
@@ -35,6 +39,8 @@ body {
   margin: 0 auto;
   padding: 16px;
 }
+
+/* Header / status cards */
 
 .game-header {
   display: flex;
@@ -44,8 +50,8 @@ body {
 }
 
 .status-card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-panel);
+  border: 1px solid #333;
   border-radius: 8px;
   padding: 8px 16px;
   text-align: center;
@@ -55,7 +61,7 @@ body {
 .status-label {
   display: block;
   font-size: 12px;
-  color: var(--muted-color);
+  color: var(--text-muted);
   letter-spacing: 0.06em;
 }
 
@@ -63,7 +69,10 @@ body {
   display: block;
   font-size: 24px;
   margin-top: 4px;
+  color: var(--text-accent); /* yellow numbers */
 }
+
+/* Board section */
 
 .board-section {
   display: flex;
@@ -75,8 +84,9 @@ body {
 
 .hex-board {
   position: relative;
-  width: calc(var(--hex-size) * 3 + var(--hex-gap) * 2);
-  height: calc(var(--hex-size) * 3 + var(--hex-gap) * 2);
+  /* Approximate bounding box for 7-hex honeycomb */
+  width: calc(var(--hex-size) * 4 + var(--hex-gap) * 2);
+  height: calc(var(--hex-size) * 3.5 + var(--hex-gap) * 2);
   margin-bottom: 12px;
   user-select: none;
   touch-action: none;
@@ -84,36 +94,44 @@ body {
 
 .hex {
   position: absolute;
-  width: var(--hex-size);
-  height: var(--hex-size);
+  width: calc(var(--hex-size) * 2);
+  height: calc(var(--hex-size) * 1.732); /* sqrt(3) */
   background: var(--hex-fill);
-  border: 2px solid var(--hex-stroke);
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  border: 3px solid var(--hex-stroke);
+  clip-path: polygon(
+    50% 0%,
+    100% 25%,
+    100% 75%,
+    50% 100%,
+    0% 75%,
+    0% 25%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 22px;
-  color: var(--letter-color);
+  color: var(--hex-letter); /* black inside hex */
   cursor: pointer;
   transition: background 120ms ease, transform 120ms ease;
 }
 
-/* Highlighted hexes: lighter yellow/cream */
 .hex.is-highlighted {
-  background: var(--highlight-color);
+  background: var(--highlight-hex);
   transform: scale(1.06);
 }
 
 .current-word {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.15em;
   min-height: 28px;
   text-align: center;
+  color: var(--text-outside);
 }
 
-/* Feedback icons: bee (good) / thumb down (bad) */
+/* Feedback icons */
+
 .feedback {
   position: absolute;
   left: 50%;
@@ -125,18 +143,15 @@ body {
   transition: opacity 150ms ease, transform 200ms ease;
 }
 
-/* Start slightly above center, then drop down a bit when shown */
 .feedback.show-good,
 .feedback.show-bad {
   opacity: 1;
 }
 
-/* Bee: starts higher, drops a little */
 .feedback.show-good {
   animation: feedbackDropGood 600ms ease forwards;
 }
 
-/* Thumb down: starts similar, drops more */
 .feedback.show-bad {
   animation: feedbackDropBad 600ms ease forwards;
 }
@@ -171,18 +186,20 @@ body {
   }
 }
 
+/* Word bank */
+
 .word-bank {
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-panel);
+  border: 1px solid #333;
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 12px;
 }
 
-.word-bank h2 {
+.section-title {
   margin: 0 0 10px;
   font-size: 16px;
-  color: var(--muted-color);
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -193,8 +210,8 @@ body {
 }
 
 .word-hint {
-  background: #f5f5f5;
-  border: 1px solid #ddd;
+  background: #2a2a2a;
+  border: 1px solid #444;
   border-radius: 6px;
   padding: 6px 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -202,26 +219,31 @@ body {
   text-align: center;
   letter-spacing: 0.2em;
   user-select: none;
+  color: var(--text-outside);
 }
 
 .word-hint--found {
   background: var(--found-word-bg);
-  border-color: #c8e6c9;
+  border-color: #2f5a2f;
   color: var(--found-word-color);
   font-weight: 700;
 }
+
+/* Messages */
 
 .game-message {
   margin: 0;
   text-align: center;
   font-size: 14px;
-  color: var(--muted-color);
+  color: var(--text-muted);
   min-height: 20px;
 }
 
+/* Responsive */
+
 @media (max-width: 420px) {
   :root {
-    --hex-size: 52px;
+    --hex-size: 50px;
     --hex-gap: 4px;
   }
 
