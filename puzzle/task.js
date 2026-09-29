@@ -1,4 +1,4 @@
-// task.js v280926c
+// task.js v260929
 "use strict";
 
 
@@ -2660,11 +2660,16 @@ function getRenderedTask03AnswerPaths(task) {
 const TASK04_WORDS = Object.freeze([
     "TORONTO",
     "MEXICO",
+    "CHICAGO",
     "CARACAS",
     "LIMA",
+    "PANAMA",
+    "BAHAMAS",
     "HAVANA",
     "MADRID",
     "BILBAO",
+    "YORK",
+    "OXFORD",
     "MALTA",
     "PARIS",
     "BERLIN",
@@ -2791,6 +2796,8 @@ function generateTask04(difficulty) {
      * We follow the same pattern as your working example:
      * - instruction.colors is an array of colour keys.
      * - instruction.tokenSources.colors points to "tasks.colors".
+     *
+     * ADDITION: Also add colorsByToken for per-token colouring.
      */
     const instructionColorKey =
         randomChoice(TASK_COLORS);
@@ -2813,9 +2820,15 @@ function generateTask04(difficulty) {
             // Colours used in the instruction text (array of keys).
             colors: [instructionColorKey],
 
+            // NEW: Per-token colour for {target}
+            colorsByToken: {
+                target: instructionColorKey
+            },
+
             // Tells the renderer to look up colour names in tasks.colors.
             tokenSources: {
-                colors: "tasks.colors"
+                colors: "tasks.colors",
+                target: "tasks.words"
             }
         },
 
@@ -3226,6 +3239,17 @@ function validateTask04(task) {
         !task.instruction.colors.every(
             c => TASK_COLORS.includes(c)
         )
+    ) {
+        return false;
+    }
+
+    /*
+     * NEW: Validate colorsByToken for per-token colouring.
+     */
+    if (
+        !task.instruction.colorsByToken ||
+        typeof task.instruction.colorsByToken.target !== "string" ||
+        !TASK_COLORS.includes(task.instruction.colorsByToken.target)
     ) {
         return false;
     }
@@ -3723,7 +3747,10 @@ async function generateTask05(difficulty) {
     const instructionColors = [baseColors.A];
 
     const instruction = {
-        template: "task05_swipeLine",
+        template:
+            startCase === "colorShapeColorShape"
+                ? "task05_swipeLineColorShape"
+                : "task05_swipeLine",
 
         length,
 
@@ -3735,6 +3762,9 @@ async function generateTask05(difficulty) {
 
         // For A/B token colouring (renderer must read this)
         colorsAB,
+
+        // NEW: Also provide colorsByToken (same data, clearer name)
+        colorsByToken: colorsAB,
 
         tokenSources: {}
     };
@@ -4245,6 +4275,19 @@ function validateTask05(task) {
     }
 
     /*
+     * NEW: Also validate colorsByToken (same data as colorsAB).
+     */
+    if (
+        !task.instruction.colorsByToken ||
+        typeof task.instruction.colorsByToken.A !== "string" ||
+        typeof task.instruction.colorsByToken.B !== "string" ||
+        !TASK_COLORS.includes(task.instruction.colorsByToken.A) ||
+        !TASK_COLORS.includes(task.instruction.colorsByToken.B)
+    ) {
+        return false;
+    }
+
+    /*
      * Display colour keys must not match the wording colour keys.
      */
     const wordingColorKeys = [];
@@ -4269,7 +4312,9 @@ function validateTask05(task) {
     for (const key of uniqueWordingKeys) {
         if (
             task.instruction.colorsAB.A === key ||
-            task.instruction.colorsAB.B === key
+            task.instruction.colorsAB.B === key ||
+            task.instruction.colorsByToken.A === key ||
+            task.instruction.colorsByToken.B === key
         ) {
             return false;
         }

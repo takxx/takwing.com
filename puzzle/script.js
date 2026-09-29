@@ -1,4 +1,4 @@
-// script.js
+// script.js v261029
 "use strict";
 
 import {
@@ -601,7 +601,6 @@ async function requestNextTask() {
     currentTask = task;
     console.log("Task JSON:", JSON.stringify(task, null, 2));
 
-
     renderTaskInstruction(task);
     renderGeneratedCells(task.cells);
     enableBoard();
@@ -673,7 +672,7 @@ function validateTaskResponse(task) {
 }
 
 /* ==========================================================================
-   Instruction rendering
+   Instruction rendering (NEW: supports per-token colours)
    ========================================================================== */
 
 function renderTaskInstruction(task) {
@@ -777,12 +776,14 @@ function renderInstructionToken(
     tokenName,
     instruction
 ) {
+    // Handle {colors} list token
     if (tokenName === "colors") {
         return renderColorList(
             getInstructionColors(instruction)
         );
     }
 
+    // Handle {color} single colour token
     if (tokenName === "color") {
         const colorKey =
             instruction.color || "";
@@ -797,11 +798,13 @@ function renderInstructionToken(
             createInstructionTerm(
                 "color",
                 colorKey,
-                colorText
+                colorText,
+                colorKey
             )
         ];
     }
 
+    // Handle all other tokens
     const value = getInstructionTokenValue(
         tokenName,
         instruction
@@ -821,11 +824,19 @@ function renderInstructionToken(
             instruction
         );
 
+    // Get optional colour for this token
+    const colorKey =
+        getInstructionTokenColor(
+            tokenName,
+            instruction
+        );
+
     return [
         createInstructionTerm(
             tokenName,
             value,
-            displayValue
+            displayValue,
+            colorKey
         )
     ];
 }
@@ -872,6 +883,58 @@ function getInstructionColors(instruction) {
     return [];
 }
 
+function getInstructionTokenColor(
+    tokenName,
+    instruction
+) {
+    /*
+     * Preferred format:
+     *
+     * colorsByToken: {
+     *     target: "red",
+     *     A: "blue",
+     *     B: "green"
+     * }
+     */
+    if (
+        instruction.colorsByToken &&
+        typeof instruction.colorsByToken === "object" &&
+        typeof instruction.colorsByToken[tokenName] === "string"
+    ) {
+        return instruction.colorsByToken[tokenName];
+    }
+
+    /*
+     * Backward-compatible format for Task05:
+     *
+     * colorsAB: {
+     *     A: "blue",
+     *     B: "red"
+     * }
+     */
+    if (
+        instruction.colorsAB &&
+        typeof instruction.colorsAB === "object" &&
+        typeof instruction.colorsAB[tokenName] === "string"
+    ) {
+        return instruction.colorsAB[tokenName];
+    }
+
+    /*
+     * Optional generic colour for a token.
+     */
+    if (
+        instruction.colorByToken &&
+        typeof instruction.colorByToken === "object" &&
+        typeof instruction.colorByToken[tokenName] === "string"
+    ) {
+        return instruction.colorByToken[tokenName];
+    }
+
+    // No colour assigned
+    return "";
+}
+
 function getLocalizedInstructionValue(
     tokenName,
     value,
@@ -912,7 +975,8 @@ function getLocalizedInstructionValue(
 function createInstructionTerm(
     tokenName,
     tokenValue,
-    displayValue
+    displayValue,
+    colorKey = ""
 ) {
     const element =
         document.createElement("span");
@@ -925,6 +989,10 @@ function createInstructionTerm(
         String(tokenValue)
             .replace(/[^a-zA-Z0-9_-]/g, "");
 
+    const safeColorKey =
+        String(colorKey || "")
+            .replace(/[^a-zA-Z0-9_-]/g, "");
+
     element.className =
         `instruction-term instruction-${safeTokenName}`;
 
@@ -934,8 +1002,19 @@ function createInstructionTerm(
         );
     }
 
+    if (safeColorKey) {
+        element.classList.add(
+            `instruction-color-${safeColorKey}`
+        );
+    }
+
     element.dataset.token = tokenName;
     element.dataset.value = String(tokenValue);
+
+    if (colorKey) {
+        element.dataset.color = colorKey;
+    }
+
     element.textContent = displayValue;
 
     return element;
@@ -952,7 +1031,8 @@ function renderColorList(colorKeys) {
         return createInstructionTerm(
             "color",
             colorKey,
-            colorText
+            colorText,
+            colorKey
         );
     });
 
