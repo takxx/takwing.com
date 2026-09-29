@@ -1,4 +1,4 @@
-// script.js v260929f
+// script.js – v260929g
 
 // ---------- Data loading ----------
 
@@ -67,7 +67,7 @@ const gameState = {
   startHexIndex: null,
 
   // Overlay state
-  overlayMode: null // "gameOver" | "nextRound" | null
+  overlayMode: null // "gameOver" | "nextRound" | "roundComplete" | null
 };
 
 let wordData = null;
@@ -95,7 +95,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     attachInputHandlers();
     attachOverlayHandlers();
-    // Do NOT start round yet; wait for "Start game" button.
   } catch (error) {
     console.error(error);
     showMessage("Unable to load Buzzword.");
@@ -199,10 +198,18 @@ function blankBar(length) {
   return Array(length).fill("_").join(" ");
 }
 
-// FIXED: create hint slots from unique words only
+// FIXED: ensure unique words in hint list
 function createHintSlots(answersByWord) {
-  // answersByWord is already a Map<word, answerEntry>, so keys are unique
-  return [...answersByWord.values()]
+  const seenWords = new Set();
+  const uniqueEntries = [];
+
+  for (const [word, entry] of answersByWord.entries()) {
+    if (seenWords.has(word)) continue;
+    seenWords.add(word);
+    uniqueEntries.push(entry);
+  }
+
+  return uniqueEntries
     .sort((a, b) => {
       if (a.length !== b.length) return a.length - b.length;
       return a.word.localeCompare(b.word);
@@ -302,6 +309,33 @@ function endGame() {
   });
 }
 
+// NEW: round completed by finding all words before time runs out
+function roundComplete() {
+  gameState.active = false;
+  clearInterval(gameState.timerId);
+
+  // +100 bonus for clearing the board
+  const bonus = 100;
+  gameState.score += bonus;
+  updateScoreDisplay(gameState.score);
+
+  if (gameState.score > gameState.highScore) {
+    gameState.highScore = gameState.score;
+    localStorage.setItem("buzzwordHighScore", String(gameState.highScore));
+    updateHighScoreDisplay(gameState.highScore);
+  }
+
+  gameState.overlayMode = "roundComplete";
+  // All words are found, so no need to reveal unfound; but keep consistent
+  revealUnfoundWords();
+
+  showRoundOverlay({
+    title: "Round complete!",
+    message: `All words found! +${bonus} bonus. Score: ${gameState.score}.`,
+    buttonLabel: "Next round"
+  });
+}
+
 // ---------- Timer ----------
 
 function clampTimer(value) {
@@ -340,6 +374,14 @@ function handleTimeUp() {
     nextRound();
   } else {
     endGame();
+  }
+}
+
+// Check if all words are found
+function checkRoundComplete() {
+  const allFound = gameState.hintSlots.every(slot => slot.found);
+  if (allFound && gameState.active) {
+    roundComplete();
   }
 }
 
@@ -469,11 +511,15 @@ function attachOverlayHandlers() {
   // Round overlay button (New game / Next round)
   const buttonEl = document.getElementById("roundOverlayButton");
   buttonEl.addEventListener("click", () => {
-    if (gameState.overlayMode === "gameOver") {
-      gameState.score = 0;
-      updateScoreDisplay(0);
-      startRound();
-    } else if (gameState.overlayMode === "nextRound") {
+    if (
+      gameState.overlayMode === "gameOver" ||
+      gameState.overlayMode === "nextRound" ||
+      gameState.overlayMode === "roundComplete"
+    ) {
+      if (gameState.overlayMode === "gameOver") {
+        gameState.score = 0;
+        updateScoreDisplay(0);
+      }
       startRound();
     }
   });
@@ -604,6 +650,9 @@ function handlePointerUp(e) {
   showMessage(
     `${result.word}: +${result.points} points, +${result.bonusSeconds} seconds`
   );
+
+  // Check if this just completed the round
+  checkRoundComplete();
 }
 
 function highlightSelectedPath() {
