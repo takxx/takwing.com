@@ -1,4 +1,4 @@
-// script.js v260929d
+// script.js v260929f
 
 // ---------- Data loading ----------
 
@@ -89,9 +89,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       gameState.highScore = parseInt(storedHigh, 10) || 0;
     }
 
-    startRound();
+    updateHighScoreDisplay(gameState.highScore);
+    updateScoreDisplay(0);
+    updateTimerDisplay(80);
+
     attachInputHandlers();
     attachOverlayHandlers();
+    // Do NOT start round yet; wait for "Start game" button.
   } catch (error) {
     console.error(error);
     showMessage("Unable to load Buzzword.");
@@ -195,7 +199,9 @@ function blankBar(length) {
   return Array(length).fill("_").join(" ");
 }
 
+// FIXED: create hint slots from unique words only
 function createHintSlots(answersByWord) {
+  // answersByWord is already a Map<word, answerEntry>, so keys are unique
   return [...answersByWord.values()]
     .sort((a, b) => {
       if (a.length !== b.length) return a.length - b.length;
@@ -266,14 +272,12 @@ function startRound() {
 }
 
 function nextRound() {
-  // Called when time is up and at least one 7-letter word was found.
-  // Show congratulations overlay with "Next round" button.
   gameState.overlayMode = "nextRound";
   revealUnfoundWords();
 
   showRoundOverlay({
     title: "Great job!",
-    message: `You found at least one 7‑letter word. Score: ${gameState.score}.`,
+    message: `You found a 7‑letter word. Score: ${gameState.score}.`,
     buttonLabel: "Next round"
   });
 }
@@ -288,7 +292,6 @@ function endGame() {
     updateHighScoreDisplay(gameState.highScore);
   }
 
-  // Show game over overlay with "New game" button (resets score).
   gameState.overlayMode = "gameOver";
   revealUnfoundWords();
 
@@ -434,7 +437,7 @@ function revealUnfoundWords() {
   });
 }
 
-// ---------- Overlay ----------
+// ---------- Overlays ----------
 
 function showRoundOverlay({ title, message, buttonLabel }) {
   const overlay = document.getElementById("roundOverlay");
@@ -455,15 +458,22 @@ function hideRoundOverlay() {
 }
 
 function attachOverlayHandlers() {
+  // Start button
+  const startButton = document.getElementById("startButton");
+  startButton.addEventListener("click", () => {
+    const startOverlay = document.getElementById("startOverlay");
+    startOverlay.hidden = true;
+    startRound();
+  });
+
+  // Round overlay button (New game / Next round)
   const buttonEl = document.getElementById("roundOverlayButton");
   buttonEl.addEventListener("click", () => {
     if (gameState.overlayMode === "gameOver") {
-      // Reset score for new game, keep high score
       gameState.score = 0;
       updateScoreDisplay(0);
       startRound();
     } else if (gameState.overlayMode === "nextRound") {
-      // Keep score, go to next puzzle
       startRound();
     }
   });

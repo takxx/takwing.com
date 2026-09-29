@@ -388,7 +388,7 @@ body {
 }
 
 /* =========================
-   Round overlay (game over / congratulations)
+   Overlays (start & end of round)
    ========================= */
 
 .round-overlay {
@@ -409,7 +409,7 @@ body {
 }
 
 .round-overlay-content {
-  width: min(90%, 220px);
+  width: min(90%, 240px);
   padding: 14px 12px;
 
   background: #1e293b;
@@ -424,7 +424,21 @@ body {
   margin: 0 0 6px;
   font-size: 1.1rem;
   font-weight: 800;
-  color: #FFD54A; /* yellow title */
+  color: #FFD54A;
+}
+
+.start-instructions {
+  margin: 0 0 10px;
+  padding-left: 1.1em;
+  text-align: left;
+
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #cbd5e1;
+}
+
+.start-instructions li {
+  margin-bottom: 4px;
 }
 
 .round-overlay-message {
