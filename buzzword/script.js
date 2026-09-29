@@ -1,4 +1,4 @@
-// script.js – v260929g
+// script.js v260929h
 
 // ---------- Data loading ----------
 
@@ -52,9 +52,10 @@ const gameState = {
   targetPath: [],
   boardLetters: [],
 
-  answersByWord: new Map(),
-  wordByPathKey: new Map(),
-  hintSlots: [],
+  answersByWord: new Map(),      // word -> answer entry
+  wordByPathKey: new Map(),      // pathKey -> word
+  wordToSlotIndex: new Map(),    // word -> index in hintSlots
+  hintSlots: [],                 // [{ id, word, length, found }]
 
   score: 0,
   highScore: 0,
@@ -72,6 +73,140 @@ const gameState = {
 
 let wordData = null;
 let pathData = null;
+
+// ---------- Audio (built‑in beeps) ----------
+
+const AudioSFX = (function () {
+  let ctx = null;
+  let enabled = true;
+
+  function ensureContext() {
+    if (!ctx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) {
+        ctx = new Ctx();
+      }
+    }
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+  }
+
+  function setEnabled(value) {
+    enabled = !!value;
+  }
+
+  function playTone(freq, duration = 0.08, type = "sine", volume = 0.07) {
+    if (!enabled) return;
+    ensureContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.value = freq;
+
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  function playGood() {
+    if (!enabled) return;
+    ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    notes.forEach((freq, i) => {
+      const t = now + i * 0.06;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.05, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.12);
+    });
+  }
+
+  function playBad() {
+    if (!enabled) return;
+    playTone(200, 0.09, "triangle", 0.06);
+    setTimeout(() => playTone(150, 0.12, "triangle", 0.06), 70);
+  }
+
+  function playRoundComplete() {
+    if (!enabled) return;
+    ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+    notes.forEach((freq, i) => {
+      const t = now + i * 0.07;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.06, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    });
+  }
+
+  function playGameOver() {
+    if (!enabled) return;
+    playTone(180, 0.12, "triangle", 0.07);
+    setTimeout(() => playTone(140, 0.14, "triangle", 0.07), 110);
+    setTimeout(() => playTone(110, 0.18, "triangle", 0.07), 240);
+  }
+
+  function playClick() {
+    if (!enabled) return;
+    playTone(900, 0.04, "square", 0.03);
+  }
+
+  // Hex touch tones: index -> note
+  // 0: mi (E4), 1: do (C4), 2: re (D4), 3: do, 4: re, 5: do, 6: re
+  const HEX_NOTES = [
+    329.63, // E4 (mi)
+    261.63, // C4 (do)
+    293.66, // D4 (re)
+    261.63, // C4
+    293.66, // D4
+    261.63, // C4
+    293.66  // D4
+  ];
+
+  function playHexTone(index) {
+    const freq = HEX_NOTES[index];
+    if (freq == null) return;
+    playTone(freq, 0.07, "sine", 0.05);
+  }
+
+  return {
+    setEnabled,
+    playGood,
+    playBad,
+    playRoundComplete,
+    playGameOver,
+    playClick,
+    playHexTone
+  };
+})();
 
 // ---------- Initialization ----------
 
@@ -198,28 +333,32 @@ function blankBar(length) {
   return Array(length).fill("_").join(" ");
 }
 
-// FIXED: ensure unique words in hint list
+// FIXED: build hint slots from unique words only, and map word -> slot index
 function createHintSlots(answersByWord) {
-  const seenWords = new Set();
-  const uniqueEntries = [];
+  const uniqueWords = [...answersByWord.keys()].sort((a, b) => {
+    const lenA = answersByWord.get(a).length;
+    const lenB = answersByWord.get(b).length;
+    if (lenA !== lenB) return lenA - lenB;
+    return a.localeCompare(b);
+  });
 
-  for (const [word, entry] of answersByWord.entries()) {
-    if (seenWords.has(word)) continue;
-    seenWords.add(word);
-    uniqueEntries.push(entry);
-  }
-
-  return uniqueEntries
-    .sort((a, b) => {
-      if (a.length !== b.length) return a.length - b.length;
-      return a.word.localeCompare(b.word);
-    })
-    .map((answer, index) => ({
+  const slots = uniqueWords.map((word, index) => {
+    const entry = answersByWord.get(word);
+    return {
       id: `word-hint-${index}`,
-      word: answer.word,
-      length: answer.length,
+      word,
+      length: entry.length,
       found: false
-    }));
+    };
+  });
+
+  // Build word -> slot index map
+  const wordToSlotIndex = new Map();
+  slots.forEach((slot, i) => {
+    wordToSlotIndex.set(slot.word, i);
+  });
+
+  return { slots, wordToSlotIndex };
 }
 
 function buildRound() {
@@ -259,7 +398,9 @@ function startRound() {
   gameState.answersByWord = round.answersByWord;
   gameState.wordByPathKey = round.wordByPathKey;
 
-  gameState.hintSlots = createHintSlots(round.answersByWord);
+  const { slots, wordToSlotIndex } = createHintSlots(round.answersByWord);
+  gameState.hintSlots = slots;
+  gameState.wordToSlotIndex = wordToSlotIndex;
 
   gameState.timeRemaining = 80;
   gameState.wordsFound = 0;
@@ -309,12 +450,11 @@ function endGame() {
   });
 }
 
-// NEW: round completed by finding all words before time runs out
+// Round completed by finding all words before time runs out
 function roundComplete() {
   gameState.active = false;
   clearInterval(gameState.timerId);
 
-  // +100 bonus for clearing the board
   const bonus = 100;
   gameState.score += bonus;
   updateScoreDisplay(gameState.score);
@@ -326,7 +466,6 @@ function roundComplete() {
   }
 
   gameState.overlayMode = "roundComplete";
-  // All words are found, so no need to reveal unfound; but keep consistent
   revealUnfoundWords();
 
   showRoundOverlay({
@@ -371,8 +510,10 @@ function handleTimeUp() {
   );
 
   if (hasSevenLetterWord) {
+    AudioSFX.playRoundComplete();
     nextRound();
   } else {
+    AudioSFX.playGameOver();
     endGame();
   }
 }
@@ -381,6 +522,7 @@ function handleTimeUp() {
 function checkRoundComplete() {
   const allFound = gameState.hintSlots.every(slot => slot.found);
   if (allFound && gameState.active) {
+    AudioSFX.playRoundComplete();
     roundComplete();
   }
 }
@@ -500,17 +642,17 @@ function hideRoundOverlay() {
 }
 
 function attachOverlayHandlers() {
-  // Start button
   const startButton = document.getElementById("startButton");
   startButton.addEventListener("click", () => {
+    AudioSFX.playClick();
     const startOverlay = document.getElementById("startOverlay");
     startOverlay.hidden = true;
     startRound();
   });
 
-  // Round overlay button (New game / Next round)
   const buttonEl = document.getElementById("roundOverlayButton");
   buttonEl.addEventListener("click", () => {
+    AudioSFX.playClick();
     if (
       gameState.overlayMode === "gameOver" ||
       gameState.overlayMode === "nextRound" ||
@@ -561,6 +703,9 @@ function handlePointerDown(e) {
   const index = getHexIndexFromEvent(e);
   if (index === null) return;
 
+  // Play per-hex tone
+  AudioSFX.playHexTone(index);
+
   gameState.isSwiping = true;
   gameState.selectedPath = [index];
   gameState.startHexIndex = index;
@@ -609,6 +754,9 @@ function handlePointerMove(e) {
 
   if (!hasExtension) return;
 
+  // Play tone for the new hex
+  AudioSFX.playHexTone(index);
+
   path.push(index);
   highlightSelectedPath();
   updateCurrentWordDisplay();
@@ -631,6 +779,7 @@ function handlePointerUp(e) {
   const result = submitPath(path);
 
   if (!result.accepted) {
+    AudioSFX.playBad();
     showFeedback(false);
     if (result.reason === "alreadyFound") {
       showMessage(`${result.word} has already been found.`);
@@ -642,6 +791,7 @@ function handlePointerUp(e) {
     return;
   }
 
+  AudioSFX.playGood();
   showFeedback(true);
 
   updateScoreDisplay(gameState.score);
@@ -651,7 +801,6 @@ function handlePointerUp(e) {
     `${result.word}: +${result.points} points, +${result.bonusSeconds} seconds`
   );
 
-  // Check if this just completed the round
   checkRoundComplete();
 }
 
@@ -730,8 +879,12 @@ function submitPath(selectedPath) {
   };
 }
 
+// FIXED: use wordToSlotIndex to mark the correct slot as found
 function revealFirstHintForLength(hintSlots, word) {
-  const slot = hintSlots.find(item => !item.found && item.length === word.length);
+  const slotIndex = gameState.wordToSlotIndex.get(word);
+  if (slotIndex == null) return false;
+
+  const slot = hintSlots[slotIndex];
   if (!slot) return false;
 
   slot.found = true;

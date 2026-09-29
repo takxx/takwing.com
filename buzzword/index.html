@@ -5,11 +5,42 @@
   <title>Buzzword</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Simple top-right controls */
+    .top-controls {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      display: flex;
+      gap: 0.4rem;
+      z-index: 10;
+    }
+
+    .top-controls button {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      line-height: 1;
+      padding: 0.2rem;
+      cursor: pointer;
+      opacity: 0.85;
+    }
+
+    .top-controls button:hover {
+      opacity: 1;
+    }
+  </style>
 </head>
 <body>
   <main class="hive-game">
     <header class="game-header">
       <h1 class="game-title">Buzzword</h1>
+
+      <!-- Top-right controls: mute + language -->
+      <div class="top-controls">
+        <button id="muteButton" type="button" aria-pressed="false" title="Toggle sound">🔊</button>
+        <button id="langButton" type="button" title="Spanish version (coming soon)">🇪🇸</button>
+      </div>
 
       <div class="status-bar">
         <div class="status-item">
@@ -71,5 +102,46 @@
   </main>
 
   <script src="script.js" type="module"></script>
+  <script>
+    // Mute button wiring (uses AudioSFX from script.js)
+    (function () {
+      const muteBtn = document.getElementById("muteButton");
+      if (!muteBtn) return;
+
+      // Try to read stored mute state
+      const storedMuted = localStorage.getItem("buzzwordMuted");
+      const initiallyMuted = storedMuted === "true";
+
+      // If AudioSFX exists, apply stored state
+      if (typeof AudioSFX !== "undefined") {
+        AudioSFX.setEnabled(!initiallyMuted);
+        muteBtn.textContent = initiallyMuted ? "🔇" : "🔊";
+        muteBtn.setAttribute("aria-pressed", String(initiallyMuted));
+      }
+
+      muteBtn.addEventListener("click", () => {
+        if (typeof AudioSFX === "undefined") return;
+
+        const currentLabel = muteBtn.textContent;
+        const isCurrentlyMuted = currentLabel === "🔇";
+        const newMuted = !isCurrentlyMuted;
+
+        AudioSFX.setEnabled(!newMuted);
+        localStorage.setItem("buzzwordMuted", String(newMuted));
+
+        muteBtn.textContent = newMuted ? "🔇" : "🔊";
+        muteBtn.setAttribute("aria-pressed", String(newMuted));
+      });
+
+      // Spanish button: placeholder
+      const langBtn = document.getElementById("langButton");
+      if (langBtn) {
+        langBtn.addEventListener("click", () => {
+          // TODO: navigate to Spanish version later
+          // e.g. window.location.href = "/?lang=es";
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
