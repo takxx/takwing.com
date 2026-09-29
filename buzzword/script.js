@@ -1,4 +1,4 @@
-// script.js v260929h
+// script.js v261029i
 
 // ---------- Data loading ----------
 
@@ -94,6 +94,10 @@ const AudioSFX = (function () {
 
   function setEnabled(value) {
     enabled = !!value;
+  }
+
+  function isEnabled() {
+    return enabled;
   }
 
   function playTone(freq, duration = 0.08, type = "sine", volume = 0.07) {
@@ -197,8 +201,14 @@ const AudioSFX = (function () {
     playTone(freq, 0.07, "sine", 0.05);
   }
 
+  // Expose enabled state for UI
+  Object.defineProperty(AudioSFX, "enabled", {
+    get: () => enabled
+  });
+
   return {
     setEnabled,
+    isEnabled,
     playGood,
     playBad,
     playRoundComplete,
@@ -230,6 +240,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     attachInputHandlers();
     attachOverlayHandlers();
+    attachMuteHandler();
+    attachLangHandler();
   } catch (error) {
     console.error(error);
     showMessage("Unable to load Buzzword.");
@@ -333,7 +345,6 @@ function blankBar(length) {
   return Array(length).fill("_").join(" ");
 }
 
-// FIXED: build hint slots from unique words only, and map word -> slot index
 function createHintSlots(answersByWord) {
   const uniqueWords = [...answersByWord.keys()].sort((a, b) => {
     const lenA = answersByWord.get(a).length;
@@ -352,7 +363,6 @@ function createHintSlots(answersByWord) {
     };
   });
 
-  // Build word -> slot index map
   const wordToSlotIndex = new Map();
   slots.forEach((slot, i) => {
     wordToSlotIndex.set(slot.word, i);
@@ -450,7 +460,6 @@ function endGame() {
   });
 }
 
-// Round completed by finding all words before time runs out
 function roundComplete() {
   gameState.active = false;
   clearInterval(gameState.timerId);
@@ -518,7 +527,6 @@ function handleTimeUp() {
   }
 }
 
-// Check if all words are found
 function checkRoundComplete() {
   const allFound = gameState.hintSlots.every(slot => slot.found);
   if (allFound && gameState.active) {
@@ -667,6 +675,43 @@ function attachOverlayHandlers() {
   });
 }
 
+// ---------- Mute & language handlers ----------
+
+function attachMuteHandler() {
+  const muteBtn = document.getElementById("muteButton");
+  if (!muteBtn) return;
+
+  const storedMuted = localStorage.getItem("buzzwordMuted");
+  const initiallyMuted = storedMuted === "true";
+
+  AudioSFX.setEnabled(!initiallyMuted);
+  updateMuteButtonState(muteBtn, initiallyMuted);
+
+  muteBtn.addEventListener("click", () => {
+    const isCurrentlyMuted = !AudioSFX.isEnabled();
+    const newMuted = !isCurrentlyMuted;
+
+    AudioSFX.setEnabled(!newMuted);
+    localStorage.setItem("buzzwordMuted", String(newMuted));
+    updateMuteButtonState(muteBtn, newMuted);
+  });
+}
+
+function updateMuteButtonState(btn, isMuted) {
+  btn.textContent = isMuted ? "🔇" : "🔊";
+  btn.setAttribute("aria-pressed", String(isMuted));
+}
+
+function attachLangHandler() {
+  const langBtn = document.getElementById("langButton");
+  if (!langBtn) return;
+
+  langBtn.addEventListener("click", () => {
+    // TODO: navigate to Spanish version later
+    // e.g. window.location.href = "/?lang=es";
+  });
+}
+
 // ---------- Input handling ----------
 
 function attachInputHandlers() {
@@ -703,7 +748,6 @@ function handlePointerDown(e) {
   const index = getHexIndexFromEvent(e);
   if (index === null) return;
 
-  // Play per-hex tone
   AudioSFX.playHexTone(index);
 
   gameState.isSwiping = true;
@@ -754,7 +798,6 @@ function handlePointerMove(e) {
 
   if (!hasExtension) return;
 
-  // Play tone for the new hex
   AudioSFX.playHexTone(index);
 
   path.push(index);
@@ -879,7 +922,6 @@ function submitPath(selectedPath) {
   };
 }
 
-// FIXED: use wordToSlotIndex to mark the correct slot as found
 function revealFirstHintForLength(hintSlots, word) {
   const slotIndex = gameState.wordToSlotIndex.get(word);
   if (slotIndex == null) return false;
