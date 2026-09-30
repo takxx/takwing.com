@@ -8,7 +8,6 @@
   <style>
     :root {
       --bg-deep: #05060a;
-      --bg-mid: #0b0e18;
       --card: rgba(20, 24, 36, 0.72);
       --text: #e9ecf1;
       --muted: #9aa3b3;
@@ -35,7 +34,13 @@
         radial-gradient(900px 600px at 50% -20%, #182039, transparent 70%),
         radial-gradient(700px 500px at 100% 20%, #171329, transparent 65%),
         var(--bg-deep);
-      font-family: "Palatino Linotype", "URW Palladio L", Palatino, "Times New Roman", Times, serif;
+      font-family:
+        "Palatino Linotype",
+        "URW Palladio L",
+        Palatino,
+        "Times New Roman",
+        Times,
+        serif;
       font-style: normal;
       letter-spacing: 0.02em;
     }
@@ -134,7 +139,7 @@
 
     .subtitle {
       max-width: 650px;
-      margin: 0 auto 20px;
+      margin: 0 auto 14px;
       color: var(--muted);
       font-size: 0.9rem;
       line-height: 1.5;
@@ -150,6 +155,17 @@
       color: var(--muted);
       font-size: 0.8rem;
       text-align: center;
+    }
+
+    .date-line {
+      color: #ffd39a;
+      font-size: clamp(1.05rem, 3vw, 1.25rem);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .language-line {
+      align-self: center;
     }
 
     label {
@@ -179,15 +195,6 @@
       box-shadow: 0 0 0 3px rgba(159, 184, 255, 0.15);
     }
 
-    /*
-      Exactly:
-      - under 480px: 2 columns = 2 x 6
-      - 480px–639px: 3 columns = 3 x 4
-      - 640px–899px: 4 columns = 4 x 3
-      - 900px and wider: 6 columns = 6 x 2
-
-      There is deliberately no five-column breakpoint.
-    */
     .signs-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -315,11 +322,12 @@
       <p class="subtitle" id="subtitle"></p>
 
       <div class="meta-row">
-        <span id="date-line"></span>
-        <span id="language-line"></span>
+        <span id="date-line" class="date-line"></span>
+        <span id="language-line" class="language-line"></span>
       </div>
 
       <label for="language-select" id="language-label"></label>
+
       <select id="language-select">
         <option value="en">English</option>
         <option value="es">Español</option>
@@ -327,6 +335,7 @@
       </select>
 
       <label id="sign-label"></label>
+
       <div
         id="signs-grid"
         class="signs-grid"
@@ -350,6 +359,7 @@
     "use strict";
 
     const SUPPORTED_LANGUAGES = ["en", "es", "zh"];
+
     const LANGUAGE_NAMES = {
       en: "English",
       es: "Español",
@@ -404,20 +414,6 @@
       return values[Math.floor(random() * values.length)];
     }
 
-    /*
-      The template is stored in the language JSON file.
-
-      Example:
-      "{subject}, {feeling} {state}."
-
-      This means the JSON controls:
-      - word order;
-      - spacing;
-      - punctuation;
-      - language-specific grammar.
-
-      The JavaScript only replaces named placeholders.
-    */
     function fillTemplate(template, values) {
       if (typeof template !== "string") {
         return "";
@@ -454,11 +450,13 @@
       }
 
       const template = chooseTemplate(random, data, category);
+
       return fillTemplate(template, values).trim();
     }
 
     function generateHoroscope(data, signKey, date) {
       const random = mulberry32(getSeed(date, signKey));
+
       const categories = [
         "opener",
         "social",
@@ -518,6 +516,44 @@
       }
     }
 
+    function formatDate(date, language) {
+      if (language === "zh") {
+        const formatter = new Intl.DateTimeFormat("zh-Hant", {
+          calendar: "gregory",
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          weekday: "long"
+        });
+
+        return formatter.format(date);
+      }
+
+      if (language === "es") {
+        const formatter = new Intl.DateTimeFormat("es", {
+          calendar: "gregory",
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        });
+
+        return formatter
+          .format(date)
+          .replace(/^./, character => character.toLowerCase());
+      }
+
+      const formatter = new Intl.DateTimeFormat("en-GB", {
+        calendar: "gregory",
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+
+      return formatter.format(date);
+    }
+
     function applyInterfaceText() {
       const ui = currentData?.ui || {};
 
@@ -528,10 +564,7 @@
       setText("loading", ui.loading);
       setText("footer-note", ui.footerNote);
 
-      setText(
-        "date-line",
-        `${ui.datePrefix || "Horoscope for"} ${getDateKey(today)}`
-      );
+      setText("date-line", formatDate(today, currentLanguage));
 
       setText(
         "language-line",
@@ -540,8 +573,10 @@
         }`
       );
 
-      document.documentElement.lang = currentLanguage;
-      document.title = ui.title || "Horoscopes";
+      document.documentElement.lang =
+        currentLanguage === "zh" ? "zh-Hant" : currentLanguage;
+
+      document.title = ui.title || "Everyday Horoscopes";
     }
 
     function getValidSelectedSign() {
@@ -593,6 +628,7 @@
         button.addEventListener("click", () => {
           selectedSign = sign.key;
           localStorage.setItem(SIGN_STORAGE_KEY, selectedSign);
+
           renderSigns();
           renderHoroscope();
         });
