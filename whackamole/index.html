@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
   <title>Whack-a-Mole</title>
 
   <style>
@@ -25,7 +28,7 @@
     body {
       min-height: 100vh;
       padding: 12px;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: Arial, "Microsoft JhengHei", "PingFang HK", sans-serif;
       color: white;
       background: radial-gradient(circle at top, #3ca55c, #176535 75%);
       display: flex;
@@ -43,6 +46,30 @@
       margin: 2px 0 10px;
       font-size: clamp(2rem, 5vw, 3rem);
       text-shadow: 3px 3px 0 #14502a;
+    }
+
+    .language-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 7px;
+      margin: 0 0 10px;
+      font-size: 0.85rem;
+    }
+
+    .language-row select {
+      padding: 6px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 7px;
+      color: white;
+      background: rgba(0, 0, 0, 0.25);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .language-row option {
+      color: #111;
+      background: white;
     }
 
     .hud {
@@ -77,7 +104,7 @@
     .game-message {
       min-height: 22px;
       margin-bottom: 7px;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: bold;
       color: var(--accent);
     }
@@ -96,9 +123,8 @@
       box-shadow:
         inset 0 0 0 3px rgba(255, 255, 255, 0.08),
         0 8px 0 rgba(0, 0, 0, 0.18);
-      touch-action: none;          /* No pan/pinch/double-tap zoom on the canvas */
-      -webkit-touch-callout: none; /* No long-press callout on iOS */
-      user-select: none;
+      touch-action: none;
+      -webkit-touch-callout: none;
       -webkit-user-select: none;
     }
 
@@ -126,79 +152,42 @@
       position: absolute;
       left: 50%;
       bottom: -5%;
-      width: var(--mole-size, 62%);
+      width: var(--mole-size, 82%);
       aspect-ratio: 1 / 1;
       transform: translate(-50%, 115%);
       transition: transform 100ms ease-out;
       cursor: pointer;
       z-index: 2;
       rotate: var(--mole-rotation, 0deg);
-      filter:
-        hue-rotate(var(--mole-hue, 0deg))
-        brightness(var(--mole-brightness, 1));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+      font-size: clamp(3.5rem, 10vw, 6.25rem);
+      line-height: 1;
+      filter: drop-shadow(0 4px 1px rgba(0, 0, 0, 0.28));
+      will-change: transform;
     }
 
     .mole.up {
-      transform: translate(-50%, 8%);
-    }
-
-    .mole::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 50% 50% 44% 44%;
-      background:
-        radial-gradient(
-          circle at var(--left-eye-x, 35%) var(--eye-y, 39%),
-          white 0 var(--eye-highlight, 5%),
-          #111 calc(var(--eye-highlight, 5%) + 1%) var(--eye-size, 11%),
-          transparent calc(var(--eye-size, 11%) + 1%)
-        ),
-        radial-gradient(
-          circle at var(--right-eye-x, 65%) var(--eye-y, 39%),
-          white 0 var(--eye-highlight, 5%),
-          #111 calc(var(--eye-highlight, 5%) + 1%) var(--eye-size, 11%),
-          transparent calc(var(--eye-size, 11%) + 1%)
-        ),
-        radial-gradient(
-          ellipse var(--mouth-width, 12%) var(--mouth-height, 11%)
-          at 50% var(--mouth-y, 67%),
-          var(--mouth-color, #f28c8c) 0 55%,
-          var(--mouth-dark, #57252d) 56% 78%,
-          transparent 80%
-        ),
-        #8c543a;
-      border: 4px solid #583323;
-      box-shadow: inset 0 -10px 0 rgba(0, 0, 0, 0.12);
-    }
-
-    .mole::after {
-      content: "";
-      position: absolute;
-      top: -10%;
-      left: 18%;
-      width: 64%;
-      height: 30%;
-      border-radius: 50%;
-      background: #8c543a;
-      border-top: 4px solid #583323;
+      transform: translate(-50%, 4%);
     }
 
     .mole.whacked {
-      animation: whacked 180ms ease-out;
+      animation: whacked 180ms ease-out forwards;
     }
 
     @keyframes whacked {
       0% {
-        transform: translate(-50%, 8%) scale(1);
+        transform: translate(-50%, 4%) scale(1);
       }
 
       50% {
-        transform: translate(-50%, 8%) scale(0.75) rotate(8deg);
+        transform: translate(-50%, 4%) scale(0.72) rotate(8deg);
       }
 
       100% {
-        transform: translate(-50%, 115%) scale(0.75);
+        transform: translate(-50%, 115%) scale(0.72);
       }
     }
 
@@ -234,10 +223,6 @@
         padding: 8px;
       }
 
-      .game {
-        width: 100%;
-      }
-
       .hud {
         gap: 5px;
       }
@@ -256,6 +241,10 @@
         border-width: 4px;
       }
 
+      .mole {
+        font-size: clamp(3.25rem, 18vw, 5.5rem);
+      }
+
       .instructions {
         font-size: 0.78rem;
       }
@@ -265,63 +254,181 @@
 
 <body>
   <main class="game">
-    <h1>Whack-a-Mole!</h1>
+    <h1 id="gameTitle">Whack-a-Mole!</h1>
 
-    <section class="hud" aria-label="Game information">
+    <div class="language-row">
+      <label for="languageSelect" id="languageLabel">Language:</label>
+      <select id="languageSelect">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">中文（廣東話）</option>
+      </select>
+    </div>
+
+    <section class="hud" id="hud" aria-label="Game information">
       <div class="stat">
-        <span class="stat-label">Stage</span>
+        <span class="stat-label" id="stageLabel">Stage</span>
         <span class="stat-value" id="stage">1</span>
       </div>
 
       <div class="stat">
-        <span class="stat-label">Target</span>
+        <span class="stat-label" id="targetLabel">Target</span>
         <span class="stat-value" id="target">5</span>
       </div>
 
       <div class="stat">
-        <span class="stat-label">Score</span>
+        <span class="stat-label" id="scoreLabel">Score</span>
         <span class="stat-value" id="score">0</span>
       </div>
 
       <div class="stat">
-        <span class="stat-label">Time</span>
+        <span class="stat-label" id="timeLabel">Time</span>
         <span class="stat-value" id="time">30</span>
       </div>
     </section>
 
-    <div class="game-message" id="message">
-      Whack the moles before time runs out!
+    <div class="game-message" id="message" aria-live="polite">
+      Whack the animals before time runs out!
     </div>
 
     <section class="board" id="board">
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
-      <div class="hole"><div class="mole"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
+      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
     </section>
 
-    <button id="startButton">Start Game</button>
+    <button id="startButton" type="button">Start Game</button>
 
-    <p class="instructions">
-      Click or tap a mole to score points. Each stage has a higher target,
-      and the moles appear faster as you progress.
+    <p class="instructions" id="instructions">
+      Click or tap an animal to score points. Each stage has a higher target,
+      and the animals appear faster as you progress.
     </p>
   </main>
 
   <script>
-    const moles = [...document.querySelectorAll(".mole")];
+    const translations = {
+      en: {
+        title: "Whack-a-Mole!",
+        language: "Language:",
+        gameInfo: "Game information",
+        stage: "Stage",
+        target: "Target",
+        score: "Score",
+        time: "Time",
+        idle: "Whack the animals before time runs out!",
+        stageStart: (stage, target) => `Stage ${stage}: get ${target} hits!`,
+        remaining: (remaining, stage) =>
+          `${remaining} more ${remaining === 1 ? "hit" : "hits"} needed for Stage ${stage}!`,
+        stageCleared: (stage) => `Stage cleared! Stage ${stage} is faster.`,
+        gameOver: (target, hits) =>
+          `Game over! You needed ${target} hits but got ${hits}.`,
+        start: "Start Game",
+        restart: "Restart Game",
+        playAgain: "Play Again",
+        instructions:
+          "Click or tap an animal to score points. Each stage has a higher target, and the animals appear faster as you progress.",
+        animal: "Animal"
+      },
 
+      es: {
+        title: "¡Golpea al Animal!",
+        language: "Idioma:",
+        gameInfo: "Información del juego",
+        stage: "Nivel",
+        target: "Objetivo",
+        score: "Puntuación",
+        time: "Tiempo",
+        idle: "¡Golpea los animales antes de que se acabe el tiempo!",
+        stageStart: (stage, target) => `Nivel ${stage}: ¡consigue ${target} golpes!`,
+        remaining: (remaining, stage) =>
+          `¡Faltan ${remaining} ${remaining === 1 ? "golpe" : "golpes"} para el nivel ${stage}!`,
+        stageCleared: (stage) => `¡Nivel superado! El nivel ${stage} es más rápido.`,
+        gameOver: (target, hits) =>
+          `¡Juego terminado! Necesitabas ${target} golpes, pero conseguiste ${hits}.`,
+        start: "Comenzar",
+        restart: "Reiniciar",
+        playAgain: "Jugar de nuevo",
+        instructions:
+          "Haz clic o toca un animal para sumar puntos. Cada nivel tiene un objetivo más alto y los animales aparecen más rápido.",
+        animal: "Animal"
+      },
+
+      "zh-Hant": {
+        title: "扑傻瓜",
+        language: "語言：",
+        gameInfo: "遊戲資料",
+        stage: "關卡",
+        target: "目標",
+        score: "分數",
+        time: "時間",
+        idle: "喺時間完之前扑啲傻瓜！",
+        stageStart: (stage, target) => `第${stage}關：要扑${target}下`,
+        remaining: (remaining, stage) => `仲差${remaining}下就過關`,
+        stageCleared: (stage) => `過關啦！第${stage}關會更快。`,
+        gameOver: (target, hits) => `遊戲結束！你要扑${target}下，但只扑到${hits}下`,
+        start: "開始遊戲",
+        restart: "重新開始",
+        playAgain: "再玩一次",
+        instructions:
+          "扑中一個傻瓜得一分。每一關目標更高，而傻瓜出現得更快。",
+        animal: "傻瓜"
+      }
+    };
+
+    const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
+    const LANGUAGE_STORAGE_KEY = "whack-a-mole-language";
+
+    function getBrowserLanguage() {
+      const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+
+      if (SUPPORTED_LANGUAGES.includes(savedLanguage)) {
+        return savedLanguage;
+      }
+
+      const browserLanguages =
+        navigator.languages || [navigator.language || "en"];
+
+      for (const language of browserLanguages) {
+        const normalized = language.toLowerCase();
+
+        if (
+          normalized.startsWith("zh-hant") ||
+          normalized.startsWith("zh-hk") ||
+          normalized.startsWith("zh-mo") ||
+          normalized.startsWith("zh-tw") ||
+          normalized === "zh"
+        ) {
+          return "zh-Hant";
+        }
+
+        if (normalized.startsWith("es")) {
+          return "es";
+        }
+
+        if (normalized.startsWith("en")) {
+          return "en";
+        }
+      }
+
+      return "en";
+    }
+
+    let currentLanguage = getBrowserLanguage();
+
+    const moles = [...document.querySelectorAll(".mole")];
     const stageDisplay = document.getElementById("stage");
     const targetDisplay = document.getElementById("target");
     const scoreDisplay = document.getElementById("score");
     const timeDisplay = document.getElementById("time");
     const messageDisplay = document.getElementById("message");
     const startButton = document.getElementById("startButton");
+    const languageSelect = document.getElementById("languageSelect");
 
     let stage = 1;
     let target = 5;
@@ -331,13 +438,69 @@
     let gameRunning = false;
 
     let moleTimer;
+    let nextMoleTimer;
     let countdownTimer;
     let currentMole = null;
     let audioContext = null;
 
-    // -----------------------------
-    // Sound effects using Web Audio
-    // -----------------------------
+    const emojis = ["🐭", "🐹", "🐰"];
+
+    function t(key, ...args) {
+      const value =
+        translations[currentLanguage][key] ?? translations.en[key];
+
+      return typeof value === "function" ? value(...args) : value;
+    }
+
+    function currentMessage() {
+      if (gameRunning) {
+        const remaining = target - stageScore;
+
+        if (remaining > 0) {
+          return t("remaining", remaining, stage);
+        }
+      }
+
+      return t("idle");
+    }
+
+    function applyTranslations() {
+      document.documentElement.lang = currentLanguage;
+      document.title = t("title");
+
+      document.getElementById("gameTitle").textContent = t("title");
+      document.getElementById("languageLabel").textContent = t("language");
+      document.getElementById("hud").setAttribute("aria-label", t("gameInfo"));
+      document.getElementById("stageLabel").textContent = t("stage");
+      document.getElementById("targetLabel").textContent = t("target");
+      document.getElementById("scoreLabel").textContent = t("score");
+      document.getElementById("timeLabel").textContent = t("time");
+      document.getElementById("instructions").textContent = t("instructions");
+
+      moles.forEach((mole) => {
+        mole.setAttribute("aria-label", t("animal"));
+      });
+
+      if (gameRunning) {
+        messageDisplay.textContent = currentMessage();
+        startButton.textContent = t("restart");
+      } else if (stageScore > 0 && timeLeft <= 0) {
+        startButton.textContent = t("playAgain");
+      } else {
+        messageDisplay.textContent = t("idle");
+        startButton.textContent = t("start");
+      }
+
+      languageSelect.value = currentLanguage;
+    }
+
+    function setLanguage(language) {
+      if (!SUPPORTED_LANGUAGES.includes(language)) return;
+
+      currentLanguage = language;
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+      applyTranslations();
+    }
 
     function getAudioContext() {
       if (!audioContext) {
@@ -363,7 +526,6 @@
       const audio = getAudioContext();
       const oscillator = audio.createOscillator();
       const gain = audio.createGain();
-
       const startTime = audio.currentTime + delay;
 
       oscillator.type = type;
@@ -408,10 +570,6 @@
       playTone(261, 0.35, "sawtooth", 0.12, 0.36);
     }
 
-    // -----------------------------
-    // Vibration and mole appearance
-    // -----------------------------
-
     function vibrateOnWhack() {
       if ("vibrate" in navigator) {
         navigator.vibrate(25);
@@ -419,65 +577,14 @@
     }
 
     function randomizeMoleAppearance(mole) {
-      // General appearance variations.
-      const size = 59 + Math.random() * 7;
-      const rotation = -4 + Math.random() * 8;
-      const hue = -10 + Math.random() * 20;
-      const brightness = 0.92 + Math.random() * 0.16;
-
-      // Eye variations.
-      const eyeY = 36 + Math.random() * 7;
-      const eyeSpacing = 27 + Math.random() * 8;
-      const leftEyeX = 50 - eyeSpacing / 2;
-      const rightEyeX = 50 + eyeSpacing / 2;
-      const eyeSize = 10 + Math.random() * 3;
-      const eyeHighlight = 4 + Math.random() * 2;
-
-      // Mouth variations.
-      const mouthY = 64 + Math.random() * 8;
-      const mouthWidth = 10 + Math.random() * 6;
-      const mouthHeight = 8 + Math.random() * 7;
-
-      const mouthColors = [
-        "#f28c8c",
-        "#ff9f9f",
-        "#e87878",
-        "#f6a0a0"
-      ];
-
-      const mouthDarks = [
-        "#57252d",
-        "#652530",
-        "#481d25"
-      ];
-
-      const mouthColor =
-        mouthColors[Math.floor(Math.random() * mouthColors.length)];
-
-      const mouthDark =
-        mouthDarks[Math.floor(Math.random() * mouthDarks.length)];
+      const size = 78 + Math.random() * 12;
+      const rotation = -6 + Math.random() * 12;
+      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
 
       mole.style.setProperty("--mole-size", `${size}%`);
       mole.style.setProperty("--mole-rotation", `${rotation}deg`);
-      mole.style.setProperty("--mole-hue", `${hue}deg`);
-      mole.style.setProperty("--mole-brightness", brightness);
-
-      mole.style.setProperty("--left-eye-x", `${leftEyeX}%`);
-      mole.style.setProperty("--right-eye-x", `${rightEyeX}%`);
-      mole.style.setProperty("--eye-y", `${eyeY}%`);
-      mole.style.setProperty("--eye-size", `${eyeSize}%`);
-      mole.style.setProperty("--eye-highlight", `${eyeHighlight}%`);
-
-      mole.style.setProperty("--mouth-y", `${mouthY}%`);
-      mole.style.setProperty("--mouth-width", `${mouthWidth}%`);
-      mole.style.setProperty("--mouth-height", `${mouthHeight}%`);
-      mole.style.setProperty("--mouth-color", mouthColor);
-      mole.style.setProperty("--mouth-dark", mouthDark);
+      mole.textContent = emoji;
     }
-
-    // -----------------------------
-    // Game functions
-    // -----------------------------
 
     function updateDisplay() {
       stageDisplay.textContent = stage;
@@ -502,22 +609,25 @@
       currentMole = null;
     }
 
+    function clearGameTimers() {
+      clearTimeout(moleTimer);
+      clearTimeout(nextMoleTimer);
+      clearInterval(countdownTimer);
+    }
+
     function showRandomMole() {
       if (!gameRunning) return;
 
       hideAllMoles();
 
-      const index = Math.floor(Math.random() * moles.length);
-      const mole = moles[index];
+      const mole = moles[Math.floor(Math.random() * moles.length)];
+      const settings = getStageSettings();
 
       currentMole = mole;
-
       randomizeMoleAppearance(mole);
       mole.classList.add("up");
 
       playMoleAppearanceSound();
-
-      const settings = getStageSettings();
 
       moleTimer = setTimeout(() => {
         if (mole === currentMole) {
@@ -526,7 +636,7 @@
         }
 
         if (gameRunning) {
-          setTimeout(showRandomMole, settings.waitTime);
+          nextMoleTimer = setTimeout(showRandomMole, settings.waitTime);
         }
       }, settings.visibleTime);
     }
@@ -545,18 +655,15 @@
     }
 
     function startStage() {
-      clearTimeout(moleTimer);
-      clearInterval(countdownTimer);
+      clearGameTimers();
 
       stageScore = 0;
       target = 4 + stage;
       timeLeft = Math.max(12, 30 - (stage - 1) * 2);
-
       gameRunning = true;
 
-      startButton.textContent = "Restart Game";
-      messageDisplay.textContent =
-        `Stage ${stage}: get ${target} hits!`;
+      startButton.textContent = t("restart");
+      messageDisplay.textContent = t("stageStart", stage, target);
 
       updateDisplay();
       startCountdown();
@@ -564,18 +671,16 @@
     }
 
     function endStage() {
-      clearTimeout(moleTimer);
-      clearInterval(countdownTimer);
+      clearGameTimers();
       hideAllMoles();
 
       if (stageScore >= target) {
         playStageClearedSound();
 
         stage++;
-        messageDisplay.textContent =
-          `Stage cleared! Stage ${stage} is faster.`;
+        messageDisplay.textContent = t("stageCleared", stage);
 
-        setTimeout(() => {
+        nextMoleTimer = setTimeout(() => {
           if (gameRunning) {
             startStage();
           }
@@ -584,10 +689,12 @@
         gameRunning = false;
         playGameOverSound();
 
-        messageDisplay.textContent =
-          `Game over! You needed ${target} hits but got ${stageScore}.`;
-
-        startButton.textContent = "Play Again";
+        messageDisplay.textContent = t(
+          "gameOver",
+          target,
+          stageScore
+        );
+        startButton.textContent = t("playAgain");
       }
     }
 
@@ -615,30 +722,32 @@
         return;
       }
 
+      /* Updated after every successful whack. */
+      messageDisplay.textContent = t(
+        "remaining",
+        target - stageScore,
+        stage
+      );
+
       clearTimeout(moleTimer);
       currentMole = null;
 
       const settings = getStageSettings();
 
-      setTimeout(() => {
+      nextMoleTimer = setTimeout(() => {
         if (gameRunning) {
           showRandomMole();
         }
       }, settings.waitTime);
     }
 
-    // Pointer events work with mouse clicks and screen touches.
-    moles.forEach(mole => {
+    moles.forEach((mole) => {
       mole.addEventListener("pointerdown", whackMole);
     });
 
     startButton.addEventListener("click", () => {
-      // Creating/resuming the audio context from a button click
-      // allows sounds to work in browsers that block autoplay audio.
       getAudioContext();
-
-      clearTimeout(moleTimer);
-      clearInterval(countdownTimer);
+      clearGameTimers();
 
       stage = 1;
       target = 5;
@@ -651,6 +760,11 @@
       startStage();
     });
 
+    languageSelect.addEventListener("change", (event) => {
+      setLanguage(event.target.value);
+    });
+
+    applyTranslations();
     updateDisplay();
   </script>
 </body>
