@@ -1,0 +1,533 @@
+{
+  "ui": {
+    "title": "Mystical Garbage Horoscopes",
+    "subtitle": "Vague enough to be true for everyone, every day.",
+    "languageLabel": "Language",
+    "signLabel": "Choose your sign",
+    "loading": "Consulting the stars…",
+    "footerNote": "Come back tomorrow for a completely new set of equally meaningless insights.",
+    "datePrefix": "Horoscope for",
+    "languagePrefix": "Language:",
+    "loadError": "The horoscope data could not be loaded. Check that the JSON file is beside the HTML file."
+  },
+  "signs": [
+    {
+      "key": "aries",
+      "emoji": "♈",
+      "name": "Aries"
+    },
+    {
+      "key": "taurus",
+      "emoji": "♉",
+      "name": "Taurus"
+    },
+    {
+      "key": "gemini",
+      "emoji": "♊",
+      "name": "Gemini"
+    },
+    {
+      "key": "cancer",
+      "emoji": "♋",
+      "name": "Cancer"
+    },
+    {
+      "key": "leo",
+      "emoji": "♌",
+      "name": "Leo"
+    },
+    {
+      "key": "virgo",
+      "emoji": "♍",
+      "name": "Virgo"
+    },
+    {
+      "key": "libra",
+      "emoji": "♎",
+      "name": "Libra"
+    },
+    {
+      "key": "scorpio",
+      "emoji": "♏",
+      "name": "Scorpio"
+    },
+    {
+      "key": "sagittarius",
+      "emoji": "♐",
+      "name": "Sagittarius"
+    },
+    {
+      "key": "capricorn",
+      "emoji": "♑",
+      "name": "Capricorn"
+    },
+    {
+      "key": "aquarius",
+      "emoji": "♒",
+      "name": "Aquarius"
+    },
+    {
+      "key": "pisces",
+      "emoji": "♓",
+      "name": "Pisces"
+    }
+  ],
+  "templates": {
+    "opener": [
+      "{subject}, {feeling} {state}.",
+      "{subject}, {feeling} {state}.",
+      "{subject}, {feeling} {state}."
+    ],
+    "social": [
+      "{context}, {tension} {optionA} and {optionB}. {extra}",
+      "{context}, {tension} {optionA} and {optionB}. {extra}",
+      "{context}, {tension} {optionA} and {optionB}. {extra}"
+    ],
+    "opportunities": [
+      "{intro}, {possibility}{qualifier}",
+      "{intro}, {possibility}{qualifier}",
+      "{intro}, {possibility}{qualifier}"
+    ],
+    "inner": [
+      "{opening}, {core}{tail}",
+      "{opening}, {core}{tail}",
+      "{opening}, {core}{tail}"
+    ],
+    "advice": [
+      "{frame}, {action}{reason}",
+      "{frame}, {action}{reason}",
+      "{frame}, {action}{reason}"
+    ],
+    "mystical": [
+      "{intro}, {statement}{tag}",
+      "{intro}, {statement}{tag}",
+      "{intro}, {statement}{tag}"
+    ],
+    "warnings": [
+      "{frame}, {behavior}{consequence}",
+      "{frame}, {behavior}{consequence}",
+      "{frame}, {behavior}{consequence}"
+    ],
+    "affirmation": [
+      "{opening}, {message}{ending}",
+      "{opening}, {message}{ending}",
+      "{opening}, {message}{ending}"
+    ],
+    "retrograde": [
+      "{intro}, {effect}{reframe}",
+      "{intro}, {effect}{reframe}",
+      "{intro}, {effect}{reframe}"
+    ],
+    "closer": [
+      "{lead}, {outcome}{touch}",
+      "{lead}, {outcome}{touch}",
+      "{lead}, {outcome}{touch}"
+    ]
+  },
+  "segments": {
+    "opener": {
+      "subject": [
+        "Today",
+        "Right now",
+        "At the moment",
+        "In this phase",
+        "These days",
+        "Currently",
+        "Lately",
+        "For now",
+        "In the current climate",
+        "At this point in your journey"
+      ],
+      "feeling": [
+        "you may feel",
+        "you might notice",
+        "you could sense",
+        "there's a sense that",
+        "it may seem like",
+        "you're likely experiencing",
+        "you may be aware of",
+        "there's a feeling of",
+        "you might find yourself experiencing",
+        "it's possible you're sensing"
+      ],
+      "state": [
+        "a mix of confidence and doubt",
+        "subtle shifts in your inner landscape",
+        "a tension between old habits and new possibilities",
+        "more emotional intensity than usual",
+        "a quiet push to reassess something important",
+        "a stronger awareness of what's working and what isn't",
+        "both restlessness and caution at the same time",
+        "a desire for change without a clear direction yet",
+        "an undercurrent of anticipation you can't quite name",
+        "a sense of being between chapters"
+      ]
+    },
+    "social": {
+      "context": [
+        "In your relationships",
+        "Around other people",
+        "In social situations",
+        "With those close to you",
+        "In group settings",
+        "In your interactions today",
+        "When it comes to connecting with others",
+        "In your close circles",
+        "Among friends and family",
+        "In your social environment"
+      ],
+      "tension": [
+        "you may feel torn between",
+        "there's a pull between",
+        "you could oscillate between",
+        "you might notice a conflict between",
+        "there's a tension between",
+        "you may be balancing",
+        "you could feel split between",
+        "there's a push-and-pull between",
+        "you might find yourself weighing",
+        "there's an inner debate between"
+      ],
+      "optionA": [
+        "connecting with others",
+        "being around people",
+        "opening up emotionally",
+        "seeking support",
+        "engaging socially",
+        "leaning on those close to you",
+        "letting people in",
+        "sharing what's on your mind",
+        "being more visible",
+        "reaching out"
+      ],
+      "optionB": [
+        "protecting your energy",
+        "needing space and solitude",
+        "keeping your feelings private",
+        "stepping back to recharge",
+        "staying on the sidelines",
+        "setting boundaries",
+        "observing more than participating",
+        "taking time just for yourself",
+        "pulling back a little",
+        "guarding your inner world"
+      ],
+      "extra": [
+        "Someone close to you might need your support, or you may realize you need theirs.",
+        "A conversation could reveal more than you initially expected.",
+        "You might find yourself explaining something you've never put into words before.",
+        "There's potential for a meaningful exchange, even in an ordinary moment.",
+        "You could feel unusually sensitive to the moods of people around you.",
+        "A casual interaction may carry more weight than it first appears.",
+        "You may hesitate to speak up, then later wish you had.",
+        "There's a chance to clarify a misunderstanding if you choose to address it.",
+        "Someone could remind you of a past version of yourself.",
+        "A relationship dynamic might shift in a small but noticeable way."
+      ]
+    },
+    "opportunities": {
+      "intro": [
+        "In terms of opportunities",
+        "When it comes to possibilities",
+        "Regarding your path forward",
+        "In your day-to-day life",
+        "In practical matters",
+        "Around work and responsibilities",
+        "In your routine",
+        "When it comes to plans and projects",
+        "In the background of your day",
+        "In the flow of events"
+      ],
+      "possibility": [
+        "a small opportunity could appear",
+        "you might notice a door opening",
+        "an idea you've had before could suddenly feel worth pursuing",
+        "something minor may turn out to be more significant than expected",
+        "a chance encounter or message could nudge you in a new direction",
+        "you may be offered help, or feel inspired to offer it yourself",
+        "there's room for a small but meaningful change",
+        "a task you've been avoiding might finally feel doable",
+        "you could stumble on a resource that makes a big difference later",
+        "a delay might actually create space for something better"
+      ],
+      "qualifier": [
+        "—maybe related to work, maybe not.",
+        "—even if it doesn't look like much at first.",
+        "—especially if you stay open to it.",
+        "—particularly in an area you've been neglecting.",
+        "—though it may not seem important until later.",
+        "—if you're willing to notice it.",
+        "—especially if you allow yourself to be curious.",
+        "—even if it doesn't fit your current plans.",
+        "—particularly if you let go of rigid expectations.",
+        "—whether or not you feel ready for it."
+      ]
+    },
+    "inner": {
+      "opening": [
+        "On an inner level",
+        "Inside yourself",
+        "Emotionally",
+        "Psychologically",
+        "In your private thoughts",
+        "In your inner world",
+        "Beneath the surface",
+        "In your mindset",
+        "In your head and heart",
+        "When you turn your attention inward"
+      ],
+      "core": [
+        "you've been thinking about a change",
+        "part of you wants to play it safe while another part asks for more",
+        "you're starting to see where you've been too hard on yourself",
+        "old doubts may surface, but so does a steadier kind of self-trust",
+        "you're more aware of the gap between who you are and who you're becoming",
+        "there's a growing sense that you can't keep doing things exactly as before",
+        "you may feel both behind and ahead of where you should be",
+        "something inside you is ready to let go, even if you can't name it yet",
+        "you're wrestling with expectations that don't fully belong to you",
+        "there's a quiet desire to live more in line with your real values"
+      ],
+      "tail": [
+        ", and while you're not entirely sure what's next, you sense that something is shifting.",
+        ", even if nothing obvious has changed on the surface.",
+        ", which can feel both unsettling and strangely hopeful.",
+        ", though it might not make logical sense yet.",
+        ", especially when you slow down enough to notice it.",
+        ", even if you try to distract yourself from it.",
+        ", whether or not you're ready to act on it.",
+        ", and this awareness alone is already a form of progress.",
+        ", even if your outer life looks the same as always.",
+        ", and that tension is part of the growth process."
+      ]
+    },
+    "advice": {
+      "frame": [
+        "As guidance for today",
+        "For navigating this energy",
+        "In terms of what might help",
+        "As a gentle suggestion",
+        "For your own well-being",
+        "To make things easier on yourself",
+        "In handling all of this",
+        "For staying grounded",
+        "For moving through this phase",
+        "As a way to work with this"
+      ],
+      "action": [
+        "be kind to yourself",
+        "trust your instincts",
+        "give yourself permission to move at your own pace",
+        "focus on small, manageable steps",
+        "say no when something doesn't feel right",
+        "focus on what you can influence and release the rest",
+        "let yourself rest without turning it into another task",
+        "remember that progress is rarely a straight line",
+        "try to notice when fear is disguised as practicality",
+        "allow yourself to want things without immediately judging those wants"
+      ],
+      "reason": [
+        "; you're doing better than you think.",
+        ", even when they don't make perfect logical sense.",
+        ", especially when everything feels a bit uncertain.",
+        ", since small steps add up more than you realize.",
+        ", because your energy is limited and valuable.",
+        ", as clarity often comes after you start moving.",
+        ", given how much you're already managing.",
+        ", particularly when you're tempted to push too hard.",
+        ", especially on days like this.",
+        ", whether or not you feel fully ready."
+      ]
+    },
+    "mystical": {
+      "intro": [
+        "Cosmically speaking",
+        "From a universal perspective",
+        "In the larger flow of things",
+        "On a soul level",
+        "In the grand scheme",
+        "From a higher vantage point",
+        "In the bigger picture",
+        "When viewed through a spiritual lens",
+        "In terms of your life path",
+        "From the standpoint of your journey"
+      ],
+      "statement": [
+        "you're exactly where you need to be, even if it doesn't feel like it",
+        "the universe is quietly rearranging things in your favor",
+        "you're being guided by forces you don't fully understand yet",
+        "there's a deeper logic to what's happening, even if it seems random",
+        "you're in alignment with lessons you came here to learn",
+        "your higher self is more involved than your everyday mind realizes",
+        "you're supported in ways that aren't immediately visible",
+        "this moment fits into a pattern that will make sense later",
+        "you're being prepared for something you can't yet see",
+        "there's meaning in this chapter that you'll recognize in hindsight"
+      ],
+      "tag": [
+        ".",
+        ", even if it's not obvious right now.",
+        ", whether or not you believe in that sort of thing.",
+        ", especially when you allow yourself to trust the process.",
+        ", which is more than coincidence.",
+        ", and that's worth acknowledging.",
+        ", even if your rational mind resists it.",
+        ", and you can lean into that.",
+        ", whether you notice it today or not.",
+        ", and that changes everything if you let it."
+      ]
+    },
+    "warnings": {
+      "frame": [
+        "As a gentle caution",
+        "Just a soft warning",
+        "In terms of potential pitfalls",
+        "To avoid unnecessary friction",
+        "For your own peace of mind",
+        "In navigating tricky moments",
+        "To keep things smooth",
+        "As something to watch out for",
+        "In dealing with stress today",
+        "For avoiding extra drama"
+      ],
+      "behavior": [
+        "be careful not to overthink every detail",
+        "try not to read too much into small signals",
+        "avoid making big decisions purely out of frustration",
+        "watch the urge to control everything",
+        "be mindful of speaking from irritation instead of clarity",
+        "don't confuse temporary discomfort with permanent failure",
+        "try not to project past experiences onto present situations",
+        "avoid taking things more personally than necessary",
+        "be cautious about promising more than you can deliver",
+        "watch the tendency to assume the worst-case scenario"
+      ],
+      "consequence": [
+        ", as it can drain your energy faster than you expect.",
+        ", since it rarely leads to the outcome you want.",
+        ", especially when you're already feeling sensitive.",
+        ", which can create problems that weren't there before.",
+        ", particularly if you're tired or stressed.",
+        ", even if it feels justified in the moment.",
+        ", given how easily misunderstandings can spread.",
+        ", especially in important relationships.",
+        ", as it may complicate something that could be simple.",
+        ", whether or not you realize it's happening."
+      ]
+    },
+    "affirmation": {
+      "opening": [
+        "As a reminder",
+        "For your inner narrative",
+        "In terms of self-talk",
+        "For your mindset today",
+        "As a personal mantra",
+        "For your emotional baseline",
+        "In how you speak to yourself",
+        "For your sense of worth",
+        "In your relationship with yourself",
+        "For your inner dialogue"
+      ],
+      "message": [
+        "you are allowed to take up space",
+        "you don't have to earn the right to rest",
+        "your feelings are valid, even when they're messy",
+        "you're more capable than your doubts suggest",
+        "you deserve kindness, especially from yourself",
+        "you're allowed to change your mind",
+        "you don't need to be perfect to be worthy",
+        "your needs matter, even when they're inconvenient",
+        "you're growing even when it doesn't feel like it",
+        "you're enough, exactly as you are in this moment"
+      ],
+      "ending": [
+        ".",
+        ", no matter what today brings.",
+        ", whether or not you feel productive.",
+        ", especially on days like this.",
+        ", even if your inner critic disagrees.",
+        ", and that's non-negotiable.",
+        ", regardless of external validation.",
+        ", and you can come back to this whenever you need.",
+        ", whether or not you fully believe it yet.",
+        ", and that's worth repeating."
+      ]
+    },
+    "retrograde": {
+      "intro": [
+        "With all the retrograde energy around",
+        "Given the current astrological weather",
+        "In this cosmic climate",
+        "With so much going on astrologically",
+        "In this phase of planetary shifts",
+        "Considering the current star patterns",
+        "With the way the stars are lined up",
+        "In this astrologically busy period",
+        "With all the celestial movement lately",
+        "Given the current cosmic setup"
+      ],
+      "effect": [
+        "things may feel a bit more unpredictable than usual",
+        "miscommunications could pop up more easily",
+        "plans might shift without much warning",
+        "technology or logistics could be slightly glitchy",
+        "emotions may run a little closer to the surface",
+        "old issues could resurface for another round",
+        "timing might feel off in various areas",
+        "delays and detours are more likely than normal",
+        "you may need to revisit or revise something",
+        "flexibility will be more useful than rigid plans"
+      ],
+      "reframe": [
+        ".",
+        ", which is annoying but also informative.",
+        ", especially if you're attached to a specific outcome.",
+        ", and that's part of the process.",
+        ", whether or not you follow astrology closely.",
+        ", so give yourself some extra margin.",
+        ", which is a good reason to slow down.",
+        ", and you can use this to your advantage.",
+        ", particularly if you've been rushing.",
+        ", even if you prefer to ignore the astrological angle."
+      ]
+    },
+    "closer": {
+      "lead": [
+        "By the end of the day",
+        "In hindsight",
+        "Looking back later",
+        "As things settle",
+        "With time",
+        "Eventually",
+        "Sooner or later",
+        "When you reflect on this",
+        "After the dust settles",
+        "In the bigger picture"
+      ],
+      "outcome": [
+        "you may feel a bit clearer than you did this morning",
+        "you'll have learned something useful about yourself",
+        "the right move will feel more obvious once you slow down",
+        "you won't need to have solved everything to be on the right path",
+        "the pieces will make more sense than they do right now",
+        "what matters most is how you treat yourself through it all",
+        "you'll see that you're more resilient than your worries suggest",
+        "this will make more sense in the context of your larger story",
+        "even small shifts today can add up over time",
+        "you'll recognize this as part of a necessary phase"
+      ],
+      "touch": [
+        ".",
+        ", even if it doesn't feel like it yet.",
+        ", whether or not you notice it today.",
+        ", especially when you look at the broader pattern.",
+        ", though it may not be obvious right away.",
+        ", and that's enough for now.",
+        ", which is more than it might seem.",
+        ", and that realization itself is valuable.",
+        ", even if your outer circumstances haven't changed.",
+        ", and you can trust that process."
+      ]
+    }
+  }
+}

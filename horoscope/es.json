@@ -1,0 +1,533 @@
+{
+  "ui": {
+    "title": "Horóscopos Místicos y Absurdos",
+    "subtitle": "Lo bastante vagos como para ser ciertos para cualquiera, cualquier día.",
+    "languageLabel": "Idioma",
+    "signLabel": "Elige tu signo",
+    "loading": "Consultando las estrellas…",
+    "footerNote": "Vuelve mañana para recibir otra colección completamente nueva de revelaciones igual de insignificantes.",
+    "datePrefix": "Horóscopo del",
+    "languagePrefix": "Idioma:",
+    "loadError": "No se han podido cargar los datos del horóscopo. Comprueba que el archivo JSON esté junto al archivo HTML."
+  },
+  "signs": [
+    {
+      "key": "aries",
+      "emoji": "♈",
+      "name": "Aries"
+    },
+    {
+      "key": "taurus",
+      "emoji": "♉",
+      "name": "Tauro"
+    },
+    {
+      "key": "gemini",
+      "emoji": "♊",
+      "name": "Géminis"
+    },
+    {
+      "key": "cancer",
+      "emoji": "♋",
+      "name": "Cáncer"
+    },
+    {
+      "key": "leo",
+      "emoji": "♌",
+      "name": "Leo"
+    },
+    {
+      "key": "virgo",
+      "emoji": "♍",
+      "name": "Virgo"
+    },
+    {
+      "key": "libra",
+      "emoji": "♎",
+      "name": "Libra"
+    },
+    {
+      "key": "scorpio",
+      "emoji": "♏",
+      "name": "Escorpio"
+    },
+    {
+      "key": "sagittarius",
+      "emoji": "♐",
+      "name": "Sagitario"
+    },
+    {
+      "key": "capricorn",
+      "emoji": "♑",
+      "name": "Capricornio"
+    },
+    {
+      "key": "aquarius",
+      "emoji": "♒",
+      "name": "Acuario"
+    },
+    {
+      "key": "pisces",
+      "emoji": "♓",
+      "name": "Piscis"
+    }
+  ],
+  "templates": {
+    "opener": [
+      "{subject}, puede que {feeling} {state}.",
+      "{subject}, es posible que {feeling} {state}.",
+      "{subject}, quizá estés {feeling} {state}."
+    ],
+    "social": [
+      "{context}, podrías sentirte dividido entre {optionA} y {optionB}. {extra}",
+      "{context}, quizá notes una tensión entre {optionA} y {optionB}. {extra}",
+      "{context}, puede que estés intentando equilibrar {optionA} con {optionB}. {extra}"
+    ],
+    "opportunities": [
+      "{intro}, {possibility}{qualifier}",
+      "{intro}, podría surgir {possibility}{qualifier}",
+      "{intro}, quizá aparezca {possibility}{qualifier}"
+    ],
+    "inner": [
+      "{opening}, {core}{tail}",
+      "{opening}, quizá descubras que {core}{tail}",
+      "{opening}, parece que {core}{tail}"
+    ],
+    "advice": [
+      "{frame}: {action}{reason}",
+      "{frame}, intenta {action}{reason}",
+      "{frame}, quizá te ayude {action}{reason}"
+    ],
+    "mystical": [
+      "{intro}, {statement}{tag}",
+      "{intro}, parece que {statement}{tag}",
+      "{intro}, podrías interpretar que {statement}{tag}"
+    ],
+    "warnings": [
+      "{frame}: {behavior}{consequence}",
+      "{frame}, intenta no {behavior}{consequence}",
+      "{frame}, conviene evitar {behavior}{consequence}"
+    ],
+    "affirmation": [
+      "{opening}: {message}{ending}",
+      "{opening}, recuerda que {message}{ending}",
+      "{opening}, repítete que {message}{ending}"
+    ],
+    "retrograde": [
+      "{intro}, {effect}{reframe}",
+      "{intro}, es posible que {effect}{reframe}",
+      "{intro}, quizá notes que {effect}{reframe}"
+    ],
+    "closer": [
+      "{lead}, {outcome}{touch}",
+      "{lead}, probablemente {outcome}{touch}",
+      "{lead}, es posible que {outcome}{touch}"
+    ]
+  },
+  "segments": {
+    "opener": {
+      "subject": [
+        "Hoy",
+        "Ahora mismo",
+        "En este momento",
+        "En esta etapa",
+        "Durante estos días",
+        "Actualmente",
+        "Últimamente",
+        "Por ahora",
+        "En el ambiente actual",
+        "En este punto de tu camino"
+      ],
+      "feeling": [
+        "estés experimentando",
+        "estés percibiendo",
+        "notes",
+        "sientas",
+        "te encuentres con",
+        "seas consciente de",
+        "estés atravesando",
+        "tengas la impresión de estar viviendo",
+        "te descubras sintiendo",
+        "estés notando"
+      ],
+      "state": [
+        "una mezcla de confianza y duda",
+        "cambios sutiles en tu paisaje interior",
+        "una tensión entre los viejos hábitos y las nuevas posibilidades",
+        "una intensidad emocional mayor de lo habitual",
+        "un impulso silencioso para replantearte algo importante",
+        "una conciencia más clara de lo que funciona y lo que no",
+        "inquietud y cautela al mismo tiempo",
+        "un deseo de cambio sin una dirección clara todavía",
+        "una expectación difícil de nombrar",
+        "la sensación de estar entre dos capítulos"
+      ]
+    },
+    "social": {
+      "context": [
+        "En tus relaciones",
+        "Con las personas que te rodean",
+        "En las situaciones sociales",
+        "Con tus seres cercanos",
+        "En los grupos",
+        "En tus interacciones de hoy",
+        "Al conectar con los demás",
+        "En tus círculos más próximos",
+        "Entre amigos y familiares",
+        "En tu entorno social"
+      ],
+      "tension": [
+        "podrías sentirte dividido entre",
+        "puede haber una tensión entre",
+        "quizá alternes entre",
+        "podrías notar un conflicto entre",
+        "es posible que te debatas entre",
+        "podrías estar equilibrando",
+        "quizá te sientas dividido entre",
+        "puede haber un tira y afloja entre",
+        "podrías encontrarte sopesando",
+        "podría surgir un debate interior entre"
+      ],
+      "optionA": [
+        "conectar con los demás",
+        "estar rodeado de gente",
+        "abrirte emocionalmente",
+        "buscar apoyo",
+        "participar socialmente",
+        "apoyarte en las personas cercanas",
+        "dejar entrar a los demás",
+        "compartir lo que tienes en mente",
+        "hacerte más visible",
+        "tender la mano"
+      ],
+      "optionB": [
+        "proteger tu energía",
+        "necesitar espacio y soledad",
+        "mantener tus sentimientos en privado",
+        "apartarte para recuperar fuerzas",
+        "quedarte al margen",
+        "establecer límites",
+        "observar más que participar",
+        "reservar tiempo para ti",
+        "tomar un poco de distancia",
+        "proteger tu mundo interior"
+      ],
+      "extra": [
+        "Alguien cercano podría necesitar tu apoyo, o quizá te des cuenta de que tú necesitas el suyo.",
+        "Una conversación podría revelar más de lo que esperabas al principio.",
+        "Podrías encontrarte explicando algo que nunca habías expresado con palabras.",
+        "Incluso un momento cotidiano podría dar lugar a un intercambio significativo.",
+        "Podrías sentirte especialmente sensible al estado de ánimo de quienes te rodean.",
+        "Una interacción casual podría tener más importancia de la que parece.",
+        "Quizá dudes antes de hablar y después desees haberlo hecho.",
+        "Existe la posibilidad de aclarar un malentendido si decides abordarlo.",
+        "Alguien podría recordarte a una versión anterior de ti.",
+        "La dinámica de una relación podría cambiar de una forma pequeña pero perceptible."
+      ]
+    },
+    "opportunities": {
+      "intro": [
+        "En cuanto a las oportunidades",
+        "Cuando se trata de posibilidades",
+        "Respecto a tu camino",
+        "En tu vida cotidiana",
+        "En los asuntos prácticos",
+        "En el trabajo y las responsabilidades",
+        "En tu rutina",
+        "En tus planes y proyectos",
+        "En el trasfondo de tu día",
+        "En el curso de los acontecimientos"
+      ],
+      "possibility": [
+        "una pequeña oportunidad podría presentarse",
+        "podrías notar que se abre una puerta",
+        "una idea que ya habías tenido podría parecer de repente digna de atención",
+        "algo insignificante podría acabar siendo más importante de lo esperado",
+        "un encuentro o un mensaje podría empujarte en una nueva dirección",
+        "podrían ofrecerte ayuda, o quizá te nazca ofrecerla tú",
+        "hay espacio para un cambio pequeño pero significativo",
+        "una tarea que has estado evitando podría parecer por fin posible",
+        "podrías encontrar por casualidad un recurso que más adelante marque una gran diferencia",
+        "un retraso podría crear espacio para algo mejor"
+      ],
+      "qualifier": [
+        " —quizá relacionado con el trabajo, o quizá no.",
+        " —aunque al principio no parezca gran cosa.",
+        " —sobre todo si permaneces receptivo.",
+        " —especialmente en un área que has estado descuidando.",
+        " —aunque su importancia quizá no sea evidente hasta más adelante.",
+        " —si estás dispuesto a darte cuenta.",
+        " —sobre todo si te permites sentir curiosidad.",
+        " —aunque no encaje con tus planes actuales.",
+        " —especialmente si abandonas las expectativas rígidas.",
+        " —estés preparado o no."
+      ]
+    },
+    "inner": {
+      "opening": [
+        "En tu interior",
+        "Dentro de ti",
+        "Emocionalmente",
+        "Psicológicamente",
+        "En tus pensamientos más privados",
+        "En tu mundo interior",
+        "Bajo la superficie",
+        "En tu manera de pensar",
+        "En tu mente y en tu corazón",
+        "Cuando diriges la atención hacia dentro"
+      ],
+      "core": [
+        "llevas un tiempo pensando en un cambio",
+        "una parte de ti quiere ir sobre seguro mientras otra pide algo más",
+        "estás empezando a ver en qué aspectos has sido demasiado duro contigo",
+        "pueden reaparecer viejas dudas, pero también una confianza más serena en ti",
+        "eres más consciente de la distancia entre quien eres y quien estás llegando a ser",
+        "crece la sensación de que no puedes seguir haciendo las cosas exactamente como antes",
+        "quizá te sientas a la vez por detrás y por delante de donde deberías estar",
+        "hay algo dentro de ti dispuesto a soltar, aunque todavía no puedas ponerle nombre",
+        "estás lidiando con expectativas que no te pertenecen del todo",
+        "existe un deseo tranquilo de vivir más de acuerdo con tus verdaderos valores"
+      ],
+      "tail": [
+        ", y aunque no tengas del todo claro qué viene después, percibes que algo está cambiando.",
+        ", aunque en la superficie no haya cambiado nada evidente.",
+        ", lo que puede resultar inquietante y extrañamente esperanzador a la vez.",
+        ", aunque todavía no tenga mucho sentido lógico.",
+        ", especialmente cuando reduces el ritmo lo suficiente para darte cuenta.",
+        ", aunque intentes distraerte de ello.",
+        ", estés preparado para actuar o no.",
+        ", y esa conciencia ya es una forma de progreso.",
+        ", aunque tu vida exterior parezca igual que siempre.",
+        ", y esa tensión forma parte del proceso de crecimiento."
+      ]
+    },
+    "advice": {
+      "frame": [
+        "Como orientación para hoy",
+        "Para desenvolverte con esta energía",
+        "En cuanto a lo que podría ayudarte",
+        "Como sugerencia amable",
+        "Por tu propio bienestar",
+        "Para ponértelo más fácil",
+        "Al enfrentarte a todo esto",
+        "Para mantener los pies en la tierra",
+        "Para atravesar esta etapa",
+        "Como forma de trabajar con esta energía"
+      ],
+      "action": [
+        "sé amable contigo",
+        "confía en tus instintos",
+        "date permiso para avanzar a tu propio ritmo",
+        "concéntrate en pasos pequeños y manejables",
+        "di que no cuando algo no te parezca bien",
+        "concéntrate en lo que puedes influir y suelta el resto",
+        "permítete descansar sin convertirlo en otra obligación",
+        "recuerda que el progreso rara vez sigue una línea recta",
+        "intenta reconocer cuándo el miedo se disfraza de sentido práctico",
+        "permítete querer cosas sin juzgar inmediatamente esos deseos"
+      ],
+      "reason": [
+        "; lo estás haciendo mejor de lo que crees.",
+        ", incluso cuando no tienen una lógica perfecta.",
+        ", especialmente cuando todo parece un poco incierto.",
+        ", porque los pequeños pasos suman más de lo que imaginas.",
+        ", porque tu energía es limitada y valiosa.",
+        ", ya que la claridad suele llegar después de empezar a avanzar.",
+        ", teniendo en cuenta todo lo que ya estás gestionando.",
+        ", sobre todo cuando sientes la tentación de exigirte demasiado.",
+        ", especialmente en días como este.",
+        ", estés completamente preparado o no."
+      ]
+    },
+    "mystical": {
+      "intro": [
+        "Desde un punto de vista cósmico",
+        "Desde una perspectiva universal",
+        "En el flujo más amplio de las cosas",
+        "A nivel del alma",
+        "En el gran esquema de las cosas",
+        "Desde una perspectiva más elevada",
+        "En el panorama general",
+        "Visto desde una perspectiva espiritual",
+        "En relación con tu camino vital",
+        "Desde el punto de vista de tu viaje"
+      ],
+      "statement": [
+        "estás exactamente donde necesitas estar, aunque no lo parezca",
+        "el universo está reorganizando silenciosamente las cosas a tu favor",
+        "te guían fuerzas que todavía no comprendes del todo",
+        "hay una lógica más profunda en lo que ocurre, aunque parezca aleatorio",
+        "estás en sintonía con las lecciones que has venido a aprender",
+        "tu yo superior participa más de lo que tu mente cotidiana imagina",
+        "recibes apoyo de formas que aún no son visibles",
+        "este momento encaja en un patrón que más adelante tendrá sentido",
+        "te están preparando para algo que todavía no puedes ver",
+        "hay un significado en este capítulo que reconocerás con el tiempo"
+      ],
+      "tag": [
+        ".",
+        ", aunque ahora no resulte evidente.",
+        ", creas o no en este tipo de cosas.",
+        ", especialmente si te permites confiar en el proceso.",
+        ", y eso es más que una coincidencia.",
+        ", y merece la pena reconocerlo.",
+        ", aunque tu mente racional se resista.",
+        ", y puedes apoyarte en ello.",
+        ", lo notes hoy o no.",
+        ", y eso lo cambia todo si se lo permites."
+      ]
+    },
+    "warnings": {
+      "frame": [
+        "Como advertencia amable",
+        "Solo una pequeña advertencia",
+        "En cuanto a los posibles obstáculos",
+        "Para evitar fricciones innecesarias",
+        "Por tu propia tranquilidad",
+        "Al atravesar momentos complicados",
+        "Para mantener las cosas tranquilas",
+        "Como algo que conviene vigilar",
+        "Al enfrentarte al estrés de hoy",
+        "Para evitar dramas innecesarios"
+      ],
+      "behavior": [
+        "no le des demasiadas vueltas a cada detalle",
+        "no interpretes demasiado las señales pequeñas",
+        "no tomes decisiones importantes solo por frustración",
+        "vigila las ganas de controlarlo todo",
+        "procura no hablar desde la irritación en lugar de la claridad",
+        "no confundas una incomodidad temporal con un fracaso permanente",
+        "intenta no proyectar experiencias pasadas sobre situaciones presentes",
+        "evita tomarte las cosas de forma más personal de lo necesario",
+        "ten cuidado de no prometer más de lo que puedes cumplir",
+        "vigila la tendencia a imaginar el peor escenario"
+      ],
+      "consequence": [
+        ", ya que puede agotar tu energía más rápido de lo que esperas.",
+        ", porque rara vez conduce al resultado que deseas.",
+        ", sobre todo cuando ya te sientes sensible.",
+        ", lo que puede crear problemas que antes no existían.",
+        ", especialmente si estás cansado o estresado.",
+        ", aunque en el momento parezca justificado.",
+        ", teniendo en cuenta lo fácilmente que pueden extenderse los malentendidos.",
+        ", sobre todo en las relaciones importantes.",
+        ", ya que podría complicar algo que podía ser sencillo.",
+        ", te des cuenta de ello o no."
+      ]
+    },
+    "affirmation": {
+      "opening": [
+        "Como recordatorio",
+        "Para tu diálogo interior",
+        "En cuanto a la forma en que te hablas",
+        "Para tu mentalidad de hoy",
+        "Como mantra personal",
+        "Para tu equilibrio emocional",
+        "En la manera en que te tratas",
+        "Para tu sentido de valía",
+        "En tu relación contigo",
+        "Para tu conversación interior"
+      ],
+      "message": [
+        "tienes derecho a ocupar espacio",
+        "no tienes que ganarte el derecho a descansar",
+        "tus sentimientos son válidos, aunque sean confusos",
+        "eres más capaz de lo que sugieren tus dudas",
+        "mereces amabilidad, especialmente por tu parte",
+        "tienes permiso para cambiar de opinión",
+        "no tienes que ser perfecto para tener valor",
+        "tus necesidades importan, aunque resulten incómodas",
+        "estás creciendo aunque no lo parezca",
+        "eres suficiente exactamente como eres en este momento"
+      ],
+      "ending": [
+        ".",
+        ", pase lo que pase hoy.",
+        ", produzcas o no todo lo que esperabas.",
+        ", especialmente en días como este.",
+        ", aunque tu crítico interior diga lo contrario.",
+        ", y eso no es negociable.",
+        ", independientemente de la validación externa.",
+        ", y puedes volver a esta idea cuando lo necesites.",
+        ", aunque todavía no te lo creas del todo.",
+        ", y merece la pena repetirlo."
+      ]
+    },
+    "retrograde": {
+      "intro": [
+        "Con toda esta energía retrógrada",
+        "Dado el clima astrológico actual",
+        "En este ambiente cósmico",
+        "Con tanta actividad astrológica",
+        "En esta etapa de cambios planetarios",
+        "Teniendo en cuenta la configuración actual de las estrellas",
+        "Con la forma en que están alineados los astros",
+        "En este periodo astrológicamente intenso",
+        "Con todo este movimiento celeste",
+        "Dada la configuración cósmica actual"
+      ],
+      "effect": [
+        "las cosas pueden parecer un poco más imprevisibles de lo normal",
+        "los malentendidos podrían surgir con mayor facilidad",
+        "los planes podrían cambiar sin previo aviso",
+        "la tecnología o la logística podrían fallar ligeramente",
+        "las emociones podrían estar más a flor de piel",
+        "viejos asuntos podrían reaparecer para una nueva ronda",
+        "el momento adecuado podría parecer extraño en varios aspectos",
+        "los retrasos y los desvíos son más probables de lo habitual",
+        "quizá tengas que revisar o modificar algo",
+        "la flexibilidad será más útil que los planes rígidos"
+      ],
+      "reframe": [
+        ".",
+        ", lo cual resulta molesto, pero también informativo.",
+        ", sobre todo si estás aferrado a un resultado concreto.",
+        ", y eso forma parte del proceso.",
+        ", sigas la astrología de cerca o no.",
+        ", así que deja un poco más de margen.",
+        ", lo que es un buen motivo para bajar el ritmo.",
+        ", y puedes aprovecharlo en tu beneficio.",
+        ", especialmente si has estado yendo demasiado deprisa.",
+        ", aunque prefieras ignorar el aspecto astrológico."
+      ]
+    },
+    "closer": {
+      "lead": [
+        "Al final del día",
+        "Con perspectiva",
+        "Cuando mires atrás",
+        "A medida que las cosas se calmen",
+        "Con el tiempo",
+        "Finalmente",
+        "Tarde o temprano",
+        "Cuando reflexiones sobre esto",
+        "Cuando pase el temporal",
+        "En el panorama general"
+      ],
+      "outcome": [
+        "podrías sentirte un poco más despejado que esta mañana",
+        "habrás aprendido algo útil sobre ti",
+        "el paso correcto parecerá más evidente cuando reduzcas el ritmo",
+        "no tendrás que haberlo resuelto todo para estar en el camino adecuado",
+        "las piezas tendrán más sentido que ahora",
+        "lo más importante será cómo te trates durante todo esto",
+        "verás que eres más resistente de lo que sugieren tus preocupaciones",
+        "esto tendrá más sentido dentro de la historia general de tu vida",
+        "incluso los pequeños cambios de hoy pueden acumularse con el tiempo",
+        "reconocerás esto como parte de una etapa necesaria"
+      ],
+      "touch": [
+        ".",
+        ", aunque todavía no lo parezca.",
+        ", te des cuenta de ello hoy o no.",
+        ", especialmente cuando observes el patrón más amplio.",
+        ", aunque no resulte evidente de inmediato.",
+        ", y por ahora eso es suficiente.",
+        ", lo cual es más de lo que parece.",
+        ", y esa comprensión ya tiene valor.",
+        ", aunque tus circunstancias externas no hayan cambiado.",
+        ", y puedes confiar en ese proceso."
+      ]
+    }
+  }
+}
