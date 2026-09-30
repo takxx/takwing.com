@@ -41,7 +41,6 @@
         "Times New Roman",
         Times,
         serif;
-      font-style: normal;
       letter-spacing: 0.02em;
     }
 
@@ -162,10 +161,6 @@
       font-size: clamp(1.05rem, 3vw, 1.25rem);
       font-weight: 600;
       letter-spacing: 0.01em;
-    }
-
-    .language-line {
-      align-self: center;
     }
 
     label {
@@ -323,7 +318,7 @@
 
       <div class="meta-row">
         <span id="date-line" class="date-line"></span>
-        <span id="language-line" class="language-line"></span>
+        <span id="language-line"></span>
       </div>
 
       <label for="language-select" id="language-label"></label>
@@ -518,40 +513,34 @@
 
     function formatDate(date, language) {
       if (language === "zh") {
-        const formatter = new Intl.DateTimeFormat("zh-Hant", {
+        return new Intl.DateTimeFormat("zh-Hant", {
           calendar: "gregory",
           year: "numeric",
           month: "numeric",
           day: "numeric",
           weekday: "long"
-        });
-
-        return formatter.format(date);
+        }).format(date);
       }
 
       if (language === "es") {
-        const formatter = new Intl.DateTimeFormat("es", {
+        return new Intl.DateTimeFormat("es", {
           calendar: "gregory",
           weekday: "long",
           day: "numeric",
           month: "long",
           year: "numeric"
-        });
-
-        return formatter
+        })
           .format(date)
           .replace(/^./, character => character.toLowerCase());
       }
 
-      const formatter = new Intl.DateTimeFormat("en-GB", {
+      return new Intl.DateTimeFormat("en-GB", {
         calendar: "gregory",
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric"
-      });
-
-      return formatter.format(date);
+      }).format(date);
     }
 
     function applyInterfaceText() {
@@ -587,7 +576,8 @@
         return storedSign;
       }
 
-      return signs[0]?.key || null;
+      // Do not select the first sign for new visitors.
+      return null;
     }
 
     function renderSigns() {
@@ -627,7 +617,11 @@
 
         button.addEventListener("click", () => {
           selectedSign = sign.key;
-          localStorage.setItem(SIGN_STORAGE_KEY, selectedSign);
+
+          localStorage.setItem(
+            SIGN_STORAGE_KEY,
+            selectedSign
+          );
 
           renderSigns();
           renderHoroscope();
@@ -640,6 +634,7 @@
     function renderHoroscope() {
       const output = document.getElementById("horoscope-output");
 
+      // Deliberately leave the output blank until a sign is selected.
       if (!currentData || !selectedSign) {
         output.textContent = "";
         return;
@@ -690,7 +685,10 @@
         currentLanguage = language;
         currentData = data;
 
-        localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
+        localStorage.setItem(
+          LANGUAGE_STORAGE_KEY,
+          currentLanguage
+        );
 
         applyInterfaceText();
         renderSigns();
@@ -711,13 +709,13 @@
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
-      const languageSelect = document.getElementById("language-select");
+      const languageSelect =
+        document.getElementById("language-select");
 
       currentLanguage = getInitialLanguage();
       languageSelect.value = currentLanguage;
 
       languageSelect.addEventListener("change", event => {
-        selectedSign = null;
         loadLanguage(event.target.value);
       });
 
