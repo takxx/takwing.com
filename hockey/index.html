@@ -151,17 +151,17 @@
       },
 
       zh: {
-        title: "触控空气曲棍球",
-        leftInstruction: "左方玩家使用左半场。",
-        rightInstruction: "右方玩家使用右半场。",
-        timeInstruction: "99 秒后得分较高的玩家获胜。",
-        start: "开始游戏",
-        timeUp: "时间到！",
-        leftWins: "左方玩家获胜！",
-        rightWins: "右方玩家获胜！",
-        draw: "平局！",
-        finalScore: "最终比分",
-        newGame: "新游戏"
+        title: "觸控空氣曲棍球",
+        leftInstruction: "左邊玩家負責左半場。",
+        rightInstruction: "右邊玩家負責右半場。",
+        timeInstruction: "99 秒之後，邊個入波多就贏。",
+        start: "開始遊戲",
+        timeUp: "時間到！",
+        leftWins: "左邊玩家贏！",
+        rightWins: "右邊玩家贏！",
+        draw: "打和！",
+        finalScore: "最終比數",
+        newGame: "再嚟一局"
       }
     };
 
@@ -764,6 +764,7 @@
           Math.abs(puck.velocityY) * physics.wallBounce;
 
         playWallSound();
+        vibratePuckHit();
       }
 
       if (puck.y + puck.radius > height) {
@@ -772,6 +773,7 @@
           -Math.abs(puck.velocityY) * physics.wallBounce;
 
         playWallSound();
+        vibratePuckHit();
       }
 
       if (!isInsideGoalOpening()) {
@@ -781,6 +783,7 @@
             Math.abs(puck.velocityX) * physics.wallBounce;
 
           playWallSound();
+          vibrateGoal();
         }
 
         if (puck.x + puck.radius > width) {
@@ -789,6 +792,7 @@
             -Math.abs(puck.velocityX) * physics.wallBounce;
 
           playWallSound();
+          vibrateGoal();
         }
       }
     }
