@@ -421,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateStatus() {
     status.textContent =
-      `${t('moves')}: ${Math.max(0, history.length - 1)} | ` +
       `${t('foundations')}: ${foundationCount}/52`;
   }
 
