@@ -1,239 +1,153 @@
+/* Root tokens */
 :root {
-  --table: #0c2b2b;
-  --card: #eee;
-  --blue: #0b84ff;
+--card-width: 88px;
+--card-height: 116px;
+--small-card-width: 68px;
+--small-card-height: 92px;
+--card-background: #eee;
+--card-border: #aaa;
+--card-red: #b00000;
+--button-background: #222;
+--button-hover: #333;
 }
 
-* {
-  box-sizing: border-box;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
+/* Global reset */
 
+{ box-sizing: border-box; }
+html, body { height: 100%; }
+html { background: linear-gradient(180deg, #064 0%, #003 100%); }
 body {
-  margin: 0;
-  padding: 14px;
-  color: white;
-  user-select: none;
-  background: linear-gradient(180deg, #064 0%, #003 100%);
+margin: 0;
+padding: 22px 14px 14px;
+color: #fff;
+background: linear-gradient(180deg, #064 0%, #003 100%);
+font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+overscroll-behavior: none;
+user-select: none;
+-webkit-user-select: none;
+touch-action: pan-y;
 }
+#board { max-width: 980px; margin: 0 auto; }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  touch-action: pan-y;
-  overscroll-behavior: none;
+/* Header / controls (kept minimal) */
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+h1 { margin: 0; font-size: 18px; line-height: 1.2; }
+button, #langSelect {
+padding: 6px 10px;
+border: 0;
+border-radius: 6px;
+background: var(--button-background);
+color: #fff;
+font: inherit;
+cursor: pointer;
 }
+button:hover, #langSelect:hover { background: var(--button-hover); }
 
-/*
- * Keep the board as a non-zooming custom surface.
- * The JavaScript touch filters below exempt native controls.
- */
-#board,
-#board * {
-  touch-action: pan-y;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
+/* Board layout */
+.row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
 
-#board {
-  max-width: 980px;
-  margin: auto;
-  touch-action: none;
-  -webkit-touch-callout: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-h1 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-/*
- * These remain native controls, but manipulation prevents iOS from
- * interpreting a quick tap as a double-tap zoom gesture.
- */
-button,
-#langSelect {
-  touch-action: manipulation;
-  -webkit-user-select: auto;
-  user-select: auto;
-  -webkit-touch-callout: default;
-}
-
-button {
-  padding: 6px 10px;
-  color: white;
-  background: #222;
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #333;
-}
-
-#langSelect {
-  padding: 6px 10px;
-  color: white;
-  background: #222;
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-#langSelect:hover {
-  background: #333;
-}
-
-#langSelect option {
-  background: #222;
-  color: white;
-}
-
-#status {
-  margin-left: auto;
-  font-size: 14px;
-  opacity: .9;
-}
-
-.row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
+/* Slots (free cells / foundations) */
 .slot {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 92px;
-  height: 120px;
-  background: rgba(255, 255, 255, .06);
-  border-radius: 8px;
+width: var(--card-width);
+height: var(--card-height);
+display: flex;
+align-items: center;
+justify-content: center;
+border-radius: 8px;
+background: rgba(255,255,255,.06);
+position: relative;
 }
+.slot.small { width: var(--small-card-width); height: var(--small-card-height); }
 
-.slot.small {
-  width: 68px;
-  height: 92px;
-}
-
-.slot .label {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  font-size: 12px;
-  opacity: .8;
-  pointer-events: none;
-}
-
+/* Card stack & cards */
 .stack {
-  position: relative;
-  width: 92px;
-  height: 420px;
+position: relative;
+width: 92px;
+height: 420px;
+contain: layout;
 }
-
 .card {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 88px;
-  height: 116px;
-  padding: 6px;
-  color: #000;
-  background: var(--card);
-  border: 1px solid #aaa;
-  border-radius: 8px;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, .45);
-  font-weight: 600;
-  cursor: pointer;
-  touch-action: none;
+position: absolute;
+top: 0;
+left: 0;
+width: var(--card-width);
+height: var(--card-height);
+padding: 6px;
+display: flex;
+flex-direction: column;
+color: #000;
+background: var(--card-background);
+border: 1px solid var(--card-border);
+border-radius: 8px;
+box-shadow: 0 6px 14px rgba(0,0,0,.45);
+font-weight: 600;
+cursor: pointer;
+touch-action: none;
+contain: layout style;
+will-change: left, top, transform;
+/* Childs respond to card width for responsive sizing */
+container-type: inline-size;
 }
+.card.red { color: var(--card-red); }
 
-.card.red {
-  color: #b00000;
-}
-
+/* Top rank (left/top) */
 .card .top {
-  font-size: 14px;
+position: absolute;
+top: 6px;
+left: 6px;
+z-index: 1;
+font-size: clamp(12px, 14cqw, 18px);
+font-weight: 700;
+line-height: 1;
 }
 
+/* Center suit grows with card width */
 .card .suit {
-  font-size: 22px;
-  line-height: 1;
+display: flex;
+align-items: center;
+justify-content: center;
+flex: 1 1 auto;
+font-size: clamp(30px, 42cqw, 82px);
+font-weight: 400;
+line-height: .85;
 }
 
+/* Bottom rank (rotated, for upside-down readability) */
+.card .bottom {
+position: absolute;
+right: 6px;
+bottom: 6px;
+z-index: 1;
+font-size: clamp(12px, 14cqw, 18px);
+font-weight: 700;
+transform: rotate(180deg);
+transform-origin: center;
+}
+
+/* Drag helpers (optional) */
 .drag-ghost {
-  z-index: 9999;
-  pointer-events: none !important;
-  margin: 0;
-  opacity: .9;
-  cursor: grabbing;
-  will-change: left, top;
+z-index: 9999;
+margin: 0;
+opacity: .9;
+cursor: grabbing;
+pointer-events: none;
+will-change: left, top;
 }
+.dragging-source { opacity: .25; }
 
-.dragging-source {
-  opacity: .25;
-}
+/* Footer / hints (optional) */
+footer { margin-top: 18px; font-size: 13px; opacity: .9; }
 
-footer {
-  margin-top: 18px;
-  font-size: 13px;
-  opacity: .9;
-}
-
-.hint {
-  color: #eef;
-  font-size: 12px;
-}
-
+/* Small screens: allow card width to adapt, keep suit responsive */
 @media (max-width: 760px) {
-  #topRow,
-  #tableauRow {
-    gap: 6px;
-  }
-
-  .stack {
-    width: calc((100vw - 42px) / 8);
-  }
-
-  .stack .card {
-    width: calc((100vw - 50px) / 8);
-  }
-
-  .card {
-    font-size: 11px;
-  }
-
-  .card .suit {
-    font-size: 17px;
-  }
-
-  .slot.small {
-    width: calc((100vw - 42px) / 8);
-  }
+:root { --card-overlap: 24px; }
+body { padding: 18px 14px 14px; }
+.slot.small { width: calc((100vw - 42px) / 8); }
+.stack { width: calc((100vw - 42px) / 8); }
+.stack .card { width: calc((100vw - 50px) / 8); }
+.card { font-size: 11px; }
+/* Do not force fixed suit size here; it scales with cqw via .suit */
 }
+
+/* Accessibility: hide decorative elements from screen readers when needed; kept minimal in markup changes */
+[aria-hidden="true"] { /* no-op placeholder if needed later */ }

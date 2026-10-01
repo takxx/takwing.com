@@ -1,7 +1,9 @@
 'use strict';
 
 document.addEventListener('DOMContentLoaded', () => {
-  /* ---------- Internationalization ---------- */
+  /* =========================================================
+     TRANSLATIONS
+  ========================================================= */
 
   const translations = {
     en: {
@@ -9,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
       newGame: 'New',
       restart: 'Restart',
       undo: 'Undo',
-      autoMove: 'Auto-move',
       hint: 'Hint',
       freeCell: 'Free',
       hintText: 'Drag or click cards to move them.',
@@ -27,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
       newGame: 'Nuevo',
       restart: 'Reiniciar',
       undo: 'Deshacer',
-      autoMove: 'Auto-mover',
       hint: 'Sugerencia',
       freeCell: 'Libre',
       hintText: 'Arrastra o haz clic en las cartas para moverlas.',
@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
       newGame: '新遊戲',
       restart: '重新開始',
       undo: '還原',
-      autoMove: '自動移動',
       hint: '提示',
       freeCell: '自由格',
       hintText: '拖曳或點擊卡片來移動它們。',
@@ -75,45 +74,43 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function detectLanguage() {
-    let saved = null;
-
     try {
-      saved = localStorage.getItem('freecell_lang');
+      const saved = localStorage.getItem('freecell_lang');
+
+      if (saved && translations[saved]) {
+        return saved;
+      }
     } catch {
-      // Storage may be unavailable in private browsing contexts.
+      // Ignore unavailable storage.
     }
 
-    if (saved && translations[saved]) {
-      return saved;
-    }
-
-    const browserLang =
+    const browserLanguage =
       navigator.languages?.[0] ||
       navigator.language ||
       'en';
 
     if (
-      browserLang.startsWith('zh-HK') ||
-      browserLang.startsWith('zh-TW') ||
-      browserLang === 'zh'
+      browserLanguage.startsWith('zh-HK') ||
+      browserLanguage.startsWith('zh-TW') ||
+      browserLanguage === 'zh'
     ) {
       return 'zh-TW';
     }
 
-    if (browserLang.startsWith('es')) {
+    if (browserLanguage.startsWith('es')) {
       return 'es';
     }
 
     return 'en';
   }
 
-  function setLanguage(lang) {
-    currentLang = translations[lang] ? lang : 'en';
+  function setLanguage(language) {
+    currentLang = translations[language] ? language : 'en';
 
     try {
       localStorage.setItem('freecell_lang', currentLang);
     } catch {
-      // Continue without persistence if storage is unavailable.
+      // Continue without persistence.
     }
 
     document.documentElement.lang = currentLang;
@@ -136,7 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStatus();
   }
 
-  /* ---------- DOM references ---------- */
+  /* =========================================================
+     DOM
+  ========================================================= */
 
   const board = document.getElementById('board');
   const status = document.getElementById('status');
@@ -144,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const newButton = document.getElementById('newBtn');
   const restartButton = document.getElementById('restartBtn');
   const undoButton = document.getElementById('undoBtn');
-  const autoButton = document.getElementById('autoBtn');
   const hintButton = document.getElementById('hintBtn');
   const languageSelect = document.getElementById('langSelect');
 
@@ -153,11 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  /* ---------- iOS gesture prevention ---------- */
+  /* =========================================================
+     TOUCH AND GESTURE HANDLING
+  ========================================================= */
 
-  /*
-   * Keep Safari pinch-zoom and gesture handling disabled.
-   */
   for (const eventName of [
     'gesturestart',
     'gesturechange',
@@ -165,18 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
   ]) {
     document.addEventListener(
       eventName,
-      event => {
-        event.preventDefault();
-      },
+      event => event.preventDefault(),
       { passive: false }
     );
   }
 
-  /*
-   * The board still cancels native touch behavior, except on
-   * native controls. This is the key fix for iPhone buttons
-   * and the language selector.
-   */
   function isNativeControl(target) {
     return Boolean(
       target.closest(
@@ -186,11 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function preventBoardTouch(event) {
-    if (isNativeControl(event.target)) {
-      return;
+    if (!isNativeControl(event.target)) {
+      event.preventDefault();
     }
-
-    event.preventDefault();
   }
 
   board.addEventListener(
@@ -211,12 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
     { passive: false }
   );
 
-  /*
-   * Prevent accidental double-tap zoom without suppressing
-   * the click generated by a normal tap on a native control.
-   *
-   * This listener only acts on non-control content.
-   */
   let lastNonControlTouchEnd = 0;
 
   document.addEventListener(
@@ -237,7 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { passive: false }
   );
 
-  /* ---------- Game constants and state ---------- */
+  /* =========================================================
+     GAME CONSTANTS
+  ========================================================= */
 
   const SUITS = ['♥', '♦', '♣', '♠'];
 
@@ -246,23 +230,55 @@ document.addEventListener('DOMContentLoaded', () => {
     '8', '9', '10', 'J', 'Q', 'K'
   ];
 
-  const COLORS = {
+  const COLORS = Object.freeze({
     '♥': 'red',
     '♦': 'red',
     '♣': 'black',
     '♠': 'black'
-  };
+  });
+
+  /* =========================================================
+     GAME STATE
+  ========================================================= */
 
   let tableau = [];
   let frees = [];
   let homes = {};
   let history = [];
+  let foundationCount = 0;
   let hasShownWinMessage = false;
 
   let pointerState = null;
   let dragState = null;
 
-  /* ---------- Cards ---------- */
+  let cachedFreeCells = null;
+  let cachedEmptyColumns = null;
+
+  function invalidateBoardCache() {
+    cachedFreeCells = null;
+    cachedEmptyColumns = null;
+  }
+
+  function getBoardMetrics() {
+    if (cachedFreeCells === null) {
+      cachedFreeCells = frees.filter(card => !card).length;
+    }
+
+    if (cachedEmptyColumns === null) {
+      cachedEmptyColumns = tableau.filter(
+        column => column.length === 0
+      ).length;
+    }
+
+    return {
+      freeCells: cachedFreeCells,
+      emptyColumns: cachedEmptyColumns
+    };
+  }
+
+  /* =========================================================
+     CARD HELPERS
+  ========================================================= */
 
   function makeCard(suit, rank) {
     return {
@@ -311,7 +327,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return deck;
   }
 
-  /* ---------- State ---------- */
+  /* =========================================================
+     HISTORY AND GAME SETUP
+  ========================================================= */
 
   function serialize() {
     return JSON.stringify({
@@ -332,6 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     frees = state.frees.map(copyCard);
     homes = { ...state.homes };
+
+    foundationCount = Object.values(homes).reduce(
+      (total, value) => total + Number(value),
+      0
+    );
+
+    invalidateBoardCache();
   }
 
   function saveSnapshot() {
@@ -339,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStatus();
   }
 
-  function deal() {
+  function createNewGame() {
     const deck = shuffle(buildDeck());
 
     tableau = Array.from(
@@ -356,12 +381,15 @@ document.addEventListener('DOMContentLoaded', () => {
       '♠': 0
     };
 
+    foundationCount = 0;
+    hasShownWinMessage = false;
+
     deck.forEach((card, index) => {
       tableau[index % 8].push(copyCard(card));
     });
 
     history = [];
-    hasShownWinMessage = false;
+    invalidateBoardCache();
 
     saveSnapshot();
     render();
@@ -392,20 +420,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateStatus() {
-    const foundationCount = Object.values(homes)
-      .reduce(
-        (total, count) => total + count,
-        0
-      );
-
     status.textContent =
-      `${t('moves')}: ${Math.max(
-        0,
-        history.length - 1
-      )} | ${t('foundations')}: ${foundationCount}/52`;
+      `${t('moves')}: ${Math.max(0, history.length - 1)} | ` +
+      `${t('foundations')}: ${foundationCount}/52`;
   }
 
-  /* ---------- Rendering ---------- */
+  /* =========================================================
+     RENDERING
+  ========================================================= */
 
   function createCardElement(card, metadata = {}) {
     const normalized = copyCard(card);
@@ -419,7 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     element.innerHTML = `
       <div class="top">${normalized.rank}</div>
-      <div class="suit">${normalized.suit}</div>
+      <div class="suit" aria-hidden="true">${normalized.suit}</div>
+      <div class="bottom" aria-hidden="true">${normalized.rank}</div>
     `;
 
     element.dataset.loc = metadata.loc ?? '';
@@ -446,25 +469,17 @@ document.addEventListener('DOMContentLoaded', () => {
     return element;
   }
 
-  function render() {
-    document.querySelectorAll('.stack').forEach(stack => {
-      stack.replaceChildren();
-    });
-
+  function renderFreeCells() {
     document
       .querySelectorAll('[data-type="free"]')
       .forEach((slot, index) => {
         slot.replaceChildren();
 
         const label = document.createElement('div');
-
         label.className = 'label';
-        label.textContent = t('freeCell');
+        label.textContent = `${t('freeCell')} ${index + 1}`;
 
-        slot.append(
-          label,
-          document.createTextNode(` ${index + 1}`)
-        );
+        slot.appendChild(label);
 
         if (frees[index]) {
           slot.appendChild(
@@ -475,7 +490,9 @@ document.addEventListener('DOMContentLoaded', () => {
           );
         }
       });
+  }
 
+  function renderFoundations() {
     document
       .querySelectorAll('[data-type="home"]')
       .forEach((slot, index) => {
@@ -484,7 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
         slot.replaceChildren();
 
         const label = document.createElement('div');
-
         label.className = 'label';
         label.textContent = suit;
 
@@ -501,7 +517,9 @@ document.addEventListener('DOMContentLoaded', () => {
           );
         }
       });
+  }
 
+  function renderTableau() {
     tableau.forEach((column, columnIndex) => {
       const stack = document.querySelector(
         `.stack[data-index="${columnIndex}"]`
@@ -511,6 +529,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      const fragment = document.createDocumentFragment();
+
       column.forEach((card, position) => {
         const element = createCardElement(card, {
           loc: 'tableau',
@@ -519,23 +539,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         element.style.top = `${position * 28}px`;
-        stack.appendChild(element);
+        fragment.appendChild(element);
       });
+
+      stack.replaceChildren(fragment);
     });
+  }
+
+  function render() {
+    renderFreeCells();
+    renderFoundations();
+    renderTableau();
 
     updateStatus();
     checkWin();
   }
 
   function checkWin() {
-    const won =
-      Object.values(homes)
-        .reduce(
-          (total, count) => total + count,
-          0
-        ) === 52;
-
-    if (!won || hasShownWinMessage) {
+    if (
+      foundationCount !== 52 ||
+      hasShownWinMessage
+    ) {
       return;
     }
 
@@ -546,7 +570,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 80);
   }
 
-  /* ---------- Rules ---------- */
+  /* =========================================================
+     RULES
+  ========================================================= */
 
   function canMoveToHome(card) {
     return Boolean(
@@ -594,33 +620,161 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const emptyFreeCells =
-      frees.filter(card => !card).length;
-
-    const emptyColumns =
-      tableau.filter(column => column.length === 0).length;
+    const {
+      freeCells,
+      emptyColumns
+    } = getBoardMetrics();
 
     const destinationIsEmpty =
       destination.length === 0;
 
     const adjustedEmptyColumns =
-      emptyColumns -
-      (destinationIsEmpty ? 1 : 0);
+      emptyColumns - (destinationIsEmpty ? 1 : 0);
 
     const maxMovable =
-      (emptyFreeCells + 1) *
+      (freeCells + 1) *
       (adjustedEmptyColumns + 1);
 
     return (
       sequence.length <= maxMovable &&
-      canPlaceOnTableau(
-        sequence[0],
-        destination
-      )
+      canPlaceOnTableau(sequence[0], destination)
     );
   }
 
-  /* ---------- Move operations ---------- */
+  /* =========================================================
+     CONSERVATIVE AUTO-MOVE
+  ========================================================= */
+
+  function getOppositeColorSuits(suit) {
+    if (suit === '♥' || suit === '♦') {
+      return ['♣', '♠'];
+    }
+
+    return ['♥', '♦'];
+  }
+
+  function isSafeToAutoMove(card) {
+    if (!card) {
+      return false;
+    }
+
+    const rank = Number(card.rankN);
+    const currentHomeRank =
+      Number(homes[card.suit]) || 0;
+
+    // It must be the next card for its suit.
+    if (rank !== currentHomeRank + 1) {
+      return false;
+    }
+
+    // Aces are always safe.
+    if (rank === 1) {
+      return true;
+    }
+
+    // Twos are safe after their own Ace.
+    if (rank === 2) {
+      return currentHomeRank >= 1;
+    }
+
+    /*
+      For rank 3 and higher, both opposite-colour
+      cards one rank lower must already be home.
+
+      Example:
+      5♥ is safe only when both 4♣ and 4♠
+      are already in their foundations.
+    */
+    const previousRank = rank - 1;
+    const oppositeSuits =
+      getOppositeColorSuits(card.suit);
+
+    return (
+      Number(homes[oppositeSuits[0]]) >= previousRank &&
+      Number(homes[oppositeSuits[1]]) >= previousRank
+    );
+  }
+
+  function findSafeExposedCard() {
+    // Check tableau cards.
+    for (let column = 0; column < tableau.length; column++) {
+      const pile = tableau[column];
+
+      if (!pile.length) {
+        continue;
+      }
+
+      const card = pile[pile.length - 1];
+
+      if (isSafeToAutoMove(card)) {
+        return {
+          type: 'tableau',
+          column,
+          card
+        };
+      }
+    }
+
+    // Check free cells.
+    for (let index = 0; index < frees.length; index++) {
+      const card = frees[index];
+
+      if (card && isSafeToAutoMove(card)) {
+        return {
+          type: 'free',
+          index,
+          card
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function autoMove() {
+    let movedAny = false;
+
+    while (true) {
+      const exposed = findSafeExposedCard();
+
+      if (!exposed) {
+        break;
+      }
+
+      if (exposed.type === 'tableau') {
+        tableau[exposed.column].pop();
+      } else {
+        frees[exposed.index] = null;
+      }
+
+      homes[exposed.card.suit]++;
+      foundationCount++;
+      movedAny = true;
+
+      invalidateBoardCache();
+    }
+
+    if (movedAny) {
+      render();
+    }
+  }
+
+  /*
+    This is called after every successful player move.
+    The timeout allows the drag/click interaction to finish
+    before the board is automatically changed.
+  */
+  function finishPlayerMove() {
+    render();
+
+    setTimeout(() => {
+      autoMove();
+    }, 0);
+  }
+
+  /* =========================================================
+     MOVE OPERATIONS
+  ========================================================= */
 
   function moveFreeToHome(index) {
     const card = frees[index];
@@ -631,9 +785,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     frees[index] = null;
     homes[card.suit]++;
+    foundationCount++;
 
+    invalidateBoardCache();
     saveSnapshot();
-    render();
+    finishPlayerMove();
 
     return true;
   }
@@ -652,8 +808,9 @@ document.addEventListener('DOMContentLoaded', () => {
     destination.push(copyCard(card));
     frees[index] = null;
 
+    invalidateBoardCache();
     saveSnapshot();
-    render();
+    finishPlayerMove();
 
     return true;
   }
@@ -668,8 +825,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return false;
     }
 
-    const card =
-      column[column.length - 1];
+    const card = column[column.length - 1];
 
     if (!card || !canMoveToHome(card)) {
       return false;
@@ -677,9 +833,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     column.pop();
     homes[card.suit]++;
+    foundationCount++;
 
+    invalidateBoardCache();
     saveSnapshot();
-    render();
+    finishPlayerMove();
 
     return true;
   }
@@ -701,8 +859,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     frees[freeIndex] = copyCard(column.pop());
 
+    invalidateBoardCache();
     saveSnapshot();
-    render();
+    finishPlayerMove();
 
     return true;
   }
@@ -725,20 +884,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     tableau[destinationIndex] =
-      destination.concat(
-        sequence.map(copyCard)
-      );
+      destination.concat(sequence.map(copyCard));
 
     tableau[sourceIndex] =
       source.slice(0, position);
 
+    invalidateBoardCache();
     saveSnapshot();
-    render();
+    finishPlayerMove();
 
     return true;
   }
 
-  /* ---------- Pointer interaction ---------- */
+  /* =========================================================
+     POINTER AND DRAG HANDLING
+  ========================================================= */
 
   function getPointerSource(element) {
     const location = element.dataset.loc;
@@ -787,12 +947,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (
       !cardElement ||
-      !board.contains(cardElement)
+      !board.contains(cardElement) ||
+      !cardElement.dataset.loc
     ) {
-      return;
-    }
-
-    if (!cardElement.dataset.loc) {
       return;
     }
 
@@ -860,10 +1017,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const completedPointer = pointerState;
 
     try {
-      completedPointer.element
-        .releasePointerCapture?.(
-          event.pointerId
-        );
+      completedPointer.element.releasePointerCapture?.(
+        event.pointerId
+      );
     } catch {
       // Pointer capture may already be released.
     }
@@ -899,9 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const original = pointerState.element;
-    const rect =
-      original.getBoundingClientRect();
-
+    const rect = original.getBoundingClientRect();
     const ghost = original.cloneNode(true);
 
     ghost.classList.add('drag-ghost');
@@ -923,10 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
       offsetY: event.clientY - rect.top
     };
 
-    original.classList.add(
-      'dragging-source'
-    );
-
+    original.classList.add('dragging-source');
     document.body.appendChild(ghost);
 
     moveDrag(event);
@@ -976,17 +1127,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const freeIndex =
           Number(original.dataset.idx);
 
-        const card = frees[freeIndex];
-
-        if (
-          card &&
-          destinationType === 'home'
-        ) {
+        if (destinationType === 'home') {
           moveFreeToHome(freeIndex);
-        } else if (
-          card &&
-          destinationType === 'tableau'
-        ) {
+        } else if (destinationType === 'tableau') {
           moveFreeToTableau(
             freeIndex,
             destinationIndex
@@ -1006,17 +1149,13 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceColumn,
             position
           );
-        } else if (
-          destinationType === 'tableau'
-        ) {
+        } else if (destinationType === 'tableau') {
           moveTableauToTableau(
             sourceColumn,
             position,
             destinationIndex
           );
-        } else if (
-          destinationType === 'free'
-        ) {
+        } else if (destinationType === 'free') {
           moveTableauToFree(
             sourceColumn,
             position,
@@ -1041,6 +1180,10 @@ document.addEventListener('DOMContentLoaded', () => {
     dragState.ghost.remove();
     dragState = null;
   }
+
+  /* =========================================================
+     CLICK-TO-MOVE
+  ========================================================= */
 
   function clickMove(source) {
     if (!source) {
@@ -1101,11 +1244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      for (
-        let destination = 0;
-        destination < 8;
-        destination++
-      ) {
+      for (let destination = 0; destination < 8; destination++) {
         if (
           destination !== column &&
           canPlaceSequence(
@@ -1139,7 +1278,89 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------- Event registration ---------- */
+  /* =========================================================
+     HINTS
+  ========================================================= */
+
+  function cardLabel(card) {
+    return `${card.rank}${card.suit}`;
+  }
+
+  function findHint() {
+    for (let column = 0; column < 8; column++) {
+      const source = tableau[column];
+
+      if (!source.length) {
+        continue;
+      }
+
+      const card = source[source.length - 1];
+
+      if (canMoveToHome(card)) {
+        return t('moveCardToFoundation', {
+          card: cardLabel(card)
+        });
+      }
+
+      for (let destination = 0; destination < 8; destination++) {
+        if (
+          destination !== column &&
+          canPlaceOnTableau(
+            card,
+            tableau[destination]
+          )
+        ) {
+          return t('moveCardToColumn', {
+            card: cardLabel(card),
+            column: destination + 1
+          });
+        }
+      }
+
+      for (let free = 0; free < 4; free++) {
+        if (!frees[free]) {
+          return t('moveCardToFree', {
+            card: cardLabel(card),
+            free: free + 1
+          });
+        }
+      }
+    }
+
+    for (let free = 0; free < 4; free++) {
+      const card = frees[free];
+
+      if (!card) {
+        continue;
+      }
+
+      if (canMoveToHome(card)) {
+        return t('moveCardToFoundation', {
+          card: cardLabel(card)
+        });
+      }
+
+      for (let column = 0; column < 8; column++) {
+        if (
+          canPlaceOnTableau(
+            card,
+            tableau[column]
+          )
+        ) {
+          return t('moveCardToColumn', {
+            card: cardLabel(card),
+            column: column + 1
+          });
+        }
+      }
+    }
+
+    return t('noHint');
+  }
+
+  /* =========================================================
+     EVENTS
+  ========================================================= */
 
   board.addEventListener(
     'pointerdown',
@@ -1165,151 +1386,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { passive: false }
   );
 
-  /* ---------- Auto-move and hints ---------- */
-
-  function autoMoveToHome() {
-    for (let column = 0; column < 8; column++) {
-      const source = tableau[column];
-
-      if (!source.length) {
-        continue;
-      }
-
-      const card =
-        source[source.length - 1];
-
-      if (canMoveToHome(card)) {
-        source.pop();
-        homes[card.suit]++;
-
-        saveSnapshot();
-        render();
-
-        return true;
-      }
-    }
-
-    for (let index = 0; index < 4; index++) {
-      const card = frees[index];
-
-      if (
-        card &&
-        canMoveToHome(card)
-      ) {
-        frees[index] = null;
-        homes[card.suit]++;
-
-        saveSnapshot();
-        render();
-
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  function cardLabel(card) {
-    return `${card.rank}${card.suit}`;
-  }
-
-  function findHint() {
-    for (let column = 0; column < 8; column++) {
-      const source = tableau[column];
-
-      if (!source.length) {
-        continue;
-      }
-
-      const card =
-        source[source.length - 1];
-
-      if (canMoveToHome(card)) {
-        return t(
-          'moveCardToFoundation',
-          {
-            card: cardLabel(card)
-          }
-        );
-      }
-
-      for (
-        let destination = 0;
-        destination < 8;
-        destination++
-      ) {
-        if (
-          destination !== column &&
-          canPlaceOnTableau(
-            card,
-            tableau[destination]
-          )
-        ) {
-          return t(
-            'moveCardToColumn',
-            {
-              card: cardLabel(card),
-              column: destination + 1
-            }
-          );
-        }
-      }
-
-      for (let free = 0; free < 4; free++) {
-        if (!frees[free]) {
-          return t(
-            'moveCardToFree',
-            {
-              card: cardLabel(card),
-              free: free + 1
-            }
-          );
-        }
-      }
-    }
-
-    for (let free = 0; free < 4; free++) {
-      const card = frees[free];
-
-      if (!card) {
-        continue;
-      }
-
-      if (canMoveToHome(card)) {
-        return t(
-          'moveCardToFoundation',
-          {
-            card: cardLabel(card)
-          }
-        );
-      }
-
-      for (let column = 0; column < 8; column++) {
-        if (
-          canPlaceOnTableau(
-            card,
-            tableau[column]
-          )
-        ) {
-          return t(
-            'moveCardToColumn',
-            {
-              card: cardLabel(card),
-              column: column + 1
-            }
-          );
-        }
-      }
-    }
-
-    return t('noHint');
-  }
-
-  /* ---------- Buttons ---------- */
-
   newButton?.addEventListener(
     'click',
-    deal
+    createNewGame
   );
 
   restartButton?.addEventListener(
@@ -1322,20 +1401,9 @@ document.addEventListener('DOMContentLoaded', () => {
     undo
   );
 
-  autoButton?.addEventListener(
-    'click',
-    () => {
-      while (autoMoveToHome()) {
-        // Continue moving available cards.
-      }
-    }
-  );
-
   hintButton?.addEventListener(
     'click',
-    () => {
-      alert(findHint());
-    }
+    () => alert(findHint())
   );
 
   languageSelect?.addEventListener(
@@ -1346,8 +1414,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   );
 
-  /* ---------- Initialize ---------- */
+  /* =========================================================
+     START GAME
+  ========================================================= */
 
   setLanguage(detectLanguage());
-  deal();
+  createNewGame();
 });
