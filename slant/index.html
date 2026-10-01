@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Slant Puzzle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1 data-i18n="puzzleTitle"></h1>
+
+    <div class="controls">
+      <label for="size">
+        <span data-i18n="sizeLabel">Board size:</span>
+        <select id="size">
+          <option value="10">10 × 10</option>
+          <option value="15" selected>15 × 15</option>
+          <option value="20">20 × 20</option>
+          <option value="25">25 × 25</option>
+        </select>
+      </label>
+
+      <button id="undo" title="Undo">↩</button>
+      <button id="redo" title="Redo">↪</button>
+      <button id="new" data-i18n="newButton">New puzzle</button>
+      <button id="reset" data-i18n="resetButton">Reset</button>
+    </div>
+
+    <canvas id="board"></canvas>
+
+    <div id="status"></div>
+
+    <div id="instructions">
+      <p data-i18n="instruction">
+        Click on squares to place or clear slants.
+      </p>
+
+      <div class="rules-block">
+        <h3 data-i18n="rulesTitle">Rules</h3>
+        <ul data-i18n="rulesList">
+          <!-- Filled by JS -->
+        </ul>
+      </div>
+
+      <div class="language-selector">
+        <label for="language" data-i18n="languageLabel">
+          Language:
+        </label>
+
+        <select id="language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-Hant">繁體中文</option>
+        </select>
+      </div>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
