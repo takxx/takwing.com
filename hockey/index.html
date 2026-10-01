@@ -868,6 +868,7 @@
         vibrateGoal();
 
         resetPositions();
+        return true;
       }
 
       if (puck.x - puck.radius > width) {
@@ -877,7 +878,10 @@
         vibrateGoal();
 
         resetPositions();
+        return true;
       }
+
+      return false;
     }
 
     function updatePhysics() {
@@ -889,8 +893,13 @@
       puck.x += puck.velocityX;
       puck.y += puck.velocityY;
 
+      // Check goals immediately after moving the puck.
+      // If a goal is scored, reset and skip wall/paddle collisions this frame.
+      if (checkGoals()) {
+        return;
+      }
+
       handleWalls();
-      checkGoals();
 
       collidePuckWithPaddle(leftPaddle);
       collidePuckWithPaddle(rightPaddle);
