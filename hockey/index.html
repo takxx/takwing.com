@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
+
+  <title>Touch Air Hockey</title>
+
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap");
+
+    :root {
+      --left-background: #ccefff;
+      --right-background: #ffcccc;
+      --line-color: #5d6875;
+      --left-player: #18bde9;
+      --right-player: #ef4040;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #111;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: "Orbitron", monospace;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      padding: 24px;
+      color: white;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.78);
+      font-family: system-ui, sans-serif;
+    }
+
+    #overlay h1 {
+      margin: 0 0 14px;
+      font-size: 30px;
+    }
+
+    #overlay p {
+      margin: 4px 0;
+      font-size: 16px;
+    }
+
+    #overlay button {
+      min-width: 150px;
+      margin-top: 20px;
+      padding: 13px 25px;
+      border: 0;
+      border-radius: 9px;
+      background: #25bdf2;
+      color: #03202d;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #overlay button:active {
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="overlay">
+    <h1 id="overlayTitle"></h1>
+    <p id="overlayInstructionLeft"></p>
+    <p id="overlayInstructionRight"></p>
+    <p id="overlayInstructionTime"></p>
+    <button id="startButton"></button>
+  </div>
+
+  <script>
+    "use strict";
+
+    /*
+      ------------------------------------------------------------
+      DOM
+      ------------------------------------------------------------
+    */
+
+    const canvas = document.getElementById("game");
+    const context = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+
+    /*
+      ------------------------------------------------------------
+      Translations
+      ------------------------------------------------------------
+    */
+
+    const translations = {
+      en: {
+        title: "Touch Air Hockey",
+        leftInstruction: "Left player uses the left half.",
+        rightInstruction: "Right player uses the right half.",
+        timeInstruction: "Most goals after 99 seconds wins.",
+        start: "Start Game",
+        timeUp: "Time's Up!",
+        leftWins: "Left player wins!",
+        rightWins: "Right player wins!",
+        draw: "It's a draw!",
+        finalScore: "Final score",
+        newGame: "New Game"
+      },
+
+      es: {
+        title: "Air Hockey Táctil",
+        leftInstruction: "El jugador izquierdo usa la mitad izquierda.",
+        rightInstruction: "El jugador derecho usa la mitad derecha.",
+        timeInstruction: "Gana quien marque más goles en 99 segundos.",
+        start: "Comenzar partida",
+        timeUp: "¡Se acabó el tiempo!",
+        leftWins: "¡Gana el jugador izquierdo!",
+        rightWins: "¡Gana el jugador derecho!",
+        draw: "¡Empate!",
+        finalScore: "Puntuación final",
+        newGame: "Nueva partida"
+      },
+
+      zh: {
+        title: "触控空气曲棍球",
+        leftInstruction: "左方玩家使用左半场。",
+        rightInstruction: "右方玩家使用右半场。",
+        timeInstruction: "99 秒后得分较高的玩家获胜。",
+        start: "开始游戏",
+        timeUp: "时间到！",
+        leftWins: "左方玩家获胜！",
+        rightWins: "右方玩家获胜！",
+        draw: "平局！",
+        finalScore: "最终比分",
+        newGame: "新游戏"
+      }
+    };
+
+    function getSelectedLanguage() {
+      const requestedLanguage = new URLSearchParams(
+        window.location.search
+      ).get("lang");
+
+      if (requestedLanguage) {
+        const normalizedLanguage = requestedLanguage
+          .trim()
+          .toLowerCase()
+          .split("-")[0];
+
+        if (
+          normalizedLanguage === "en" ||
+          normalizedLanguage === "es" ||
+          normalizedLanguage === "zh"
+        ) {
+          return normalizedLanguage;
+        }
+      }
+
+      const browserLanguages =
+        navigator.languages?.length > 0
+          ? navigator.languages
+          : [navigator.language || "en"];
+
+      for (const browserLanguage of browserLanguages) {
+        const normalizedLanguage = browserLanguage
+          .toLowerCase()
+          .split("-")[0];
+
+        if (
+          normalizedLanguage === "en" ||
+          normalizedLanguage === "es" ||
+          normalizedLanguage === "zh"
+        ) {
+          return normalizedLanguage;
+        }
+      }
+
+      return "en";
+    }
+
+    const language = getSelectedLanguage();
+    const text = translations[language];
+
+    function applyTranslations() {
+      document.documentElement.lang =
+        language === "zh" ? "zh-Hant" : language;
+
+      document.getElementById("overlayTitle").textContent = text.title;
+      document.getElementById("overlayInstructionLeft").textContent =
+        text.leftInstruction;
+      document.getElementById("overlayInstructionRight").textContent =
+        text.rightInstruction;
+      document.getElementById("overlayInstructionTime").textContent =
+        text.timeInstruction;
+      document.getElementById("startButton").textContent = text.start;
+    }
+
+    applyTranslations();
+
+    /*
+      ------------------------------------------------------------
+      Canvas dimensions
+      ------------------------------------------------------------
+    */
+
+    let width = 0;
+    let height = 0;
+    let centerX = 0;
+    let centerY = 0;
+    let goalTop = 0;
+    let goalBottom = 0;
+
+    /*
+      ------------------------------------------------------------
+      Game state
+      ------------------------------------------------------------
+    */
+
+    const game = {
+      running: false,
+      secondsRemaining: 99,
+      leftScore: 0,
+      rightScore: 0,
+      timerId: null
+    };
+
+    const puck = {
+      x: 0,
+      y: 0,
+      velocityX: 0,
+      velocityY: 0,
+      radius: 0
+    };
+
+    const leftPaddle = {
+      x: 0,
+      y: 0,
+      radius: 0,
+      active: false,
+      pointerId: null,
+      velocityX: 0,
+      velocityY: 0
+    };
+
+    const rightPaddle = {
+      x: 0,
+      y: 0,
+      radius: 0,
+      active: false,
+      pointerId: null,
+      velocityX: 0,
+      velocityY: 0
+    };
+
+    const physics = {
+      friction: 0.998,
+      wallBounce: 0.88,
+      paddleBounce: 1.15,
+      paddleVelocityInfluence: 1.35,
+      maxPuckSpeed: 0
+    };
+
+    /*
+      ------------------------------------------------------------
+      Audio
+      ------------------------------------------------------------
+    */
+
+    let audioContext = null;
+
+    function initialiseAudio() {
+      if (!audioContext) {
+        audioContext = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+    }
+
+    function playTone({
+      frequency = 440,
+      duration = 0.08,
+      type = "sine",
+      volume = 0.08,
+      slideTo = null,
+      delay = 0
+    } = {}) {
+      if (!audioContext) return;
+
+      const startTime = audioContext.currentTime + delay;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+
+      if (slideTo !== null) {
+        oscillator.frequency.exponentialRampToValueAtTime(
+          Math.max(1, slideTo),
+          startTime + duration
+        );
+      }
+
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(
+        volume,
+        startTime + 0.008
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        startTime + duration
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration + 0.02);
+    }
+
+    function playNewGameSound() {
+      playTone({
+        frequency: 440,
+        slideTo: 660,
+        duration: 0.18,
+        type: "triangle",
+        volume: 0.12
+      });
+
+      playTone({
+        frequency: 660,
+        slideTo: 880,
+        duration: 0.18,
+        type: "triangle",
+        volume: 0.1,
+        delay: 0.16
+      });
+    }
+
+    function playPuckHitSound() {
+      playTone({
+        frequency: 180,
+        slideTo: 95,
+        duration: 0.045,
+        type: "square",
+        volume: 0.045
+      });
+    }
+
+    function playWallSound() {
+      playTone({
+        frequency: 125,
+        slideTo: 75,
+        duration: 0.07,
+        type: "triangle",
+        volume: 0.055
+      });
+    }
+
+    function playGoalSound() {
+      playTone({
+        frequency: 330,
+        slideTo: 660,
+        duration: 0.22,
+        type: "sawtooth",
+        volume: 0.09
+      });
+
+      playTone({
+        frequency: 660,
+        slideTo: 990,
+        duration: 0.28,
+        type: "triangle",
+        volume: 0.09,
+        delay: 0.2
+      });
+    }
+
+    function playTimeUpSound() {
+      playTone({
+        frequency: 440,
+        slideTo: 220,
+        duration: 0.45,
+        type: "sawtooth",
+        volume: 0.11
+      });
+
+      playTone({
+        frequency: 220,
+        slideTo: 110,
+        duration: 0.6,
+        type: "sine",
+        volume: 0.09,
+        delay: 0.42
+      });
+    }
+
+    /*
+      ------------------------------------------------------------
+      Vibration
+      ------------------------------------------------------------
+    */
+
+    function vibrate(pattern) {
+      if (typeof navigator.vibrate !== "function") {
+        return;
+      }
+
+      try {
+        navigator.vibrate(pattern);
+      } catch {
+        // Vibration is optional and may be blocked by the browser.
+      }
+    }
+
+    function vibratePuckHit() {
+      vibrate(18);
+    }
+
+    function vibrateGoal() {
+      vibrate([45, 35, 80]);
+    }
+
+    function vibrateGameOver() {
+      vibrate([100, 60, 140, 60, 220]);
+    }
+
+    /*
+      ------------------------------------------------------------
+      Canvas setup
+      ------------------------------------------------------------
+    */
+
+    function resizeCanvas() {
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+      width = window.innerWidth;
+      height = window.innerHeight;
+
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      context.setTransform(
+        pixelRatio,
+        0,
+        0,
+        pixelRatio,
+        0,
+        0
+      );
+
+      calculateDimensions();
+      resetPositions();
+    }
+
+    function calculateDimensions() {
+      centerX = width / 2;
+      centerY = height / 2;
+
+      const base = Math.min(width, height);
+
+      puck.radius = base * 0.025;
+      leftPaddle.radius = base * 0.045;
+      rightPaddle.radius = base * 0.045;
+
+      physics.maxPuckSpeed = base * 0.08;
+
+      const goalHeight = height * 0.36;
+
+      goalTop = centerY - goalHeight / 2;
+      goalBottom = centerY + goalHeight / 2;
+    }
+
+    function clamp(value, minimum, maximum) {
+      return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    function resetPaddle(paddle, x) {
+      paddle.x = x;
+      paddle.y = centerY;
+      paddle.active = false;
+      paddle.pointerId = null;
+      paddle.velocityX = 0;
+      paddle.velocityY = 0;
+    }
+
+    function resetPositions() {
+      const edgeOffset = Math.min(width, height) * 0.15;
+
+      resetPaddle(leftPaddle, edgeOffset);
+      resetPaddle(rightPaddle, width - edgeOffset);
+
+      puck.x = centerX;
+      puck.y = centerY;
+      puck.velocityX = 0;
+      puck.velocityY = 0;
+    }
+
+    /*
+      ------------------------------------------------------------
+      Game lifecycle
+      ------------------------------------------------------------
+    */
+
+    function startGame() {
+      initialiseAudio();
+      playNewGameSound();
+
+      game.running = true;
+      game.secondsRemaining = 99;
+      game.leftScore = 0;
+      game.rightScore = 0;
+
+      resetPositions();
+
+      clearInterval(game.timerId);
+
+      game.timerId = setInterval(() => {
+        if (!game.running) return;
+
+        game.secondsRemaining--;
+
+        if (game.secondsRemaining <= 0) {
+          game.secondsRemaining = 0;
+          finishGame();
+        }
+      }, 1000);
+    }
+
+    function finishGame() {
+      game.running = false;
+
+      clearInterval(game.timerId);
+      game.timerId = null;
+
+      playTimeUpSound();
+      vibrateGameOver();
+
+      let winnerText = text.draw;
+
+      if (game.leftScore > game.rightScore) {
+        winnerText = text.leftWins;
+      } else if (game.rightScore > game.leftScore) {
+        winnerText = text.rightWins;
+      }
+
+      overlay.innerHTML = `
+        <h1>${text.timeUp}</h1>
+        <p>${winnerText}</p>
+        <p>${text.finalScore}: ${game.leftScore} - ${game.rightScore}</p>
+        <button id="restartButton">${text.newGame}</button>
+      `;
+
+      overlay.style.display = "flex";
+
+      document
+        .getElementById("restartButton")
+        .addEventListener("click", () => {
+          overlay.style.display = "none";
+          startGame();
+        });
+    }
+
+    /*
+      ------------------------------------------------------------
+      Pointer controls
+      ------------------------------------------------------------
+    */
+
+    function getPointerPosition(event) {
+      const rectangle = canvas.getBoundingClientRect();
+
+      return {
+        x: event.clientX - rectangle.left,
+        y: event.clientY - rectangle.top
+      };
+    }
+
+    function startPointer(event) {
+      if (!game.running) return;
+
+      event.preventDefault();
+
+      const position = getPointerPosition(event);
+      const pointerId = event.pointerId;
+
+      if (position.x < centerX && !leftPaddle.active) {
+        leftPaddle.active = true;
+        leftPaddle.pointerId = pointerId;
+
+        leftPaddle.x = clamp(
+          position.x,
+          leftPaddle.radius,
+          centerX - leftPaddle.radius
+        );
+
+        leftPaddle.y = clamp(
+          position.y,
+          leftPaddle.radius,
+          height - leftPaddle.radius
+        );
+
+        canvas.setPointerCapture?.(pointerId);
+      }
+
+      if (position.x > centerX && !rightPaddle.active) {
+        rightPaddle.active = true;
+        rightPaddle.pointerId = pointerId;
+
+        rightPaddle.x = clamp(
+          position.x,
+          centerX + rightPaddle.radius,
+          width - rightPaddle.radius
+        );
+
+        rightPaddle.y = clamp(
+          position.y,
+          rightPaddle.radius,
+          height - rightPaddle.radius
+        );
+
+        canvas.setPointerCapture?.(pointerId);
+      }
+    }
+
+    function movePointer(event) {
+      if (!game.running) return;
+
+      event.preventDefault();
+
+      const position = getPointerPosition(event);
+      const pointerId = event.pointerId;
+
+      if (
+        leftPaddle.active &&
+        leftPaddle.pointerId === pointerId
+      ) {
+        const newX = clamp(
+          position.x,
+          leftPaddle.radius,
+          centerX - leftPaddle.radius
+        );
+
+        const newY = clamp(
+          position.y,
+          leftPaddle.radius,
+          height - leftPaddle.radius
+        );
+
+        leftPaddle.velocityX = newX - leftPaddle.x;
+        leftPaddle.velocityY = newY - leftPaddle.y;
+
+        leftPaddle.x = newX;
+        leftPaddle.y = newY;
+      }
+
+      if (
+        rightPaddle.active &&
+        rightPaddle.pointerId === pointerId
+      ) {
+        const newX = clamp(
+          position.x,
+          centerX + rightPaddle.radius,
+          width - rightPaddle.radius
+        );
+
+        const newY = clamp(
+          position.y,
+          rightPaddle.radius,
+          height - rightPaddle.radius
+        );
+
+        rightPaddle.velocityX = newX - rightPaddle.x;
+        rightPaddle.velocityY = newY - rightPaddle.y;
+
+        rightPaddle.x = newX;
+        rightPaddle.y = newY;
+      }
+    }
+
+    function endPointer(event) {
+      const pointerId = event.pointerId;
+
+      if (leftPaddle.pointerId === pointerId) {
+        leftPaddle.active = false;
+        leftPaddle.pointerId = null;
+        leftPaddle.velocityX = 0;
+        leftPaddle.velocityY = 0;
+      }
+
+      if (rightPaddle.pointerId === pointerId) {
+        rightPaddle.active = false;
+        rightPaddle.pointerId = null;
+        rightPaddle.velocityX = 0;
+        rightPaddle.velocityY = 0;
+      }
+    }
+
+    canvas.addEventListener("pointerdown", startPointer, {
+      passive: false
+    });
+
+    canvas.addEventListener("pointermove", movePointer, {
+      passive: false
+    });
+
+    canvas.addEventListener("pointerup", endPointer, {
+      passive: false
+    });
+
+    canvas.addEventListener("pointercancel", endPointer, {
+      passive: false
+    });
+
+    /*
+      ------------------------------------------------------------
+      Physics
+      ------------------------------------------------------------
+    */
+
+    function isInsideGoalOpening() {
+      return puck.y > goalTop && puck.y < goalBottom;
+    }
+
+    function handleWalls() {
+      if (puck.y - puck.radius < 0) {
+        puck.y = puck.radius;
+        puck.velocityY =
+          Math.abs(puck.velocityY) * physics.wallBounce;
+
+        playWallSound();
+      }
+
+      if (puck.y + puck.radius > height) {
+        puck.y = height - puck.radius;
+        puck.velocityY =
+          -Math.abs(puck.velocityY) * physics.wallBounce;
+
+        playWallSound();
+      }
+
+      if (!isInsideGoalOpening()) {
+        if (puck.x - puck.radius < 0) {
+          puck.x = puck.radius;
+          puck.velocityX =
+            Math.abs(puck.velocityX) * physics.wallBounce;
+
+          playWallSound();
+        }
+
+        if (puck.x + puck.radius > width) {
+          puck.x = width - puck.radius;
+          puck.velocityX =
+            -Math.abs(puck.velocityX) * physics.wallBounce;
+
+          playWallSound();
+        }
+      }
+    }
+
+    function collidePuckWithPaddle(paddle) {
+      const dx = puck.x - paddle.x;
+      const dy = puck.y - paddle.y;
+      const distance = Math.hypot(dx, dy);
+      const minimumDistance = puck.radius + paddle.radius;
+
+      if (
+        distance >= minimumDistance ||
+        distance === 0
+      ) {
+        return;
+      }
+
+      const normalX = dx / distance;
+      const normalY = dy / distance;
+      const overlap = minimumDistance - distance;
+
+      puck.x += normalX * overlap;
+      puck.y += normalY * overlap;
+
+      const velocityAlongNormal =
+        puck.velocityX * normalX +
+        puck.velocityY * normalY;
+
+      puck.velocityX -=
+        2 * velocityAlongNormal * normalX;
+
+      puck.velocityY -=
+        2 * velocityAlongNormal * normalY;
+
+      puck.velocityX +=
+        paddle.velocityX * physics.paddleVelocityInfluence;
+
+      puck.velocityY +=
+        paddle.velocityY * physics.paddleVelocityInfluence;
+
+      puck.velocityX *= physics.paddleBounce;
+      puck.velocityY *= physics.paddleBounce;
+
+      const speed = Math.hypot(
+        puck.velocityX,
+        puck.velocityY
+      );
+
+      if (speed > physics.maxPuckSpeed) {
+        const scale = physics.maxPuckSpeed / speed;
+
+        puck.velocityX *= scale;
+        puck.velocityY *= scale;
+      }
+
+      playPuckHitSound();
+      vibratePuckHit();
+    }
+
+    function checkGoals() {
+      /*
+        Left goal:
+        right player scores.
+
+        Right goal:
+        left player scores.
+      */
+
+      if (puck.x + puck.radius < 0) {
+        game.rightScore++;
+
+        playGoalSound();
+        vibrateGoal();
+
+        resetPositions();
+      }
+
+      if (puck.x - puck.radius > width) {
+        game.leftScore++;
+
+        playGoalSound();
+        vibrateGoal();
+
+        resetPositions();
+      }
+    }
+
+    function updatePhysics() {
+      if (!game.running) return;
+
+      puck.velocityX *= physics.friction;
+      puck.velocityY *= physics.friction;
+
+      puck.x += puck.velocityX;
+      puck.y += puck.velocityY;
+
+      handleWalls();
+      checkGoals();
+
+      collidePuckWithPaddle(leftPaddle);
+      collidePuckWithPaddle(rightPaddle);
+
+      const speed = Math.hypot(
+        puck.velocityX,
+        puck.velocityY
+      );
+
+      if (speed < 0.35) {
+        puck.velocityX += (Math.random() - 0.5) * 0.35;
+        puck.velocityY += (Math.random() - 0.5) * 0.35;
+      }
+    }
+
+    /*
+      ------------------------------------------------------------
+      Rendering
+      ------------------------------------------------------------
+    */
+
+    function drawDigitalText(
+      value,
+      x,
+      y,
+      size,
+      rotation = 0
+    ) {
+      context.save();
+
+      context.translate(x, y);
+      context.rotate(rotation);
+
+      context.font = `900 ${size}px Orbitron, monospace`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillStyle = "#ffffff";
+
+      context.shadowColor = "rgba(0, 0, 0, 0.35)";
+      context.shadowBlur = 5;
+      context.shadowOffsetX = 2;
+      context.shadowOffsetY = 2;
+
+      context.fillText(value, 0, 0);
+
+      context.restore();
+    }
+
+    function drawTable() {
+      context.fillStyle = "#ccefff";
+      context.fillRect(0, 0, centerX, height);
+
+      context.fillStyle = "#ffcccc";
+      context.fillRect(centerX, 0, width - centerX, height);
+
+      context.strokeStyle = "#5d6875";
+      context.lineWidth = Math.max(
+        3,
+        Math.min(width, height) * 0.005
+      );
+
+      /* Centre line. */
+      context.beginPath();
+      context.moveTo(centerX, 0);
+      context.lineTo(centerX, height);
+      context.stroke();
+
+      /* Centre circle. */
+      context.beginPath();
+      context.arc(
+        centerX,
+        centerY,
+        Math.min(width, height) * 0.12,
+        0,
+        Math.PI * 2
+      );
+      context.stroke();
+
+      /*
+        Goals are on the left and right edges,
+        centred vertically.
+      */
+      context.fillStyle = "#71808c";
+
+      context.fillRect(
+        0,
+        goalTop,
+        12,
+        goalBottom - goalTop
+      );
+
+      context.fillRect(
+        width - 12,
+        goalTop,
+        12,
+        goalBottom - goalTop
+      );
+    }
+
+    function drawDisplays() {
+      const base = Math.min(width, height);
+      const scoreSize = base * 0.34;
+      const timerSize = base * 0.08;
+      const time = String(game.secondsRemaining).padStart(2, "0");
+
+      /*
+        Scores face outward.
+
+        On a canvas:
+        - positive rotation is clockwise;
+        - negative rotation is counterclockwise.
+
+        Therefore:
+        - left score: +90 degrees;
+        - right score: -90 degrees.
+      */
+      drawDigitalText(
+        game.leftScore,
+        width * 0.12,
+        centerY,
+        scoreSize,
+        Math.PI / 2
+      );
+
+      drawDigitalText(
+        game.rightScore,
+        width * 0.88,
+        centerY,
+        scoreSize,
+        -Math.PI / 2
+      );
+
+      /*
+        Clocks stay at the top and bottom.
+      */
+      drawDigitalText(
+        time,
+        centerX,
+        height * 0.07,
+        timerSize,
+        0
+      );
+
+      drawDigitalText(
+        time,
+        centerX,
+        height * 0.93,
+        timerSize,
+        Math.PI
+      );
+    }
+
+    function drawPaddle(
+      paddle,
+      fillColor,
+      outlineColor
+    ) {
+      context.fillStyle = fillColor;
+
+      context.beginPath();
+      context.arc(
+        paddle.x,
+        paddle.y,
+        paddle.radius,
+        0,
+        Math.PI * 2
+      );
+      context.fill();
+
+      context.strokeStyle = outlineColor;
+      context.lineWidth = Math.max(
+        3,
+        paddle.radius * 0.15
+      );
+
+      context.beginPath();
+      context.arc(
+        paddle.x,
+        paddle.y,
+        paddle.radius * 0.6,
+        0,
+        Math.PI * 2
+      );
+      context.stroke();
+    }
+
+    function drawPuck() {
+      context.fillStyle = "#000000";
+
+      context.beginPath();
+      context.arc(
+        puck.x,
+        puck.y,
+        puck.radius,
+        0,
+        Math.PI * 2
+      );
+      context.fill();
+    }
+
+    function render() {
+      drawTable();
+      drawDisplays();
+
+      drawPaddle(
+        leftPaddle,
+        "#18bde9",
+        "#006688"
+      );
+
+      drawPaddle(
+        rightPaddle,
+        "#ef4040",
+        "#880000"
+      );
+
+      drawPuck();
+    }
+
+    /*
+      ------------------------------------------------------------
+      Main loop
+      ------------------------------------------------------------
+    */
+
+    function gameLoop() {
+      updatePhysics();
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    /*
+      ------------------------------------------------------------
+      Start
+      ------------------------------------------------------------
+    */
+
+    document
+      .getElementById("startButton")
+      .addEventListener("click", () => {
+        overlay.style.display = "none";
+        startGame();
+      });
+
+    window.addEventListener("resize", resizeCanvas);
+
+    resizeCanvas();
+    gameLoop();
+  </script>
+</body>
+</html>
