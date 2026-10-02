@@ -1,41 +1,1341 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wooden Labyrinth</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board Game</title>
+
+<style>
+  :root {
+    --inner-size: min(88vw, 560px);
+    --frame: 48px;
+    --outer-size: calc(var(--inner-size) + (var(--frame) * 2));
+
+    --wood-light: #e7b878;
+    --wood: #9a5d28;
+    --wood-dark: #3b1b08;
+
+    --board-light: #e0bd68;
+    --board-dark: #ae7736;
+
+    --wall-wood-light: #c68b4b;
+    --wall-wood: #8a5224;
+    --wall-wood-dark: #4a2610;
+    --wall-edge: #ffe58a;
+
+    --color-reached: #c58a4a;
+    --color-next: #159447;
+    --color-not-reached: #3b1b08;
+
+    --overlay-dark: rgba(18, 11, 5, 0.78);
+    --overlay-panel: rgba(35, 21, 10, 0.96);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #111216;
+    color: #eee;
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      "SF Pro Text",
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+  }
+
+  button {
+    min-width: 170px;
+    padding: 12px 18px;
+    border: 1px solid rgba(255, 229, 138, .7);
+    border-radius: 8px;
+    color: #fff;
+    background: #6e3d18;
+    font: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  button:hover {
+    background: #875020;
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button:focus-visible {
+    outline: 3px solid #fff1a8;
+    outline-offset: 3px;
+  }
+
+  .game {
+    position: relative;
+    width: var(--outer-size);
+    height: var(--outer-size);
+    perspective: 900px;
+  }
+
+  .board {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    transform-style: preserve-3d;
+    transition: transform 80ms linear;
+    cursor: grab;
+    isolation: isolate;
+
+    /*
+     * Layered wood texture:
+     * - broad grain
+     * - fine vertical grain
+     * - irregular darker wood bands
+     * - soft highlights and shadows
+     */
+    background:
+      repeating-linear-gradient(
+        8deg,
+        rgba(255, 221, 151, .12) 0 2px,
+        rgba(108, 53, 16, .08) 2px 7px,
+        transparent 7px 16px
+      ),
+      repeating-linear-gradient(
+        92deg,
+        rgba(255,255,255,.1) 0 2px,
+        transparent 2px 8px
+      ),
+      radial-gradient(
+        ellipse at 20% 10%,
+        rgba(255, 225, 156, .7),
+        transparent 27%
+      ),
+      linear-gradient(135deg, var(--wood-light), var(--wood)),
+      var(--wood-dark);
+
+    border: 5px solid #1b0b03;
+
+    box-shadow:
+      0 28px 45px rgba(0,0,0,.85),
+      0 8px 0 #241006,
+      inset 0 0 0 5px rgba(255,255,255,.48),
+      inset 0 0 0 12px rgba(71,30,7,.92),
+      inset 0 0 0 17px rgba(238,180,101,.78),
+      inset 0 0 0 23px rgba(68,28,6,.96),
+      inset 0 16px 22px rgba(255,255,255,.3),
+      inset 0 -18px 25px rgba(0,0,0,.65);
+  }
+
+  .board::before {
+    content: "";
+    position: absolute;
+    inset: 19px;
+    border: 1px solid rgba(255, 225, 156, .42);
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .board::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 12px;
+    pointer-events: none;
+    z-index: 2;
+    background:
+      repeating-linear-gradient(
+        175deg,
+        transparent 0 25px,
+        rgba(54, 22, 5, .13) 25px 28px,
+        transparent 28px 58px
+      );
+    mix-blend-mode: multiply;
+    opacity: .7;
+  }
+
+  .board:active {
+    cursor: grabbing;
+  }
+
+  .board-inner {
+    position: absolute;
+    left: var(--frame);
+    top: var(--frame);
+    width: calc(100% - (var(--frame) * 2));
+    height: calc(100% - (var(--frame) * 2));
+    overflow: visible;
+    border: 3px solid rgba(35, 16, 3, .8);
+    border-radius: 4px;
+    isolation: isolate;
+
+    /*
+     * No grid lines. The grain remains visible on the playing surface.
+     */
+    background:
+      repeating-linear-gradient(
+        7deg,
+        rgba(255, 229, 161, .13) 0 2px,
+        rgba(76, 35, 8, .08) 2px 6px,
+        transparent 6px 15px
+      ),
+      repeating-linear-gradient(
+        93deg,
+        rgba(255,255,255,.04) 0 1px,
+        transparent 1px 8px
+      ),
+      linear-gradient(
+        135deg,
+        var(--board-light),
+        var(--board-dark)
+      );
+
+    box-shadow:
+      inset 0 0 0 2px rgba(0,0,0,.38),
+      inset 0 4px 9px rgba(255,255,255,.2),
+      inset 0 -8px 14px rgba(0,0,0,.28);
+  }
+
+  .holes-layer,
+  .walls-layer,
+  .markers-layer {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+
+  .holes-layer {
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .walls-layer {
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .markers-layer {
+    z-index: 30;
+    pointer-events: none;
+  }
+
+  .hole {
+    position: absolute;
+    width: 5%;
+    height: 5%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+
+    background:
+      radial-gradient(
+        circle at 35% 30%,
+        #292929 0%,
+        #050505 60%,
+        #000 100%
+      );
+
+    box-shadow:
+      0 3px 6px rgba(0,0,0,.8),
+      inset 0 2px 4px rgba(255,255,255,.15),
+      inset 0 -3px 6px rgba(0,0,0,.6);
+  }
+
+  .wall {
+    position: absolute;
+    display: block;
+    z-index: 21;
+    border-radius: 4px;
+
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255,255,255,.12) 0 2px,
+        transparent 2px 8px
+      ),
+      linear-gradient(
+        135deg,
+        var(--wall-wood-light),
+        var(--wall-wood),
+        var(--wall-wood-dark)
+      );
+
+    border: 2px solid #2a1407;
+
+    box-shadow:
+      0 0 0 2px var(--wall-edge),
+      0 5px 0 #2a1407,
+      0 9px 14px rgba(0,0,0,.85),
+      inset 0 2px 0 rgba(255,255,255,.6),
+      inset 0 -3px 0 rgba(0,0,0,.6);
+  }
+
+  .wall::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 2px;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255,255,255,.18) 0 2px,
+        transparent 2px 7px
+      );
+    pointer-events: none;
+  }
+
+  .wall.v {
+    width: 14px;
+    transform: translateX(-50%);
+  }
+
+  .wall.h {
+    height: 12px;
+    transform: translateY(-50%);
+  }
+
+  .marker {
+    position: absolute;
+    width: 8.5%;
+    height: 8.5%;
+    display: grid;
+    place-items: center;
+    transform: translate(-50%, -50%);
+    background: transparent;
+
+    font-family:
+      "Times New Roman",
+      Times,
+      serif;
+    font-weight: 400;
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .marker.waypoint {
+    font-size: clamp(24px, 6vw, 40px);
+  }
+
+  .marker.start,
+  .marker.end {
+    font-size: clamp(28px, 7vw, 46px);
+  }
+
+  .marker.reached {
+    color: var(--color-reached);
+  }
+
+  .marker.next {
+    color: var(--color-next);
+  }
+
+  .marker.not-reached {
+    color: var(--color-not-reached);
+  }
+
+  /*
+   * Ball: only slightly smaller than the 5% holes.
+   */
+  .ball {
+    position: absolute;
+    width: 4.4%;
+    height: 4.4%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 40;
+    pointer-events: none;
+
+    background:
+      radial-gradient(
+        circle at 35% 25%,
+        #fff 0%,
+        #ddd 18%,
+        #aaa 40%,
+        #777 70%,
+        #444 100%
+      );
+
+    border: 1px solid #333;
+
+    box-shadow:
+      0 3px 6px rgba(0,0,0,.7),
+      inset 0 -4px 7px rgba(0,0,0,.5),
+      inset 0 3px 5px rgba(255,255,255,.7),
+      inset 0 -2px 3px rgba(0,0,0,.35);
+
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .ball.falling {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.05);
+  }
+
+  .game-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--overlay-dark);
+    border-radius: 18px;
+  }
+
+  .game-screen[hidden] {
+    display: none;
+  }
+
+  .message-panel {
+    width: min(88%, 390px);
+    padding: 28px 22px;
+    display: grid;
+    gap: 18px;
+    justify-items: center;
+    text-align: center;
+    border: 1px solid rgba(255, 229, 138, .7);
+    border-radius: 12px;
+    background: var(--overlay-panel);
+    box-shadow:
+      0 12px 30px rgba(0,0,0,.7),
+      inset 0 1px 0 rgba(255,255,255,.2);
+  }
+
+  .message-title {
+    margin: 0;
+    color: #ffe58a;
+    font-size: clamp(22px, 5vw, 32px);
+    line-height: 1.15;
+  }
+
+  .message-text {
+    max-width: 34ch;
+    margin: 0;
+    color: #f1e5d3;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .message-actions {
+    width: 100%;
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+  }
+
+  @media (max-width: 620px) {
+    :root {
+      --frame: 34px;
+      --inner-size: min(88vw, 560px);
+    }
+
+    .message-panel {
+      padding: 22px 16px;
+    }
+  }
+</style>
 </head>
+
 <body>
-  <main class="game" id="game">
-    <div class="board" id="board">
-      <div class="board-inner">
-        <div class="holes-layer" id="holesLayer"></div>
-        <div class="walls-layer" id="wallsLayer"></div>
-        <div class="markers-layer" id="markersLayer"></div>
-        <div class="ball" id="ball"></div>
+<main class="game" id="game">
+  <div class="board" id="board">
+    <div class="board-inner">
+      <div class="holes-layer" id="holesLayer"></div>
+      <div class="walls-layer" id="wallsLayer"></div>
+      <div class="markers-layer" id="markersLayer"></div>
+      <div class="ball" id="ball"></div>
+    </div>
+  </div>
+
+  <section
+    class="game-screen"
+    id="gameScreen"
+    aria-live="polite"
+    aria-modal="true"
+    role="dialog"
+  >
+    <div class="message-panel">
+      <h1 class="message-title" id="messageTitle"></h1>
+      <p class="message-text" id="messageText"></p>
+
+      <div class="message-actions">
+        <button
+          id="primaryAction"
+          type="button"
+        ></button>
+
+        <button
+          id="secondaryAction"
+          type="button"
+          hidden
+        ></button>
       </div>
     </div>
+  </section>
+</main>
 
-    <section
-      class="game-screen"
-      id="gameScreen"
-      aria-live="polite"
-      aria-modal="true"
-      role="dialog"
-    >
-      <div class="message-panel">
-        <h1 class="message-title" id="messageTitle"></h1>
-        <p class="message-text" id="messageText"></p>
+<script>
+(() => {
+  /*
+   * Board data.
+   *
+   * A new game chooses one of these boards randomly.
+   * Replay keeps the current board.
+   * Start new game chooses another board randomly.
+   */
+  const boards = [
+	{
+		"start": "00-11",
+		"waypoints": ["80-91","26-37","44-55","62-73","08-19"],
+		"end": "88-99",
+		"v-walls": ["21-71","23-53","45-75","27-77"],
+		"h-walls": ["14-15","74-75"],
+		"holes": ["20-71","20-71","82-97","82-97","46-77","22-53","02-17","02-17","28-79","28-79"]
+	},
+	{
+		"start": "00-11",
+		"waypoints": ["42-53","06-17","48-59","60-71"],
+		"end": "88-99",
+		"v-walls": ["21-31","23-53","05-35","27-57"],
+		"h-walls": ["50-55","72-77"],
+		"holes": ["02-51","02-35","02-35","24-57","24-57","08-39","08-39","62-79","62-79","62-79","80-97","80-97","80-97"]
+	},
+	{
+		"start": "00-11",
+		"waypoints": ["44-55","42-53","40-51","84-95","06-17"],
+		"end": "88-99",
+		"v-walls": ["41-71","23-53","05-75","27-77"],
+		"h-walls": ["12-13","74-75"],
+		"holes": ["02-15","04-35","62-75","20-33","60-91","80-93","26-97","26-97","26-97","08-79","08-79","08-79"]
+	}
+];
 
-        <div class="message-actions">
-          <button id="primaryAction" type="button"></button>
-          <button id="secondaryAction" type="button" hidden></button>
-        </div>
-      </div>
-    </section>
-  </main>
+  const waypointSymbols = [
+    "❶",
+    "❷",
+    "❸",
+    "❹",
+    "❺",
+    "❻",
+    "❼",
+    "❽",
+    "❾"
+  ];
 
-  <script src="script.js"></script>
+  /*
+   * Localisation.
+   *
+   * Supported query parameters:
+   *   ?lang=en
+   *   ?lang=es
+   *   ?lang=zh
+   *
+   * zh uses Traditional Chinese with Cantonese wording.
+   */
+  const translations = {
+    en: {
+      startTitle: "Ready to play?",
+      startText:
+        "Tilt the board to guide the ball through every waypoint and reach the endpoint. Avoid the holes.",
+      holeTitle: "The ball fell into a hole",
+      holeText:
+        "Your progress has been reset. You can replay this board or start a new game.",
+      winTitle: "You win!",
+      winText:
+        "You reached the endpoint successfully. You can replay this board or start a new game.",
+
+      actions: {
+        startGame: "Start game",
+        replay: "Replay",
+        newGame: "Start new game"
+      }
+    },
+
+    es: {
+      startTitle: "¿Listo para jugar?",
+      startText:
+        "Inclina el tablero para guiar la bola por todos los puntos de paso y llegar al final. Evita los agujeros.",
+      holeTitle: "La bola cayó en un agujero",
+      holeText:
+        "Tu progreso se ha reiniciado. Puedes volver a jugar este tablero o empezar una partida nueva.",
+      winTitle: "¡Has ganado!",
+      winText:
+        "Has llegado al final correctamente. Puedes volver a jugar este tablero o empezar una partida nueva.",
+
+      actions: {
+        startGame: "Empezar partida",
+        replay: "Volver a jugar",
+        newGame: "Nueva partida"
+      }
+    },
+
+    zh: {
+      startTitle: "準備好未？",
+      startText:
+        "傾斜個棋盤，引導粒波子經過所有路點，再去到終點。小心唔好跌入窿。",
+      holeTitle: "粒波子跌咗入窿",
+      holeText:
+        "你嘅進度已經重設。你可以再玩一次呢個棋盤，或者開始新一局。",
+      winTitle: "你贏咗！",
+      winText:
+        "你成功去到終點。你可以再玩一次呢個棋盤，或者開始新一局。",
+
+      actions: {
+        startGame: "開始遊戲",
+        replay: "再玩一次",
+        newGame: "開始新一局"
+      }
+    }
+  };
+
+  function getLanguage() {
+    const supported = ["en", "es", "zh"];
+    const queryLanguage =
+      new URLSearchParams(window.location.search).get("lang");
+
+    if (supported.includes(queryLanguage)) {
+      return queryLanguage;
+    }
+
+    const browserLanguages = [
+      ...(navigator.languages || []),
+      navigator.language
+    ]
+      .filter(Boolean)
+      .map(language => language.toLowerCase());
+
+    for (const language of browserLanguages) {
+      if (language === "es" || language.startsWith("es-")) {
+        return "es";
+      }
+
+      /*
+       * Any zh browser preference uses the Traditional Chinese
+       * Cantonese translation in this game.
+       */
+      if (language === "zh" || language.startsWith("zh-")) {
+        return "zh";
+      }
+
+      if (language === "en" || language.startsWith("en-")) {
+        return "en";
+      }
+    }
+
+    return "en";
+  }
+
+  const currentLocale = getLanguage();
+  const text = translations[currentLocale];
+
+  document.documentElement.lang =
+    currentLocale === "zh" ? "zh-Hant" : currentLocale;
+
+  const board = document.getElementById("board");
+  const holesLayer = document.getElementById("holesLayer");
+  const wallsLayer = document.getElementById("wallsLayer");
+  const markersLayer = document.getElementById("markersLayer");
+  const ballEl = document.getElementById("ball");
+
+  const gameScreen = document.getElementById("gameScreen");
+  const messageTitle = document.getElementById("messageTitle");
+  const messageText = document.getElementById("messageText");
+  const primaryAction = document.getElementById("primaryAction");
+  const secondaryAction = document.getElementById("secondaryAction");
+
+  let currentBoard;
+  let startPos;
+  let endPos;
+  let waypointPositions;
+  let holeCells;
+  let vWalls;
+  let hWalls;
+
+  let startMarkerEl;
+  let endMarkerEl;
+  let waypointMarkerEls = [];
+
+  let nextWaypointIndex = 0;
+  let gameFinished = false;
+  let ballFalling = false;
+  let gameStarted = false;
+
+  function randomBoard() {
+    const index = Math.floor(Math.random() * boards.length);
+    return boards[index];
+  }
+
+  function cellId(id) {
+    const number = Number(id);
+
+    return {
+      row: Math.floor(number / 10),
+      col: number % 10
+    };
+  }
+
+  function intersection(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    if (
+      second.row !== first.row + 1 ||
+      second.col !== first.col + 1
+    ) {
+      throw new Error(`Invalid intersection: ${spec}`);
+    }
+
+    return {
+      x: first.col + 1,
+      y: first.row + 1
+    };
+  }
+
+  function parseVerticalWall(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    if (first.col !== second.col) {
+      throw new Error(
+        `Invalid vertical wall "${spec}": columns must match`
+      );
+    }
+
+    return {
+      x: first.col + 1,
+      y: Math.min(first.row, second.row),
+      height: Math.abs(second.row - first.row) + 1
+    };
+  }
+
+  function parseHorizontalWall(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    if (first.row !== second.row) {
+      throw new Error(
+        `Invalid horizontal wall "${spec}": rows must match`
+      );
+    }
+
+    return {
+      x: Math.min(first.col, second.col),
+      y: first.row + 1,
+      width: Math.abs(second.col - first.col) + 1
+    };
+  }
+
+  function holeCellRange(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    return {
+      minRow: Math.min(first.row, second.row),
+      maxRow: Math.max(first.row, second.row),
+      minCol: Math.min(first.col, second.col),
+      maxCol: Math.max(first.col, second.col)
+    };
+  }
+
+  function randomHoleCell(range) {
+    return {
+      row:
+        range.minRow +
+        Math.floor(
+          Math.random() * (range.maxRow - range.minRow + 1)
+        ),
+
+      col:
+        range.minCol +
+        Math.floor(
+          Math.random() * (range.maxCol - range.minCol + 1)
+        )
+    };
+  }
+
+  function cellsAreAdjacent(first, second) {
+    const rowDistance = Math.abs(first.row - second.row);
+    const colDistance = Math.abs(first.col - second.col);
+
+    return Math.max(rowDistance, colDistance) <= 1;
+  }
+
+  function generateHoleCells(specs) {
+    const placed = [];
+
+    for (const spec of specs) {
+      const range = holeCellRange(spec);
+      let selected = null;
+
+      for (let attempt = 0; attempt < 1000; attempt++) {
+        const candidate = randomHoleCell(range);
+
+        const conflicts = placed.some(existing =>
+          cellsAreAdjacent(candidate, existing)
+        );
+
+        if (!conflicts) {
+          selected = candidate;
+          break;
+        }
+      }
+
+      if (selected) {
+        placed.push(selected);
+      }
+    }
+
+    return placed;
+  }
+
+  function loadRandomBoard() {
+    currentBoard = randomBoard();
+
+    startPos = intersection(currentBoard.start);
+    endPos = intersection(currentBoard.end);
+
+    waypointPositions =
+      currentBoard.waypoints.map(intersection);
+
+    holeCells = generateHoleCells(currentBoard.holes);
+
+    vWalls =
+      currentBoard["v-walls"].map(parseVerticalWall);
+
+    hWalls =
+      currentBoard["h-walls"].map(parseHorizontalWall);
+
+    renderBoard();
+  }
+
+  function makeMarker(textValue, className, x, y) {
+    const element = document.createElement("div");
+
+    element.className = `marker ${className}`;
+    element.textContent = textValue;
+    element.style.left = `${x * 10}%`;
+    element.style.top = `${y * 10}%`;
+
+    return element;
+  }
+
+  function renderMarkers() {
+    markersLayer.replaceChildren();
+    waypointMarkerEls = [];
+
+    startMarkerEl = makeMarker(
+      "◎",
+      "start reached",
+      startPos.x,
+      startPos.y
+    );
+
+    markersLayer.appendChild(startMarkerEl);
+
+    endMarkerEl = makeMarker(
+      "◉",
+      "end not-reached",
+      endPos.x,
+      endPos.y
+    );
+
+    markersLayer.appendChild(endMarkerEl);
+
+    currentBoard.waypoints.forEach((spec, index) => {
+      const position = intersection(spec);
+
+      const marker = makeMarker(
+        waypointSymbols[index],
+        "waypoint not-reached",
+        position.x,
+        position.y
+      );
+
+      markersLayer.appendChild(marker);
+      waypointMarkerEls.push(marker);
+    });
+
+    updateMarkerColors();
+  }
+
+  function updateMarkerColors() {
+    startMarkerEl.className = "marker start reached";
+    startMarkerEl.textContent = "◎";
+
+    waypointMarkerEls.forEach((marker, index) => {
+      marker.classList.remove(
+        "reached",
+        "next",
+        "not-reached"
+      );
+
+      if (index < nextWaypointIndex) {
+        marker.classList.add("reached");
+      } else if (index === nextWaypointIndex) {
+        marker.classList.add("next");
+      } else {
+        marker.classList.add("not-reached");
+      }
+
+      marker.textContent = waypointSymbols[index];
+    });
+
+    endMarkerEl.classList.remove(
+      "reached",
+      "next",
+      "not-reached"
+    );
+
+    if (gameFinished) {
+      endMarkerEl.classList.add("reached");
+    } else if (
+      nextWaypointIndex >= waypointPositions.length
+    ) {
+      endMarkerEl.classList.add("next");
+    } else {
+      endMarkerEl.classList.add("not-reached");
+    }
+
+    endMarkerEl.textContent = "◉";
+  }
+
+  function renderWalls() {
+    wallsLayer.replaceChildren();
+
+    vWalls.forEach(wall => {
+      const element = document.createElement("div");
+
+      element.className = "wall v";
+      element.style.left = `${wall.x * 10}%`;
+      element.style.top = `${wall.y * 10}%`;
+      element.style.height = `${wall.height * 10}%`;
+
+      wallsLayer.appendChild(element);
+    });
+
+    hWalls.forEach(wall => {
+      const element = document.createElement("div");
+
+      element.className = "wall h";
+      element.style.left = `${wall.x * 10}%`;
+      element.style.top = `${wall.y * 10}%`;
+      element.style.width = `${wall.width * 10}%`;
+
+      wallsLayer.appendChild(element);
+    });
+  }
+
+  function renderHoles() {
+    holesLayer.replaceChildren();
+
+    holeCells.forEach(cell => {
+      const element = document.createElement("div");
+
+      element.className = "hole";
+      element.style.left = `${(cell.col + 0.5) * 10}%`;
+      element.style.top = `${(cell.row + 0.5) * 10}%`;
+
+      holesLayer.appendChild(element);
+    });
+  }
+
+  function renderBoard() {
+    renderMarkers();
+    renderWalls();
+    renderHoles();
+  }
+
+  function setScreenContent(title, description) {
+    messageTitle.textContent = title;
+    messageText.textContent = description;
+  }
+
+  function showStartScreen() {
+    setScreenContent(
+      text.startTitle,
+      text.startText
+    );
+
+    primaryAction.textContent = text.actions.startGame;
+    primaryAction.dataset.action = "start";
+
+    secondaryAction.hidden = true;
+    gameScreen.hidden = false;
+  }
+
+  function showHoleScreen() {
+    setScreenContent(
+      text.holeTitle,
+      text.holeText
+    );
+
+    primaryAction.textContent = text.actions.replay;
+    primaryAction.dataset.action = "replay";
+
+    secondaryAction.textContent = text.actions.newGame;
+    secondaryAction.hidden = false;
+
+    gameScreen.hidden = false;
+  }
+
+  function showWinScreen() {
+    setScreenContent(
+      text.winTitle,
+      text.winText
+    );
+
+    primaryAction.textContent = text.actions.replay;
+    primaryAction.dataset.action = "replay";
+
+    secondaryAction.textContent = text.actions.newGame;
+    secondaryAction.hidden = false;
+
+    gameScreen.hidden = false;
+  }
+
+  function hideGameScreen() {
+    gameScreen.hidden = true;
+  }
+
+  function updateBallVisual() {
+    ballEl.style.left = `${ball.x * 10}%`;
+    ballEl.style.top = `${ball.y * 10}%`;
+  }
+
+  function resetProgress() {
+    nextWaypointIndex = 0;
+    gameFinished = false;
+    ballFalling = false;
+
+    updateMarkerColors();
+  }
+
+  function resetBall() {
+    ballEl.classList.remove("falling");
+
+    ball.x = startPos.x;
+    ball.y = startPos.y;
+    ball.vx = 0;
+    ball.vy = 0;
+
+    updateBallVisual();
+  }
+
+  function startGame() {
+    resetProgress();
+    resetBall();
+
+    gameStarted = true;
+    hideGameScreen();
+  }
+
+  function replayGame() {
+    resetProgress();
+    resetBall();
+
+    gameStarted = true;
+    hideGameScreen();
+  }
+
+  function startNewGame() {
+    loadRandomBoard();
+    resetProgress();
+    resetBall();
+
+    gameStarted = false;
+    showStartScreen();
+  }
+
+  function findTouchedHole() {
+    return holeCells.find(hole => {
+      const holeX = hole.col + 0.5;
+      const holeY = hole.row + 0.5;
+
+      const dx = ball.x - holeX;
+      const dy = ball.y - holeY;
+
+      return Math.hypot(dx, dy) < 0.38;
+    });
+  }
+
+  function fallIntoHole(hole) {
+    if (ballFalling || gameFinished) {
+      return;
+    }
+
+    ballFalling = true;
+
+    ball.x = hole.col + 0.5;
+    ball.y = hole.row + 0.5;
+    ball.vx = 0;
+    ball.vy = 0;
+
+    updateBallVisual();
+
+    requestAnimationFrame(() => {
+      ballEl.classList.add("falling");
+    });
+
+    window.setTimeout(() => {
+      ballFalling = false;
+      gameStarted = false;
+
+      ballEl.classList.remove("falling");
+      resetBall();
+
+      showHoleScreen();
+    }, 550);
+  }
+
+  function checkGameProgress() {
+    if (!gameStarted || ballFalling || gameFinished) {
+      return;
+    }
+
+    const touchedHole = findTouchedHole();
+
+    if (touchedHole) {
+      fallIntoHole(touchedHole);
+      return;
+    }
+
+    if (nextWaypointIndex < waypointPositions.length) {
+      const target = waypointPositions[nextWaypointIndex];
+
+      const dx = ball.x - target.x;
+      const dy = ball.y - target.y;
+
+      if (Math.hypot(dx, dy) < 0.9) {
+        nextWaypointIndex++;
+        updateMarkerColors();
+      }
+
+      return;
+    }
+
+    const dx = ball.x - endPos.x;
+    const dy = ball.y - endPos.y;
+
+    if (Math.hypot(dx, dy) < 0.9) {
+      gameFinished = true;
+      gameStarted = false;
+
+      updateMarkerColors();
+      showWinScreen();
+    }
+  }
+
+  function resolveWalls(nextX, nextY) {
+    const radius = ball.radius;
+
+    if (nextX - radius < 0) {
+      nextX = radius;
+      ball.vx = -ball.vx * 0.6;
+    } else if (nextX + radius > 10) {
+      nextX = 10 - radius;
+      ball.vx = -ball.vx * 0.6;
+    }
+
+    if (nextY - radius < 0) {
+      nextY = radius;
+      ball.vy = -ball.vy * 0.6;
+    } else if (nextY + radius > 10) {
+      nextY = 10 - radius;
+      ball.vy = -ball.vy * 0.6;
+    }
+
+    for (const wall of vWalls) {
+      const crossed =
+        (ball.x - radius < wall.x &&
+          nextX + radius > wall.x) ||
+        (ball.x + radius > wall.x &&
+          nextX - radius < wall.x);
+
+      if (!crossed) {
+        continue;
+      }
+
+      const yCenter = (ball.y + nextY) / 2;
+
+      if (
+        yCenter >= wall.y &&
+        yCenter <= wall.y + wall.height
+      ) {
+        nextX =
+          ball.x < wall.x
+            ? wall.x - radius
+            : wall.x + radius;
+
+        ball.vx = -ball.vx * 0.7;
+      }
+    }
+
+    for (const wall of hWalls) {
+      const crossed =
+        (ball.y - radius < wall.y &&
+          nextY + radius > wall.y) ||
+        (ball.y + radius > wall.y &&
+          nextY - radius < wall.y);
+
+      if (!crossed) {
+        continue;
+      }
+
+      const xCenter = (ball.x + nextX) / 2;
+
+      if (
+        xCenter >= wall.x &&
+        xCenter <= wall.x + wall.width
+      ) {
+        nextY =
+          ball.y < wall.y
+            ? wall.y - radius
+            : wall.y + radius;
+
+        ball.vy = -ball.vy * 0.7;
+      }
+    }
+
+    return {
+      x: nextX,
+      y: nextY
+    };
+  }
+
+  const ball = {
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+
+    /*
+     * The visual ball is 4.4%; this physics radius keeps it
+     * slightly smaller than the 5% holes.
+     */
+    radius: 0.30,
+
+    damping: 0.98,
+    gravityScale: 0.0009
+  };
+
+  function stepPhysics() {
+    if (gameStarted && !ballFalling) {
+      const gravityX = rotateY * ball.gravityScale;
+      const gravityY = -rotateX * ball.gravityScale;
+
+      ball.vx += gravityX;
+      ball.vy += gravityY;
+
+      ball.vx *= ball.damping;
+      ball.vy *= ball.damping;
+
+      const resolved = resolveWalls(
+        ball.x + ball.vx,
+        ball.y + ball.vy
+      );
+
+      ball.x = resolved.x;
+      ball.y = resolved.y;
+
+      updateBallVisual();
+      checkGameProgress();
+    }
+
+    requestAnimationFrame(stepPhysics);
+  }
+
+  // Board tilt
+  let dragging = false;
+  let pointerId = null;
+  let originX = 0;
+  let originY = 0;
+  let rotateX = 0;
+  let rotateY = 0;
+
+  function applyTilt() {
+    board.style.transform =
+      `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  }
+
+  board.addEventListener("pointerdown", event => {
+    dragging = true;
+    pointerId = event.pointerId;
+    originX = event.clientX;
+    originY = event.clientY;
+
+    board.setPointerCapture(pointerId);
+  });
+
+  board.addEventListener("pointermove", event => {
+    if (!dragging || event.pointerId !== pointerId) {
+      return;
+    }
+
+    const dx = event.clientX - originX;
+    const dy = event.clientY - originY;
+
+    rotateY = Math.max(
+      -28,
+      Math.min(28, dx * 0.12)
+    );
+
+    rotateX = Math.max(
+      -28,
+      Math.min(28, -dy * 0.12)
+    );
+
+    applyTilt();
+  });
+
+  function stopDragging(event) {
+    if (event.pointerId !== pointerId) {
+      return;
+    }
+
+    dragging = false;
+
+    if (board.hasPointerCapture(pointerId)) {
+      board.releasePointerCapture(pointerId);
+    }
+  }
+
+  board.addEventListener("pointerup", stopDragging);
+  board.addEventListener("pointercancel", stopDragging);
+
+  primaryAction.addEventListener("click", () => {
+    if (primaryAction.dataset.action === "start") {
+      startGame();
+    } else if (primaryAction.dataset.action === "replay") {
+      replayGame();
+    }
+  });
+
+  secondaryAction.addEventListener("click", startNewGame);
+
+  loadRandomBoard();
+  resetBall();
+  showStartScreen();
+  requestAnimationFrame(stepPhysics);
+})();
+</script>
 </body>
 </html>
