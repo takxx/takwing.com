@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Board Game</title>
+<title>Classic Labyrinth</title>
 
 <style>
   :root {
@@ -99,13 +99,6 @@
     cursor: grab;
     isolation: isolate;
 
-    /*
-     * Layered wood texture:
-     * - broad grain
-     * - fine vertical grain
-     * - irregular darker wood bands
-     * - soft highlights and shadows
-     */
     background:
       repeating-linear-gradient(
         8deg,
@@ -182,9 +175,6 @@
     border-radius: 4px;
     isolation: isolate;
 
-    /*
-     * No grid lines. The grain remains visible on the playing surface.
-     */
     background:
       repeating-linear-gradient(
         7deg,
@@ -346,9 +336,6 @@
     color: var(--color-not-reached);
   }
 
-  /*
-   * Ball: only slightly smaller than the 5% holes.
-   */
   .ball {
     position: absolute;
     width: 4.4%;
@@ -491,38 +478,47 @@
 
 <script>
 (() => {
-  /*
-   * Board data.
-   *
-   * A new game chooses one of these boards randomly.
-   * Replay keeps the current board.
-   * Start new game chooses another board randomly.
-   */
   const boards = [
-	{
-		"start": "00-11",
-		"waypoints": ["80-91","26-37","44-55","62-73","08-19"],
-		"end": "88-99",
-		"v-walls": ["21-71","23-53","45-75","27-77"],
-		"h-walls": ["14-15","74-75"],
-		"holes": ["20-71","20-71","82-97","82-97","46-77","22-53","02-17","02-17","28-79","28-79"]
-	},
-	{
-		"start": "00-11",
-		"waypoints": ["42-53","06-17","48-59","60-71"],
-		"end": "88-99",
-		"v-walls": ["21-31","23-53","05-35","27-57"],
-		"h-walls": ["50-55","72-77"],
-		"holes": ["02-51","02-35","02-35","24-57","24-57","08-39","08-39","62-79","62-79","62-79","80-97","80-97","80-97"]
-	},
-	{
-		"start": "00-11",
-		"waypoints": ["44-55","42-53","40-51","84-95","06-17"],
-		"end": "88-99",
-		"v-walls": ["41-71","23-53","05-75","27-77"],
-		"h-walls": ["12-13","74-75"],
-		"holes": ["02-15","04-35","62-75","20-33","60-91","80-93","26-97","26-97","26-97","08-79","08-79","08-79"]
-	}
+{
+"start": "00-11",
+"waypoints": ["88-99","66-77","44-55"],
+"end": "40-51",
+"v-walls": ["41-51","23-33","45-55","27-77"],
+"h-walls": ["10-17","52-55","72-77"],
+"holes": ["02-19","02-19","02-19","08-79","08-79","08-79","80-97","80-97","80-97","60-91","60-75","60-75","26-57","24-37","22-53","20-33"]
+},
+{
+"start": "00-11",
+"waypoints": ["66-77","44-55","02-13","68-79"],
+"end": "80-91",
+"v-walls": ["01-51","23-33","45-55","27-57"],
+"h-walls": ["14-17","70-77"],
+"holes": ["20-71","20-71","60-75","60-75","26-57","24-37","22-53","04-19","04-19","08-59","08-59","82-99","82-99","82-99"]
+},
+{
+"start": "00-11",
+"waypoints": ["80-91","26-37","44-55","62-73","08-19"],
+"end": "88-99",
+"v-walls": ["21-71","23-53","45-75","27-77"],
+"h-walls": ["14-15","74-75"],
+"holes": ["20-71","20-71","82-97","82-97","46-77","22-53","02-17","02-17","28-79","28-79"]
+},
+{
+"start": "00-11",
+"waypoints": ["42-53","06-17","48-59","60-71"],
+"end": "88-99",
+"v-walls": ["21-31","23-53","05-35","27-57"],
+"h-walls": ["50-55","72-77"],
+"holes": ["02-51","02-35","02-35","24-57","24-57","08-39","08-39","62-79","62-79","62-79","80-97","80-97","80-97"]
+},
+{
+"start": "00-11",
+"waypoints": ["44-55","42-53","40-51","84-95","06-17"],
+"end": "88-99",
+"v-walls": ["41-71","23-53","05-75","27-77"],
+"h-walls": ["12-13","74-75"],
+"holes": ["02-15","04-35","62-75","20-33","60-91","80-93","26-97","26-97","26-97","08-79","08-79","08-79"]
+}
 ];
 
   const waypointSymbols = [
@@ -537,18 +533,9 @@
     "❾"
   ];
 
-  /*
-   * Localisation.
-   *
-   * Supported query parameters:
-   *   ?lang=en
-   *   ?lang=es
-   *   ?lang=zh
-   *
-   * zh uses Traditional Chinese with Cantonese wording.
-   */
   const translations = {
     en: {
+      gameTitle: "Classic Labyrinth",
       startTitle: "Ready to play?",
       startText:
         "Tilt the board to guide the ball through every waypoint and reach the endpoint. Avoid the holes.",
@@ -567,6 +554,7 @@
     },
 
     es: {
+      gameTitle: "Laberinto Clásico",
       startTitle: "¿Listo para jugar?",
       startText:
         "Inclina el tablero para guiar la bola por todos los puntos de paso y llegar al final. Evita los agujeros.",
@@ -585,6 +573,7 @@
     },
 
     zh: {
+      gameTitle: "經典迷宮",
       startTitle: "準備好未？",
       startText:
         "傾斜個棋盤，引導粒波子經過所有路點，再去到終點。小心唔好跌入窿。",
@@ -624,10 +613,6 @@
         return "es";
       }
 
-      /*
-       * Any zh browser preference uses the Traditional Chinese
-       * Cantonese translation in this game.
-       */
       if (language === "zh" || language.startsWith("zh-")) {
         return "zh";
       }
@@ -645,6 +630,8 @@
 
   document.documentElement.lang =
     currentLocale === "zh" ? "zh-Hant" : currentLocale;
+
+  document.title = text.gameTitle;
 
   const board = document.getElementById("board");
   const holesLayer = document.getElementById("holesLayer");
@@ -674,6 +661,215 @@
   let gameFinished = false;
   let ballFalling = false;
   let gameStarted = false;
+
+  // Audio context and sound synthesis
+  let audioCtx = null;
+  let masterGain = null;
+  let rollOscillator = null;
+  let rollGain = null;
+
+  // Cooldown to prevent rapid-fire bounces
+  let lastBounceTime = 0;
+  const bounceCooldown = 50; // ms between bounce events
+
+  function initAudio() {
+    if (audioCtx) return;
+    
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.3;
+    masterGain.connect(audioCtx.destination);
+  }
+
+  function playTone(freq, type, duration, startTime = 0, volume = 0.5) {
+    if (!audioCtx) return;
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = type;
+    osc.frequency.value = freq;
+    
+    gain.gain.setValueAtTime(volume, audioCtx.currentTime + startTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + startTime + duration);
+    
+    osc.connect(gain);
+    gain.connect(masterGain);
+    
+    osc.start(audioCtx.currentTime + startTime);
+    osc.stop(audioCtx.currentTime + startTime + duration);
+  }
+
+  function playNoise(duration, filterFreq = 1000, gainValue = 0.4) {
+    if (!audioCtx) return;
+    
+    const bufferSize = audioCtx.sampleRate * duration;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = filterFreq;
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    
+    noise.start();
+  }
+
+  function startRollSound() {
+    if (!audioCtx || rollOscillator) return;
+    
+    rollOscillator = audioCtx.createOscillator();
+    rollGain = audioCtx.createGain();
+    
+    rollOscillator.type = 'sine';
+    rollOscillator.frequency.value = 80;
+    rollGain.gain.value = 0;
+    
+    rollOscillator.connect(rollGain);
+    rollGain.connect(masterGain);
+    
+    rollOscillator.start();
+  }
+
+  function updateRollSound(velocity) {
+    if (!audioCtx || !rollOscillator || !rollGain) return;
+    
+    const speed = Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy);
+    const targetGain = Math.min(speed * 8, 0.25);
+    const targetFreq = 60 + speed * 200;
+    
+    rollGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.05);
+    rollOscillator.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.05);
+  }
+
+  function stopRollSound() {
+    if (!audioCtx || !rollGain) return;
+    
+    rollGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+    
+    if (rollOscillator) {
+      rollOscillator.stop(audioCtx.currentTime + 0.15);
+      rollOscillator = null;
+    }
+  }
+
+function playWallHit(impactSpeed) {
+  if (!audioCtx) return;
+
+  const now = Date.now();
+
+  if (now - lastBounceTime < bounceCooldown) {
+    return;
+  }
+
+  // Ignore only extremely tiny movement, which is effectively resting.
+  const minimumImpactSpeed = 0.08;
+
+  if (impactSpeed < minimumImpactSpeed) {
+    return;
+  }
+
+  lastBounceTime = now;
+
+  /*
+   * Normalize the impact speed.
+   * Weak hits now produce an audible sound, while faster hits remain louder.
+   */
+  const normalizedSpeed = Math.min(
+    impactSpeed / 1.5,
+    1
+  );
+
+  // Small audible base volume plus speed-dependent volume.
+  const volume =
+    0.06 +
+    normalizedSpeed * 0.34;
+
+  const noiseVolume =
+    0.025 +
+    normalizedSpeed * 0.22;
+
+  const frequency =
+    180 +
+    normalizedSpeed * 260;
+
+  const duration =
+    0.045 +
+    normalizedSpeed * 0.045;
+
+  playTone(
+    frequency,
+    "square",
+    duration,
+    0,
+    volume
+  );
+
+  playNoise(
+    0.035 + normalizedSpeed * 0.025,
+    900 + normalizedSpeed * 900,
+    noiseVolume
+  );
+
+  if (navigator.vibrate) {
+    const vibrationDuration = Math.round(
+      4 + normalizedSpeed * 24
+    );
+
+    navigator.vibrate(vibrationDuration);
+  }
+}
+
+  function playHoleFall() {
+    if (!audioCtx) return;
+    
+    playTone(350, 'sine', 0.4, 0);
+    playTone(250, 'sine', 0.4, 0.08);
+    playTone(150, 'sine', 0.5, 0.16);
+    playNoise(0.6, 400, 0.5);
+    
+    if (navigator.vibrate) {
+      navigator.vibrate(30);
+    }
+  }
+
+  function playWaypointReach() {
+    if (!audioCtx) return;
+    
+    playTone(600, 'sine', 0.12, 0);
+    playTone(900, 'sine', 0.15, 0.05);
+    
+    if (navigator.vibrate) {
+      navigator.vibrate(12);
+    }
+  }
+
+  function playWin() {
+    if (!audioCtx) return;
+    
+    playTone(523, 'sine', 0.2, 0);
+    playTone(659, 'sine', 0.2, 0.1);
+    playTone(784, 'sine', 0.25, 0.2);
+    playTone(1047, 'sine', 0.4, 0.3);
+    
+    if (navigator.vibrate) {
+      navigator.vibrate([20, 30, 20, 30, 40]);
+    }
+  }
 
   function randomBoard() {
     const index = Math.floor(Math.random() * boards.length);
@@ -1041,6 +1237,7 @@
   }
 
   function startGame() {
+    initAudio();
     resetProgress();
     resetBall();
 
@@ -1049,6 +1246,7 @@
   }
 
   function replayGame() {
+    initAudio();
     resetProgress();
     resetBall();
 
@@ -1083,6 +1281,7 @@
     }
 
     ballFalling = true;
+    stopRollSound();
 
     ball.x = hole.col + 0.5;
     ball.y = hole.row + 0.5;
@@ -1090,6 +1289,7 @@
     ball.vy = 0;
 
     updateBallVisual();
+    playHoleFall();
 
     requestAnimationFrame(() => {
       ballEl.classList.add("falling");
@@ -1126,6 +1326,7 @@
 
       if (Math.hypot(dx, dy) < 0.9) {
         nextWaypointIndex++;
+        playWaypointReach();
         updateMarkerColors();
       }
 
@@ -1138,31 +1339,59 @@
     if (Math.hypot(dx, dy) < 0.9) {
       gameFinished = true;
       gameStarted = false;
+      stopRollSound();
 
       updateMarkerColors();
+      playWin();
       showWinScreen();
     }
   }
 
   function resolveWalls(nextX, nextY) {
     const radius = ball.radius;
+    let hitWall = false;
+    let impactSpeed = 0;
 
+    // Check for collisions with borders and walls
+    // Left border
     if (nextX - radius < 0) {
+      if (ball.vx < 0) {
+        impactSpeed = Math.abs(ball.vx);
+        hitWall = true;
+      }
       nextX = radius;
       ball.vx = -ball.vx * 0.6;
-    } else if (nextX + radius > 10) {
+    }
+    // Right border
+    else if (nextX + radius > 10) {
+      if (ball.vx > 0) {
+        impactSpeed = Math.max(impactSpeed, Math.abs(ball.vx));
+        hitWall = true;
+      }
       nextX = 10 - radius;
       ball.vx = -ball.vx * 0.6;
     }
 
+    // Top border
     if (nextY - radius < 0) {
+      if (ball.vy < 0) {
+        impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
+        hitWall = true;
+      }
       nextY = radius;
       ball.vy = -ball.vy * 0.6;
-    } else if (nextY + radius > 10) {
+    }
+    // Bottom border
+    else if (nextY + radius > 10) {
+      if (ball.vy > 0) {
+        impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
+        hitWall = true;
+      }
       nextY = 10 - radius;
       ball.vy = -ball.vy * 0.6;
     }
 
+    // Vertical walls
     for (const wall of vWalls) {
       const crossed =
         (ball.x - radius < wall.x &&
@@ -1170,25 +1399,30 @@
         (ball.x + radius > wall.x &&
           nextX - radius < wall.x);
 
-      if (!crossed) {
-        continue;
-      }
+      if (!crossed) continue;
 
       const yCenter = (ball.y + nextY) / 2;
 
-      if (
-        yCenter >= wall.y &&
-        yCenter <= wall.y + wall.height
-      ) {
-        nextX =
-          ball.x < wall.x
-            ? wall.x - radius
-            : wall.x + radius;
-
-        ball.vx = -ball.vx * 0.7;
+      if (yCenter >= wall.y && yCenter <= wall.y + wall.height) {
+        if (ball.x < wall.x) {
+          if (ball.vx > 0) {
+            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vx));
+            hitWall = true;
+          }
+          nextX = wall.x - radius;
+          ball.vx = -ball.vx * 0.7;
+        } else {
+          if (ball.vx < 0) {
+            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vx));
+            hitWall = true;
+          }
+          nextX = wall.x + radius;
+          ball.vx = -ball.vx * 0.7;
+        }
       }
     }
 
+    // Horizontal walls
     for (const wall of hWalls) {
       const crossed =
         (ball.y - radius < wall.y &&
@@ -1196,23 +1430,31 @@
         (ball.y + radius > wall.y &&
           nextY - radius < wall.y);
 
-      if (!crossed) {
-        continue;
-      }
+      if (!crossed) continue;
 
       const xCenter = (ball.x + nextX) / 2;
 
-      if (
-        xCenter >= wall.x &&
-        xCenter <= wall.x + wall.width
-      ) {
-        nextY =
-          ball.y < wall.y
-            ? wall.y - radius
-            : wall.y + radius;
-
-        ball.vy = -ball.vy * 0.7;
+      if (xCenter >= wall.x && xCenter <= wall.x + wall.width) {
+        if (ball.y < wall.y) {
+          if (ball.vy > 0) {
+            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
+            hitWall = true;
+          }
+          nextY = wall.y - radius;
+          ball.vy = -ball.vy * 0.7;
+        } else {
+          if (ball.vy < 0) {
+            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
+            hitWall = true;
+          }
+          nextY = wall.y + radius;
+          ball.vy = -ball.vy * 0.7;
+        }
       }
+    }
+
+    if (hitWall) {
+      playWallHit(impactSpeed);
     }
 
     return {
@@ -1227,10 +1469,6 @@
     vx: 0,
     vy: 0,
 
-    /*
-     * The visual ball is 4.4%; this physics radius keeps it
-     * slightly smaller than the 5% holes.
-     */
     radius: 0.30,
 
     damping: 0.98,
@@ -1257,13 +1495,15 @@
       ball.y = resolved.y;
 
       updateBallVisual();
+      updateRollSound({vx: ball.vx, vy: ball.vy});
       checkGameProgress();
+    } else {
+      stopRollSound();
     }
 
     requestAnimationFrame(stepPhysics);
   }
 
-  // Board tilt
   let dragging = false;
   let pointerId = null;
   let originX = 0;
@@ -1277,6 +1517,7 @@
   }
 
   board.addEventListener("pointerdown", event => {
+    initAudio();
     dragging = true;
     pointerId = event.pointerId;
     originX = event.clientX;
