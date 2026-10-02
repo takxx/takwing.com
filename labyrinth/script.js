@@ -1,800 +1,974 @@
-const container = document.getElementById('game-container');
-const board = document.getElementById('maze-board');
-const ballElement = document.getElementById('ball');
+(() => {
+  const waypointSymbols = [
+    "❶",
+    "❷",
+    "❸",
+    "❹",
+    "❺",
+    "❻",
+    "❼",
+    "❽",
+    "❾"
+  ];
 
-const instructionModal =
-    document.getElementById('instruction-modal');
+  const translations = {
+    en: {
+      gameName: "Wooden Labyrinth",
+      startTitle: "Ready to play?",
+      startText:
+        "Tilt the board to guide the ball through every waypoint and reach the endpoint. Avoid the holes.",
+      holeTitle: "The ball fell into a hole",
+      holeText:
+        "Your progress has been reset. You can replay this board or start a new game.",
+      winTitle: "You win!",
+      winText:
+        "You reached the endpoint successfully. You can replay this board or start a new game.",
+      actions: {
+        startGame: "Start game",
+        replay: "Replay",
+        newGame: "Start new game"
+      }
+    },
 
-const endModal =
-    document.getElementById('end-modal');
+    es: {
+      gameName: "Laberinto de Madera",
+      startTitle: "¿Listo para jugar?",
+      startText:
+        "Inclina el tablero para guiar la bola por todos los puntos de paso y llegar al final. Evita los agujeros.",
+      holeTitle: "La bola cayó en un agujero",
+      holeText:
+        "Tu progreso se ha reiniciado. Puedes volver a jugar este tablero o empezar una partida nueva.",
+      winTitle: "¡Has ganado!",
+      winText:
+        "Has llegado al final correctamente. Puedes volver a jugar este tablero o empezar una partida nueva.",
+      actions: {
+        startGame: "Empezar partida",
+        replay: "Volver a jugar",
+        newGame: "Nueva partida"
+      }
+    },
 
-const endTitle =
-    document.getElementById('end-title');
+    zh: {
+      gameName: "木質迷宮",
+      startTitle: "準備好未？",
+      startText:
+        "傾斜棋盤，引導粒子經過所有路點，直到終點。小心不要掉入洞中。",
+      holeTitle: "粒子跌入洞中",
+      holeText:
+        "你的進度已被重設。你可以再玩這個棋盤或開始新的一局。",
+      winTitle: "你贏了！",
+      winText:
+        "你成功到達終點。你可以再玩一次或開始新的一局。",
+      actions: {
+        startGame: "開始遊戲",
+        replay: "再玩一次",
+        newGame: "開始新一局"
+      }
+    }
+  };
 
-const endMessage =
-    document.getElementById('end-message');
+  function getLanguage() {
+    const supported = ["en", "es", "zh"];
+    const queryLanguage =
+      new URLSearchParams(window.location.search).get("lang");
 
-const startButton =
-    document.getElementById('start-btn');
+    if (supported.includes(queryLanguage)) {
+      return queryLanguage;
+    }
 
-const reloadButton =
-    document.getElementById('reload-btn');
+    const browserLanguages = [
+      ...(navigator.languages || []),
+      navigator.language
+    ]
+      .filter(Boolean)
+      .map(language => language.toLowerCase());
 
-const GRID_SIZE = 15;
+    for (const language of browserLanguages) {
+      if (language === "es" || language.startsWith("es-")) {
+        return "es";
+      }
 
-let boardWidth = 0;
-let boardHeight = 0;
-let cellSize = 0;
+      if (language === "zh" || language.startsWith("zh-")) {
+        return "zh";
+      }
 
-const ball = {
+      if (language === "en" || language.startsWith("en-")) {
+        return "en";
+      }
+    }
+
+    return "en";
+  }
+
+  const currentLocale = getLanguage();
+  const text = translations[currentLocale];
+
+  document.documentElement.lang =
+    currentLocale === "zh" ? "zh-Hant" : currentLocale;
+
+  document.title = text.gameName;
+
+  const board = document.getElementById("board");
+  const holesLayer = document.getElementById("holesLayer");
+  const wallsLayer = document.getElementById("wallsLayer");
+  const markersLayer = document.getElementById("markersLayer");
+  const ballEl = document.getElementById("ball");
+
+  const gameScreen = document.getElementById("gameScreen");
+  const messageTitle = document.getElementById("messageTitle");
+  const messageText = document.getElementById("messageText");
+  const primaryAction = document.getElementById("primaryAction");
+  const secondaryAction = document.getElementById("secondaryAction");
+
+  let currentBoard;
+  let startPos;
+  let endPos;
+  let waypointPositions;
+  let holeCells;
+  let vWalls;
+  let hWalls;
+
+  let startMarkerEl;
+  let endMarkerEl;
+  let waypointMarkerEls = [];
+
+  let nextWaypointIndex = 0;
+  let gameFinished = false;
+  let ballFalling = false;
+  let gameStarted = false;
+
+  /*
+   * Web Audio sound system.
+   */
+  let audioContext = null;
+  let masterGain = null;
+
+  function ensureAudio() {
+    if (!audioContext) {
+      const AudioContext =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContext) {
+        return false;
+      }
+
+      audioContext = new AudioContext();
+      masterGain = audioContext.createGain();
+      masterGain.gain.value = 0.9;
+      masterGain.connect(audioContext.destination);
+    }
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
+
+    return true;
+  }
+
+  function playTone({
+    frequency,
+    endFrequency = frequency,
+    duration = 0.16,
+    volume = 0.2,
+    type = "sine",
+    delay = 0
+  }) {
+    if (!ensureAudio()) {
+      return;
+    }
+
+    const startTime = audioContext.currentTime + delay;
+    const endTime = startTime + duration;
+
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = type;
+
+    oscillator.frequency.setValueAtTime(
+      frequency,
+      startTime
+    );
+
+    oscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(1, endFrequency),
+      endTime
+    );
+
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(
+      Math.max(0.0001, volume),
+      startTime + Math.min(0.018, duration * 0.2)
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      endTime
+    );
+
+    oscillator.connect(gain);
+    gain.connect(masterGain);
+
+    oscillator.start(startTime);
+    oscillator.stop(endTime + 0.02);
+  }
+
+  function playWaypointSound() {
+    playTone({
+      frequency: 620,
+      endFrequency: 900,
+      duration: 0.12,
+      volume: 0.22,
+      type: "sine"
+    });
+
+    playTone({
+      frequency: 930,
+      endFrequency: 1180,
+      duration: 0.16,
+      volume: 0.18,
+      type: "sine",
+      delay: 0.08
+    });
+  }
+
+  function playWallBounceSound() {
+    playTone({
+      frequency: 115,
+      endFrequency: 78,
+      duration: 0.055,
+      volume: 0.045,
+      type: "triangle"
+    });
+
+    if ("vibrate" in navigator) {
+      try {
+        navigator.vibrate(18);
+      } catch {
+        // Vibration is optional and may be unavailable.
+      }
+    }
+  }
+
+  function playHoleSound() {
+    playTone({
+      frequency: 260,
+      endFrequency: 75,
+      duration: 0.55,
+      volume: 0.28,
+      type: "sawtooth"
+    });
+
+    playTone({
+      frequency: 120,
+      endFrequency: 42,
+      duration: 0.7,
+      volume: 0.16,
+      type: "sine",
+      delay: 0.03
+    });
+  }
+
+  function playWinSound() {
+    playTone({
+      frequency: 523.25,
+      endFrequency: 523.25,
+      duration: 0.18,
+      volume: 0.2,
+      type: "sine"
+    });
+
+    playTone({
+      frequency: 659.25,
+      endFrequency: 659.25,
+      duration: 0.18,
+      volume: 0.22,
+      type: "sine",
+      delay: 0.13
+    });
+
+    playTone({
+      frequency: 783.99,
+      endFrequency: 783.99,
+      duration: 0.3,
+      volume: 0.25,
+      type: "sine",
+      delay: 0.26
+    });
+  }
+
+  function cellId(id) {
+    const number = Number(id);
+
+    return {
+      row: Math.floor(number / 10),
+      col: number % 10
+    };
+  }
+
+  function intersection(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    if (
+      second.row !== first.row + 1 ||
+      second.col !== first.col + 1
+    ) {
+      throw new Error(`Invalid intersection: ${spec}`);
+    }
+
+    return {
+      x: first.col + 1,
+      y: first.row + 1
+    };
+  }
+
+  function parseVerticalWall(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    if (first.col !== second.col) {
+      throw new Error(
+        `Invalid vertical wall "${spec}": columns must match`
+      );
+    }
+
+    return {
+      x: first.col + 1,
+      y: Math.min(first.row, second.row),
+      height: Math.abs(second.row - first.row) + 1
+    };
+  }
+
+  function parseHorizontalWall(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    if (first.row !== second.row) {
+      throw new Error(
+        `Invalid horizontal wall "${spec}": rows must match`
+      );
+    }
+
+    return {
+      x: Math.min(first.col, second.col),
+      y: first.row + 1,
+      width: Math.abs(second.col - first.col) + 1
+    };
+  }
+
+  function holeCellRange(spec) {
+    const [firstId, secondId] = spec.split("-");
+    const first = cellId(firstId);
+    const second = cellId(secondId);
+
+    return {
+      minRow: Math.min(first.row, second.row),
+      maxRow: Math.max(first.row, second.row),
+      minCol: Math.min(first.col, second.col),
+      maxCol: Math.max(first.col, second.col)
+    };
+  }
+
+  function randomHoleCell(range) {
+    return {
+      row:
+        range.minRow +
+        Math.floor(
+          Math.random() * (range.maxRow - range.minRow + 1)
+        ),
+
+      col:
+        range.minCol +
+        Math.floor(
+          Math.random() * (range.maxCol - range.minCol + 1)
+        )
+    };
+  }
+
+  function cellsAreAdjacent(first, second) {
+    const rowDistance = Math.abs(first.row - second.row);
+    const colDistance = Math.abs(first.col - second.col);
+
+    return Math.max(rowDistance, colDistance) <= 1;
+  }
+
+  function generateHoleCells(specs) {
+    const placed = [];
+
+    for (const spec of specs) {
+      const range = holeCellRange(spec);
+      let selected = null;
+
+      for (let attempt = 0; attempt < 1000; attempt++) {
+        const candidate = randomHoleCell(range);
+
+        const conflicts = placed.some(existing =>
+          cellsAreAdjacent(candidate, existing)
+        );
+
+        if (!conflicts) {
+          selected = candidate;
+          break;
+        }
+      }
+
+      if (selected) {
+        placed.push(selected);
+      }
+    }
+
+    return placed;
+  }
+
+  function makeMarker(textValue, className, x, y) {
+    const element = document.createElement("div");
+
+    element.className = `marker ${className}`;
+    element.textContent = textValue;
+    element.style.left = `${x * 10}%`;
+    element.style.top = `${y * 10}%`;
+
+    return element;
+  }
+
+  function renderMarkers() {
+    markersLayer.replaceChildren();
+    waypointMarkerEls = [];
+
+    startMarkerEl = makeMarker(
+      "◎",
+      "start reached",
+      startPos.x,
+      startPos.y
+    );
+
+    markersLayer.appendChild(startMarkerEl);
+
+    endMarkerEl = makeMarker(
+      "◉",
+      "end not-reached",
+      endPos.x,
+      endPos.y
+    );
+
+    markersLayer.appendChild(endMarkerEl);
+
+    currentBoard.waypoints.forEach((spec, index) => {
+      const position = intersection(spec);
+
+      const marker = makeMarker(
+        waypointSymbols[index],
+        "waypoint not-reached",
+        position.x,
+        position.y
+      );
+
+      markersLayer.appendChild(marker);
+      waypointMarkerEls.push(marker);
+    });
+
+    updateMarkerColors();
+  }
+
+  function updateMarkerColors() {
+    startMarkerEl.className = "marker start reached";
+    startMarkerEl.textContent = "◎";
+
+    waypointMarkerEls.forEach((marker, index) => {
+      marker.classList.remove(
+        "reached",
+        "next",
+        "not-reached"
+      );
+
+      if (index < nextWaypointIndex) {
+        marker.classList.add("reached");
+      } else if (index === nextWaypointIndex) {
+        marker.classList.add("next");
+      } else {
+        marker.classList.add("not-reached");
+      }
+
+      marker.textContent = waypointSymbols[index];
+    });
+
+    endMarkerEl.classList.remove(
+      "reached",
+      "next",
+      "not-reached"
+    );
+
+    if (gameFinished) {
+      endMarkerEl.classList.add("reached");
+    } else if (
+      nextWaypointIndex >= waypointPositions.length
+    ) {
+      endMarkerEl.classList.add("next");
+    } else {
+      endMarkerEl.classList.add("not-reached");
+    }
+
+    endMarkerEl.textContent = "◉";
+  }
+
+  function renderWalls() {
+    wallsLayer.replaceChildren();
+
+    vWalls.forEach(wall => {
+      const element = document.createElement("div");
+
+      element.className = "wall v";
+      element.style.left = `${wall.x * 10}%`;
+      element.style.top = `${wall.y * 10}%`;
+      element.style.height = `${wall.height * 10}%`;
+
+      wallsLayer.appendChild(element);
+    });
+
+    hWalls.forEach(wall => {
+      const element = document.createElement("div");
+
+      element.className = "wall h";
+      element.style.left = `${wall.x * 10}%`;
+      element.style.top = `${wall.y * 10}%`;
+      element.style.width = `${wall.width * 10}%`;
+
+      wallsLayer.appendChild(element);
+    });
+  }
+
+  function renderHoles() {
+    holesLayer.replaceChildren();
+
+    holeCells.forEach(cell => {
+      const element = document.createElement("div");
+
+      element.className = "hole";
+      element.style.left = `${(cell.col + 0.5) * 10}%`;
+      element.style.top = `${(cell.row + 0.5) * 10}%`;
+
+      holesLayer.appendChild(element);
+    });
+  }
+
+  function renderBoard() {
+    renderMarkers();
+    renderWalls();
+    renderHoles();
+  }
+
+  function setScreenContent(title, description) {
+    messageTitle.textContent = title;
+    messageText.textContent = description;
+  }
+
+  function showStartScreen() {
+    setScreenContent(
+      text.startTitle,
+      text.startText
+    );
+
+    primaryAction.textContent = text.actions.startGame;
+    primaryAction.dataset.action = "start";
+
+    secondaryAction.hidden = true;
+    gameScreen.hidden = false;
+  }
+
+  function showHoleScreen() {
+    setScreenContent(
+      text.holeTitle,
+      text.holeText
+    );
+
+    primaryAction.textContent = text.actions.replay;
+    primaryAction.dataset.action = "replay";
+
+    secondaryAction.textContent = text.actions.newGame;
+    secondaryAction.hidden = false;
+
+    gameScreen.hidden = false;
+  }
+
+  function showWinScreen() {
+    setScreenContent(
+      text.winTitle,
+      text.winText
+    );
+
+    primaryAction.textContent = text.actions.replay;
+    primaryAction.dataset.action = "replay";
+
+    secondaryAction.textContent = text.actions.newGame;
+    secondaryAction.hidden = false;
+
+    gameScreen.hidden = false;
+  }
+
+  function hideGameScreen() {
+    gameScreen.hidden = true;
+  }
+
+  function updateBallVisual() {
+    ballEl.style.left = `${ball.x * 10}%`;
+    ballEl.style.top = `${ball.y * 10}%`;
+  }
+
+  function resetProgress() {
+    nextWaypointIndex = 0;
+    gameFinished = false;
+    ballFalling = false;
+
+    updateMarkerColors();
+  }
+
+  function resetBall() {
+    ballEl.classList.remove("falling");
+
+    ball.x = startPos.x;
+    ball.y = startPos.y;
+    ball.vx = 0;
+    ball.vy = 0;
+
+    updateBallVisual();
+  }
+
+  function startGame() {
+    ensureAudio();
+
+    resetProgress();
+    resetBall();
+
+    gameStarted = true;
+    hideGameScreen();
+  }
+
+  function replayGame() {
+    ensureAudio();
+
+    resetProgress();
+    resetBall();
+
+    gameStarted = true;
+    hideGameScreen();
+  }
+
+  function startNewGame() {
+    loadRandomBoard();
+    resetProgress();
+    resetBall();
+
+    gameStarted = false;
+    showStartScreen();
+  }
+
+  function findTouchedHole() {
+    return holeCells.find(hole => {
+      const holeX = hole.col + 0.5;
+      const holeY = hole.row + 0.5;
+
+      const dx = ball.x - holeX;
+      const dy = ball.y - holeY;
+
+      return Math.hypot(dx, dy) < 0.38;
+    });
+  }
+
+  function fallIntoHole(hole) {
+    if (ballFalling || gameFinished) {
+      return;
+    }
+
+    ballFalling = true;
+    playHoleSound();
+
+    ball.x = hole.col + 0.5;
+    ball.y = hole.row + 0.5;
+    ball.vx = 0;
+    ball.vy = 0;
+
+    updateBallVisual();
+
+    requestAnimationFrame(() => {
+      ballEl.classList.add("falling");
+    });
+
+    window.setTimeout(() => {
+      ballFalling = false;
+      gameStarted = false;
+
+      ballEl.classList.remove("falling");
+      resetBall();
+
+      showHoleScreen();
+    }, 550);
+  }
+
+  function checkGameProgress() {
+    if (!gameStarted || ballFalling || gameFinished) {
+      return;
+    }
+
+    const touchedHole = findTouchedHole();
+
+    if (touchedHole) {
+      fallIntoHole(touchedHole);
+      return;
+    }
+
+    if (nextWaypointIndex < waypointPositions.length) {
+      const target = waypointPositions[nextWaypointIndex];
+
+      const dx = ball.x - target.x;
+      const dy = ball.y - target.y;
+
+      if (Math.hypot(dx, dy) < 0.9) {
+        nextWaypointIndex++;
+        playWaypointSound();
+        updateMarkerColors();
+      }
+
+      return;
+    }
+
+    const dx = ball.x - endPos.x;
+    const dy = ball.y - endPos.y;
+
+    if (Math.hypot(dx, dy) < 0.9) {
+      gameFinished = true;
+      gameStarted = false;
+
+      playWinSound();
+      updateMarkerColors();
+      showWinScreen();
+    }
+  }
+
+  function resolveWalls(nextX, nextY) {
+    const radius = ball.radius;
+    let bounced = false;
+
+    if (nextX - radius < 0) {
+      nextX = radius;
+      ball.vx = -ball.vx * 0.6;
+      bounced = true;
+    } else if (nextX + radius > 10) {
+      nextX = 10 - radius;
+      ball.vx = -ball.vx * 0.6;
+      bounced = true;
+    }
+
+    if (nextY - radius < 0) {
+      nextY = radius;
+      ball.vy = -ball.vy * 0.6;
+      bounced = true;
+    } else if (nextY + radius > 10) {
+      nextY = 10 - radius;
+      ball.vy = -ball.vy * 0.6;
+      bounced = true;
+    }
+
+    for (const wall of vWalls) {
+      const crossed =
+        (ball.x - radius < wall.x &&
+          nextX + radius > wall.x) ||
+        (ball.x + radius > wall.x &&
+          nextX - radius < wall.x);
+
+      if (!crossed) {
+        continue;
+      }
+
+      const yCenter = (ball.y + nextY) / 2;
+
+      if (
+        yCenter >= wall.y &&
+        yCenter <= wall.y + wall.height
+      ) {
+        nextX =
+          ball.x < wall.x
+            ? wall.x - radius
+            : wall.x + radius;
+
+        ball.vx = -ball.vx * 0.7;
+        bounced = true;
+      }
+    }
+
+    for (const wall of hWalls) {
+      const crossed =
+        (ball.y - radius < wall.y &&
+          nextY + radius > wall.y) ||
+        (ball.y + radius > wall.y &&
+          nextY - radius < wall.y);
+
+      if (!crossed) {
+        continue;
+      }
+
+      const xCenter = (ball.x + nextX) / 2;
+
+      if (
+        xCenter >= wall.x &&
+        xCenter <= wall.x + wall.width
+      ) {
+        nextY =
+          ball.y < wall.y
+            ? wall.y - radius
+            : wall.y + radius;
+
+        ball.vy = -ball.vy * 0.7;
+        bounced = true;
+      }
+    }
+
+    if (bounced) {
+      playWallBounceSound();
+    }
+
+    return {
+      x: nextX,
+      y: nextY
+    };
+  }
+
+  const ball = {
     x: 0,
     y: 0,
     vx: 0,
     vy: 0,
-    radius: 0
-};
 
-const tilt = {
-    x: 0,
-    y: 0
-};
+    radius: 0.3,
+    damping: 0.98,
+    gravityScale: 0.0009
+  };
 
-const orientationBase = {
-    beta: 0,
-    gamma: 0,
-    calibrated: false
-};
+  function stepPhysics() {
+    if (gameStarted && !ballFalling) {
+      const gravityX = rotateY * ball.gravityScale;
+      const gravityY = -rotateX * ball.gravityScale;
 
-let walls = [];
-let holes = [];
-let checkpoints = [];
+      ball.vx += gravityX;
+      ball.vy += gravityY;
 
-let goal = {
-    x: 0,
-    y: 0,
-    radius: 0
-};
+      ball.vx *= ball.damping;
+      ball.vy *= ball.damping;
 
-let nextCheckpoint = 0;
-let isGameActive = false;
-let animationFrameId = null;
+      const resolved = resolveWalls(
+        ball.x + ball.vx,
+        ball.y + ball.vy
+      );
 
+      ball.x = resolved.x;
+      ball.y = resolved.y;
 
-/* =========================
-   Dimensions
-========================= */
+      updateBallVisual();
+      checkGameProgress();
+    }
 
-function initDimensions() {
-    boardWidth = board.clientWidth;
-    boardHeight = board.clientHeight;
-    cellSize = boardWidth / GRID_SIZE;
+    requestAnimationFrame(stepPhysics);
+  }
 
-    ball.radius = cellSize * 0.30;
+  // Board tilt
+  let dragging = false;
+  let pointerId = null;
+  let originX = 0;
+  let originY = 0;
+  let rotateX = 0;
+  let rotateY = 0;
 
-    ballElement.style.width =
-        `${ball.radius * 2}px`;
+  function applyTilt() {
+    board.style.transform =
+      `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  }
 
-    ballElement.style.height =
-        `${ball.radius * 2}px`;
-}
+  board.addEventListener("pointerdown", event => {
+    dragging = true;
+    pointerId = event.pointerId;
+    originX = event.clientX;
+    originY = event.clientY;
 
+    board.setPointerCapture(pointerId);
+  });
 
-/* =========================
-   Maze generation
-========================= */
+  board.addEventListener("pointermove", event => {
+    if (!dragging || event.pointerId !== pointerId) {
+      return;
+    }
 
-function generateMaze() {
-    const startX = 1;
-    const startY = 1;
-    const goalX = GRID_SIZE - 2;
-    const goalY = GRID_SIZE - 2;
+    const dx = event.clientX - originX;
+    const dy = event.clientY - originY;
 
-    const grid = Array.from(
-        { length: GRID_SIZE },
-        () => Array(GRID_SIZE).fill(0)
+    rotateY = Math.max(
+      -28,
+      Math.min(28, dx * 0.12)
     );
 
-    const guaranteedPath = new Set();
-
-    function addPathCell(x, y) {
-        if (
-            x >= 1 &&
-            x < GRID_SIZE - 1 &&
-            y >= 1 &&
-            y < GRID_SIZE - 1
-        ) {
-            guaranteedPath.add(`${x},${y}`);
-        }
-    }
-
-    function addPathSegment(x1, y1, x2, y2) {
-        let x = x1;
-        let y = y1;
-
-        addPathCell(x, y);
-
-        if (Math.random() < 0.5) {
-            while (x !== x2) {
-                x += Math.sign(x2 - x);
-                addPathCell(x, y);
-            }
-
-            while (y !== y2) {
-                y += Math.sign(y2 - y);
-                addPathCell(x, y);
-            }
-        } else {
-            while (y !== y2) {
-                y += Math.sign(y2 - y);
-                addPathCell(x, y);
-            }
-
-            while (x !== x2) {
-                x += Math.sign(x2 - x);
-                addPathCell(x, y);
-            }
-        }
-    }
-
-    const checkpointCells = [
-        {
-            x: 3 + Math.floor(Math.random() * 2),
-            y: 3 + Math.floor(Math.random() * 2)
-        },
-        {
-            x: 8 + Math.floor(Math.random() * 2),
-            y: 7 + Math.floor(Math.random() * 2)
-        }
-    ];
-
-    const waypoints = [
-        { x: startX, y: startY },
-        checkpointCells[0],
-        checkpointCells[1],
-        { x: goalX, y: goalY }
-    ];
-
-    for (let i = 0; i < waypoints.length - 1; i++) {
-        addPathSegment(
-            waypoints[i].x,
-            waypoints[i].y,
-            waypoints[i + 1].x,
-            waypoints[i + 1].y
-        );
-    }
-
-    const obstacleChance = 0.20;
-
-    for (let y = 1; y < GRID_SIZE - 1; y++) {
-        for (let x = 1; x < GRID_SIZE - 1; x++) {
-            const key = `${x},${y}`;
-
-            if (
-                !guaranteedPath.has(key) &&
-                Math.random() < obstacleChance
-            ) {
-                grid[y][x] = 1;
-            }
-        }
-    }
-
-    for (const key of guaranteedPath) {
-        const [x, y] = key.split(',').map(Number);
-        grid[y][x] = 0;
-    }
-
-    ball.x = cellSize * 1.5;
-    ball.y = cellSize * 1.5;
-    ball.vx = 0;
-    ball.vy = 0;
-
-    checkpoints = checkpointCells.map((checkpoint) => ({
-        x: (checkpoint.x + 0.5) * cellSize,
-        y: (checkpoint.y + 0.5) * cellSize,
-        cellX: checkpoint.x,
-        cellY: checkpoint.y,
-        radius: cellSize * 0.42,
-        reached: false
-    }));
-
-    nextCheckpoint = 0;
-
-    goal = {
-        x: (goalX + 0.5) * cellSize,
-        y: (goalY + 0.5) * cellSize,
-        radius: cellSize * 0.38
-    };
-
-    let solutionPath = solveMaze(
-        grid,
-        startX,
-        startY,
-        goalX,
-        goalY
+    rotateX = Math.max(
+      -28,
+      Math.min(28, -dy * 0.12)
     );
 
-    if (solutionPath.size === 0) {
-        for (const key of guaranteedPath) {
-            const [x, y] = key.split(',').map(Number);
-            grid[y][x] = 0;
-        }
+    applyTilt();
+  });
 
-        solutionPath = solveMaze(
-            grid,
-            startX,
-            startY,
-            goalX,
-            goalY
-        );
+  function stopDragging(event) {
+    if (event.pointerId !== pointerId) {
+      return;
     }
 
-    renderMapObjects(
-        grid,
-        goalX,
-        goalY,
-        solutionPath
-    );
+    dragging = false;
 
-    positionBall();
-}
-
-
-/* =========================
-   Maze solving
-========================= */
-
-function solveMaze(grid, startX, startY, endX, endY) {
-    const queue = [[startX, startY]];
-    const visited = Array.from(
-        { length: GRID_SIZE },
-        () => Array(GRID_SIZE).fill(false)
-    );
-
-    const parent = {};
-
-    const directions = [
-        [0, 1],
-        [0, -1],
-        [1, 0],
-        [-1, 0]
-    ];
-
-    visited[startY][startX] = true;
-
-    while (queue.length > 0) {
-        const [currentX, currentY] = queue.shift();
-
-        if (
-            currentX === endX &&
-            currentY === endY
-        ) {
-            const path = new Set();
-            let currentKey = `${endX},${endY}`;
-
-            while (currentKey) {
-                path.add(currentKey);
-                currentKey = parent[currentKey];
-            }
-
-            return path;
-        }
-
-        for (const [dx, dy] of directions) {
-            const nextX = currentX + dx;
-            const nextY = currentY + dy;
-
-            const isInside =
-                nextX >= 0 &&
-                nextX < GRID_SIZE &&
-                nextY >= 0 &&
-                nextY < GRID_SIZE;
-
-            if (!isInside) {
-                continue;
-            }
-
-            if (
-                grid[nextY][nextX] === 0 &&
-                !visited[nextY][nextX]
-            ) {
-                visited[nextY][nextX] = true;
-
-                parent[`${nextX},${nextY}`] =
-                    `${currentX},${currentY}`;
-
-                queue.push([nextX, nextY]);
-            }
-        }
+    if (board.hasPointerCapture(pointerId)) {
+      board.releasePointerCapture(pointerId);
     }
+  }
 
-    return new Set();
-}
+  board.addEventListener("pointerup", stopDragging);
+  board.addEventListener("pointercancel", stopDragging);
 
-
-/* =========================
-   Rendering
-========================= */
-
-function renderMapObjects(
-    grid,
-    goalX,
-    goalY,
-    solutionPath
-) {
-    board.querySelectorAll(
-        '.wall, .hole, .endpoint'
-    ).forEach((element) => {
-        element.remove();
-    });
-
-    walls = [];
-    holes = [];
-
-    createZone(1, 1, 'START', 'start-zone');
-
-    checkpoints.forEach((checkpoint, index) => {
-        createZone(
-            checkpoint.cellX,
-            checkpoint.cellY,
-            String(index + 1),
-            'checkpoint-zone'
-        );
-    });
-
-    createZone(
-        goalX,
-        goalY,
-        'GOAL',
-        'goal-zone'
-    );
-
-    const safeCells = new Set();
-
-    for (const key of solutionPath) {
-        const [x, y] = key.split(',').map(Number);
-
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                const safeX = x + dx;
-                const safeY = y + dy;
-
-                if (
-                    safeX >= 1 &&
-                    safeX < GRID_SIZE - 1 &&
-                    safeY >= 1 &&
-                    safeY < GRID_SIZE - 1
-                ) {
-                    safeCells.add(`${safeX},${safeY}`);
-                }
-            }
-        }
+  primaryAction.addEventListener("click", () => {
+    if (primaryAction.dataset.action === "start") {
+      startGame();
+    } else if (primaryAction.dataset.action === "replay") {
+      replayGame();
     }
+  });
 
-    for (let y = 0; y < GRID_SIZE; y++) {
-        for (let x = 0; x < GRID_SIZE; x++) {
-            const isOuterEdge =
-                x === 0 ||
-                y === 0 ||
-                x === GRID_SIZE - 1 ||
-                y === GRID_SIZE - 1;
+  secondaryAction.addEventListener("click", startNewGame);
 
-            if (grid[y][x] === 1 || isOuterEdge) {
-                createWall(x, y);
-                continue;
-            }
+  // Load board data
+  async function loadRandomBoard() {
+    const response = await fetch("board.json");
+    const boards = await response.json();
 
-            const cellKey = `${x},${y}`;
+    const index = Math.floor(Math.random() * boards.length);
+    currentBoard = boards[index];
 
-            const isStart = x === 1 && y === 1;
-            const isGoal = x === goalX && y === goalY;
+    startPos = intersection(currentBoard.start);
+    endPos = intersection(currentBoard.end);
 
-            const isCheckpoint = checkpoints.some((checkpoint) => {
-                return (
-                    checkpoint.cellX === x &&
-                    checkpoint.cellY === y
-                );
-            });
+    waypointPositions =
+      currentBoard.waypoints.map(intersection);
 
-            if (
-                !isStart &&
-                !isGoal &&
-                !isCheckpoint &&
-                !safeCells.has(cellKey) &&
-                Math.random() < 0.18
-            ) {
-                createHole(x, y);
-            }
-        }
-    }
-}
+    holeCells = generateHoleCells(currentBoard.holes);
 
-function createWall(x, y) {
-    const wallElement = document.createElement('div');
+    vWalls =
+      currentBoard["v-walls"].map(parseVerticalWall);
 
-    wallElement.className = 'wall';
-    wallElement.style.left = `${x * cellSize}px`;
-    wallElement.style.top = `${y * cellSize}px`;
-    wallElement.style.width = `${cellSize + 0.5}px`;
-    wallElement.style.height = `${cellSize + 0.5}px`;
+    hWalls =
+      currentBoard["h-walls"].map(parseHorizontalWall);
 
-    board.appendChild(wallElement);
+    renderBoard();
+  }
 
-    walls.push({
-        left: x * cellSize,
-        right: (x + 1) * cellSize,
-        top: y * cellSize,
-        bottom: (y + 1) * cellSize
-    });
-}
-
-function createHole(x, y) {
-    const holeRadius = cellSize * 0.29;
-    const holeX = (x + 0.5) * cellSize;
-    const holeY = (y + 0.5) * cellSize;
-
-    const holeElement = document.createElement('div');
-
-    holeElement.className = 'hole';
-    holeElement.style.width = `${holeRadius * 2}px`;
-    holeElement.style.height = `${holeRadius * 2}px`;
-    holeElement.style.left = `${holeX - holeRadius}px`;
-    holeElement.style.top = `${holeY - holeRadius}px`;
-
-    board.appendChild(holeElement);
-
-    holes.push({
-        x: holeX,
-        y: holeY,
-        radius: holeRadius
-    });
-}
-
-function createZone(x, y, label, className) {
-    const zoneElement = document.createElement('div');
-
-    zoneElement.className =
-        `endpoint ${className}`;
-
-    zoneElement.style.width = `${cellSize}px`;
-    zoneElement.style.height = `${cellSize}px`;
-    zoneElement.style.left = `${x * cellSize}px`;
-    zoneElement.style.top = `${y * cellSize}px`;
-    zoneElement.innerText = label;
-
-    board.appendChild(zoneElement);
-}
-
-
-/* =========================
-   Controls
-========================= */
-
-window.addEventListener('mousemove', (event) => {
-    if (!isGameActive) {
-        return;
-    }
-
-    const rect = board.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    tilt.x = clamp(
-        (event.clientX - centerX) / (rect.width / 2),
-        -1,
-        1
-    );
-
-    tilt.y = clamp(
-        (event.clientY - centerY) / (rect.height / 2),
-        -1,
-        1
-    );
-
-    applyVisualTilt();
-});
-
-function handleOrientation(event) {
-    if (!isGameActive) {
-        return;
-    }
-
-    const beta = event.beta || 0;
-    const gamma = event.gamma || 0;
-
-    if (!orientationBase.calibrated) {
-        orientationBase.beta = beta;
-        orientationBase.gamma = gamma;
-        orientationBase.calibrated = true;
-    }
-
-    tilt.x = clamp(
-        (gamma - orientationBase.gamma) / 20,
-        -1,
-        1
-    );
-
-    tilt.y = clamp(
-        (beta - orientationBase.beta) / 20,
-        -1,
-        1
-    );
-
-    applyVisualTilt();
-}
-
-function applyVisualTilt() {
-    container.style.transform =
-        `rotateX(${-tilt.y * 14}deg)
-         rotateY(${tilt.x * 14}deg)`;
-}
-
-function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
-}
-
-
-/* =========================
-   Physics
-========================= */
-
-function updatePhysics() {
-    if (!isGameActive) {
-        return;
-    }
-
-    ball.vx += tilt.x * 0.58;
-    ball.vy += tilt.y * 0.58;
-
-    ball.vx *= 0.96;
-    ball.vy *= 0.96;
-
-    ball.x += ball.vx;
-    checkWallCollision('x');
-
-    ball.y += ball.vy;
-    checkWallCollision('y');
-
-    positionBall();
-
-    checkGameTriggers();
-
-    animationFrameId =
-        requestAnimationFrame(updatePhysics);
-}
-
-function positionBall() {
-    ballElement.style.left =
-        `${ball.x - ball.radius}px`;
-
-    ballElement.style.top =
-        `${ball.y - ball.radius}px`;
-
-    const shadowX = 6 + tilt.x * 12;
-    const shadowY = 10 + tilt.y * 12;
-    const blur =
-        14 - (Math.abs(tilt.x) + Math.abs(tilt.y)) * 4;
-
-    ballElement.style.boxShadow =
-        `${shadowX}px ${shadowY}px ${blur}px rgba(0, 0, 0, .55),
-         inset -3px -3px 7px rgba(0, 0, 0, .6),
-         inset 2px 2px 4px rgba(255, 255, 255, .4)`;
-}
-
-function checkWallCollision(axis) {
-    for (const wall of walls) {
-        const overlaps =
-            ball.x + ball.radius > wall.left &&
-            ball.x - ball.radius < wall.right &&
-            ball.y + ball.radius > wall.top &&
-            ball.y - ball.radius < wall.bottom;
-
-        if (!overlaps) {
-            continue;
-        }
-
-        if (axis === 'x') {
-            if (ball.vx > 0) {
-                ball.x = wall.left - ball.radius;
-            } else if (ball.vx < 0) {
-                ball.x = wall.right + ball.radius;
-            }
-
-            ball.vx *= -0.4;
-        } else {
-            if (ball.vy > 0) {
-                ball.y = wall.top - ball.radius;
-            } else if (ball.vy < 0) {
-                ball.y = wall.bottom + ball.radius;
-            }
-
-            ball.vy *= -0.4;
-        }
-    }
-}
-
-
-/* =========================
-   Waypoints and goal
-========================= */
-
-function checkGameTriggers() {
-    for (const hole of holes) {
-        const dx = ball.x - hole.x;
-        const dy = ball.y - hole.y;
-        const distance = Math.hypot(dx, dy);
-
-        if (
-            distance <
-            hole.radius + ball.radius * 0.3
-        ) {
-            endGame(
-                false,
-                'You rolled into a pit trap!'
-            );
-
-            return;
-        }
-    }
-
-    if (nextCheckpoint < checkpoints.length) {
-        const checkpoint =
-            checkpoints[nextCheckpoint];
-
-        const distance = Math.hypot(
-            ball.x - checkpoint.x,
-            ball.y - checkpoint.y
-        );
-
-        if (distance < checkpoint.radius) {
-            checkpoint.reached = true;
-            markCheckpointReached(nextCheckpoint);
-
-            nextCheckpoint++;
-
-            if (nextCheckpoint < checkpoints.length) {
-                endMessage.innerText =
-                    `Waypoint ${nextCheckpoint} reached. ` +
-                    `Find waypoint ${nextCheckpoint + 1}.`;
-            } else {
-                endMessage.innerText =
-                    'All waypoints reached! Now find the goal.';
-            }
-        }
-
-        return;
-    }
-
-    const goalDistance = Math.hypot(
-        ball.x - goal.x,
-        ball.y - goal.y
-    );
-
-    if (goalDistance < goal.radius * 1.1) {
-        endGame(
-            true,
-            'Superb! You reached both waypoints ' +
-            'and completed the maze.'
-        );
-    }
-}
-
-function markCheckpointReached(index) {
-    const checkpointElements =
-        board.querySelectorAll('.checkpoint-zone');
-
-    const checkpointElement =
-        checkpointElements[index];
-
-    if (checkpointElement) {
-        checkpointElement.classList.add(
-            'checkpoint-reached'
-        );
-
-        checkpointElement.innerText = '✓';
-        checkpointElement.setAttribute(
-            'aria-label',
-            `Waypoint ${index + 1} reached`
-        );
-    }
-}
-
-
-/* =========================
-   Game state
-========================= */
-
-function resetOrientationCalibration() {
-    orientationBase.beta = 0;
-    orientationBase.gamma = 0;
-    orientationBase.calibrated = false;
-}
-
-function startGame() {
-    instructionModal.classList.remove('active');
-
-    resetOrientationCalibration();
-    initDimensions();
-    generateMaze();
-
-    isGameActive = true;
-    updatePhysics();
-}
-
-function endGame(isWin, message) {
-    isGameActive = false;
-
-    if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-    }
-
-    endTitle.innerText =
-        isWin ? '🎉 Victory!' : '💥 Defeat';
-
-    endMessage.innerText = message;
-    endModal.classList.add('active');
-}
-
-function requestGyroscopePermissions() {
-    if (
-        typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission ===
-            'function'
-    ) {
-        DeviceOrientationEvent
-            .requestPermission()
-            .then((permissionState) => {
-                if (permissionState === 'granted') {
-                    window.addEventListener(
-                        'deviceorientation',
-                        handleOrientation
-                    );
-                }
-
-                startGame();
-            })
-            .catch((error) => {
-                console.error(
-                    'Gyroscope authorization error:',
-                    error
-                );
-
-                startGame();
-            });
-
-        return;
-    }
-
-    window.addEventListener(
-        'deviceorientation',
-        handleOrientation
-    );
-
-    startGame();
-}
-
-
-/* =========================
-   Events
-========================= */
-
-startButton.addEventListener(
-    'click',
-    requestGyroscopePermissions
-);
-
-reloadButton.addEventListener(
-    'click',
-    () => {
-        window.location.reload();
-    }
-);
-
-window.addEventListener('resize', () => {
-    if (!isGameActive) {
-        return;
-    }
-
-    initDimensions();
-    generateMaze();
-});
+  loadRandomBoard().then(() => {
+    resetBall();
+    showStartScreen();
+    requestAnimationFrame(stepPhysics);
+  });
+})();
