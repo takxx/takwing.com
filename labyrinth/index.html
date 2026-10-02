@@ -481,6 +481,14 @@
   const boards = [
 {
 "start": "00-11",
+"waypoints": ["80-91","22-33","08-09","26-37","46-57","68-79"],
+"end": "88-99",
+"v-walls": ["21-71","23-73"],
+"h-walls": ["16-17","36-37","54-57","76-79"],
+"holes": ["20-71","20-71","42-93","42-93","02-17","02-17","28-59","28-59","24-55","24-55","64-77","64-95","84-97"]
+},
+{
+"start": "00-11",
 "waypoints": ["88-99","66-77","44-55"],
 "end": "40-51",
 "v-walls": ["41-51","23-33","45-55","27-77"],
@@ -1370,7 +1378,7 @@ function playWallHit(impactSpeed) {
       const dx = ball.x - target.x;
       const dy = ball.y - target.y;
 
-      if (Math.hypot(dx, dy) < 0.9) {
+      if (Math.hypot(dx, dy) < 0.55) {
         nextWaypointIndex++;
         playWaypointReach();
         updateMarkerColors();
@@ -1382,7 +1390,7 @@ function playWallHit(impactSpeed) {
     const dx = ball.x - endPos.x;
     const dy = ball.y - endPos.y;
 
-    if (Math.hypot(dx, dy) < 0.9) {
+    if (Math.hypot(dx, dy) < 0.55) {
       gameFinished = true;
       gameStarted = false;
       stopRollSound();
