@@ -502,15 +502,15 @@
 			aria-modal="true"
 			role="dialog"
 			>
-			<div class="message-panel">
-				<h1 class="message-title" id="messageTitle"></h1>
-				<p class="message-text" id="messageText"></p>
+				<div class="message-panel">
+					<h1 class="message-title" id="messageTitle"></h1>
+					<p class="message-text" id="messageText"></p>
 
-				<div class="message-actions">
-					<button id="primaryAction" type="button"></button>
-					<button id="secondaryAction" type="button" hidden></button>
+					<div class="message-actions">
+						<button id="primaryAction" type="button"></button>
+						<button id="secondaryAction" type="button" hidden></button>
+					</div>
 				</div>
-			</div>
 			</section>
 		</main>
 
@@ -574,30 +574,127 @@
 
 				const waypointSymbols = ["❶","❷","❸","❹","❺","❻","❼","❽","❾"];
 
-				const text = {
-					gameTitle: "Classic Labyrinth",
+				/* =========================
+				Localization
+				========================= */
 
-					startTitle: "Ready to play?",
+				const messages = {
+					en: {
+						gameTitle: "Classic Labyrinth",
 
-					startText:
-					"Tilt the board or drag to guide the ball through every waypoint and reach the endpoint. Avoid the holes.",
+						startTitle: "Ready to play?",
 
-					holeTitle: "The ball fell into a hole",
+						startText:
+						"Tilt the board or drag to guide the ball through every waypoint and reach the endpoint. Avoid the holes.",
 
-					holeText:
-					"Your progress has been reset. You can replay this board or start a new game.",
+						holeTitle: "The ball fell into a hole",
 
-					winTitle: "You win!",
+						holeText:
+						"Your progress has been reset. You can replay this board or start a new game.",
 
-					winText:
-					"You reached the endpoint successfully. You can replay this board or start a new game.",
+						winTitle: "You win!",
 
-					actions: {
-						startGame: "Start game",
-						replay: "Replay",
-						newGame: "Start new game"
+						winText:
+						"You reached the endpoint successfully. You can replay this board or start a new game.",
+
+						actions: {
+							startGame: "Start game",
+							replay: "Replay",
+							newGame: "Start new game"
+						}
+					},
+
+					es: {
+						gameTitle: "Laberinto clásico",
+
+						startTitle: "¿Listo para jugar?",
+
+						startText:
+						"Inclina el tablero o arrástralo para guiar la bola por todos los puntos y llegar al final. Evita los agujeros.",
+
+						holeTitle: "La bola cayó en un agujero",
+
+						holeText:
+						"Tu progreso se ha reiniciado. Puedes repetir este tablero o empezar un juego nuevo.",
+
+						winTitle: "¡Ganaste!",
+
+						winText:
+						"Llegaste al punto final con éxito. Puedes repetir este tablero o empezar un juego nuevo.",
+
+						actions: {
+							startGame: "Empezar",
+							replay: "Repetir",
+							newGame: "Juego nuevo"
+						}
+					},
+
+					zh: {
+						gameTitle: "經典迷宮",
+
+						startTitle: "準備好未？",
+
+						startText:
+						"傾斜木板或拖曳引導個波經過每個檢查點，最後到達終點。千祈唔好跌入窿度。",
+
+						holeTitle: "個波跌入窿度",
+
+						holeText:
+						"你嘅進度已經重置。你可以重玩呢個板，或者開始新遊戲。",
+
+						winTitle: "你贏咗！",
+
+						winText:
+						"你成功到達終點。你可以重玩呢個板，或者開始新遊戲。",
+
+						actions: {
+							startGame: "開始遊戲",
+							replay: "重玩",
+							newGame: "新遊戲"
+						}
 					}
 				};
+
+				function getLangFromQuery() {
+					const params = new URLSearchParams(window.location.search);
+					const lang = params.get("lang");
+					if (lang === "en" || lang === "es" || lang === "zh") {
+						return lang;
+					}
+					return null;
+				}
+
+				function getLangFromBrowser() {
+					const languages = navigator.languages || [];
+					if (languages.length) {
+						for (const code of languages) {
+							const base = (code || "").split("-")[0].toLowerCase();
+							if (base === "es") return "es";
+							if (base === "zh") return "zh";
+							if (base === "en") return "en";
+						}
+					}
+					const primary = (navigator.language || "").split("-")[0].toLowerCase();
+					if (primary === "es") return "es";
+					if (primary === "zh") return "zh";
+					if (primary === "en") return "en";
+					return null;
+				}
+
+				function resolveLanguage() {
+					return (
+					getLangFromQuery() ||
+					getLangFromBrowser() ||
+					"en"
+					);
+				}
+
+				let currentLang = resolveLanguage();
+				let text = messages[currentLang] || messages.en;
+
+				/* =========================
+				Game code
+				========================= */
 
 				document.title = text.gameTitle;
 
@@ -1222,7 +1319,7 @@
 					/Mobi|Android/i.test(navigator.userAgent);
 
 					const description = isMobile
-					? "Tilt your device or drag to guide the ball through every waypoint and reach the endpoint. Avoid the holes."
+					? text.startText
 					: text.startText;
 
 					setScreenContent(
@@ -1571,6 +1668,7 @@
 
 					requestAnimationFrame(stepPhysics);
 				}
+
 				function applyTilt() {
 					board.style.transform =
 					`rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
