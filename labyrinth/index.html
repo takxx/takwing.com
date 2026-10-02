@@ -1393,122 +1393,126 @@ function playWallHit(impactSpeed) {
     }
   }
 
-  function resolveWalls(nextX, nextY) {
-    const radius = ball.radius;
-    let hitWall = false;
-    let impactSpeed = 0;
+function resolveWalls(nextX, nextY) {
+  const radius = ball.radius;
+  // Make the collision thickness a bit larger than the visual wall
+  const wallThickness = 0.18;
 
-    // Check for collisions with borders and walls
-    // Left border
-    if (nextX - radius < 0) {
-      if (ball.vx < 0) {
-        impactSpeed = Math.abs(ball.vx);
-        hitWall = true;
+  let hitWall = false;
+  let impactSpeed = 0;
+
+  // Helper to record a bounce and reverse velocity on a given axis
+  function bounce(axis, direction) {
+    const v = axis === "x" ? ball.vx : ball.vy;
+    // Only count as a hit if moving into the wall
+    if (direction * v > 0) {
+      impactSpeed = Math.max(impactSpeed, Math.abs(v));
+      hitWall = true;
+
+      // Reverse and damp
+      if (axis === "x") {
+        ball.vx = -ball.vx * 0.6;
+      } else {
+        ball.vy = -ball.vy * 0.6;
       }
-      nextX = radius;
-      ball.vx = -ball.vx * 0.6;
-    }
-    // Right border
-    else if (nextX + radius > 10) {
-      if (ball.vx > 0) {
-        impactSpeed = Math.max(impactSpeed, Math.abs(ball.vx));
-        hitWall = true;
-      }
-      nextX = 10 - radius;
-      ball.vx = -ball.vx * 0.6;
-    }
-
-    // Top border
-    if (nextY - radius < 0) {
-      if (ball.vy < 0) {
-        impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
-        hitWall = true;
-      }
-      nextY = radius;
-      ball.vy = -ball.vy * 0.6;
-    }
-    // Bottom border
-    else if (nextY + radius > 10) {
-      if (ball.vy > 0) {
-        impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
-        hitWall = true;
-      }
-      nextY = 10 - radius;
-      ball.vy = -ball.vy * 0.6;
-    }
-
-    // Vertical walls
-    for (const wall of vWalls) {
-      const crossed =
-        (ball.x - radius < wall.x &&
-          nextX + radius > wall.x) ||
-        (ball.x + radius > wall.x &&
-          nextX - radius < wall.x);
-
-      if (!crossed) continue;
-
-      const yCenter = (ball.y + nextY) / 2;
-
-      if (yCenter >= wall.y && yCenter <= wall.y + wall.height) {
-        if (ball.x < wall.x) {
-          if (ball.vx > 0) {
-            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vx));
-            hitWall = true;
-          }
-          nextX = wall.x - radius;
-          ball.vx = -ball.vx * 0.7;
-        } else {
-          if (ball.vx < 0) {
-            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vx));
-            hitWall = true;
-          }
-          nextX = wall.x + radius;
-          ball.vx = -ball.vx * 0.7;
-        }
+    } else {
+      // Resting contact: kill velocity in this direction to avoid creeping
+      if (axis === "x") {
+        ball.vx = 0;
+      } else {
+        ball.vy = 0;
       }
     }
-
-    // Horizontal walls
-    for (const wall of hWalls) {
-      const crossed =
-        (ball.y - radius < wall.y &&
-          nextY + radius > wall.y) ||
-        (ball.y + radius > wall.y &&
-          nextY - radius < wall.y);
-
-      if (!crossed) continue;
-
-      const xCenter = (ball.x + nextX) / 2;
-
-      if (xCenter >= wall.x && xCenter <= wall.x + wall.width) {
-        if (ball.y < wall.y) {
-          if (ball.vy > 0) {
-            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
-            hitWall = true;
-          }
-          nextY = wall.y - radius;
-          ball.vy = -ball.vy * 0.7;
-        } else {
-          if (ball.vy < 0) {
-            impactSpeed = Math.max(impactSpeed, Math.abs(ball.vy));
-            hitWall = true;
-          }
-          nextY = wall.y + radius;
-          ball.vy = -ball.vy * 0.7;
-        }
-      }
-    }
-
-    if (hitWall) {
-      playWallHit(impactSpeed);
-    }
-
-    return {
-      x: nextX,
-      y: nextY
-    };
   }
 
+  // Outer borders
+  if (nextX - radius < 0) {
+    nextX = radius;
+    bounce("x", -1);
+  } else if (nextX + radius > 10) {
+    nextX = 10 - radius;
+    bounce("x", 1);
+  }
+
+  if (nextY - radius < 0) {
+    nextY = radius;
+    bounce("y", -1);
+  } else if (nextY + radius > 10) {
+    nextY = 10 - radius;
+    bounce("y", 1);
+  }
+
+  // Vertical walls
+  for (const wall of vWalls) {
+    const left = wall.x - wallThickness / 2;
+    const right = wall.x + wallThickness / 2;
+    const top = wall.y;
+    const bottom = wall.y + wall.height;
+
+    const overlapX =
+      nextX + radius > left &&
+      nextX - radius < right;
+
+    const overlapY =
+      nextY + radius > top &&
+      nextY - radius < bottom;
+
+    if (!overlapX || !overlapY) continue;
+
+    const pushLeft = nextX + radius - left;
+    const pushRight = right - (nextX - radius);
+
+    if (pushLeft < pushRight) {
+      // Resolve to the left side
+      nextX = left - radius;
+      bounce("x", -1);
+    } else {
+      // Resolve to the right side
+      nextX = right + radius;
+      bounce("x", 1);
+    }
+  }
+
+  // Horizontal walls
+  for (const wall of hWalls) {
+    const top = wall.y - wallThickness / 2;
+    const bottom = wall.y + wallThickness / 2;
+    const left = wall.x;
+    const right = wall.x + wall.width;
+
+    const overlapX =
+      nextX + radius > left &&
+      nextX - radius < right;
+
+    const overlapY =
+      nextY + radius > top &&
+      nextY - radius < bottom;
+
+    if (!overlapX || !overlapY) continue;
+
+    const pushUp = nextY + radius - top;
+    const pushDown = bottom - (nextY - radius);
+
+    if (pushUp < pushDown) {
+      // Ball is mostly above the wall: place it on top
+      nextY = top - radius;
+      bounce("y", -1);
+    } else {
+      // Ball is mostly below the wall: place it underneath
+      nextY = bottom + radius;
+      bounce("y", 1);
+    }
+  }
+
+  if (hitWall) {
+    playWallHit(impactSpeed);
+  }
+
+  return {
+    x: nextX,
+    y: nextY
+  };
+}
   const ball = {
     x: 0,
     y: 0,
