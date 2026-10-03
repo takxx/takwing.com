@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Bilingual Wordle</title>
+<title>Another Wordle</title>
 
 <style>
 :root {
@@ -17,6 +17,7 @@
   --green: #538d4e;
   --yellow: #b59f3b;
   --gray: #3a3a3a;
+  --focus: #7aa9ff;
 }
 
 * {
@@ -25,10 +26,10 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--background);
-  min-height: 100vh;
 }
 
 header {
@@ -44,15 +45,14 @@ header {
 h1 {
   margin: 0;
   letter-spacing: 0.2rem;
-  color: var(--text);
 }
 
 .controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: center;
 }
 
 label {
@@ -65,8 +65,8 @@ button {
   padding: 0.45rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface-2);
   color: var(--text);
+  background: var(--surface-2);
   cursor: pointer;
 }
 
@@ -77,7 +77,7 @@ button:hover {
 
 select:focus-visible,
 button:focus-visible {
-  outline: 2px solid #7aa9ff;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -100,6 +100,7 @@ main {
   justify-content: center;
   margin-bottom: 1rem;
   cursor: text;
+  touch-action: manipulation;
 }
 
 .row {
@@ -114,11 +115,12 @@ main {
   display: grid;
   place-items: center;
   border: 2px solid var(--border);
+  color: var(--text);
   font-size: 1.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--text);
   user-select: none;
+  will-change: contents, background-color;
 }
 
 .tile.filled {
@@ -126,38 +128,42 @@ main {
 }
 
 .tile.correct {
+  color: #ffffff;
   background: var(--green);
   border-color: var(--green);
-  color: #ffffff;
 }
 
 .tile.present {
+  color: #121212;
   background: var(--yellow);
   border-color: var(--yellow);
-  color: #121212;
 }
 
 .tile.absent {
+  color: #d7dadc;
   background: var(--gray);
   border-color: var(--gray);
-  color: #d7dadc;
 }
 
 #message {
   min-height: 1.5rem;
   margin-bottom: 1rem;
-  font-weight: 600;
   color: var(--text);
+  font-weight: 600;
 }
 
+/*
+  This remains focusable so that mobile browsers open the touchscreen keyboard.
+  It is visually hidden without using display:none or pointer-events:none.
+*/
 #guess-input {
-  position: absolute;
+  position: fixed;
+  left: -9999px;
   width: 1px;
   height: 1px;
   padding: 0;
-  border: none;
+  border: 0;
   opacity: 0;
-  pointer-events: none;
 }
 
 @media (max-width: 480px) {
@@ -173,24 +179,32 @@ main {
 }
 </style>
 </head>
+
 <body>
 <header>
   <h1 id="title">WORDLE</h1>
 
   <div class="controls">
     <label for="language-select" id="language-label">Language</label>
+
     <select id="language-select">
       <option value="en">English</option>
       <option value="es">Español</option>
     </select>
-    <button id="new-game">New game</button>
+
+    <button id="new-game" type="button">New game</button>
   </div>
 </header>
 
 <main>
   <p id="instructions"></p>
 
-  <div id="board" aria-label="Wordle board"></div>
+  <div
+    id="board"
+    aria-label="Wordle board"
+    role="application"
+    tabindex="0"
+  ></div>
 
   <div id="message" role="status" aria-live="polite"></div>
 
@@ -207,8 +221,11 @@ main {
 </main>
 
 <script>
+"use strict";
+
 const WORD_LENGTH = 5;
 const MAX_GUESSES = 6;
+const LETTER_PATTERN = /^[a-zA-ZñÑáéíóúüÁÉÍÓÚÜ]$/;
 
 const TRANSLATIONS = {
   en: {
@@ -238,10 +255,12 @@ const TRANSLATIONS = {
 const state = {
   lang: "en",
   words: [],
+  wordSet: new Set(),
   answer: "",
   guesses: [],
   currentGuess: "",
-  gameOver: false
+  gameOver: false,
+  loading: false
 };
 
 const board = document.getElementById("board");
@@ -252,6 +271,13 @@ const languageLabel = document.getElementById("language-label");
 const instructions = document.getElementById("instructions");
 const newGameButton = document.getElementById("new-game");
 const title = document.getElementById("title");
+
+/*
+  Cached tile references:
+  tiles[row][column]
+  This avoids repeated DOM traversal via board.children during every keystroke.
+*/
+const tiles = [];
 
 function detectInitialLanguage() {
   const urlLanguage = new URLSearchParams(window.location.search).get("lang");
@@ -285,7 +311,7 @@ async function loadWords(language) {
     .filter(
       word =>
         typeof word === "string" &&
-        word.length === WORD_LENGTH &&
+        [...word].length === WORD_LENGTH &&
         /^[A-ZÑÁÉÍÓÚÜ]+$/i.test(word)
     )
     .map(word => word.toUpperCase());
@@ -308,6 +334,74 @@ function normalizeWord(word) {
   return normalizeLetter(word);
 }
 
+function createBoard() {
+  board.replaceChildren();
+  tiles.length = 0;
+
+  const fragment = document.createDocumentFragment();
+
+  for (let row = 0; row < MAX_GUESSES; row++) {
+    const rowElement = document.createElement("div");
+    rowElement.className = "row";
+
+    const rowTiles = [];
+
+    for (let column = 0; column < WORD_LENGTH; column++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.setAttribute("aria-hidden", "true");
+
+      rowElement.appendChild(tile);
+      rowTiles.push(tile);
+    }
+
+    fragment.appendChild(rowElement);
+    tiles.push(rowTiles);
+  }
+
+  board.appendChild(fragment);
+}
+
+function resetTile(tile) {
+  tile.textContent = "";
+  tile.className = "tile";
+}
+
+function updateCurrentRow() {
+  const rowIndex = state.guesses.length;
+
+  if (rowIndex >= MAX_GUESSES) return;
+
+  for (let column = 0; column < WORD_LENGTH; column++) {
+    const tile = tiles[rowIndex][column];
+    const letter = state.currentGuess[column] || "";
+
+    tile.textContent = letter;
+    tile.classList.toggle("filled", Boolean(letter));
+  }
+}
+
+function renderSubmittedRow(rowIndex, guess, feedback) {
+  for (let column = 0; column < WORD_LENGTH; column++) {
+    const tile = tiles[rowIndex][column];
+
+    tile.textContent = guess[column];
+    tile.className = `tile ${feedback[column]}`;
+  }
+}
+
+function clearBoard() {
+  for (const rowTiles of tiles) {
+    for (const tile of rowTiles) {
+      resetTile(tile);
+    }
+  }
+}
+
+function showMessage(text = "") {
+  message.textContent = text;
+}
+
 function buildAnswerMap(word) {
   const counts = new Map();
 
@@ -322,92 +416,52 @@ function evaluateGuess(guess, answer) {
   const result = Array(WORD_LENGTH).fill("absent");
   const remaining = buildAnswerMap(answer);
 
-  for (let i = 0; i < WORD_LENGTH; i++) {
-    if (guess[i] === answer[i]) {
-      result[i] = "correct";
-      remaining.set(guess[i], remaining.get(guess[i]) - 1);
+  for (let index = 0; index < WORD_LENGTH; index++) {
+    if (guess[index] === answer[index]) {
+      result[index] = "correct";
+      remaining.set(guess[index], remaining.get(guess[index]) - 1);
     }
   }
 
-  for (let i = 0; i < WORD_LENGTH; i++) {
-    if (result[i] === "correct") continue;
+  for (let index = 0; index < WORD_LENGTH; index++) {
+    if (result[index] === "correct") continue;
 
-    const count = remaining.get(guess[i]) || 0;
+    const count = remaining.get(guess[index]) || 0;
 
     if (count > 0) {
-      result[i] = "present";
-      remaining.set(guess[i], count - 1);
+      result[index] = "present";
+      remaining.set(guess[index], count - 1);
     }
   }
 
   return result;
 }
 
-function createBoard() {
-  board.innerHTML = "";
-
-  for (let row = 0; row < MAX_GUESSES; row++) {
-    const rowElement = document.createElement("div");
-    rowElement.className = "row";
-
-    for (let column = 0; column < WORD_LENGTH; column++) {
-      const tile = document.createElement("div");
-      tile.className = "tile";
-      rowElement.appendChild(tile);
-    }
-
-    board.appendChild(rowElement);
-  }
-}
-
-function updateBoard() {
-  const rows = board.children;
-
-  for (let rowIndex = 0; rowIndex < MAX_GUESSES; rowIndex++) {
-    const tiles = rows[rowIndex].children;
-    const submittedGuess = state.guesses[rowIndex];
-
-    if (submittedGuess) {
-      const feedback = evaluateGuess(submittedGuess.guess, state.answer);
-
-      for (let i = 0; i < WORD_LENGTH; i++) {
-        tiles[i].textContent = submittedGuess.guess[i];
-        tiles[i].classList.add(feedback[i]);
-      }
-    } else if (rowIndex === state.guesses.length) {
-      for (let i = 0; i < WORD_LENGTH; i++) {
-        tiles[i].textContent = state.currentGuess[i] || "";
-        tiles[i].classList.toggle("filled", Boolean(state.currentGuess[i]));
-      }
-    } else {
-      for (const tile of tiles) {
-        tile.textContent = "";
-        tile.className = "tile";
-      }
-    }
-  }
-}
-
-function showMessage(text) {
-  message.textContent = text;
-}
-
 function addLetter(rawLetter) {
-  if (state.gameOver) return;
+  if (state.loading || state.gameOver) return;
   if (state.currentGuess.length >= WORD_LENGTH) return;
 
-  state.currentGuess += normalizeLetter(rawLetter);
-  updateBoard();
+  const letter = normalizeLetter(rawLetter);
+
+  if (!LETTER_PATTERN.test(rawLetter) || letter.length !== 1) return;
+
+  state.currentGuess += letter;
+  showMessage();
+  updateCurrentRow();
 }
 
 function removeLetter() {
-  if (state.gameOver) return;
+  if (state.loading || state.gameOver) return;
+  if (!state.currentGuess) return;
 
   state.currentGuess = state.currentGuess.slice(0, -1);
-  updateBoard();
+  showMessage();
+  updateCurrentRow();
 }
 
 function submitGuess() {
+  if (state.loading || state.gameOver) return;
+
   const guess = state.currentGuess;
 
   if (guess.length !== WORD_LENGTH) {
@@ -415,33 +469,38 @@ function submitGuess() {
     return;
   }
 
-  const normalizedGuess = normalizeWord(guess);
-  const isValid = state.words.some(
-    word => normalizeWord(word) === normalizedGuess
-  );
-
-  if (!isValid) {
+  /*
+    Set.has() is faster than scanning all words with Array.some()
+    every time a guess is submitted.
+  */
+  if (!state.wordSet.has(normalizeWord(guess))) {
     showMessage(TRANSLATIONS[state.lang].invalidWord);
     return;
   }
 
   const feedback = evaluateGuess(guess, state.answer);
+  const rowIndex = state.guesses.length;
 
   state.guesses.push({ guess, feedback });
   state.currentGuess = "";
 
-  updateBoard();
+  renderSubmittedRow(rowIndex, guess, feedback);
 
   if (guess === state.answer) {
     state.gameOver = true;
     showMessage(TRANSLATIONS[state.lang].win);
+    guessInput.blur();
     return;
   }
 
   if (state.guesses.length === MAX_GUESSES) {
     state.gameOver = true;
     showMessage(`${TRANSLATIONS[state.lang].lose} ${state.answer}`);
+    guessInput.blur();
+    return;
   }
+
+  updateCurrentRow();
 }
 
 function applyTranslations() {
@@ -455,65 +514,131 @@ function applyTranslations() {
   languageSelect.value = state.lang;
 }
 
+function focusGameInput() {
+  if (!state.gameOver && !state.loading) {
+    guessInput.focus({ preventScroll: true });
+  }
+}
+
+function handleKey(key) {
+  if (key === "Enter") {
+    submitGuess();
+    return;
+  }
+
+  if (key === "Backspace" || key === "Delete") {
+    removeLetter();
+    return;
+  }
+
+  if (LETTER_PATTERN.test(key)) {
+    addLetter(key);
+  }
+}
+
 async function startGame(language, { preserveUrl = false } = {}) {
+  state.loading = true;
+  showMessage("");
+
   try {
     state.lang = language;
     applyTranslations();
 
-    state.words = await loadWords(language);
-    state.answer =
-      state.words[Math.floor(Math.random() * state.words.length)];
+    const words = await loadWords(language);
+
+    state.words = words;
+    state.wordSet = new Set(words.map(normalizeWord));
+    state.answer = words[Math.floor(Math.random() * words.length)];
     state.guesses = [];
     state.currentGuess = "";
     state.gameOver = false;
 
-    message.textContent = "";
-    createBoard();
-    updateBoard();
+    clearBoard();
 
     if (preserveUrl) {
-      const url = new URL(window.location);
+      const url = new URL(window.location.href);
       url.searchParams.set("lang", language);
       window.history.replaceState({}, "", url);
     }
+
+    focusGameInput();
   } catch (error) {
     console.error(error);
-    showMessage(error.message);
+    showMessage(error.message || "Unable to start the game.");
+  } finally {
+    state.loading = false;
   }
 }
 
+/*
+  Hardware keyboards:
+  Do not intercept normal text entry while the hidden input owns focus.
+  The input event handles those letters. This handler remains useful if
+  the board itself is focused.
+*/
 document.addEventListener("keydown", event => {
   if (event.target === guessInput) return;
 
-  if (event.key === "Enter") {
-    submitGuess();
-  } else if (event.key === "Backspace") {
-    removeLetter();
-  } else if (/^[a-zA-ZñÑáéíóúüÁÉÍÓÚÜ]$/.test(event.key)) {
-    addLetter(event.key);
+  if (
+    event.key === "Enter" ||
+    event.key === "Backspace" ||
+    event.key === "Delete" ||
+    LETTER_PATTERN.test(event.key)
+  ) {
+    event.preventDefault();
+    handleKey(event.key);
   }
 });
 
-board.addEventListener("click", () => {
-  guessInput.focus();
+/*
+  Mobile virtual keyboards:
+  beforeinput exposes deleteContentBackward even where keydown does not
+  reliably report Backspace.
+*/
+guessInput.addEventListener("beforeinput", event => {
+  if (event.inputType === "deleteContentBackward") {
+    event.preventDefault();
+    removeLetter();
+  }
 });
 
+/*
+  Fallback for keyboards that do emit a normal Backspace key event.
+  Preventing default avoids duplicate deletion when both events occur.
+*/
+guessInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    submitGuess();
+    return;
+  }
+
+  if (event.key === "Backspace" || event.key === "Delete") {
+    event.preventDefault();
+    removeLetter();
+  }
+});
+
+/*
+  Handles touchscreen typing, physical keyboard typing, paste, speech
+  input, and IME text insertion. The value is immediately cleared because
+  game state is stored in state.currentGuess rather than in this field.
+*/
 guessInput.addEventListener("input", () => {
   const value = guessInput.value;
   guessInput.value = "";
 
   for (const character of value) {
-    if (/^[a-zA-ZñÑáéíóúüÁÉÍÓÚÜ]$/.test(character)) {
+    if (LETTER_PATTERN.test(character)) {
       addLetter(character);
     }
   }
 });
 
-guessInput.addEventListener("keydown", event => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    submitGuess();
-  }
+board.addEventListener("click", focusGameInput);
+
+board.addEventListener("touchstart", focusGameInput, {
+  passive: true
 });
 
 languageSelect.addEventListener("change", event => {
@@ -524,6 +649,7 @@ newGameButton.addEventListener("click", () => {
   startGame(state.lang);
 });
 
+createBoard();
 startGame(detectInitialLanguage());
 </script>
 </body>
