@@ -266,3 +266,8 @@ h1 {
     text-align: center;
   }
 }
+
+.cell.dynamite {
+  background: #5a1a1a; /* dark maroon */
+  color: #fff;
+}

@@ -12,10 +12,22 @@ const animals = [
   "🐡"
 ];
 
+const DYNAMITE = "🧨";
+
 const TIMED_START_SECONDS = 80;
 const TIMED_MAX_SECONDS = 99;
 const TIME_PER_POINT = 1 / 3;
 const RESHUFFLE_BONUS_SECONDS = 2;
+
+// Dynamite thresholds
+const DYNAMITE_POINTS_RELAXED = 500;
+const DYNAMITE_POINTS_TIMED = 100;
+
+// A cascade must reach this level to queue one dynamite.
+const DYNAMITE_CASCADE_LEVEL = 5;
+
+// Maximum queued dynamites at any time.
+const MAX_PENDING_DYNAMITES = 2;
 
 const translations = {
   en: {
@@ -36,7 +48,9 @@ const translations = {
     reshuffled: "No moves available. The board was reshuffled!",
     timeUp: "Time is up!",
     noMoves: "Game over! There are no possible matches left.",
-    hintMessage: "Hint: try swapping these two animals."
+    hintMessage: "Hint: try swapping these two animals.",
+    dynamiteCleared: count => `Boom! ${count} animals cleared!`,
+    dynamiteHint: "Hint: explode this dynamite."
   },
 
   es: {
@@ -45,19 +59,21 @@ const translations = {
     mode: "Modo",
     modeRelaxed: "Relajado",
     modeTimed: "Contrarreloj",
-    score: "Puntuación",
-    moves: "Movimientos",
-    time: "Tiempo",
-    bestScore: "Mejor",
-    hint: "Pista",
-    newGame: "Nuevo Juego",
+    score: "Score",
+    moves: "Moves",
+    time: "Time",
+    bestScore: "Best",
+    hint: "Hint",
+    newGame: "New Game",
     instructions: "Haz clic o desliza animales vecinos para combinarlos.",
     match: count => `¡Bien! ¡Has combinado ${count} animales!`,
     invalidSwap: "Ese movimiento no creó una combinación.",
     reshuffled: "No hay movimientos. ¡El tablero se reorganizó!",
     timeUp: "¡Se acabó el tiempo!",
     noMoves: "¡Fin del juego! No quedan combinaciones posibles.",
-    hintMessage: "Pista: intenta intercambiar estos dos animales."
+    hintMessage: "Pista: intenta intercambiar estos dos animales.",
+    dynamiteCleared: count => `¡Boom! ¡${count} animales eliminados!`,
+    dynamiteHint: "Pista: detona esta dinamita."
   },
 
   "zh-TW": {
@@ -78,7 +94,9 @@ const translations = {
     reshuffled: "沒有可用步數，棋盤已重新排列！",
     timeUp: "夠鐘！",
     noMoves: "遊戲結束！已無動物可配對。",
-    hintMessage: "提示：試試交換這兩隻動物。"
+    hintMessage: "提示：試試交換這兩隻動物。",
+    dynamiteCleared: count => `轟！消除了 ${count} 隻動物！`,
+    dynamiteHint: "提示：引爆這顆炸藥。"
   }
 };
 
@@ -115,6 +133,12 @@ let bestScoreTimed = 0;
 
 let resizeTimeout = null;
 let reshuffleCheckInterval = null;
+
+// Dynamite tracking
+let pointsSinceLastDynamite = 0;
+
+// Dynamites waiting for an empty board space.
+let pendingDynamites = 0;
 
 /* ---------------------------
    Orientation / board size
@@ -293,6 +317,74 @@ function playMatchSounds(numberOfMatchedAnimals) {
   }
 }
 
+function playDynamiteSound() {
+  const context = getAudioContext();
+
+  if (!context) {
+    return;
+  }
+
+  if (context.state === "suspended") {
+    context.resume();
+  }
+
+  const t = context.currentTime;
+
+  const osc = context.createOscillator();
+  const oscGain = context.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(90, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.35);
+
+  oscGain.gain.setValueAtTime(0.0001, t);
+  oscGain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+  oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+  osc.connect(oscGain);
+  oscGain.connect(context.destination);
+
+  osc.start(t);
+  osc.stop(t + 0.36);
+
+  const bufferSize = context.sampleRate * 0.4;
+  const buffer = context.createBuffer(
+    1,
+    bufferSize,
+    context.sampleRate
+  );
+
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+
+  const noise = context.createBufferSource();
+  noise.buffer = buffer;
+
+  const noiseFilter = context.createBiquadFilter();
+  noiseFilter.type = "lowpass";
+  noiseFilter.frequency.setValueAtTime(900, t);
+  noiseFilter.frequency.exponentialRampToValueAtTime(120, t + 0.3);
+
+  const noiseGain = context.createGain();
+  noiseGain.gain.setValueAtTime(0.0001, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(context.destination);
+
+  noise.start(t);
+  noise.stop(t + 0.4);
+
+  if (navigator.vibrate) {
+    navigator.vibrate(200);
+  }
+}
+
 /* ---------------------------
    Utility functions
 ---------------------------- */
@@ -338,7 +430,6 @@ function updateBestScore() {
 }
 
 function formatTime(seconds) {
-  // Always show two digits, even if internal time is fractional.
   return String(
     Math.max(0, Math.ceil(seconds))
   ).padStart(2, "0");
@@ -367,7 +458,6 @@ function addTime(seconds) {
     timeLeft + seconds
   );
 
-  // Move the end time forward by the amount added.
   if (timerEndTime !== null) {
     timerEndTime += seconds * 1000;
   }
@@ -397,7 +487,6 @@ function scheduleTimerTick() {
   timeLeft = millisecondsRemaining / 1000;
   updateTimerDisplay();
 
-  // Update close to the next visible whole-second change.
   const nextUpdate =
     millisecondsRemaining % 1000 || 1000;
 
@@ -442,6 +531,8 @@ function createBoard() {
   busy = false;
   pointerStart = null;
   hintCells = [];
+  pointsSinceLastDynamite = 0;
+  pendingDynamites = 0;
 
   do {
     board = Array.from(
@@ -467,17 +558,26 @@ function render() {
       cell.className = "cell";
       cell.dataset.row = row;
       cell.dataset.col = col;
-      cell.textContent = board[row][col] || "";
+
+      const value = board[row][col];
+
+      cell.textContent = value ? value : "";
 
       cell.setAttribute(
         "aria-label",
-        board[row][col]
-          ? `Animal ${board[row][col]}`
+        value
+          ? value === DYNAMITE
+            ? "Dynamite"
+            : `Animal ${value}`
           : "Empty"
       );
 
-      if (!board[row][col]) {
+      if (!value) {
         cell.classList.add("empty");
+      }
+
+      if (value === DYNAMITE) {
+        cell.classList.add("dynamite");
       }
 
       if (
@@ -529,7 +629,6 @@ function swap(first, second) {
 function findMatches() {
   const matches = new Set();
 
-  // Horizontal matches
   for (let row = 0; row < ROWS; row++) {
     let start = 0;
 
@@ -554,7 +653,6 @@ function findMatches() {
     }
   }
 
-  // Vertical matches
   for (let col = 0; col < COLS; col++) {
     let start = 0;
 
@@ -600,27 +698,85 @@ function dropAnimals() {
         randomAnimal();
     }
   }
+
+  // Place queued dynamites only if empty spaces now exist.
+  placePendingDynamites();
+}
+
+/* ---------------------------
+   Pending dynamite placement
+---------------------------- */
+
+function queueDynamite() {
+  pendingDynamites = Math.min(
+    MAX_PENDING_DYNAMITES,
+    pendingDynamites + 1
+  );
+}
+
+function placePendingDynamites() {
+  while (pendingDynamites > 0) {
+    const emptyCells = [];
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        if (!board[row][col]) {
+          emptyCells.push({ row, col });
+        }
+      }
+    }
+
+    // No free space yet. Keep the dynamite queued.
+    if (emptyCells.length === 0) {
+      break;
+    }
+
+    const index = Math.floor(
+      Math.random() * emptyCells.length
+    );
+
+    const cell = emptyCells[index];
+
+    board[cell.row][cell.col] = DYNAMITE;
+
+    pendingDynamites--;
+  }
 }
 
 /* ---------------------------
    Scoring
 ---------------------------- */
 
-/*
-  Match of 3 = 1 point
-  Match of 4 = 2 points
-  Match of 5 = 3 points
-  Match of 6 = 4 points
-
-  Chain multiplier:
-  First cascade = ×1
-  Second cascade = ×2
-  Third cascade = ×3
-*/
 function scoreForMatch(count, cascadeLevel) {
   const basePoints = Math.max(1, count - 2);
 
   return basePoints * cascadeLevel;
+}
+
+function addScore(points) {
+  if (points <= 0) {
+    return;
+  }
+
+  score += points;
+
+  if (gameMode === "timed") {
+    addTime(points * TIME_PER_POINT);
+  }
+
+  pointsSinceLastDynamite += points;
+
+  const threshold =
+    gameMode === "timed"
+      ? DYNAMITE_POINTS_TIMED
+      : DYNAMITE_POINTS_RELAXED;
+
+  // One score dynamite per threshold crossed.
+  if (pointsSinceLastDynamite >= threshold) {
+    pointsSinceLastDynamite -= threshold;
+
+    queueDynamite();
+  }
 }
 
 /* ---------------------------
@@ -679,24 +835,257 @@ async function resolveMatches() {
   }
 
   if (pointsThisMove > 0) {
-    score += pointsThisMove;
+    // May queue one score dynamite.
+    addScore(pointsThisMove);
 
-    if (gameMode === "timed") {
-      addTime(pointsThisMove * TIME_PER_POINT);
+    // May queue one cascade dynamite.
+    if (cascadeLevel >= DYNAMITE_CASCADE_LEVEL) {
+      queueDynamite();
     }
 
     render();
   }
 
   if (!findPossibleMove()) {
+    if (gameMode === "relaxed" && !boardHasDynamite()) {
+      showGameOver();
+      return;
+    }
+
     reshuffleBoard();
-  } else if (!gameOverShown) {
+    return;
+  }
+
+  if (!gameOverShown) {
     messageElement.textContent =
       translate("instructions");
   }
 }
 
+/* ---------------------------
+   Dynamite logic
+---------------------------- */
+
+function boardHasDynamite() {
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (board[row][col] === DYNAMITE) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function triggerDynamiteExplosion(row, col, explodedSet) {
+  const toExplode = [{ row, col }];
+  let totalCleared = 0;
+
+  while (toExplode.length > 0) {
+    const current = toExplode.pop();
+    const key = `${current.row},${current.col}`;
+
+    if (explodedSet.has(key)) {
+      continue;
+    }
+
+    explodedSet.add(key);
+
+    if (!board[current.row][current.col]) {
+      continue;
+    }
+
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const nr = current.row + dr;
+        const nc = current.col + dc;
+
+        if (
+          nr < 0 ||
+          nr >= ROWS ||
+          nc < 0 ||
+          nc >= COLS
+        ) {
+          continue;
+        }
+
+        const neighborKey = `${nr},${nc}`;
+
+        if (explodedSet.has(neighborKey)) {
+          continue;
+        }
+
+        if (!board[nr][nc]) {
+          continue;
+        }
+
+        explodedSet.add(neighborKey);
+        totalCleared++;
+
+        const value = board[nr][nc];
+
+        board[nr][nc] = null;
+
+        if (value === DYNAMITE) {
+          toExplode.push({ row: nr, col: nc });
+        }
+      }
+    }
+  }
+
+  return totalCleared;
+}
+
+function clearEntireBoard() {
+  let count = 0;
+
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (board[row][col]) {
+        board[row][col] = null;
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+/* ---------------------------
+   Swaps and interactions
+---------------------------- */
+
 async function attemptSwap(first, second) {
+  const firstVal = board[first.row][first.col];
+  const secondVal = board[second.row][second.col];
+
+  if (firstVal === DYNAMITE && secondVal === DYNAMITE) {
+    swap(first, second);
+    render();
+
+    await wait(150);
+
+    playDynamiteSound();
+
+    const cleared = clearEntireBoard();
+
+    addScore(cleared);
+
+    messageElement.textContent =
+      translate("dynamiteCleared", cleared);
+
+    render();
+
+    await wait(250);
+
+    dropAnimals();
+    render();
+
+    await wait(180);
+
+    await checkAfterExplosion();
+    return;
+  }
+
+  if (firstVal === DYNAMITE && secondVal !== DYNAMITE) {
+    swap(first, second);
+    render();
+
+    await wait(150);
+
+    playDynamiteSound();
+
+    const explodedSet = new Set();
+
+    triggerDynamiteExplosion(
+      second.row,
+      second.col,
+      explodedSet
+    );
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        if (board[row][col] === secondVal) {
+          const key = `${row},${col}`;
+
+          if (!explodedSet.has(key)) {
+            explodedSet.add(key);
+            board[row][col] = null;
+          }
+        }
+      }
+    }
+
+    const cleared = explodedSet.size;
+
+    addScore(cleared);
+
+    messageElement.textContent =
+      translate("dynamiteCleared", cleared);
+
+    render();
+
+    await wait(250);
+
+    dropAnimals();
+    render();
+
+    await wait(180);
+
+    await checkAfterExplosion();
+    return;
+  }
+
+  if (secondVal === DYNAMITE && firstVal !== DYNAMITE) {
+    swap(first, second);
+    render();
+
+    await wait(150);
+
+    playDynamiteSound();
+
+    const explodedSet = new Set();
+
+    triggerDynamiteExplosion(
+      first.row,
+      first.col,
+      explodedSet
+    );
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        if (board[row][col] === firstVal) {
+          const key = `${row},${col}`;
+
+          if (!explodedSet.has(key)) {
+            explodedSet.add(key);
+            board[row][col] = null;
+          }
+        }
+      }
+    }
+
+    const cleared = explodedSet.size;
+
+    addScore(cleared);
+
+    messageElement.textContent =
+      translate("dynamiteCleared", cleared);
+
+    render();
+
+    await wait(250);
+
+    dropAnimals();
+    render();
+
+    await wait(180);
+
+    await checkAfterExplosion();
+    return;
+  }
+
   swap(first, second);
   render();
 
@@ -717,6 +1106,25 @@ async function attemptSwap(first, second) {
   busy = false;
 }
 
+async function checkAfterExplosion() {
+  if (!findPossibleMove()) {
+    if (gameMode === "relaxed" && !boardHasDynamite()) {
+      showGameOver();
+      busy = false;
+      return;
+    }
+
+    reshuffleBoard();
+    busy = false;
+    return;
+  }
+
+  busy = false;
+
+  messageElement.textContent =
+    translate("instructions");
+}
+
 /* ---------------------------
    Input handling
 ---------------------------- */
@@ -729,8 +1137,61 @@ function areNeighbors(first, second) {
   return distance === 1;
 }
 
+async function handleDynamiteClick(row, col) {
+  if (busy || gameOverShown) {
+    return;
+  }
+
+  busy = true;
+
+  playDynamiteSound();
+
+  const explodedSet = new Set();
+
+  const cleared = triggerDynamiteExplosion(
+    row,
+    col,
+    explodedSet
+  );
+
+  addScore(cleared);
+
+  messageElement.textContent =
+    translate("dynamiteCleared", cleared);
+
+  render();
+
+  await wait(250);
+
+  dropAnimals();
+  render();
+
+  await wait(180);
+
+  await checkAfterExplosion();
+}
+
 function handleTap(row, col) {
-  if (busy || gameOverShown || !board[row][col]) {
+  if (gameOverShown) {
+    return;
+  }
+
+  const cellValue = board[row][col];
+
+  if (!cellValue) {
+    return;
+  }
+
+  if (cellValue === DYNAMITE) {
+    if (!busy) {
+      moves++;
+      handleDynamiteClick(row, col);
+    }
+
+    return;
+  }
+
+  if (busy) {
     return;
   }
 
@@ -967,6 +1428,32 @@ function showHint() {
     return;
   }
 
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (board[row][col] === DYNAMITE) {
+        hintCells = [{ row, col }];
+
+        messageElement.textContent =
+          translate("dynamiteHint");
+
+        render();
+
+        setTimeout(() => {
+          hintCells = [];
+
+          if (!busy && !gameOverShown) {
+            messageElement.textContent =
+              translate("instructions");
+          }
+
+          render();
+        }, 2200);
+
+        return;
+      }
+    }
+  }
+
   const hint = findPossibleMove();
 
   if (!hint) {
@@ -974,10 +1461,7 @@ function showHint() {
     return;
   }
 
-  hintCells = [
-    hint.first,
-    hint.second
-  ];
+  hintCells = [hint.first, hint.second];
 
   messageElement.textContent =
     translate("hintMessage");
@@ -1013,6 +1497,7 @@ function finishGame(messageKey) {
   render();
 
   const finalMessage = translate(messageKey);
+
   messageElement.textContent = finalMessage;
 
   setTimeout(() => {
@@ -1040,6 +1525,8 @@ function resetGameState() {
   gameOverShown = false;
   pointerStart = null;
   hintCells = [];
+  pointsSinceLastDynamite = 0;
+  pendingDynamites = 0;
 }
 
 function startNewGame() {
@@ -1141,14 +1628,16 @@ if (gameMode === "timed") {
   startTimer();
 }
 
-// Check for a no-moves board periodically.
-// The reshuffle itself adds five seconds in timed mode.
 reshuffleCheckInterval = setInterval(() => {
   if (
     !busy &&
     !gameOverShown &&
     !findPossibleMove()
   ) {
-    reshuffleBoard();
+    if (gameMode === "relaxed" && !boardHasDynamite()) {
+      showGameOver();
+    } else {
+      reshuffleBoard();
+    }
   }
 }, 800);
