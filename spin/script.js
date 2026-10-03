@@ -9,6 +9,9 @@ const result = document.getElementById("result");
 
 let options = ["1", "2", "3", "4", "5", "6"];
 
+// Cached color list — computed once per option-set change, never per frame
+let segmentColors = [];
+
 let rotation = 0;
 let previousRotation = 0;
 let velocity = 0;
@@ -16,16 +19,99 @@ let spinning = false;
 let lastBoundary = 0;
 let audioContext = null;
 
-const colors = [
-  "#ff6b6b",
-  "#ffd166",
-  "#06d6a0",
-  "#4cc9f0",
-  "#9b5de5",
-  "#f15bb5",
-  "#ff924c",
-  "#8ac926"
+// Ordered around the hue wheel so even spacing looks natural
+const baseColors = [
+  "#80ff00", // 90°  — neon orange‑green
+  "#00ff80", // 135° — neon green‑cyan
+  "#00ffff", // 180° — neon cyan
+  "#0080ff", // 225° — neon blue
+  "#8000ff", // 270° — neon purple
+  "#ff00bf", // 315° — neon magenta‑pink
+  "#ff0000", // 0°   — neon red
+  "#ff8000"  // 45°  — neon orange
 ];
+
+// Swipe / drag state
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let lastDragX = 0;
+let lastDragY = 0;
+let dragStartTime = 0;
+let hasDraggedEnough = false;
+
+// ---------- Color assignment ----------
+
+/*
+  Picks n colors spread as evenly as possible around the 8-color palette.
+  No randomness — the same n always produces the same well-spaced set.
+
+  Examples:
+    n=3 -> indices 0, 3, 5  (red, green, blue)
+    n=4 -> indices 0, 2, 4, 6 (red, yellow, cyan, purple)
+    n=5 -> indices 0, 2, 3, 5, 7 (spread across the wheel)
+*/
+function getEvenlySpacedIndices(n, paletteSize) {
+  const indices = [];
+  const step = paletteSize / n;
+
+  for (let i = 0; i < n; i++) {
+    indices.push(Math.round(i * step) % paletteSize);
+  }
+
+  return indices;
+}
+
+function getColorList(n) {
+  if (n < 2) {
+    return [baseColors[0]];
+  }
+
+  // Case 1: n fits within the palette — pick n evenly spaced colors
+  if (n <= baseColors.length) {
+    const indices = getEvenlySpacedIndices(n, baseColors.length);
+    return indices.map(i => baseColors[i]);
+  }
+
+  // Case 2: n exceeds the palette — find the largest usable factor
+  // and repeat a well-spaced subset of colors around the wheel.
+  let factor = 1;
+  for (let f = Math.min(baseColors.length, n - 1); f >= 2; f--) {
+    if (n % f === 0) {
+      factor = f;
+      break;
+    }
+  }
+
+  // If n is prime (no factor found), fall back to cycling the full palette
+  if (factor === 1) {
+    const result = [];
+    for (let i = 0; i < n; i++) {
+      result.push(baseColors[i % baseColors.length]);
+    }
+    return result;
+  }
+
+  const repeats = n / factor;
+  const indices = getEvenlySpacedIndices(factor, baseColors.length);
+  const palette = indices.map(i => baseColors[i]);
+
+  // Interleave: [c0, c1, ..., c(factor-1)] repeated `repeats` times
+  const result = [];
+  for (let r = 0; r < repeats; r++) {
+    for (let i = 0; i < factor; i++) {
+      result.push(palette[i]);
+    }
+  }
+
+  return result;
+}
+
+function refreshSegmentColors() {
+  segmentColors = getColorList(options.length);
+}
+
+// ---------- Canvas and drawing ----------
 
 function resizeCanvas() {
   const rectangle = canvas.getBoundingClientRect();
@@ -34,14 +120,7 @@ function resizeCanvas() {
   canvas.width = rectangle.width * pixelRatio;
   canvas.height = rectangle.height * pixelRatio;
 
-  ctx.setTransform(
-    pixelRatio,
-    0,
-    0,
-    pixelRatio,
-    0,
-    0
-  );
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
   drawWheel();
 }
@@ -57,11 +136,14 @@ function drawWheel() {
 
   ctx.clearRect(0, 0, width, height);
 
-  /*
-    Rotating wheel body.
-    The segments and their borders rotate, but no reflective
-    rim gradient is drawn inside this block.
-  */
+  // Safety net: if cache is stale (e.g., options changed without refresh),
+  // rebuild it once rather than every frame.
+  if (segmentColors.length !== options.length) {
+    refreshSegmentColors();
+  }
+
+  const colors = segmentColors;
+
   ctx.save();
   ctx.translate(center, center);
   ctx.rotate(rotation);
@@ -69,13 +151,10 @@ function drawWheel() {
   for (let i = 0; i < options.length; i++) {
     const startAngle = -Math.PI / 2 + i * segmentAngle;
     const endAngle = startAngle + segmentAngle;
-    const color = colors[i % colors.length];
+    const color = colors[i];
 
     const segmentGradient = ctx.createLinearGradient(
-      -radius,
-      -radius,
-      radius,
-      radius
+      -radius, -radius, radius, radius
     );
 
     segmentGradient.addColorStop(0, shadeColor(color, 35));
@@ -96,21 +175,40 @@ function drawWheel() {
 
     // Segment label
     ctx.save();
-    ctx.rotate(startAngle + segmentAngle / 2);
 
-    ctx.textAlign = "right";
+    const midAngle = startAngle + segmentAngle / 2;
+
+    ctx.rotate(midAngle);
+    ctx.translate(radius * 0.82, 0);
+    ctx.rotate(Math.PI / 2);
+
+    const maxTextWidth = radius * 0.55;
+    const maxFontSize = 96;
+    const baseFontSize = Math.min(maxFontSize, Math.max(26, radius * 0.24));
+
+    let fontSize = baseFontSize;
+    ctx.font = `700 ${fontSize}px system-ui`;
+
+    let textWidth = ctx.measureText(options[i]).width;
+
+    while (textWidth > maxTextWidth && fontSize > 10) {
+      fontSize -= 1;
+      ctx.font = `700 ${fontSize}px system-ui`;
+      textWidth = ctx.measureText(options[i]).width;
+    }
+
+    ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
-    ctx.font = `700 ${Math.max(16, radius * 0.105)}px system-ui`;
     ctx.shadowColor = "#0009";
     ctx.shadowBlur = 4;
 
-    ctx.fillText(options[i], radius * 0.82, 0);
+    ctx.fillText(options[i], 0, 0);
 
     ctx.restore();
   }
 
-  // Plain rim base
+  // Rim base
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
 
@@ -125,15 +223,7 @@ function drawWheel() {
 
   ctx.restore();
 
-  /*
-    Fixed rim reflection.
-    This is deliberately drawn outside the rotated canvas block.
-  */
   drawFixedRimReflection(center, radius);
-
-  /*
-    Fixed center hub and reflection.
-  */
   drawFixedCenterHub(center, radius);
 }
 
@@ -142,36 +232,14 @@ function drawFixedRimReflection(center, radius) {
   ctx.translate(center, center);
 
   const rimHighlight = ctx.createLinearGradient(
-    -radius,
-    -radius,
-    radius,
-    radius
+    -radius, -radius, radius, radius
   );
 
-  rimHighlight.addColorStop(
-    0,
-    "rgba(255, 255, 255, 0.95)"
-  );
-
-  rimHighlight.addColorStop(
-    0.25,
-    "rgba(255, 255, 255, 0.35)"
-  );
-
-  rimHighlight.addColorStop(
-    0.5,
-    "rgba(255, 255, 255, 0.05)"
-  );
-
-  rimHighlight.addColorStop(
-    0.75,
-    "rgba(0, 0, 0, 0.2)"
-  );
-
-  rimHighlight.addColorStop(
-    1,
-    "rgba(0, 0, 0, 0.55)"
-  );
+  rimHighlight.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+  rimHighlight.addColorStop(0.25, "rgba(255, 255, 255, 0.35)");
+  rimHighlight.addColorStop(0.5, "rgba(255, 255, 255, 0.05)");
+  rimHighlight.addColorStop(0.75, "rgba(0, 0, 0, 0.2)");
+  rimHighlight.addColorStop(1, "rgba(0, 0, 0, 0.55)");
 
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -190,12 +258,8 @@ function drawFixedCenterHub(center, radius) {
   const hubRadius = radius * 0.13;
 
   const hubGradient = ctx.createRadialGradient(
-    -hubRadius * 0.45,
-    -hubRadius * 0.5,
-    1,
-    0,
-    0,
-    hubRadius
+    -hubRadius * 0.45, -hubRadius * 0.5, 1,
+    0, 0, hubRadius
   );
 
   hubGradient.addColorStop(0, "#ffffff");
@@ -222,6 +286,8 @@ function drawFixedCenterHub(center, radius) {
   ctx.restore();
 }
 
+// ---------- Audio click ----------
+
 function playClick(direction) {
   audioContext ||= new (
     window.AudioContext || window.webkitAudioContext
@@ -232,14 +298,11 @@ function playClick(direction) {
   const sampleRate = audioContext.sampleRate;
 
   const buffer = audioContext.createBuffer(
-    1,
-    sampleRate * duration,
-    sampleRate
+    1, sampleRate * duration, sampleRate
   );
 
   const data = buffer.getChannelData(0);
 
-  // Short filtered noise burst for a mechanical click
   for (let i = 0; i < data.length; i++) {
     const fade = 1 - i / data.length;
     data[i] = (Math.random() * 2 - 1) * fade * fade;
@@ -254,10 +317,7 @@ function playClick(direction) {
   filter.Q.value = 1.8;
 
   gain.gain.setValueAtTime(0.16, now);
-  gain.gain.exponentialRampToValueAtTime(
-    0.001,
-    now + duration
-  );
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
   source.buffer = buffer;
   source.connect(filter);
@@ -267,7 +327,6 @@ function playClick(direction) {
   source.start(now);
   source.stop(now + duration);
 
-  // Make the pointer flex in the travel direction
   pointer.classList.remove("hit-left", "hit-right");
   void pointer.offsetWidth;
 
@@ -281,21 +340,15 @@ function playClick(direction) {
 function crossedBoundary() {
   const fullCircle = Math.PI * 2;
   const segmentAngle = fullCircle / options.length;
-  const currentBoundary = Math.floor(
-    rotation / segmentAngle
-  );
+  const currentBoundary = Math.floor(rotation / segmentAngle);
 
   if (currentBoundary !== lastBoundary) {
-    const numberOfClicks = Math.abs(
-      currentBoundary - lastBoundary
-    );
-
-    const direction = rotation > previousRotation ? 1 : -1;
+    const numberOfClicks = Math.abs(currentBoundary - lastBoundary);
+    const wheelDirection = rotation > previousRotation ? 1 : -1;
+    const pointerDirection = -wheelDirection;
 
     for (let i = 0; i < Math.min(numberOfClicks, 4); i++) {
-      setTimeout(() => {
-        playClick(direction);
-      }, i * 18);
+      setTimeout(() => playClick(pointerDirection), i * 18);
     }
 
     lastBoundary = currentBoundary;
@@ -306,27 +359,15 @@ function getSelectedOption() {
   const fullCircle = Math.PI * 2;
   const segmentAngle = fullCircle / options.length;
 
-  /*
-    The first segment starts at -90 degrees,
-    exactly where the pointer is located.
-  */
   let localAngle = -rotation % fullCircle;
+  if (localAngle < 0) localAngle += fullCircle;
 
-  if (localAngle < 0) {
-    localAngle += fullCircle;
-  }
-
-  const selectedIndex = Math.floor(
-    localAngle / segmentAngle
-  );
-
+  const selectedIndex = Math.floor(localAngle / segmentAngle);
   return options[selectedIndex % options.length];
 }
 
 function animate() {
-  if (!spinning) {
-    return;
-  }
+  if (!spinning) return;
 
   previousRotation = rotation;
   rotation += velocity;
@@ -338,7 +379,6 @@ function animate() {
   if (Math.abs(velocity) < 0.002) {
     spinning = false;
     velocity = 0;
-
     result.textContent = `Result: ${getSelectedOption()}`;
     return;
   }
@@ -346,28 +386,30 @@ function animate() {
   requestAnimationFrame(animate);
 }
 
-function spin() {
+function spin(direction, baseSpeed = null) {
   if (options.length < 2) {
     result.textContent = "Add at least two options.";
     return;
   }
 
-  if (spinning) {
-    return;
+  if (spinning) return;
+
+  // Colors are already cached from applyOptions/init — no need to refresh here
+  const minSpeed = 0.28;
+  const randomExtra = Math.random() * 0.14;
+
+  if (baseSpeed == null) {
+    velocity = direction * (minSpeed + randomExtra);
+  } else {
+    const clamped = Math.max(minSpeed, Math.min(0.6, Math.abs(baseSpeed)));
+    velocity = direction * clamped;
   }
 
-  const direction = Math.random() > 0.5 ? 1 : -1;
-
-  velocity = direction * (0.28 + Math.random() * 0.14);
   spinning = true;
-
   result.textContent = "Spinning…";
 
   const segmentAngle = Math.PI * 2 / options.length;
-
-  lastBoundary = Math.floor(
-    rotation / segmentAngle
-  );
+  lastBoundary = Math.floor(rotation / segmentAngle);
 
   animate();
 }
@@ -391,6 +433,7 @@ function applyOptions() {
 
   result.textContent = "Ready";
 
+  refreshSegmentColors();
   drawWheel();
 }
 
@@ -406,26 +449,135 @@ function shadeColor(hex, amount) {
 
   const number = parseInt(color, 16);
 
-  const red = Math.max(
-    0,
-    Math.min(255, (number >> 16) + amount)
-  );
-
-  const green = Math.max(
-    0,
-    Math.min(255, ((number >> 8) & 255) + amount)
-  );
-
-  const blue = Math.max(
-    0,
-    Math.min(255, (number & 255) + amount)
-  );
+  const red = Math.max(0, Math.min(255, (number >> 16) + amount));
+  const green = Math.max(0, Math.min(255, ((number >> 8) & 255) + amount));
+  const blue = Math.max(0, Math.min(255, (number & 255) + amount));
 
   return `rgb(${red}, ${green}, ${blue})`;
 }
 
-wheelWrap.addEventListener("click", spin);
+// ---------- Input handling ----------
+
+function getWheelRect() {
+  return canvas.getBoundingClientRect();
+}
+
+function getWheelCenter(rect) {
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2
+  };
+}
+
+function startDrag(clientX, clientY) {
+  if (spinning) return;
+
+  isDragging = true;
+  hasDraggedEnough = false;
+  dragStartX = clientX;
+  dragStartY = clientY;
+  lastDragX = clientX;
+  lastDragY = clientY;
+  dragStartTime = performance.now();
+}
+
+function moveDrag(clientX, clientY) {
+  if (!isDragging) return;
+
+  const dxTotal = clientX - dragStartX;
+  const dyTotal = clientY - dragStartY;
+
+  if (!hasDraggedEnough && Math.hypot(dxTotal, dyTotal) > 10) {
+    hasDraggedEnough = true;
+  }
+
+  lastDragX = clientX;
+  lastDragY = clientY;
+}
+
+function endDrag(clientX, clientY) {
+  if (!isDragging) return;
+  isDragging = false;
+
+  const rect = getWheelRect();
+  const center = getWheelCenter(rect);
+
+  const sx = dragStartX - center.x;
+  const sy = dragStartY - center.y;
+  const ex = clientX - center.x;
+  const ey = clientY - center.y;
+
+  const tx = -sy;
+  const ty = sx;
+
+  const dx = ex - sx;
+  const dy = ey - sy;
+
+  const dot = dx * tx + dy * ty;
+  const tangentLen2 = tx * tx + ty * ty;
+
+  if (tangentLen2 === 0) {
+    const direction = dragStartX < center.x ? -1 : 1;
+    spin(direction, null);
+    return;
+  }
+
+  const movedAlongTangent = dot / Math.sqrt(tangentLen2);
+  const totalDist = Math.hypot(dx, dy);
+  const dt = performance.now() - dragStartTime;
+
+  if (!hasDraggedEnough || totalDist < 10) {
+    const direction = dragStartX < center.x ? -1 : 1;
+    spin(direction, null);
+    return;
+  }
+
+  const direction = movedAlongTangent > 0 ? 1 : -1;
+  const speed = totalDist / Math.max(1, dt);
+  const baseSpeed = speed * 0.6;
+
+  spin(direction, baseSpeed);
+}
+
+// Mouse events
+wheelWrap.addEventListener("mousedown", (e) => {
+  e.preventDefault();
+  startDrag(e.clientX, e.clientY);
+});
+
+window.addEventListener("mousemove", (e) => {
+  moveDrag(e.clientX, e.clientY);
+});
+
+window.addEventListener("mouseup", (e) => {
+  endDrag(e.clientX, e.clientY);
+});
+
+// Touch events
+wheelWrap.addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  e.preventDefault();
+  startDrag(t.clientX, t.clientY);
+}, { passive: false });
+
+window.addEventListener("touchmove", (e) => {
+  if (!isDragging || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  e.preventDefault();
+  moveDrag(t.clientX, t.clientY);
+}, { passive: false });
+
+window.addEventListener("touchend", (e) => {
+  if (!isDragging) return;
+  const t = e.changedTouches[0];
+  e.preventDefault();
+  endDrag(t.clientX, t.clientY);
+}, { passive: false });
+
 applyButton.addEventListener("click", applyOptions);
 window.addEventListener("resize", resizeCanvas);
 
+// Initial setup
+refreshSegmentColors();
 resizeCanvas();
