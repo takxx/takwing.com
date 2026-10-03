@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Bilingual Wordle</title>
+
+		<style>
+			:root {
+				--background: #121212;
+				--surface: #1e1e1e;
+				--surface-2: #2a2a2a;
+				--border: #3a3a3a;
+				--text: #e8e8e8;
+				--muted-text: #b8b8b8;
+
+				--green: #538d4e;
+				--yellow: #b59f3b;
+				--gray: #3a3a3a;
+				--key: #818384;
+				--key-text: #f6f6f6;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				margin: 0;
+				font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+				color: var(--text);
+				background: var(--background);
+				min-height: 100vh;
+			}
+
+			header {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 0.75rem;
+				padding: 1rem;
+				background: var(--surface);
+				border-bottom: 1px solid var(--border);
+			}
+
+			h1 {
+				margin: 0;
+				letter-spacing: 0.2rem;
+				color: var(--text);
+			}
+
+			.controls {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				flex-wrap: wrap;
+				justify-content: center;
+			}
+
+			label {
+				color: var(--muted-text);
+			}
+
+			select,
+			button {
+				font: inherit;
+				padding: 0.45rem 0.75rem;
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				background: var(--surface-2);
+				color: var(--text);
+				cursor: pointer;
+			}
+
+			select:hover,
+			button:hover {
+				border-color: #5a5a5a;
+			}
+
+			select:focus-visible,
+			button:focus-visible {
+				outline: 2px solid #7aa9ff;
+				outline-offset: 2px;
+			}
+
+			main {
+				max-width: 500px;
+				margin: 0 auto;
+				padding: 1rem;
+				text-align: center;
+			}
+
+			#instructions {
+				min-height: 3rem;
+				margin: 0 0 1rem;
+				color: var(--muted-text);
+			}
+
+			#board {
+				display: grid;
+				gap: 6px;
+				justify-content: center;
+				margin-bottom: 1rem;
+			}
+
+			.row {
+				display: grid;
+				grid-template-columns: repeat(5, 58px);
+				gap: 6px;
+			}
+
+			.tile {
+				width: 58px;
+				height: 58px;
+				display: grid;
+				place-items: center;
+				border: 2px solid var(--border);
+				font-size: 1.75rem;
+				font-weight: 700;
+				text-transform: uppercase;
+				color: var(--text);
+				user-select: none;
+			}
+
+			.tile.filled {
+				border-color: #565758;
+			}
+
+			.tile.correct {
+				background: var(--green);
+				border-color: var(--green);
+				color: #ffffff;
+			}
+
+			.tile.present {
+				background: var(--yellow);
+				border-color: var(--yellow);
+				color: #121212;
+			}
+
+			.tile.absent {
+				background: var(--gray);
+				border-color: var(--gray);
+				color: #d7dadc;
+			}
+
+			#message {
+				min-height: 1.5rem;
+				margin-bottom: 1rem;
+				font-weight: 600;
+				color: var(--text);
+			}
+
+			#keyboard {
+				display: grid;
+				gap: 6px;
+				max-width: 500px;
+				margin: 0 auto;
+			}
+
+			.keyboard-row {
+				display: flex;
+				justify-content: center;
+				gap: 6px;
+			}
+
+			.key {
+				min-width: 38px;
+				height: 52px;
+				flex: 1;
+				border: none;
+				border-radius: 4px;
+				background: var(--key);
+				color: var(--key-text);
+				font: inherit;
+				font-weight: 700;
+				text-transform: uppercase;
+				cursor: pointer;
+			}
+
+			.key:hover {
+				background: #939598;
+			}
+
+			.key.wide {
+				flex: 1.6;
+			}
+
+			.key.correct {
+				background: var(--green);
+				color: #ffffff;
+			}
+
+			.key.present {
+				background: var(--yellow);
+				color: #121212;
+			}
+
+			.key.absent {
+				background: var(--gray);
+				color: #d7dadc;
+			}
+
+			@media (max-width: 480px) {
+				.row {
+				grid-template-columns: repeat(5, minmax(48px, 1fr));
+			}
+
+			.tile {
+				width: 100%;
+				height: 52px;
+				font-size: 1.4rem;
+			}
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1 id="title">WORDLE</h1>
+
+			<div class="controls">
+				<label for="language-select" id="language-label">Language</label>
+				<select id="language-select">
+					<option value="en">English</option>
+					<option value="es">Español</option>
+				</select>
+				<button id="new-game">New game</button>
+			</div>
+		</header>
+
+		<main>
+			<p id="instructions"></p>
+			<div id="board" aria-label="Wordle board"></div>
+			<div id="message" role="status" aria-live="polite"></div>
+			<div id="keyboard"></div>
+		</main>
+
+		<script>
+			const WORD_LENGTH = 5;
+			const MAX_GUESSES = 6;
+
+			const TRANSLATIONS = {
+				en: {
+					title: "WORDLE",
+					language: "Language",
+					newGame: "New game",
+					instructions:
+					"Guess the five-letter word in six tries. Green means the letter is correct and in the right place, yellow means it is in the word but elsewhere, and gray means it is not in the word.",
+					invalidLength: "Your guess must have 5 letters.",
+					invalidWord: "Not a valid five-letter word.",
+					win: "You guessed it!",
+					lose: "The word was:",
+					enter: "ENTER",
+					backspace: "⌫"
+				},
+				es: {
+					title: "WORDLE",
+					language: "Idioma",
+					newGame: "Nueva partida",
+					instructions:
+					"Adivina la palabra de cinco letras en seis intentos. Verde significa que la letra es correcta y está en su lugar, amarillo que está en la palabra pero en otra posición, y gris que no está en la palabra.",
+					invalidLength: "Tu palabra debe tener 5 letras.",
+					invalidWord: "No es una palabra válida de cinco letras.",
+					win: "¡Lo adivinaste!",
+					lose: "La palabra era:",
+					enter: "ENTER",
+					backspace: "⌫"
+				}
+			};
+
+			const KEYBOARDS = {
+				en: [
+				["Q","W","E","R","T","Y","U","I","O","P"],
+				["A","S","D","F","G","H","J","K","L"],
+				["ENTER","Z","X","C","V","B","N","M","BACKSPACE"]
+				],
+				es: [
+				["Q","W","E","R","T","Y","U","I","O","P"],
+				["A","S","D","F","G","H","J","K","L","Ñ"],
+				["ENTER","Z","X","C","V","B","N","M","BACKSPACE"]
+				]
+			};
+
+			const state = {
+				lang: "en",
+				words: [],
+				answer: "",
+				guesses: [],
+				currentGuess: "",
+				gameOver: false,
+				letterStates: {}
+			};
+
+			const board = document.getElementById("board");
+			const keyboard = document.getElementById("keyboard");
+			const message = document.getElementById("message");
+			const languageSelect = document.getElementById("language-select");
+			const languageLabel = document.getElementById("language-label");
+			const instructions = document.getElementById("instructions");
+			const newGameButton = document.getElementById("new-game");
+			const title = document.getElementById("title");
+
+			function detectInitialLanguage() {
+				const urlLanguage = new URLSearchParams(window.location.search).get("lang");
+
+				if (urlLanguage === "en" || urlLanguage === "es") {
+					return urlLanguage;
+				}
+
+				const browserLanguages = navigator.languages || [navigator.language || "en"];
+
+				for (const browserLanguage of browserLanguages) {
+					const code = browserLanguage.toLowerCase().slice(0, 2);
+
+					if (code === "es") return "es";
+					if (code === "en") return "en";
+				}
+
+				return "en";
+			}
+
+			async function loadWords(language) {
+				const response = await fetch(`./util/wordlist/${language}.json`);
+
+				if (!response.ok) {
+					throw new Error(`Could not load word list for "${language}".`);
+				}
+
+				const allWords = await response.json();
+
+				const fiveLetterWords = allWords
+				.filter(
+				word =>
+				typeof word === "string" &&
+				word.length === WORD_LENGTH &&
+				/^[A-ZÑÁÉÍÓÚÜ]+$/i.test(word)
+				)
+				.map(word => word.toUpperCase());
+
+				if (fiveLetterWords.length === 0) {
+					throw new Error(`No five-letter words found in "${language}.json".`);
+				}
+
+				return fiveLetterWords;
+			}
+
+			function normalizeLetter(letter) {
+				return letter
+				.normalize("NFD")
+				.replace(/[\u0300-\u036f]/g, "")
+				.toUpperCase();
+			}
+
+			function normalizeWord(word) {
+				return normalizeLetter(word);
+			}
+
+			function buildAnswerMap(word) {
+				const counts = new Map();
+
+				for (const letter of word) {
+					counts.set(letter, (counts.get(letter) || 0) + 1);
+				}
+
+				return counts;
+			}
+
+			function evaluateGuess(guess, answer) {
+				const result = Array(WORD_LENGTH).fill("absent");
+				const remaining = buildAnswerMap(answer);
+
+				for (let i = 0; i < WORD_LENGTH; i++) {
+					if (guess[i] === answer[i]) {
+						result[i] = "correct";
+						remaining.set(guess[i], remaining.get(guess[i]) - 1);
+					}
+				}
+
+				for (let i = 0; i < WORD_LENGTH; i++) {
+					if (result[i] === "correct") continue;
+
+					const count = remaining.get(guess[i]) || 0;
+
+					if (count > 0) {
+						result[i] = "present";
+						remaining.set(guess[i], count - 1);
+					}
+				}
+
+				return result;
+			}
+
+			function createBoard() {
+				board.innerHTML = "";
+
+				for (let row = 0; row < MAX_GUESSES; row++) {
+					const rowElement = document.createElement("div");
+					rowElement.className = "row";
+
+					for (let column = 0; column < WORD_LENGTH; column++) {
+						const tile = document.createElement("div");
+						tile.className = "tile";
+						rowElement.appendChild(tile);
+					}
+
+					board.appendChild(rowElement);
+				}
+			}
+
+			function createKeyboard() {
+				keyboard.innerHTML = "";
+
+				for (const row of KEYBOARDS[state.lang]) {
+					const rowElement = document.createElement("div");
+					rowElement.className = "keyboard-row";
+
+					for (const key of row) {
+						const button = document.createElement("button");
+						button.className = "key";
+						button.textContent =
+						key === "ENTER"
+						? TRANSLATIONS[state.lang].enter
+						: key === "BACKSPACE"
+						? TRANSLATIONS[state.lang].backspace
+						: key;
+
+						if (key === "ENTER" || key === "BACKSPACE") {
+							button.classList.add("wide");
+						}
+
+						button.dataset.key = key;
+						button.addEventListener("click", () => handleKey(key));
+						rowElement.appendChild(button);
+					}
+
+					keyboard.appendChild(rowElement);
+				}
+			}
+
+			function updateBoard() {
+				const rows = board.children;
+
+				for (let rowIndex = 0; rowIndex < MAX_GUESSES; rowIndex++) {
+					const tiles = rows[rowIndex].children;
+					const submittedGuess = state.guesses[rowIndex];
+
+					if (submittedGuess) {
+						const feedback = evaluateGuess(submittedGuess.guess, state.answer);
+
+						for (let i = 0; i < WORD_LENGTH; i++) {
+							tiles[i].textContent = submittedGuess.guess[i];
+							tiles[i].classList.add(feedback[i]);
+						}
+					} else if (rowIndex === state.guesses.length) {
+						for (let i = 0; i < WORD_LENGTH; i++) {
+							tiles[i].textContent = state.currentGuess[i] || "";
+							tiles[i].classList.toggle("filled", Boolean(state.currentGuess[i]));
+						}
+					} else {
+						for (const tile of tiles) {
+							tile.textContent = "";
+							tile.className = "tile";
+						}
+					}
+				}
+			}
+
+			function updateKeyboard() {
+				const priority = { correct: 3, present: 2, absent: 1 };
+
+				for (const button of keyboard.querySelectorAll(".key")) {
+					const key = button.dataset.key;
+
+					if (key === "ENTER" || key === "BACKSPACE") continue;
+
+					const normalizedKey = normalizeLetter(key);
+					const letterState = state.letterStates[normalizedKey];
+
+					button.classList.remove("correct", "present", "absent");
+
+					if (letterState) {
+						button.classList.add(letterState);
+					}
+				}
+			}
+
+			function showMessage(text) {
+				message.textContent = text;
+			}
+
+			function handleKey(rawKey) {
+				if (state.gameOver) return;
+
+				if (rawKey === "ENTER") {
+					submitGuess();
+					return;
+				}
+
+				if (rawKey === "BACKSPACE") {
+					state.currentGuess = state.currentGuess.slice(0, -1);
+					updateBoard();
+					return;
+				}
+
+				if (state.currentGuess.length >= WORD_LENGTH) return;
+
+				state.currentGuess += normalizeLetter(rawKey);
+				updateBoard();
+			}
+
+			function submitGuess() {
+				const guess = state.currentGuess;
+
+				if (guess.length !== WORD_LENGTH) {
+					showMessage(TRANSLATIONS[state.lang].invalidLength);
+					return;
+				}
+
+				const normalizedGuess = normalizeWord(guess);
+				const isValid = state.words.some(
+				word => normalizeWord(word) === normalizedGuess
+				);
+
+				if (!isValid) {
+					showMessage(TRANSLATIONS[state.lang].invalidWord);
+					return;
+				}
+
+				const feedback = evaluateGuess(guess, state.answer);
+
+				state.guesses.push({ guess, feedback });
+				state.currentGuess = "";
+
+				for (let i = 0; i < WORD_LENGTH; i++) {
+					const normalizedLetter = normalizeLetter(guess[i]);
+					const newState = feedback[i];
+					const currentState = state.letterStates[normalizedLetter];
+
+					if (!currentState || priority[newState] > priority[currentState]) {
+						state.letterStates[normalizedLetter] = newState;
+					}
+				}
+
+				updateBoard();
+				updateKeyboard();
+
+				if (guess === state.answer) {
+					state.gameOver = true;
+					showMessage(TRANSLATIONS[state.lang].win);
+					return;
+				}
+
+				if (state.guesses.length === MAX_GUESSES) {
+					state.gameOver = true;
+					showMessage(`${TRANSLATIONS[state.lang].lose} ${state.answer}`);
+				}
+			}
+
+			function applyTranslations() {
+				const text = TRANSLATIONS[state.lang];
+
+				document.documentElement.lang = state.lang;
+				title.textContent = text.title;
+				languageLabel.textContent = text.language;
+				newGameButton.textContent = text.newGame;
+				instructions.textContent = text.instructions;
+				languageSelect.value = state.lang;
+			}
+
+			async function startGame(language, { preserveUrl = false } = {}) {
+				try {
+					state.lang = language;
+					applyTranslations();
+
+					state.words = await loadWords(language);
+					state.answer =
+					state.words[Math.floor(Math.random() * state.words.length)];
+					state.guesses = [];
+					state.currentGuess = "";
+					state.gameOver = false;
+					state.letterStates = {};
+
+					message.textContent = "";
+					createBoard();
+					createKeyboard();
+					updateBoard();
+					updateKeyboard();
+
+					if (preserveUrl) {
+						const url = new URL(window.location);
+						url.searchParams.set("lang", language);
+						window.history.replaceState({}, "", url);
+					}
+				} catch (error) {
+					console.error(error);
+					showMessage(error.message);
+				}
+			}
+
+			document.addEventListener("keydown", event => {
+				if (event.key === "Enter") {
+					handleKey("ENTER");
+				} else if (event.key === "Backspace") {
+					handleKey("BACKSPACE");
+				} else if (/^[a-zA-ZñÑáéíóúüÁÉÍÓÚÜ]$/.test(event.key)) {
+					handleKey(event.key);
+				}
+			});
+
+			languageSelect.addEventListener("change", event => {
+				startGame(event.target.value, { preserveUrl: true });
+			});
+
+			newGameButton.addEventListener("click", () => {
+				startGame(state.lang);
+			});
+
+			startGame(detectInitialLanguage());
+		</script>
+	</body>
+</html>
