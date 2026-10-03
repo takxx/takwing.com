@@ -970,18 +970,85 @@ window.__labyrinthOrientationAttached = true;
 }
 }
 
-function handleDeviceOrientation(event) {
-if (!gameStarted || ballFalling) {
-return;
+function getScreenOrientationAngle() {
+  if (
+    window.screen &&
+    screen.orientation &&
+    typeof screen.orientation.angle === "number"
+  ) {
+    return screen.orientation.angle;
+  }
+
+  // Older Android / legacy browser fallback.
+  if (typeof window.orientation === "number") {
+    return window.orientation;
+  }
+
+  return 0;
 }
 
-const beta = event.beta || 0;
-const gamma = event.gamma || 0;
+function clampTilt(value) {
+  return Math.max(-28, Math.min(28, value));
+}
 
-rotateY = Math.max(-28, Math.min(28, gamma * 0.6));
-rotateX = Math.max(-28, Math.min(28, -beta * 0.6));
+function handleDeviceOrientation(event) {
+  if (!gameStarted || ballFalling) {
+    return;
+  }
 
-scheduleTiltUpdate();
+  let beta = Number.isFinite(event.beta) ? event.beta : 0;
+  let gamma = Number.isFinite(event.gamma) ? event.gamma : 0;
+
+  // beta/gamma are device-relative. Convert them to screen-relative
+  // values so portrait and landscape behave consistently on Android.
+  const angle = getScreenOrientationAngle();
+
+  switch (angle) {
+    case 90:
+      [beta, gamma] = [gamma, -beta];
+      break;
+
+    case 180:
+    case -180:
+      beta = -beta;
+      gamma = -gamma;
+      break;
+
+    case 270:
+    case -90:
+      [beta, gamma] = [-gamma, beta];
+      break;
+
+    case 0:
+    default:
+      break;
+  }
+
+  // Keep the existing game convention:
+  // rotateY drives horizontal movement; rotateX drives vertical movement.
+  rotateY = clampTilt(gamma * 0.6);
+  rotateX = clampTilt(-beta * 0.6);
+
+  scheduleTiltUpdate();
+}
+
+/* Add this once, near the orientation handler or lifecycle listeners. */
+function resetTiltForOrientationChange() {
+  rotateX = 0;
+  rotateY = 0;
+  scheduleTiltUpdate();
+}
+
+if (screen.orientation && screen.orientation.addEventListener) {
+  screen.orientation.addEventListener(
+    "change",
+    resetTiltForOrientationChange
+  );
+} else {
+  window.addEventListener(
+    "orientationchange",
+    resetTiltForOrientationChange
+  );
 }
 
 function playTone(
