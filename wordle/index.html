@@ -320,7 +320,7 @@
 			}
 
 			async function loadWords(language) {
-				const response = await fetch(`./util/wordlist/${language}.json`);
+				const response = await fetch(`/util/wordlist/${language}.json`);
 
 				if (!response.ok) {
 					throw new Error(`Could not load word list for "${language}".`);
