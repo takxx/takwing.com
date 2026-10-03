@@ -78,7 +78,7 @@ perspective: 900px;
 }
 
 /* =========================================================
-OUTER BOARD
+OUTER BOARD (simplified for performance)
 ========================================================= */
 
 .board {
@@ -88,31 +88,13 @@ height: 100%;
 border: 5px solid #1b0b03;
 border-radius: 18px;
 transform-style: preserve-3d;
-transition: transform 80ms linear;
+/* transition removed for performance */
 cursor: grab;
 isolation: isolate;
+will-change: transform;
 
+/* Simplified background: single gradient, no expensive SVG filters */
 background:
-radial-gradient(
-ellipse at 20% 8%,
-rgba(255, 235, 178, .34) 0%,
-rgba(255, 220, 145, .12) 28%,
-transparent 58%
-),
-
-radial-gradient(
-ellipse at 84% 92%,
-rgba(35, 13, 2, .42) 0%,
-rgba(35, 13, 2, .18) 30%,
-transparent 65%
-),
-
-url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='clouds'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.009' numOctaves='4' seed='31' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='table' tableValues='0.18 0.58'/%3E%3CfeFuncG type='table' tableValues='0.07 0.30'/%3E%3CfeFuncB type='table' tableValues='0.015 0.10'/%3E%3CfeFuncA type='table' tableValues='0.16 0.42'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23clouds)'/%3E%3C/svg%3E"),
-
-url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480'%3E%3Cfilter id='mottle'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='3' seed='83' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='table' tableValues='0.32 0.70'/%3E%3CfeFuncG type='table' tableValues='0.12 0.38'/%3E%3CfeFuncB type='table' tableValues='0.025 0.13'/%3E%3CfeFuncA type='table' tableValues='0.10 0.25'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23mottle)'/%3E%3C/svg%3E"),
-
-url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='pores'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.62' numOctaves='3' seed='12' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='table' tableValues='0.16 0.40'/%3E%3CfeFuncG type='table' tableValues='0.07 0.20'/%3E%3CfeFuncB type='table' tableValues='0.015 0.07'/%3E%3CfeFuncA type='table' tableValues='0.06 0.16'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23pores)'/%3E%3C/svg%3E"),
-
 radial-gradient(
 ellipse at 30% 18%,
 #d9ad68 0%,
@@ -120,30 +102,6 @@ ellipse at 30% 18%,
 #965b26 68%,
 #633512 100%
 );
-
-background-size:
-auto,
-auto,
-900px 900px,
-480px 480px,
-240px 240px,
-auto;
-
-background-position:
-center,
-center,
-0 0,
-37px 91px,
-13px 27px,
-center;
-
-background-blend-mode:
-screen,
-multiply,
-multiply,
-overlay,
-soft-light,
-normal;
 
 box-shadow:
 0 28px 45px rgba(0, 0, 0, .85),
@@ -192,7 +150,7 @@ cursor: grabbing;
 }
 
 /* =========================================================
-PLAYING SURFACE
+PLAYING SURFACE (simplified)
 ========================================================= */
 
 .board-inner {
@@ -207,21 +165,8 @@ isolation: isolate;
 border: 3px solid rgba(35, 16, 3, .82);
 border-radius: 4px;
 
+/* Simplified background: just a subtle gradient */
 background:
-radial-gradient(
-ellipse at 18% 12%,
-rgba(255, 238, 183, .28),
-transparent 42%
-),
-
-radial-gradient(
-ellipse at 84% 88%,
-rgba(45, 18, 4, .26),
-transparent 58%
-),
-
-url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520'%3E%3Cfilter id='surface'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.028' numOctaves='4' seed='44' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='table' tableValues='0.52 0.82'/%3E%3CfeFuncG type='table' tableValues='0.30 0.55'/%3E%3CfeFuncB type='table' tableValues='0.10 0.24'/%3E%3CfeFuncA type='table' tableValues='0.10 0.22'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23surface)'/%3E%3C/svg%3E"),
-
 radial-gradient(
 ellipse at 30% 18%,
 #e3c77b 0%,
@@ -230,31 +175,11 @@ ellipse at 30% 18%,
 #97602b 100%
 );
 
-background-size:
-auto,
-auto,
-520px 520px,
-auto;
-
-background-position:
-center,
-center,
-29px 63px,
-center;
-
-background-blend-mode:
-screen,
-multiply,
-soft-light,
-normal;
-
 box-shadow:
 inset 0 0 0 2px rgba(0, 0, 0, .40),
 inset 0 4px 9px rgba(255, 255, 255, .22),
 inset 0 -8px 14px rgba(0, 0, 0, .30);
 }
-
-/* No wood-knot layer is included. */
 
 /* =========================================================
 GAMEPLAY LAYERS
@@ -266,6 +191,7 @@ GAMEPLAY LAYERS
 position: absolute;
 inset: 0;
 overflow: visible;
+content-visibility: auto;
 }
 
 .holes-layer {
@@ -387,6 +313,7 @@ border: 1px solid #333;
 border-radius: 50%;
 transform: translate(-50%, -50%);
 pointer-events: none;
+will-change: left, top;
 
 background:
 radial-gradient(
@@ -480,6 +407,13 @@ justify-items: center;
 .message-panel {
 padding: 22px 16px;
 }
+}
+
+/* Respect reduced motion / low power where possible */
+@media (prefers-reduced-motion: reduce) {
+  .board {
+    transform: none !important;
+  }
 }
 </style>
 </head>
@@ -596,7 +530,6 @@ Flip A: Diagonal Flip
 
 function flipACellId(id) {
 const cell = cellId(id);
-// swap row and col
 return toCellId({ row: cell.col, col: cell.row });
 }
 
@@ -612,12 +545,10 @@ function flipABoard(sourceBoard) {
 const transformedVWalls = [];
 const transformedHWalls = [];
 
-// v-walls become h-walls
 for (const spec of sourceBoard["v-walls"]) {
 transformedHWalls.push(flipASpec(spec));
 }
 
-// h-walls become v-walls
 for (const spec of sourceBoard["h-walls"]) {
 transformedVWalls.push(flipASpec(spec));
 }
@@ -641,14 +572,12 @@ const [id1, id2] = spec.split("-");
 const c1 = cellId(id1);
 const c2 = cellId(id2);
 
-// (a) swap unit digits (cols)
 const col1 = c1.col;
 const col2 = c2.col;
 
 const afterSwap1 = { row: c1.row, col: col2 };
 const afterSwap2 = { row: c2.row, col: col1 };
 
-// (b) subtract unit digit from 9
 const afterFlip1 = { row: afterSwap1.row, col: 9 - afterSwap1.col };
 const afterFlip2 = { row: afterSwap2.row, col: 9 - afterSwap2.col };
 
@@ -663,7 +592,6 @@ const [id1, id2] = spec.split("-");
 const c1 = cellId(id1);
 const c2 = cellId(id2);
 
-// only subtract the unit digit (col) from 8
 const afterFlip1 = { row: c1.row, col: 8 - c1.col };
 const afterFlip2 = { row: c2.row, col: 8 - c2.col };
 
@@ -693,14 +621,12 @@ const [id1, id2] = spec.split("-");
 const c1 = cellId(id1);
 const c2 = cellId(id2);
 
-// (a) swap ten digits (rows)
 const row1 = c1.row;
 const row2 = c2.row;
 
 const afterSwap1 = { row: row2, col: c1.col };
 const afterSwap2 = { row: row1, col: c2.col };
 
-// (b) subtract ten digit from 9
 const afterFlip1 = { row: 9 - afterSwap1.row, col: afterSwap1.col };
 const afterFlip2 = { row: 9 - afterSwap2.row, col: afterSwap2.col };
 
@@ -715,7 +641,6 @@ const [id1, id2] = spec.split("-");
 const c1 = cellId(id1);
 const c2 = cellId(id2);
 
-// only subtract the ten digit (row) from 8
 const afterFlip1 = { row: 8 - c1.row, col: c1.col };
 const afterFlip2 = { row: 8 - c2.row, col: c2.col };
 
@@ -942,7 +867,7 @@ let audioCtx = null;
 let masterGain = null;
 
 let lastBounceTime = 0;
-const bounceCooldown = 50;
+const bounceCooldown = 80; // slightly increased to reduce audio calls
 
 let orientationAllowed = false;
 
@@ -952,6 +877,10 @@ let originX = 0;
 let originY = 0;
 let rotateX = 0;
 let rotateY = 0;
+
+// Throttle tilt updates (~30 Hz)
+let lastTiltTime = 0;
+const TILT_INTERVAL = 1000 / 30;
 
 const ball = {
 x: 0,
@@ -963,12 +892,18 @@ damping: 0.98,
 gravityScale: 0.0009
 };
 
+/* ---------- Reduced motion / power helpers ---------- */
+
+const prefersReducedMotion =
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- Audio ---------- */
+
 function initAudio() {
 if (audioCtx) {
 if (audioCtx.state === "suspended") {
 audioCtx.resume();
 }
-
 return;
 }
 
@@ -987,6 +922,11 @@ masterGain.connect(audioCtx.destination);
 }
 
 async function requestOrientationPermission() {
+if (prefersReducedMotion) {
+  orientationAllowed = false;
+  return;
+}
+
 if (
 typeof DeviceOrientationEvent !== "undefined" &&
 typeof DeviceOrientationEvent.requestPermission === "function"
@@ -994,7 +934,6 @@ typeof DeviceOrientationEvent.requestPermission === "function"
 try {
 const permission =
 await DeviceOrientationEvent.requestPermission();
-
 orientationAllowed = permission === "granted";
 } catch {
 orientationAllowed = false;
@@ -1011,7 +950,6 @@ window.addEventListener(
 "deviceorientation",
 handleDeviceOrientation
 );
-
 window.__labyrinthOrientationAttached = true;
 }
 }
@@ -1027,7 +965,7 @@ const gamma = event.gamma || 0;
 rotateY = Math.max(-28, Math.min(28, gamma * 0.6));
 rotateX = Math.max(-28, Math.min(28, -beta * 0.6));
 
-applyTilt();
+scheduleTiltUpdate();
 }
 
 function playTone(
@@ -1158,7 +1096,7 @@ playNoise(
 noiseVolume
 );
 
-if (navigator.vibrate) {
+if (!prefersReducedMotion && navigator.vibrate) {
 navigator.vibrate(
 Math.round(4 + normalizedSpeed * 24)
 );
@@ -1175,7 +1113,7 @@ playTone(250, "sine", .4, .08);
 playTone(150, "sine", .5, .16);
 playNoise(.6, 400, .5);
 
-if (navigator.vibrate) {
+if (!prefersReducedMotion && navigator.vibrate) {
 navigator.vibrate(30);
 }
 }
@@ -1188,7 +1126,7 @@ return;
 playTone(600, "sine", .12);
 playTone(900, "sine", .15, .05);
 
-if (navigator.vibrate) {
+if (!prefersReducedMotion && navigator.vibrate) {
 navigator.vibrate(12);
 }
 }
@@ -1203,10 +1141,12 @@ playTone(659, "sine", .2, .1);
 playTone(784, "sine", .25, .2);
 playTone(1047, "sine", .4, .3);
 
-if (navigator.vibrate) {
+if (!prefersReducedMotion && navigator.vibrate) {
 navigator.vibrate([20, 30, 40]);
 }
 }
+
+/* ---------- Board setup ---------- */
 
 function randomBoard() {
 return boards[
@@ -1466,43 +1406,43 @@ endMarkerEl.textContent = "◉";
 function renderWalls() {
 wallsLayer.replaceChildren();
 
-vWalls.forEach(wall => {
+const vLen = vWalls.length;
+for (let i = 0; i < vLen; i++) {
+const wall = vWalls[i];
 const element = document.createElement("div");
-
 element.className = "wall v";
 element.style.left = `${wall.x * 10}%`;
 element.style.top = `${wall.y * 10}%`;
 element.style.height = `${wall.height * 10}%`;
-
 wallsLayer.appendChild(element);
-});
+}
 
-hWalls.forEach(wall => {
+const hLen = hWalls.length;
+for (let i = 0; i < hLen; i++) {
+const wall = hWalls[i];
 const element = document.createElement("div");
-
 element.className = "wall h";
 element.style.left = `${wall.x * 10}%`;
 element.style.top = `${wall.y * 10}%`;
 element.style.width = `${wall.width * 10}%`;
-
 wallsLayer.appendChild(element);
-});
+}
 }
 
 function renderHoles() {
 holesLayer.replaceChildren();
 
-holeCells.forEach(cell => {
+const len = holeCells.length;
+for (let i = 0; i < len; i++) {
+const cell = holeCells[i];
 const element = document.createElement("div");
-
 element.className = "hole";
 element.style.left =
 `${(cell.col + .5) * 10}%`;
 element.style.top =
 `${(cell.row + .5) * 10}%`;
-
 holesLayer.appendChild(element);
-});
+}
 }
 
 function renderBoard() {
@@ -1510,6 +1450,8 @@ renderMarkers();
 renderWalls();
 renderHoles();
 }
+
+/* ---------- UI screens ---------- */
 
 function setScreenContent(title, description) {
 messageTitle.textContent = title;
@@ -1633,16 +1575,23 @@ gameStarted = false;
 showStartScreen();
 }
 
+/* ---------- Gameplay logic ---------- */
+
 function findTouchedHole() {
-return holeCells.find(hole => {
+const len = holeCells.length;
+for (let i = 0; i < len; i++) {
+const hole = holeCells[i];
 const holeX = hole.col + .5;
 const holeY = hole.row + .5;
 
 const dx = ball.x - holeX;
 const dy = ball.y - holeY;
 
-return Math.hypot(dx, dy) < .38;
-});
+if (Math.hypot(dx, dy) < .38) {
+return hole;
+}
+}
+return null;
 }
 
 function fallIntoHole(hole) {
@@ -1766,7 +1715,9 @@ nextY = 10 - radius;
 bounce("y", 1);
 }
 
-for (const wall of vWalls) {
+const vLen = vWalls.length;
+for (let i = 0; i < vLen; i++) {
+const wall = vWalls[i];
 const left = wall.x - wallThickness / 2;
 const right = wall.x + wallThickness / 2;
 const top = wall.y;
@@ -1799,7 +1750,9 @@ bounce("x", 1);
 }
 }
 
-for (const wall of hWalls) {
+const hLen = hWalls.length;
+for (let i = 0; i < hLen; i++) {
+const wall = hWalls[i];
 const top = wall.y - wallThickness / 2;
 const bottom = wall.y + wallThickness / 2;
 const left = wall.x;
@@ -1842,7 +1795,28 @@ y: nextY
 };
 }
 
-function stepPhysics() {
+/* ---------- Physics loop (visibility-aware) ---------- */
+
+const PHYSICS_STEP = 1000 / 60;
+let lastFrameTime = 0;
+let accumulator = 0;
+
+let physicsRunning = false;
+
+function stepPhysics(timestamp) {
+if (!physicsRunning) return;
+
+if (!lastFrameTime) {
+lastFrameTime = timestamp;
+}
+
+accumulator += timestamp - lastFrameTime;
+lastFrameTime = timestamp;
+
+// Clamp to avoid huge jumps after tab switch
+accumulator = Math.min(accumulator, PHYSICS_STEP * 5);
+
+while (accumulator >= PHYSICS_STEP) {
 if (gameStarted && !ballFalling) {
 const gravityX =
 rotateY * ball.gravityScale;
@@ -1868,7 +1842,38 @@ updateBallVisual();
 checkGameProgress();
 }
 
+accumulator -= PHYSICS_STEP;
+}
+
 requestAnimationFrame(stepPhysics);
+}
+
+function startPhysics() {
+if (physicsRunning) return;
+physicsRunning = true;
+lastFrameTime = 0;
+accumulator = 0;
+requestAnimationFrame(stepPhysics);
+}
+
+function stopPhysics() {
+physicsRunning = false;
+}
+
+/* ---------- Tilt handling (throttled) ---------- */
+
+function scheduleTiltUpdate() {
+if (prefersReducedMotion) {
+  rotateX = 0;
+  rotateY = 0;
+  applyTilt();
+  return;
+}
+
+const now = performance.now();
+if (now - lastTiltTime < TILT_INTERVAL) return;
+lastTiltTime = now;
+applyTilt();
 }
 
 function applyTilt() {
@@ -1876,7 +1881,11 @@ board.style.transform =
 `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
 }
 
+/* ---------- Pointer events ---------- */
+
 board.addEventListener("pointerdown", event => {
+if (prefersReducedMotion) return;
+
 initAudio();
 
 dragging = true;
@@ -1889,6 +1898,7 @@ board.setPointerCapture(pointerId);
 
 board.addEventListener("pointermove", event => {
 if (
+prefersReducedMotion ||
 !dragging ||
 event.pointerId !== pointerId
 ) {
@@ -1908,7 +1918,7 @@ rotateX = Math.max(
 Math.min(28, -dy * .12)
 );
 
-applyTilt();
+scheduleTiltUpdate();
 });
 
 function stopDragging(event) {
@@ -1926,6 +1936,8 @@ board.releasePointerCapture(pointerId);
 board.addEventListener("pointerup", stopDragging);
 board.addEventListener("pointercancel", stopDragging);
 
+/* ---------- Buttons ---------- */
+
 primaryAction.addEventListener("click", () => {
 if (primaryAction.dataset.action === "start") {
 startGame();
@@ -1941,11 +1953,27 @@ secondaryAction.addEventListener(
 startNewGame
 );
 
+/* ---------- Visibility / lifecycle ---------- */
+
+document.addEventListener("visibilitychange", () => {
+if (document.hidden) {
+stopPhysics();
+} else if (!physicsRunning) {
+// Reset timing so we don't get a huge delta
+lastFrameTime = 0;
+accumulator = 0;
+startPhysics();
+}
+});
+
+/* ---------- Init ---------- */
+
 function init() {
 loadRandomBoard();
+resetProgress();
 resetBall();
 showStartScreen();
-requestAnimationFrame(stepPhysics);
+startPhysics();
 }
 
 init();
