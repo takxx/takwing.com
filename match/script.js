@@ -19,14 +19,9 @@ const TIMED_MAX_SECONDS = 99;
 const TIME_PER_POINT = 1 / 3;
 const RESHUFFLE_BONUS_SECONDS = 2;
 
-// Dynamite thresholds
 const DYNAMITE_POINTS_RELAXED = 500;
 const DYNAMITE_POINTS_TIMED = 100;
-
-// A cascade must reach this level to queue one dynamite.
 const DYNAMITE_CASCADE_LEVEL = 5;
-
-// Maximum queued dynamites at any time.
 const MAX_PENDING_DYNAMITES = 2;
 
 const translations = {
@@ -59,12 +54,12 @@ const translations = {
     mode: "Modo",
     modeRelaxed: "Relajado",
     modeTimed: "Contrarreloj",
-    score: "Score",
-    moves: "Moves",
-    time: "Time",
-    bestScore: "Best",
-    hint: "Hint",
-    newGame: "New Game",
+    score: "Puntos",
+    moves: "Movimientos",
+    time: "Tiempo",
+    bestScore: "Récord",
+    hint: "Pista",
+    newGame: "Nuevo Juego",
     instructions: "Haz clic o desliza animales vecinos para combinarlos.",
     match: count => `¡Bien! ¡Has combinado ${count} animales!`,
     invalidSwap: "Ese movimiento no creó una combinación.",
@@ -134,11 +129,12 @@ let bestScoreTimed = 0;
 let resizeTimeout = null;
 let reshuffleCheckInterval = null;
 
-// Dynamite tracking
+// Score progress toward the next score-based dynamite.
 let pointsSinceLastDynamite = 0;
 
-// Dynamites waiting for an empty board space.
-let pendingDynamites = 0;
+// FIFO queue. The first item is always the first dynamite
+// that must be placed when an empty cell becomes available.
+let pendingDynamites = [];
 
 /* ---------------------------
    Orientation / board size
@@ -155,8 +151,15 @@ function updateBoardSize() {
     COLS = 10;
   }
 
-  document.documentElement.style.setProperty("--rows", String(ROWS));
-  document.documentElement.style.setProperty("--cols", String(COLS));
+  document.documentElement.style.setProperty(
+    "--rows",
+    String(ROWS)
+  );
+
+  document.documentElement.style.setProperty(
+    "--cols",
+    String(COLS)
+  );
 }
 
 /* ---------------------------
@@ -168,21 +171,43 @@ function getBrowserLanguage() {
     navigator.languages || [navigator.language];
 
   for (const language of browserLanguages) {
-    const normalized = language.toLowerCase();
+    const normalized = String(language).toLowerCase();
 
     if (
       normalized === "zh-tw" ||
+      normalized === "zh-hk" ||
+      normalized === "zh-mo" ||
       normalized === "zh-hant" ||
-      normalized.startsWith("zh-tw")
+      normalized.startsWith("zh-tw-") ||
+      normalized.startsWith("zh-hk-") ||
+      normalized.startsWith("zh-mo-") ||
+      normalized.startsWith("zh-hant-")
     ) {
       return "zh-TW";
     }
 
-    if (normalized.startsWith("es")) {
+    if (
+      normalized === "zh-cn" ||
+      normalized === "zh-hans" ||
+      normalized.startsWith("zh-cn-") ||
+      normalized.startsWith("zh-hans-")
+    ) {
+      return "zh-TW";
+    }
+
+    if (
+      normalized === "es" ||
+      normalized.startsWith("es-") ||
+      normalized.startsWith("es_")
+    ) {
       return "es";
     }
 
-    if (normalized.startsWith("en")) {
+    if (
+      normalized === "en" ||
+      normalized.startsWith("en-") ||
+      normalized.startsWith("en_")
+    ) {
       return "en";
     }
   }
@@ -191,11 +216,16 @@ function getBrowserLanguage() {
 }
 
 function translate(key, ...args) {
-  const value = translations[currentLanguage][key];
+  const language = translations[currentLanguage] ||
+    translations.en;
 
-  return typeof value === "function"
-    ? value(...args)
-    : value;
+  const value = language[key];
+
+  if (typeof value === "function") {
+    return value(...args);
+  }
+
+  return value ?? translations.en[key] ?? key;
 }
 
 function setLanguage(language) {
@@ -203,23 +233,36 @@ function setLanguage(language) {
     ? language
     : "en";
 
-  languageSelect.value = currentLanguage;
+  if (languageSelect) {
+    languageSelect.value = currentLanguage;
+  }
 
   document.documentElement.lang =
     currentLanguage === "zh-TW"
       ? "zh-Hant"
       : currentLanguage;
 
+  document.documentElement.classList.remove(
+    "lang-en",
+    "lang-es",
+    "lang-zh-tw"
+  );
+
+  document.documentElement.classList.add(
+    `lang-${currentLanguage.toLowerCase()}`
+  );
+
   document.querySelectorAll("[data-i18n]").forEach(element => {
     const key = element.dataset.i18n;
-    const translation = translations[currentLanguage][key];
+    const translation =
+      translations[currentLanguage][key];
 
     if (typeof translation === "string") {
       element.textContent = translation;
     }
   });
 
-  if (modeSelect) {
+  if (modeSelect && modeSelect.options.length >= 2) {
     modeSelect.options[0].textContent =
       translate("modeRelaxed");
 
@@ -227,7 +270,7 @@ function setLanguage(language) {
       translate("modeTimed");
   }
 
-  if (!busy && !gameOverShown) {
+  if (!busy && !gameOverShown && messageElement) {
     messageElement.textContent =
       translate("instructions");
   }
@@ -328,24 +371,38 @@ function playDynamiteSound() {
     context.resume();
   }
 
-  const t = context.currentTime;
+  const time = context.currentTime;
 
-  const osc = context.createOscillator();
-  const oscGain = context.createGain();
+  const oscillator = context.createOscillator();
+  const oscillatorGain = context.createGain();
 
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(90, t);
-  osc.frequency.exponentialRampToValueAtTime(40, t + 0.35);
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(90, time);
+  oscillator.frequency.exponentialRampToValueAtTime(
+    40,
+    time + 0.35
+  );
 
-  oscGain.gain.setValueAtTime(0.0001, t);
-  oscGain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-  oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+  oscillatorGain.gain.setValueAtTime(
+    0.0001,
+    time
+  );
 
-  osc.connect(oscGain);
-  oscGain.connect(context.destination);
+  oscillatorGain.gain.exponentialRampToValueAtTime(
+    0.25,
+    time + 0.02
+  );
 
-  osc.start(t);
-  osc.stop(t + 0.36);
+  oscillatorGain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    time + 0.35
+  );
+
+  oscillator.connect(oscillatorGain);
+  oscillatorGain.connect(context.destination);
+
+  oscillator.start(time);
+  oscillator.stop(time + 0.36);
 
   const bufferSize = context.sampleRate * 0.4;
   const buffer = context.createBuffer(
@@ -356,8 +413,8 @@ function playDynamiteSound() {
 
   const data = buffer.getChannelData(0);
 
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = Math.random() * 2 - 1;
+  for (let index = 0; index < bufferSize; index++) {
+    data[index] = Math.random() * 2 - 1;
   }
 
   const noise = context.createBufferSource();
@@ -365,20 +422,40 @@ function playDynamiteSound() {
 
   const noiseFilter = context.createBiquadFilter();
   noiseFilter.type = "lowpass";
-  noiseFilter.frequency.setValueAtTime(900, t);
-  noiseFilter.frequency.exponentialRampToValueAtTime(120, t + 0.3);
+
+  noiseFilter.frequency.setValueAtTime(
+    900,
+    time
+  );
+
+  noiseFilter.frequency.exponentialRampToValueAtTime(
+    120,
+    time + 0.3
+  );
 
   const noiseGain = context.createGain();
-  noiseGain.gain.setValueAtTime(0.0001, t);
-  noiseGain.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+  noiseGain.gain.setValueAtTime(
+    0.0001,
+    time
+  );
+
+  noiseGain.gain.exponentialRampToValueAtTime(
+    0.22,
+    time + 0.01
+  );
+
+  noiseGain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    time + 0.35
+  );
 
   noise.connect(noiseFilter);
   noiseFilter.connect(noiseGain);
   noiseGain.connect(context.destination);
 
-  noise.start(t);
-  noise.stop(t + 0.4);
+  noise.start(time);
+  noise.stop(time + 0.4);
 
   if (navigator.vibrate) {
     navigator.vibrate(200);
@@ -396,9 +473,9 @@ function randomAnimal() {
 }
 
 function wait(milliseconds) {
-  return new Promise(resolve =>
-    setTimeout(resolve, milliseconds)
-  );
+  return new Promise(resolve => {
+    setTimeout(resolve, milliseconds);
+  });
 }
 
 function getBestScore() {
@@ -417,15 +494,17 @@ function updateBestScore() {
         String(bestScoreRelaxed)
       );
     }
-  } else {
-    if (score > bestScoreTimed) {
-      bestScoreTimed = score;
 
-      localStorage.setItem(
-        "seaMatchesBestTimed",
-        String(bestScoreTimed)
-      );
-    }
+    return;
+  }
+
+  if (score > bestScoreTimed) {
+    bestScoreTimed = score;
+
+    localStorage.setItem(
+      "seaMatchesBestTimed",
+      String(bestScoreTimed)
+    );
   }
 }
 
@@ -449,7 +528,11 @@ function updateTimerDisplay() {
 }
 
 function addTime(seconds) {
-  if (gameMode !== "timed" || gameOverShown) {
+  if (
+    gameMode !== "timed" ||
+    gameOverShown ||
+    seconds <= 0
+  ) {
     return;
   }
 
@@ -532,7 +615,7 @@ function createBoard() {
   pointerStart = null;
   hintCells = [];
   pointsSinceLastDynamite = 0;
-  pendingDynamites = 0;
+  pendingDynamites = [];
 
   do {
     board = Array.from(
@@ -548,6 +631,10 @@ function createBoard() {
 }
 
 function render() {
+  if (!boardElement) {
+    return;
+  }
+
   boardElement.innerHTML = "";
 
   for (let row = 0; row < ROWS; row++) {
@@ -561,7 +648,7 @@ function render() {
 
       const value = board[row][col];
 
-      cell.textContent = value ? value : "";
+      cell.textContent = value || "";
 
       cell.setAttribute(
         "aria-label",
@@ -588,11 +675,12 @@ function render() {
         cell.classList.add("selected");
       }
 
-      const isHintCell = hintCells.some(
-        hint =>
+      const isHintCell = hintCells.some(hint => {
+        return (
           hint.row === row &&
           hint.col === col
-      );
+        );
+      });
 
       if (isHintCell) {
         cell.classList.add("hint");
@@ -602,14 +690,19 @@ function render() {
     }
   }
 
-  scoreElement.textContent = score;
-  movesElement.textContent = moves;
+  if (scoreElement) {
+    scoreElement.textContent = score;
+  }
 
-  updateTimerDisplay();
+  if (movesElement) {
+    movesElement.textContent = moves;
+  }
 
   if (bestScoreElement) {
     bestScoreElement.textContent = getBestScore();
   }
+
+  updateTimerDisplay();
 }
 
 /* ---------------------------
@@ -680,7 +773,59 @@ function findMatches() {
   return matches;
 }
 
-function dropAnimals() {
+/* ---------------------------
+   Dynamite queue and refilling
+---------------------------- */
+
+function queueDynamite() {
+  if (
+    pendingDynamites.length >=
+    MAX_PENDING_DYNAMITES
+  ) {
+    return;
+  }
+
+  // FIFO: append to the end.
+  // The first queued dynamite remains at index 0.
+  pendingDynamites.push(DYNAMITE);
+}
+
+function getEmptyCells() {
+  const emptyCells = [];
+
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (board[row][col] === null) {
+        emptyCells.push({ row, col });
+      }
+    }
+  }
+
+  return emptyCells;
+}
+
+function placePendingDynamites() {
+  while (pendingDynamites.length > 0) {
+    const emptyCells = getEmptyCells();
+
+    if (emptyCells.length === 0) {
+      // Preserve the queue. Do not replace animals.
+      return;
+    }
+
+    const randomIndex = Math.floor(
+      Math.random() * emptyCells.length
+    );
+
+    const cell = emptyCells[randomIndex];
+
+    // Remove the oldest queued dynamite only after placement.
+    board[cell.row][cell.col] =
+      pendingDynamites.shift();
+  }
+}
+
+function collapseColumns() {
   for (let col = 0; col < COLS; col++) {
     const remaining = [];
 
@@ -694,53 +839,31 @@ function dropAnimals() {
       const indexFromBottom = ROWS - 1 - row;
 
       board[row][col] =
-        remaining[indexFromBottom] ??
-        randomAnimal();
+        remaining[indexFromBottom] ?? null;
     }
   }
-
-  // Place queued dynamites only if empty spaces now exist.
-  placePendingDynamites();
 }
 
-/* ---------------------------
-   Pending dynamite placement
----------------------------- */
-
-function queueDynamite() {
-  pendingDynamites = Math.min(
-    MAX_PENDING_DYNAMITES,
-    pendingDynamites + 1
-  );
-}
-
-function placePendingDynamites() {
-  while (pendingDynamites > 0) {
-    const emptyCells = [];
-
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        if (!board[row][col]) {
-          emptyCells.push({ row, col });
-        }
+function fillEmptyCells() {
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (board[row][col] === null) {
+        board[row][col] = randomAnimal();
       }
     }
-
-    // No free space yet. Keep the dynamite queued.
-    if (emptyCells.length === 0) {
-      break;
-    }
-
-    const index = Math.floor(
-      Math.random() * emptyCells.length
-    );
-
-    const cell = emptyCells[index];
-
-    board[cell.row][cell.col] = DYNAMITE;
-
-    pendingDynamites--;
   }
+}
+
+function refillBoard() {
+  // First move existing cells downward.
+  collapseColumns();
+
+  // Next place the oldest queued dynamites into newly
+  // available cells.
+  placePendingDynamites();
+
+  // Finally fill remaining empty cells with animals.
+  fillEmptyCells();
 }
 
 /* ---------------------------
@@ -771,10 +894,10 @@ function addScore(points) {
       ? DYNAMITE_POINTS_TIMED
       : DYNAMITE_POINTS_RELAXED;
 
-  // One score dynamite per threshold crossed.
-  if (pointsSinceLastDynamite >= threshold) {
+  while (
+    pointsSinceLastDynamite >= threshold
+  ) {
     pointsSinceLastDynamite -= threshold;
-
     queueDynamite();
   }
 }
@@ -826,7 +949,9 @@ async function resolveMatches() {
       board[row][col] = null;
     }
 
-    dropAnimals();
+    // Refill after each cascade. Any dynamite already queued
+    // gets first priority over new animals.
+    refillBoard();
     render();
 
     await wait(180);
@@ -835,19 +960,27 @@ async function resolveMatches() {
   }
 
   if (pointsThisMove > 0) {
-    // May queue one score dynamite.
+    // Queue score-based dynamites before the final refill.
     addScore(pointsThisMove);
 
-    // May queue one cascade dynamite.
-    if (cascadeLevel >= DYNAMITE_CASCADE_LEVEL) {
+    // Queue the cascade dynamite after the score dynamite.
+    // Therefore the score dynamite has priority.
+    if (
+      cascadeLevel >= DYNAMITE_CASCADE_LEVEL
+    ) {
       queueDynamite();
     }
 
+    // The final refill places queued dynamites before animals.
+    refillBoard();
     render();
   }
 
   if (!findPossibleMove()) {
-    if (gameMode === "relaxed" && !boardHasDynamite()) {
+    if (
+      gameMode === "relaxed" &&
+      !boardHasDynamite()
+    ) {
       showGameOver();
       return;
     }
@@ -878,13 +1011,18 @@ function boardHasDynamite() {
   return false;
 }
 
-function triggerDynamiteExplosion(row, col, explodedSet) {
+function triggerDynamiteExplosion(
+  row,
+  col,
+  explodedSet
+) {
   const toExplode = [{ row, col }];
   let totalCleared = 0;
 
   while (toExplode.length > 0) {
     const current = toExplode.pop();
-    const key = `${current.row},${current.col}`;
+    const key =
+      `${current.row},${current.col}`;
 
     if (explodedSet.has(key)) {
       continue;
@@ -898,37 +1036,42 @@ function triggerDynamiteExplosion(row, col, explodedSet) {
 
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
-        const nr = current.row + dr;
-        const nc = current.col + dc;
+        const neighborRow = current.row + dr;
+        const neighborCol = current.col + dc;
 
         if (
-          nr < 0 ||
-          nr >= ROWS ||
-          nc < 0 ||
-          nc >= COLS
+          neighborRow < 0 ||
+          neighborRow >= ROWS ||
+          neighborCol < 0 ||
+          neighborCol >= COLS
         ) {
           continue;
         }
 
-        const neighborKey = `${nr},${nc}`;
+        const neighborKey =
+          `${neighborRow},${neighborCol}`;
 
         if (explodedSet.has(neighborKey)) {
           continue;
         }
 
-        if (!board[nr][nc]) {
+        if (!board[neighborRow][neighborCol]) {
           continue;
         }
 
         explodedSet.add(neighborKey);
+
+        const value =
+          board[neighborRow][neighborCol];
+
+        board[neighborRow][neighborCol] = null;
         totalCleared++;
 
-        const value = board[nr][nc];
-
-        board[nr][nc] = null;
-
         if (value === DYNAMITE) {
-          toExplode.push({ row: nr, col: nc });
+          toExplode.push({
+            row: neighborRow,
+            col: neighborCol
+          });
         }
       }
     }
@@ -953,14 +1096,45 @@ function clearEntireBoard() {
 }
 
 /* ---------------------------
+   Explosion resolution
+---------------------------- */
+
+async function resolveExplosion(
+  cleared,
+  message
+) {
+  addScore(cleared);
+
+  messageElement.textContent = message;
+  render();
+
+  await wait(250);
+
+  // Explosion created empty cells. Queued dynamites are
+  // placed before any replacement animals.
+  refillBoard();
+  render();
+
+  await wait(180);
+
+  await checkAfterExplosion();
+}
+
+/* ---------------------------
    Swaps and interactions
 ---------------------------- */
 
 async function attemptSwap(first, second) {
-  const firstVal = board[first.row][first.col];
-  const secondVal = board[second.row][second.col];
+  const firstValue =
+    board[first.row][first.col];
 
-  if (firstVal === DYNAMITE && secondVal === DYNAMITE) {
+  const secondValue =
+    board[second.row][second.col];
+
+  if (
+    firstValue === DYNAMITE &&
+    secondValue === DYNAMITE
+  ) {
     swap(first, second);
     render();
 
@@ -970,25 +1144,18 @@ async function attemptSwap(first, second) {
 
     const cleared = clearEntireBoard();
 
-    addScore(cleared);
+    await resolveExplosion(
+      cleared,
+      translate("dynamiteCleared", cleared)
+    );
 
-    messageElement.textContent =
-      translate("dynamiteCleared", cleared);
-
-    render();
-
-    await wait(250);
-
-    dropAnimals();
-    render();
-
-    await wait(180);
-
-    await checkAfterExplosion();
     return;
   }
 
-  if (firstVal === DYNAMITE && secondVal !== DYNAMITE) {
+  if (
+    firstValue === DYNAMITE &&
+    secondValue !== DYNAMITE
+  ) {
     swap(first, second);
     render();
 
@@ -1006,7 +1173,7 @@ async function attemptSwap(first, second) {
 
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
-        if (board[row][col] === secondVal) {
+        if (board[row][col] === secondValue) {
           const key = `${row},${col}`;
 
           if (!explodedSet.has(key)) {
@@ -1019,25 +1186,18 @@ async function attemptSwap(first, second) {
 
     const cleared = explodedSet.size;
 
-    addScore(cleared);
+    await resolveExplosion(
+      cleared,
+      translate("dynamiteCleared", cleared)
+    );
 
-    messageElement.textContent =
-      translate("dynamiteCleared", cleared);
-
-    render();
-
-    await wait(250);
-
-    dropAnimals();
-    render();
-
-    await wait(180);
-
-    await checkAfterExplosion();
     return;
   }
 
-  if (secondVal === DYNAMITE && firstVal !== DYNAMITE) {
+  if (
+    secondValue === DYNAMITE &&
+    firstValue !== DYNAMITE
+  ) {
     swap(first, second);
     render();
 
@@ -1055,7 +1215,7 @@ async function attemptSwap(first, second) {
 
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
-        if (board[row][col] === firstVal) {
+        if (board[row][col] === firstValue) {
           const key = `${row},${col}`;
 
           if (!explodedSet.has(key)) {
@@ -1068,21 +1228,11 @@ async function attemptSwap(first, second) {
 
     const cleared = explodedSet.size;
 
-    addScore(cleared);
+    await resolveExplosion(
+      cleared,
+      translate("dynamiteCleared", cleared)
+    );
 
-    messageElement.textContent =
-      translate("dynamiteCleared", cleared);
-
-    render();
-
-    await wait(250);
-
-    dropAnimals();
-    render();
-
-    await wait(180);
-
-    await checkAfterExplosion();
     return;
   }
 
@@ -1108,7 +1258,10 @@ async function attemptSwap(first, second) {
 
 async function checkAfterExplosion() {
   if (!findPossibleMove()) {
-    if (gameMode === "relaxed" && !boardHasDynamite()) {
+    if (
+      gameMode === "relaxed" &&
+      !boardHasDynamite()
+    ) {
       showGameOver();
       busy = false;
       return;
@@ -1154,21 +1307,10 @@ async function handleDynamiteClick(row, col) {
     explodedSet
   );
 
-  addScore(cleared);
-
-  messageElement.textContent =
-    translate("dynamiteCleared", cleared);
-
-  render();
-
-  await wait(250);
-
-  dropAnimals();
-  render();
-
-  await wait(180);
-
-  await checkAfterExplosion();
+  await resolveExplosion(
+    cleared,
+    translate("dynamiteCleared", cleared)
+  );
 }
 
 function handleTap(row, col) {
@@ -1257,7 +1399,11 @@ function handleSwipe(start, endX, endY) {
     targetCol < COLS &&
     board[targetRow][targetCol];
 
-  if (!validTarget || busy || gameOverShown) {
+  if (
+    !validTarget ||
+    busy ||
+    gameOverShown
+  ) {
     selected = null;
     render();
     return;
@@ -1342,7 +1488,7 @@ boardElement.addEventListener(
 );
 
 /* ---------------------------
-   Possible moves and reshuffling
+   Possible moves / reshuffling
 ---------------------------- */
 
 function findPossibleMove() {
@@ -1368,6 +1514,13 @@ function findPossibleMove() {
           continue;
         }
 
+        if (
+          !board[first.row][first.col] ||
+          !board[second.row][second.col]
+        ) {
+          continue;
+        }
+
         swap(first, second);
 
         const createsMatch =
@@ -1385,7 +1538,7 @@ function findPossibleMove() {
   return null;
 }
 
-function reshuffleBoard() {
+function createPlayableBoard() {
   do {
     board = Array.from(
       { length: ROWS },
@@ -1398,6 +1551,11 @@ function reshuffleBoard() {
     findMatches().size > 0 ||
     !findPossibleMove()
   );
+}
+
+function reshuffleBoard() {
+  // Pending dynamites remain queued during a reshuffle.
+  createPlayableBoard();
 
   selected = null;
   hintCells = [];
@@ -1514,7 +1672,7 @@ function showGameOver() {
 }
 
 /* ---------------------------
-   New game and mode changes
+   New game / mode changes
 ---------------------------- */
 
 function resetGameState() {
@@ -1526,7 +1684,7 @@ function resetGameState() {
   pointerStart = null;
   hintCells = [];
   pointsSinceLastDynamite = 0;
-  pendingDynamites = 0;
+  pendingDynamites = [];
 }
 
 function startNewGame() {
@@ -1614,7 +1772,6 @@ window.addEventListener(
 ---------------------------- */
 
 loadBestScores();
-
 updateBoardSize();
 
 currentLanguage = getBrowserLanguage();
@@ -1634,7 +1791,10 @@ reshuffleCheckInterval = setInterval(() => {
     !gameOverShown &&
     !findPossibleMove()
   ) {
-    if (gameMode === "relaxed" && !boardHasDynamite()) {
+    if (
+      gameMode === "relaxed" &&
+      !boardHasDynamite()
+    ) {
       showGameOver();
     } else {
       reshuffleBoard();
