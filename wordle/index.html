@@ -1,656 +1,1226 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Another Wordle</title>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
-<style>
-:root {
-  --background: #121212;
-  --surface: #1e1e1e;
-  --surface-2: #2a2a2a;
-  --border: #3a3a3a;
-  --text: #e8e8e8;
-  --muted-text: #b8b8b8;
+  <title>Another Wordle</title>
 
-  --green: #538d4e;
-  --yellow: #b59f3b;
-  --gray: #3a3a3a;
-  --focus: #7aa9ff;
-}
+  <style>
+    :root {
+      --background: #101114;
+      --surface: #191b20;
+      --surface-2: #24272e;
+      --border: #3b404a;
+      --border-strong: #636b78;
 
-* {
-  box-sizing: border-box;
-}
+      --text: #f1f3f5;
+      --muted-text: #aeb4bf;
+      --subtle-text: #7f8794;
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: var(--text);
-  background: var(--background);
-}
+      --green: #538d4e;
+      --yellow: #b59f3b;
+      --gray: #3a3d43;
 
-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
+      --focus: #82aaff;
+      --error: #e17676;
+    }
 
-h1 {
-  margin: 0;
-  letter-spacing: 0.2rem;
-}
+    * {
+      box-sizing: border-box;
+    }
 
-.controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
+    html {
+      color-scheme: dark;
+    }
 
-label {
-  color: var(--muted-text);
-}
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
 
-select,
-button {
-  font: inherit;
-  padding: 0.45rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  background: var(--surface-2);
-  cursor: pointer;
-}
+      color: var(--text);
+      background:
+        radial-gradient(
+          circle at top,
+          #1d2027 0,
+          var(--background) 40rem
+        ),
+        var(--background);
 
-select:hover,
-button:hover {
-  border-color: #5a5a5a;
-}
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
 
-select:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
+    button,
+    select,
+    input {
+      font: inherit;
+    }
 
-main {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 1rem;
-  text-align: center;
-}
+    button,
+    select {
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+    }
 
-#instructions {
-  min-height: 3rem;
-  margin: 0 0 1rem;
-  color: var(--muted-text);
-}
+    button,
+    select {
+      cursor: pointer;
+    }
 
-#board {
-  display: grid;
-  gap: 6px;
-  justify-content: center;
-  margin-bottom: 1rem;
-  cursor: text;
-  touch-action: manipulation;
-}
+    button:hover:not(:disabled),
+    select:hover {
+      background: #2d3139;
+      border-color: var(--border-strong);
+    }
 
-.row {
-  display: grid;
-  grid-template-columns: repeat(5, 58px);
-  gap: 6px;
-}
+    button:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 3px;
+    }
 
-.tile {
-  width: 58px;
-  height: 58px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--border);
-  color: var(--text);
-  font-size: 1.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  user-select: none;
-  will-change: contents, background-color;
-}
+    header {
+      background: rgb(25 27 32 / 92%);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(0.75rem);
+    }
 
-.tile.filled {
-  border-color: #565758;
-}
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
 
-.tile.correct {
-  color: #ffffff;
-  background: var(--green);
-  border-color: var(--green);
-}
+      width: min(100% - 2rem, 48rem);
+      min-height: 4.5rem;
+      margin: 0 auto;
+    }
 
-.tile.present {
-  color: #121212;
-  background: var(--yellow);
-  border-color: var(--yellow);
-}
+    h1 {
+      margin: 0;
 
-.tile.absent {
-  color: #d7dadc;
-  background: var(--gray);
-  border-color: var(--gray);
-}
+      font-size: clamp(1.35rem, 5vw, 1.85rem);
+      letter-spacing: 0.2em;
+      line-height: 1;
+    }
 
-#message {
-  min-height: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--text);
-  font-weight: 600;
-}
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
 
-/*
-  This remains focusable so that mobile browsers open the touchscreen keyboard.
-  It is visually hidden without using display:none or pointer-events:none.
-*/
-#guess-input {
-  position: fixed;
-  left: -9999px;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-}
+    .controls label {
+      color: var(--muted-text);
+      font-size: 0.9rem;
+    }
 
-@media (max-width: 480px) {
-  .row {
-    grid-template-columns: repeat(5, minmax(48px, 1fr));
-  }
+    .controls select,
+    .controls button {
+      min-height: 2.35rem;
+      padding: 0.4rem 0.7rem;
+    }
 
-  .tile {
-    width: 100%;
-    height: 52px;
-    font-size: 1.4rem;
-  }
-}
-</style>
+    main {
+      width: min(100% - 2rem, 32rem);
+      margin: 0 auto;
+      padding: 1.5rem 0 2rem;
+    }
+
+    #instructions {
+      max-width: 34rem;
+      min-height: 3.75rem;
+      margin: 0 auto 1.25rem;
+
+      color: var(--muted-text);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    /*
+      The board width is determined only by the five tiles.
+      The enter button is positioned outside the grid flow.
+    */
+    #board {
+      position: relative;
+
+      display: grid;
+      justify-content: center;
+      gap: 0.4rem;
+
+      width: max-content;
+      margin: 0 auto 1.25rem;
+
+      cursor: text;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.4rem;
+    }
+
+    .tile {
+      display: grid;
+      place-items: center;
+
+      width: clamp(3rem, 15vw, 3.65rem);
+      aspect-ratio: 1;
+
+      color: var(--text);
+      border: 2px solid var(--border);
+
+      font-size: clamp(1.45rem, 7vw, 1.85rem);
+      font-weight: 750;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .tile.filled {
+      border-color: var(--border-strong);
+    }
+
+    .tile.active {
+      border-color: var(--focus);
+    }
+
+    .tile.active-placeholder {
+      color: var(--subtle-text);
+      font-weight: 500;
+    }
+
+    .tile.correct {
+      color: #ffffff;
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .tile.present {
+      color: #111111;
+      background: var(--yellow);
+      border-color: var(--yellow);
+    }
+
+    .tile.absent {
+      color: #e1e4e8;
+      background: var(--gray);
+      border-color: var(--gray);
+    }
+
+    /*
+      This is intentionally not a square button.
+      It sits beside the row without affecting grid layout.
+    */
+    .submit-symbol {
+      position: absolute;
+      top: 50%;
+      left: calc(100% + 0.65rem);
+
+      display: grid;
+      place-items: center;
+
+      width: 1.6rem;
+      height: 1.6rem;
+      padding: 0;
+
+      color: var(--muted-text);
+      background: transparent;
+      border: 0;
+      border-radius: 50%;
+
+      font-size: 1.35rem;
+      line-height: 1;
+
+      opacity: 0.8;
+      transform: translateY(-50%);
+    }
+
+    .submit-symbol:hover:not(:disabled) {
+      color: var(--text);
+      background: var(--surface-2);
+      border: 0;
+    }
+
+    .submit-symbol:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
+
+    .submit-symbol[hidden] {
+      display: none;
+    }
+
+    #message {
+      min-height: 1.6rem;
+      margin: 0 0 1rem;
+
+      color: var(--text);
+      font-weight: 650;
+      text-align: center;
+    }
+
+    #message.error {
+      color: var(--error);
+    }
+
+    #keyboard-help {
+      margin: 0;
+
+      color: var(--subtle-text);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    /*
+      Invisible input receiver for physical,
+      mobile, onboard, and speech keyboards.
+    */
+    #guess-input {
+      position: fixed;
+      left: -9999px;
+
+      width: 1px;
+      height: 1px;
+      padding: 0;
+
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 560px) {
+      .header-content {
+        align-items: stretch;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 0.9rem 0;
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      .controls {
+        justify-content: center;
+      }
+
+      main {
+        padding-top: 1.25rem;
+      }
+
+      #instructions {
+        min-height: 0;
+        margin-bottom: 1rem;
+        font-size: 0.88rem;
+      }
+
+      .submit-symbol {
+        left: calc(100% + 0.35rem);
+      }
+    }
+
+    @media (max-width: 380px) {
+      main {
+        width: min(100% - 1rem, 32rem);
+      }
+
+      .row {
+        gap: 0.3rem;
+      }
+
+      .tile {
+        width: clamp(2.75rem, 16vw, 3.2rem);
+      }
+
+      .submit-symbol {
+        left: calc(100% + 0.25rem);
+      }
+    }
+  </style>
 </head>
 
 <body>
-<header>
-  <h1 id="title">WORDLE</h1>
+  <header>
+    <div class="header-content">
+      <h1 id="title">WORDLE</h1>
 
-  <div class="controls">
-    <label for="language-select" id="language-label">Language</label>
+      <div class="controls">
+        <label for="language-select" id="language-label">
+          Language
+        </label>
 
-    <select id="language-select">
-      <option value="en">English</option>
-      <option value="es">Español</option>
-    </select>
+        <select id="language-select">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
 
-    <button id="new-game" type="button">New game</button>
-  </div>
-</header>
+        <button id="new-game" type="button">
+          New game
+        </button>
+      </div>
+    </div>
+  </header>
 
-<main>
-  <p id="instructions"></p>
+  <main>
+    <p id="instructions"></p>
 
-  <div
-    id="board"
-    aria-label="Wordle board"
-    role="application"
-    tabindex="0"
-  ></div>
+    <div
+      id="board"
+      role="application"
+      aria-label="Wordle board"
+      tabindex="0"
+    ></div>
 
-  <div id="message" role="status" aria-live="polite"></div>
+    <div
+      id="message"
+      role="status"
+      aria-live="polite"
+    ></div>
 
-  <input
-    id="guess-input"
-    type="text"
-    inputmode="text"
-    autocomplete="off"
-    autocapitalize="characters"
-    autocorrect="off"
-    spellcheck="false"
-    aria-label="Enter your guess"
-  />
-</main>
+    <p id="keyboard-help"></p>
 
-<script>
-"use strict";
+    <input
+      id="guess-input"
+      type="text"
+      inputmode="text"
+      autocomplete="off"
+      autocapitalize="characters"
+      autocorrect="off"
+      spellcheck="false"
+      aria-label="Enter your five-letter guess"
+    />
+  </main>
 
-const WORD_LENGTH = 5;
-const MAX_GUESSES = 6;
-const LETTER_PATTERN = /^[a-zA-ZñÑáéíóúüÁÉÍÓÚÜ]$/;
+  <script>
+    "use strict";
 
-const TRANSLATIONS = {
-  en: {
-    title: "WORDLE",
-    language: "Language",
-    newGame: "New game",
-    instructions:
-      "Guess the five-letter word in six tries. Green means the letter is correct and in the right place, yellow means it is in the word but elsewhere, and gray means it is not in the word.",
-    invalidLength: "Your guess must have 5 letters.",
-    invalidWord: "Not a valid five-letter word.",
-    win: "You guessed it!",
-    lose: "The word was:"
-  },
-  es: {
-    title: "WORDLE",
-    language: "Idioma",
-    newGame: "Nueva partida",
-    instructions:
-      "Adivina la palabra de cinco letras en seis intentos. Verde significa que la letra es correcta y está en su lugar, amarillo que está en la palabra pero en otra posición, y gris que no está en la palabra.",
-    invalidLength: "Tu palabra debe tener 5 letras.",
-    invalidWord: "No es una palabra válida de cinco letras.",
-    win: "¡Lo adivinaste!",
-    lose: "La palabra era:"
-  }
-};
+    const WORD_LENGTH = 5;
+    const MAX_GUESSES = 6;
 
-const state = {
-  lang: "en",
-  words: [],
-  wordSet: new Set(),
-  answer: "",
-  guesses: [],
-  currentGuess: "",
-  gameOver: false,
-  loading: false
-};
+    const LETTER_PATTERN =
+      /^[a-zA-ZñÑáéíóúüÁÉÍÓÚÜ]$/;
 
-const board = document.getElementById("board");
-const message = document.getElementById("message");
-const guessInput = document.getElementById("guess-input");
-const languageSelect = document.getElementById("language-select");
-const languageLabel = document.getElementById("language-label");
-const instructions = document.getElementById("instructions");
-const newGameButton = document.getElementById("new-game");
-const title = document.getElementById("title");
+    const WORD_PATTERN =
+      /^[A-ZÑÁÉÍÓÚÜ]+$/i;
 
-/*
-  Cached tile references:
-  tiles[row][column]
-  This avoids repeated DOM traversal via board.children during every keystroke.
-*/
-const tiles = [];
+    const TRANSLATIONS = {
+      en: {
+        title: "WORDLE",
+        language: "Language",
+        newGame: "New game",
 
-function detectInitialLanguage() {
-  const urlLanguage = new URLSearchParams(window.location.search).get("lang");
+        instructions:
+          "Guess the five-letter word in six tries. Green means the letter is correct and in the right place, yellow means it is in the word but elsewhere, and gray means it is not in the word.",
 
-  if (urlLanguage === "en" || urlLanguage === "es") {
-    return urlLanguage;
-  }
+        keyboardHelp:
+          "Type with your system keyboard · Enter to submit · Backspace to erase",
 
-  const browserLanguages = navigator.languages || [navigator.language || "en"];
+        invalidLength:
+          "Your guess must have 5 letters.",
 
-  for (const browserLanguage of browserLanguages) {
-    const code = browserLanguage.toLowerCase().slice(0, 2);
+        invalidWord:
+          "Not a valid five-letter word.",
 
-    if (code === "es") return "es";
-    if (code === "en") return "en";
-  }
+        win:
+          "You guessed it!",
 
-  return "en";
-}
+        lose:
+          "The word was:",
 
-async function loadWords(language) {
-  const response = await fetch(`/util/wordlist/${language}.json`);
+        loading:
+          "Loading…",
 
-  if (!response.ok) {
-    throw new Error(`Could not load word list for "${language}".`);
-  }
+        loadError:
+          "Unable to start the game.",
 
-  const allWords = await response.json();
+        submit:
+          "Submit guess"
+      },
 
-  const fiveLetterWords = allWords
-    .filter(
-      word =>
-        typeof word === "string" &&
-        [...word].length === WORD_LENGTH &&
-        /^[A-ZÑÁÉÍÓÚÜ]+$/i.test(word)
-    )
-    .map(word => word.toUpperCase());
+      es: {
+        title: "WORDLE",
+        language: "Idioma",
+        newGame: "Nueva partida",
 
-  if (fiveLetterWords.length === 0) {
-    throw new Error(`No five-letter words found in "${language}.json".`);
-  }
+        instructions:
+          "Adivina la palabra de cinco letras en seis intentos. Verde significa que la letra es correcta y está en su lugar, amarillo que está en la palabra pero en otra posición, y gris que no está en la palabra.",
 
-  return fiveLetterWords;
-}
+        keyboardHelp:
+          "Escribe con el teclado · Enter para enviar · Retroceso para borrar",
 
-function normalizeLetter(letter) {
-  return letter
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase();
-}
+        invalidLength:
+          "Tu palabra debe tener 5 letras.",
 
-function normalizeWord(word) {
-  return normalizeLetter(word);
-}
+        invalidWord:
+          "No es una palabra válida de cinco letras.",
 
-function createBoard() {
-  board.replaceChildren();
-  tiles.length = 0;
+        win:
+          "¡Lo adivinaste!",
 
-  const fragment = document.createDocumentFragment();
+        lose:
+          "La palabra era:",
 
-  for (let row = 0; row < MAX_GUESSES; row++) {
-    const rowElement = document.createElement("div");
-    rowElement.className = "row";
+        loading:
+          "Cargando…",
 
-    const rowTiles = [];
+        loadError:
+          "No se pudo iniciar la partida.",
 
-    for (let column = 0; column < WORD_LENGTH; column++) {
-      const tile = document.createElement("div");
+        submit:
+          "Enviar palabra"
+      }
+    };
+
+    const state = {
+      lang: "en",
+      words: [],
+      wordSet: new Set(),
+      answer: "",
+      guesses: [],
+      currentGuess: "",
+      gameOver: false,
+      loading: false
+    };
+
+    const board =
+      document.getElementById("board");
+
+    const message =
+      document.getElementById("message");
+
+    const guessInput =
+      document.getElementById("guess-input");
+
+    const languageSelect =
+      document.getElementById("language-select");
+
+    const languageLabel =
+      document.getElementById("language-label");
+
+    const instructions =
+      document.getElementById("instructions");
+
+    const keyboardHelp =
+      document.getElementById("keyboard-help");
+
+    const newGameButton =
+      document.getElementById("new-game");
+
+    const title =
+      document.getElementById("title");
+
+    const tiles = [];
+
+    let submitSymbol = null;
+
+    function detectInitialLanguage() {
+      const urlLanguage =
+        new URLSearchParams(window.location.search)
+          .get("lang");
+
+      if (
+        urlLanguage === "en" ||
+        urlLanguage === "es"
+      ) {
+        return urlLanguage;
+      }
+
+      const browserLanguages =
+        navigator.languages || [
+          navigator.language || "en"
+        ];
+
+      for (const browserLanguage of browserLanguages) {
+        const code =
+          browserLanguage.toLowerCase().slice(0, 2);
+
+        if (code === "es") return "es";
+        if (code === "en") return "en";
+      }
+
+      return "en";
+    }
+
+    async function loadWords(language) {
+      const response = await fetch(
+        `/util/wordlist/${language}.json`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Could not load word list for "${language}".`
+        );
+      }
+
+      const allWords = await response.json();
+
+      const fiveLetterWords = allWords
+        .filter(word => {
+          return (
+            typeof word === "string" &&
+            [...word].length === WORD_LENGTH &&
+            WORD_PATTERN.test(word)
+          );
+        })
+        .map(word => word.toUpperCase());
+
+      if (fiveLetterWords.length === 0) {
+        throw new Error(
+          `No five-letter words found in "${language}.json".`
+        );
+      }
+
+      return fiveLetterWords;
+    }
+
+    function normalizeLetter(letter) {
+      return letter
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+    }
+
+    function normalizeWord(word) {
+      return normalizeLetter(word);
+    }
+
+    function createBoard() {
+      board.replaceChildren();
+
+      tiles.length = 0;
+
+      for (
+        let row = 0;
+        row < MAX_GUESSES;
+        row++
+      ) {
+        const rowElement =
+          document.createElement("div");
+
+        rowElement.className = "row";
+
+        const rowTiles = [];
+
+        for (
+          let column = 0;
+          column < WORD_LENGTH;
+          column++
+        ) {
+          const tile =
+            document.createElement("div");
+
+          tile.className = "tile";
+          tile.setAttribute(
+            "aria-hidden",
+            "true"
+          );
+
+          rowElement.appendChild(tile);
+          rowTiles.push(tile);
+        }
+
+        board.appendChild(rowElement);
+        tiles.push(rowTiles);
+      }
+
+      submitSymbol =
+        document.createElement("button");
+
+      submitSymbol.type = "button";
+      submitSymbol.className = "submit-symbol";
+      submitSymbol.textContent = "↵";
+      submitSymbol.hidden = true;
+      submitSymbol.disabled = true;
+      submitSymbol.setAttribute(
+        "aria-label",
+        TRANSLATIONS[state.lang].submit
+      );
+
+      submitSymbol.addEventListener(
+        "click",
+        event => {
+          event.stopPropagation();
+          submitGuess();
+        }
+      );
+
+      board.appendChild(submitSymbol);
+    }
+
+    function resetTile(tile) {
+      tile.textContent = "";
       tile.className = "tile";
-      tile.setAttribute("aria-hidden", "true");
-
-      rowElement.appendChild(tile);
-      rowTiles.push(tile);
     }
 
-    fragment.appendChild(rowElement);
-    tiles.push(rowTiles);
-  }
+    function clearBoard() {
+      for (const rowTiles of tiles) {
+        for (const tile of rowTiles) {
+          resetTile(tile);
+        }
+      }
 
-  board.appendChild(fragment);
-}
-
-function resetTile(tile) {
-  tile.textContent = "";
-  tile.className = "tile";
-}
-
-function updateCurrentRow() {
-  const rowIndex = state.guesses.length;
-
-  if (rowIndex >= MAX_GUESSES) return;
-
-  for (let column = 0; column < WORD_LENGTH; column++) {
-    const tile = tiles[rowIndex][column];
-    const letter = state.currentGuess[column] || "";
-
-    tile.textContent = letter;
-    tile.classList.toggle("filled", Boolean(letter));
-  }
-}
-
-function renderSubmittedRow(rowIndex, guess, feedback) {
-  for (let column = 0; column < WORD_LENGTH; column++) {
-    const tile = tiles[rowIndex][column];
-
-    tile.textContent = guess[column];
-    tile.className = `tile ${feedback[column]}`;
-  }
-}
-
-function clearBoard() {
-  for (const rowTiles of tiles) {
-    for (const tile of rowTiles) {
-      resetTile(tile);
-    }
-  }
-}
-
-function showMessage(text = "") {
-  message.textContent = text;
-}
-
-function buildAnswerMap(word) {
-  const counts = new Map();
-
-  for (const letter of word) {
-    counts.set(letter, (counts.get(letter) || 0) + 1);
-  }
-
-  return counts;
-}
-
-function evaluateGuess(guess, answer) {
-  const result = Array(WORD_LENGTH).fill("absent");
-  const remaining = buildAnswerMap(answer);
-
-  for (let index = 0; index < WORD_LENGTH; index++) {
-    if (guess[index] === answer[index]) {
-      result[index] = "correct";
-      remaining.set(guess[index], remaining.get(guess[index]) - 1);
-    }
-  }
-
-  for (let index = 0; index < WORD_LENGTH; index++) {
-    if (result[index] === "correct") continue;
-
-    const count = remaining.get(guess[index]) || 0;
-
-    if (count > 0) {
-      result[index] = "present";
-      remaining.set(guess[index], count - 1);
-    }
-  }
-
-  return result;
-}
-
-function addLetter(rawLetter) {
-  if (state.loading || state.gameOver) return;
-  if (state.currentGuess.length >= WORD_LENGTH) return;
-
-  const letter = normalizeLetter(rawLetter);
-
-  if (!LETTER_PATTERN.test(rawLetter) || letter.length !== 1) return;
-
-  state.currentGuess += letter;
-  showMessage();
-  updateCurrentRow();
-}
-
-function removeLetter() {
-  if (state.loading || state.gameOver) return;
-  if (!state.currentGuess) return;
-
-  state.currentGuess = state.currentGuess.slice(0, -1);
-  showMessage();
-  updateCurrentRow();
-}
-
-function submitGuess() {
-  if (state.loading || state.gameOver) return;
-
-  const guess = state.currentGuess;
-
-  if (guess.length !== WORD_LENGTH) {
-    showMessage(TRANSLATIONS[state.lang].invalidLength);
-    return;
-  }
-
-  /*
-    Set.has() is faster than scanning all words with Array.some()
-    every time a guess is submitted.
-  */
-  if (!state.wordSet.has(normalizeWord(guess))) {
-    showMessage(TRANSLATIONS[state.lang].invalidWord);
-    return;
-  }
-
-  const feedback = evaluateGuess(guess, state.answer);
-  const rowIndex = state.guesses.length;
-
-  state.guesses.push({ guess, feedback });
-  state.currentGuess = "";
-
-  renderSubmittedRow(rowIndex, guess, feedback);
-
-  if (guess === state.answer) {
-    state.gameOver = true;
-    showMessage(TRANSLATIONS[state.lang].win);
-    guessInput.blur();
-    return;
-  }
-
-  if (state.guesses.length === MAX_GUESSES) {
-    state.gameOver = true;
-    showMessage(`${TRANSLATIONS[state.lang].lose} ${state.answer}`);
-    guessInput.blur();
-    return;
-  }
-
-  updateCurrentRow();
-}
-
-function applyTranslations() {
-  const text = TRANSLATIONS[state.lang];
-
-  document.documentElement.lang = state.lang;
-  title.textContent = text.title;
-  languageLabel.textContent = text.language;
-  newGameButton.textContent = text.newGame;
-  instructions.textContent = text.instructions;
-  languageSelect.value = state.lang;
-}
-
-function focusGameInput() {
-  if (!state.gameOver && !state.loading) {
-    guessInput.focus({ preventScroll: true });
-  }
-}
-
-function handleKey(key) {
-  if (key === "Enter") {
-    submitGuess();
-    return;
-  }
-
-  if (key === "Backspace" || key === "Delete") {
-    removeLetter();
-    return;
-  }
-
-  if (LETTER_PATTERN.test(key)) {
-    addLetter(key);
-  }
-}
-
-async function startGame(language, { preserveUrl = false } = {}) {
-  state.loading = true;
-  showMessage("");
-
-  try {
-    state.lang = language;
-    applyTranslations();
-
-    const words = await loadWords(language);
-
-    state.words = words;
-    state.wordSet = new Set(words.map(normalizeWord));
-    state.answer = words[Math.floor(Math.random() * words.length)];
-    state.guesses = [];
-    state.currentGuess = "";
-    state.gameOver = false;
-
-    clearBoard();
-
-    if (preserveUrl) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("lang", language);
-      window.history.replaceState({}, "", url);
+      if (submitSymbol) {
+        submitSymbol.hidden = true;
+        submitSymbol.disabled = true;
+      }
     }
 
-    focusGameInput();
-  } catch (error) {
-    console.error(error);
-    showMessage(error.message || "Unable to start the game.");
-  } finally {
-    state.loading = false;
-  }
-}
+    function positionSubmitSymbol() {
+      if (!submitSymbol) {
+        return;
+      }
 
-/*
-  Hardware keyboards:
-  Do not intercept normal text entry while the hidden input owns focus.
-  The input event handles those letters. This handler remains useful if
-  the board itself is focused.
-*/
-document.addEventListener("keydown", event => {
-  if (event.target === guessInput) return;
+      const activeRowIndex =
+        state.guesses.length;
 
-  if (
-    event.key === "Enter" ||
-    event.key === "Backspace" ||
-    event.key === "Delete" ||
-    LETTER_PATTERN.test(event.key)
-  ) {
-    event.preventDefault();
-    handleKey(event.key);
-  }
-});
+      const activeRow =
+        board.children[activeRowIndex];
 
-/*
-  Mobile virtual keyboards:
-  beforeinput exposes deleteContentBackward even where keydown does not
-  reliably report Backspace.
-*/
-guessInput.addEventListener("beforeinput", event => {
-  if (event.inputType === "deleteContentBackward") {
-    event.preventDefault();
-    removeLetter();
-  }
-});
+      if (!activeRow) {
+        return;
+      }
 
-/*
-  Fallback for keyboards that do emit a normal Backspace key event.
-  Preventing default avoids duplicate deletion when both events occur.
-*/
-guessInput.addEventListener("keydown", event => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    submitGuess();
-    return;
-  }
+      const rowTop =
+        activeRow.offsetTop;
 
-  if (event.key === "Backspace" || event.key === "Delete") {
-    event.preventDefault();
-    removeLetter();
-  }
-});
+      const rowHeight =
+        activeRow.offsetHeight;
 
-/*
-  Handles touchscreen typing, physical keyboard typing, paste, speech
-  input, and IME text insertion. The value is immediately cleared because
-  game state is stored in state.currentGuess rather than in this field.
-*/
-guessInput.addEventListener("input", () => {
-  const value = guessInput.value;
-  guessInput.value = "";
-
-  for (const character of value) {
-    if (LETTER_PATTERN.test(character)) {
-      addLetter(character);
+      submitSymbol.style.top =
+        `${rowTop + rowHeight / 2}px`;
     }
-  }
-});
 
-board.addEventListener("click", focusGameInput);
+    function updateCurrentRow() {
+      const rowIndex = state.guesses.length;
 
-board.addEventListener("touchstart", focusGameInput, {
-  passive: true
-});
+      if (rowIndex >= MAX_GUESSES) {
+        updateSubmitSymbol();
+        return;
+      }
 
-languageSelect.addEventListener("change", event => {
-  startGame(event.target.value, { preserveUrl: true });
-});
+      for (
+        let column = 0;
+        column < WORD_LENGTH;
+        column++
+      ) {
+        const tile =
+          tiles[rowIndex][column];
 
-newGameButton.addEventListener("click", () => {
-  startGame(state.lang);
-});
+        const letter =
+          state.currentGuess[column] || "";
 
-createBoard();
-startGame(detectInitialLanguage());
-</script>
+        tile.className = "tile";
+        tile.textContent = letter;
+
+        if (letter) {
+          tile.classList.add("filled");
+        }
+      }
+
+      const activeColumn =
+        state.currentGuess.length;
+
+      if (
+        activeColumn < WORD_LENGTH &&
+        !state.gameOver &&
+        !state.loading
+      ) {
+        const activeTile =
+          tiles[rowIndex][activeColumn];
+
+        activeTile.textContent = "_";
+        activeTile.classList.add(
+          "active",
+          "active-placeholder"
+        );
+      }
+
+      positionSubmitSymbol();
+      updateSubmitSymbol();
+    }
+
+    function updateSubmitSymbol() {
+      if (!submitSymbol) {
+        return;
+      }
+
+      const canSubmit =
+        state.currentGuess.length === WORD_LENGTH &&
+        !state.gameOver &&
+        !state.loading;
+
+      submitSymbol.hidden = !canSubmit;
+      submitSymbol.disabled = !canSubmit;
+
+      submitSymbol.setAttribute(
+        "aria-label",
+        TRANSLATIONS[state.lang].submit
+      );
+    }
+
+    function renderSubmittedRow(
+      rowIndex,
+      guess,
+      feedback
+    ) {
+      for (
+        let column = 0;
+        column < WORD_LENGTH;
+        column++
+      ) {
+        const tile =
+          tiles[rowIndex][column];
+
+        tile.textContent = guess[column];
+        tile.className =
+          `tile ${feedback[column]}`;
+      }
+    }
+
+    function showMessage(
+      text = "",
+      type = ""
+    ) {
+      message.textContent = text;
+      message.className = type;
+    }
+
+    function buildAnswerMap(word) {
+      const counts = new Map();
+
+      for (const letter of word) {
+        counts.set(
+          letter,
+          (counts.get(letter) || 0) + 1
+        );
+      }
+
+      return counts;
+    }
+
+    function evaluateGuess(guess, answer) {
+      const result =
+        Array(WORD_LENGTH).fill("absent");
+
+      const remaining =
+        buildAnswerMap(answer);
+
+      for (
+        let index = 0;
+        index < WORD_LENGTH;
+        index++
+      ) {
+        if (guess[index] === answer[index]) {
+          result[index] = "correct";
+
+          remaining.set(
+            guess[index],
+            remaining.get(guess[index]) - 1
+          );
+        }
+      }
+
+      for (
+        let index = 0;
+        index < WORD_LENGTH;
+        index++
+      ) {
+        if (result[index] === "correct") {
+          continue;
+        }
+
+        const count =
+          remaining.get(guess[index]) || 0;
+
+        if (count > 0) {
+          result[index] = "present";
+
+          remaining.set(
+            guess[index],
+            count - 1
+          );
+        }
+      }
+
+      return result;
+    }
+
+    function addLetter(rawLetter) {
+      if (state.loading || state.gameOver) {
+        return;
+      }
+
+      if (
+        state.currentGuess.length >= WORD_LENGTH
+      ) {
+        return;
+      }
+
+      const letter =
+        normalizeLetter(rawLetter);
+
+      if (
+        !LETTER_PATTERN.test(rawLetter) ||
+        letter.length !== 1
+      ) {
+        return;
+      }
+
+      state.currentGuess += letter;
+
+      showMessage();
+      updateCurrentRow();
+    }
+
+    function removeLetter() {
+      if (state.loading || state.gameOver) {
+        return;
+      }
+
+      if (!state.currentGuess) {
+        return;
+      }
+
+      state.currentGuess =
+        state.currentGuess.slice(0, -1);
+
+      showMessage();
+      updateCurrentRow();
+    }
+
+    function submitGuess() {
+      if (state.loading || state.gameOver) {
+        return;
+      }
+
+      const guess =
+        state.currentGuess;
+
+      if (guess.length !== WORD_LENGTH) {
+        showMessage(
+          TRANSLATIONS[state.lang].invalidLength,
+          "error"
+        );
+        return;
+      }
+
+      if (
+        !state.wordSet.has(normalizeWord(guess))
+      ) {
+        showMessage(
+          TRANSLATIONS[state.lang].invalidWord,
+          "error"
+        );
+        return;
+      }
+
+      const feedback =
+        evaluateGuess(guess, state.answer);
+
+      const rowIndex =
+        state.guesses.length;
+
+      state.guesses.push({
+        guess,
+        feedback
+      });
+
+      state.currentGuess = "";
+
+      renderSubmittedRow(
+        rowIndex,
+        guess,
+        feedback
+      );
+
+      if (guess === state.answer) {
+        state.gameOver = true;
+
+        showMessage(
+          TRANSLATIONS[state.lang].win
+        );
+
+        submitSymbol.hidden = true;
+        submitSymbol.disabled = true;
+
+        guessInput.blur();
+        return;
+      }
+
+      if (
+        state.guesses.length === MAX_GUESSES
+      ) {
+        state.gameOver = true;
+
+        showMessage(
+          `${TRANSLATIONS[state.lang].lose} ${state.answer}`
+        );
+
+        submitSymbol.hidden = true;
+        submitSymbol.disabled = true;
+
+        guessInput.blur();
+        return;
+      }
+
+      updateCurrentRow();
+      focusGameInput();
+    }
+
+    function applyTranslations() {
+      const text =
+        TRANSLATIONS[state.lang];
+
+      document.documentElement.lang =
+        state.lang;
+
+      title.textContent =
+        text.title;
+
+      languageLabel.textContent =
+        text.language;
+
+      newGameButton.textContent =
+        text.newGame;
+
+      instructions.textContent =
+        text.instructions;
+
+      keyboardHelp.textContent =
+        text.keyboardHelp;
+
+      languageSelect.value =
+        state.lang;
+    }
+
+    function focusGameInput() {
+      if (
+        !state.gameOver &&
+        !state.loading
+      ) {
+        guessInput.focus({
+          preventScroll: true
+        });
+      }
+    }
+
+    function handleInputValue(value) {
+      for (const character of value) {
+        if (LETTER_PATTERN.test(character)) {
+          addLetter(character);
+        }
+      }
+
+      guessInput.value = "";
+    }
+
+    async function startGame(
+      language,
+      { preserveUrl = false } = {}
+    ) {
+      state.loading = true;
+      state.gameOver = false;
+      state.currentGuess = "";
+
+      updateCurrentRow();
+
+      showMessage(
+        TRANSLATIONS[language].loading
+      );
+
+      try {
+        state.lang = language;
+        applyTranslations();
+
+        const words =
+          await loadWords(language);
+
+        state.words = words;
+
+        state.wordSet =
+          new Set(words.map(normalizeWord));
+
+        state.answer =
+          words[
+            Math.floor(
+              Math.random() * words.length
+            )
+          ];
+
+        state.guesses = [];
+        state.currentGuess = "";
+        state.gameOver = false;
+
+        clearBoard();
+        updateCurrentRow();
+        showMessage();
+
+        if (preserveUrl) {
+          const url =
+            new URL(window.location.href);
+
+          url.searchParams.set(
+            "lang",
+            language
+          );
+
+          window.history.replaceState(
+            {},
+            "",
+            url
+          );
+        }
+      } catch (error) {
+        console.error(error);
+
+        showMessage(
+          error.message ||
+            TRANSLATIONS[state.lang].loadError,
+          "error"
+        );
+      } finally {
+        state.loading = false;
+
+        updateCurrentRow();
+        focusGameInput();
+      }
+    }
+
+    guessInput.addEventListener(
+      "input",
+      event => {
+        handleInputValue(
+          event.target.value
+        );
+      }
+    );
+
+    guessInput.addEventListener(
+      "keydown",
+      event => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          submitGuess();
+          return;
+        }
+
+        if (
+          event.key === "Backspace" ||
+          event.key === "Delete"
+        ) {
+          event.preventDefault();
+          removeLetter();
+        }
+      }
+    );
+
+    guessInput.addEventListener(
+      "beforeinput",
+      event => {
+        if (
+          event.inputType ===
+          "deleteContentBackward"
+        ) {
+          event.preventDefault();
+          removeLetter();
+        }
+      }
+    );
+
+    document.addEventListener(
+      "keydown",
+      event => {
+        if (event.target === guessInput) {
+          return;
+        }
+
+        if (event.key === "Enter") {
+          event.preventDefault();
+          submitGuess();
+          return;
+        }
+
+        if (
+          event.key === "Backspace" ||
+          event.key === "Delete"
+        ) {
+          event.preventDefault();
+          removeLetter();
+          return;
+        }
+
+        if (LETTER_PATTERN.test(event.key)) {
+          event.preventDefault();
+          addLetter(event.key);
+          focusGameInput();
+        }
+      }
+    );
+
+    board.addEventListener(
+      "click",
+      event => {
+        if (event.target === submitSymbol) {
+          return;
+        }
+
+        focusGameInput();
+      }
+    );
+
+    board.addEventListener(
+      "touchstart",
+      event => {
+        if (event.target === submitSymbol) {
+          return;
+        }
+
+        focusGameInput();
+      },
+      { passive: true }
+    );
+
+    window.addEventListener(
+      "resize",
+      positionSubmitSymbol
+    );
+
+    languageSelect.addEventListener(
+      "change",
+      event => {
+        startGame(
+          event.target.value,
+          { preserveUrl: true }
+        );
+      }
+    );
+
+    newGameButton.addEventListener(
+      "click",
+      () => {
+        startGame(state.lang);
+      }
+    );
+
+    createBoard();
+    startGame(detectInitialLanguage());
+  </script>
 </body>
 </html>
