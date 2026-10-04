@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
+  <title>Tilt Runner</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #07111f;
+      font-family: system-ui, sans-serif;
+      touch-action: none;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    #game {
+      position: relative;
+      width: min(100vw, 520px);
+      height: 100dvh;
+      max-height: 900px;
+      overflow: hidden;
+      background:
+        linear-gradient(#62c9ff 0 40%, #b9edff 40% 42%, #72c45b 42% 100%);
+      isolation: isolate;
+    }
+
+    /* Distant scenery */
+    #game::before {
+      content: "☁️       ☁️              ☁️";
+      position: absolute;
+      top: 9%;
+      left: -10%;
+      width: 120%;
+      color: white;
+      font-size: 2.1rem;
+      opacity: 0.75;
+      white-space: nowrap;
+      z-index: -1;
+    }
+
+    #game::after {
+      content: "🌲  🌲    🌲      🌲  🌲";
+      position: absolute;
+      left: -15%;
+      bottom: 39%;
+      width: 130%;
+      color: #176b3b;
+      font-size: 2.7rem;
+      white-space: nowrap;
+      z-index: -1;
+    }
+
+    #road {
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 0;
+      bottom: 0;
+      overflow: hidden;
+      background:
+        linear-gradient(
+          75deg,
+          transparent 0 47%,
+          rgba(255,255,255,0.65) 48% 50%,
+          transparent 51% 100%
+        ),
+        linear-gradient(
+          -75deg,
+          transparent 0 47%,
+          rgba(255,255,255,0.65) 48% 50%,
+          transparent 51% 100%
+        ),
+        #555b65;
+      clip-path: polygon(39% 0, 61% 0, 100% 100%, 0 100%);
+      z-index: 0;
+    }
+
+    #road::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.32;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0 9%,
+        #fff 9% 11%,
+        transparent 11% 20%
+      );
+      transform: perspective(300px) rotateX(18deg) scale(1.3);
+    }
+
+    #player,
+    .obstacle {
+      position: absolute;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      user-select: none;
+      pointer-events: none;
+    }
+
+#player {
+  width: 18%;
+  height: 12%;
+  bottom: 8%;
+  left: 41%;
+  font-size: clamp(3rem, 16vw, 5.5rem);
+  filter: drop-shadow(0 8px 4px rgba(0, 0, 0, 0.3));
+  transition: left 80ms linear;
+}
+
+    .obstacle {
+      width: 18%;
+      height: 12%;
+      font-size: clamp(2rem, 10vw, 4rem);
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 5px 3px rgba(0, 0, 0, 0.35));
+    }
+
+    #hud {
+      position: absolute;
+      z-index: 10;
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      color: white;
+      font-weight: 800;
+      text-shadow: 0 2px 3px #123;
+      pointer-events: none;
+    }
+
+    #message {
+      position: absolute;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 30px;
+      background: rgba(2, 12, 25, 0.58);
+      text-align: center;
+      color: white;
+    }
+
+    .panel {
+      width: min(100%, 350px);
+      padding: 25px 20px;
+      border-radius: 22px;
+      background: rgba(9, 27, 47, 0.93);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    p {
+      margin: 10px 0 18px;
+      line-height: 1.45;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px 18px;
+      border: 0;
+      border-radius: 14px;
+      background: #ffd447;
+      color: #211b00;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    #status {
+      min-height: 1.4em;
+      margin-top: 12px;
+      color: #bdeaff;
+      font-size: 0.9rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <main id="game">
+    <div id="road"></div>
+
+    <div id="hud">
+      <span>Score: <span id="score">0</span></span>
+      <span>Best: <span id="best">0</span></span>
+    </div>
+
+    <div id="player">👣</div>
+
+    <section id="message">
+      <div class="panel">
+        <h1 id="title">Tilt Runner</h1>
+        <p id="instructions">
+          Tilt your phone left and right to change lanes.<br />
+          Avoid the obstacles.
+        </p>
+        <button id="startButton">Start Game</button>
+        <div id="status"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const game = document.querySelector("#game");
+    const player = document.querySelector("#player");
+    const message = document.querySelector("#message");
+    const title = document.querySelector("#title");
+    const instructions = document.querySelector("#instructions");
+    const startButton = document.querySelector("#startButton");
+    const statusText = document.querySelector("#status");
+    const scoreText = document.querySelector("#score");
+    const bestText = document.querySelector("#best");
+
+    const lanePositions = [25, 50, 75];
+    const obstacleEmojis = ["🪨", "🚧", "🛢️", "🌵", "🐌"];
+
+    let playerLane = 1;
+    let obstacles = [];
+    let score = 0;
+    let best = Number(localStorage.getItem("tiltRunnerBest") || 0);
+    let running = false;
+    let lastTime = 0;
+    let spawnTimer = 0;
+    let speed = 0.32;
+    let tiltValue = 0;
+    let tiltAvailable = false;
+    let keyboardFallback = false;
+
+    bestText.textContent = best;
+
+    function setPlayerLane() {
+      player.style.left = lanePositions[playerLane] + "%";
+    }
+
+    function movePlayer(direction) {
+      playerLane = Math.max(0, Math.min(2, playerLane + direction));
+      setPlayerLane();
+    }
+
+    function createObstacle() {
+      const obstacle = document.createElement("div");
+      obstacle.className = "obstacle";
+      obstacle.textContent =
+        obstacleEmojis[Math.floor(Math.random() * obstacleEmojis.length)];
+
+      const lane = Math.floor(Math.random() * 3);
+      obstacle.dataset.lane = lane;
+      obstacle.dataset.y = "-12";
+      obstacle.style.left = lanePositions[lane] + "%";
+      obstacle.style.top = "-12%";
+
+      game.appendChild(obstacle);
+      obstacles.push(obstacle);
+    }
+
+    function rectanglesOverlap(a, b) {
+      return !(
+        a.right < b.left ||
+        a.left > b.right ||
+        a.bottom < b.top ||
+        a.top > b.bottom
+      );
+    }
+
+    function gameOver() {
+      running = false;
+
+      const finalScore = Math.floor(score);
+      if (finalScore > best) {
+        best = finalScore;
+        localStorage.setItem("tiltRunnerBest", best);
+        bestText.textContent = best;
+      }
+
+      title.textContent = "Game Over";
+      instructions.innerHTML =
+        `You scored <strong>${finalScore}</strong> points.<br />Try again!`;
+      startButton.textContent = "Play Again";
+      statusText.textContent = "";
+      message.classList.remove("hidden");
+
+      obstacles.forEach((obstacle) => obstacle.remove());
+      obstacles = [];
+    }
+
+    function update(time) {
+      if (!running) return;
+
+      const delta = Math.min(40, time - lastTime);
+      lastTime = time;
+
+      score += delta * 0.01;
+      scoreText.textContent = Math.floor(score);
+
+      speed += delta * 0.000002;
+      spawnTimer += delta;
+
+      const spawnDelay = Math.max(520, 1050 - score * 2);
+      if (spawnTimer > spawnDelay) {
+        createObstacle();
+        spawnTimer = 0;
+      }
+
+      // Tilt sensitivity. Positive gamma means tilt toward the right.
+      if (tiltAvailable && Math.abs(tiltValue) > 8) {
+        if (tiltValue > 16 && playerLane < 2) {
+          movePlayer(1);
+          tiltValue = 0;
+        } else if (tiltValue < -16 && playerLane > 0) {
+          movePlayer(-1);
+          tiltValue = 0;
+        }
+      }
+
+      const playerRect = player.getBoundingClientRect();
+
+      obstacles.forEach((obstacle) => {
+        let y = Number(obstacle.dataset.y);
+        y += speed * delta;
+        obstacle.dataset.y = y;
+        obstacle.style.top = y + "%";
+
+        if (rectanglesOverlap(playerRect, obstacle.getBoundingClientRect())) {
+          gameOver();
+        }
+
+        if (y > 115) {
+          obstacle.remove();
+        }
+      });
+
+      obstacles = obstacles.filter((obstacle) => obstacle.isConnected);
+
+      requestAnimationFrame(update);
+    }
+
+    function orientationHandler(event) {
+      if (typeof event.gamma === "number") {
+        tiltAvailable = true;
+        tiltValue = event.gamma;
+      }
+    }
+
+    async function enableTilt() {
+      // iOS and some other browsers require this to happen after a tap.
+      if (
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function"
+      ) {
+        try {
+          const permission = await DeviceOrientationEvent.requestPermission();
+
+          if (permission !== "granted") {
+            statusText.textContent =
+              "Motion permission was denied. Use the arrow keys as a fallback.";
+            keyboardFallback = true;
+            return;
+          }
+        } catch {
+          statusText.textContent =
+            "Motion access failed. Use the arrow keys as a fallback.";
+          keyboardFallback = true;
+          return;
+        }
+      }
+
+      if ("DeviceOrientationEvent" in window) {
+        window.addEventListener("deviceorientation", orientationHandler);
+        statusText.textContent = "Tilt control enabled";
+      } else {
+        keyboardFallback = true;
+        statusText.textContent =
+          "Tilt is unavailable. Use the arrow keys as a fallback.";
+      }
+    }
+
+    async function startGame() {
+      await enableTilt();
+
+      score = 0;
+      speed = 0.32;
+      spawnTimer = 0;
+      playerLane = 1;
+      setPlayerLane();
+
+      scoreText.textContent = "0";
+      message.classList.add("hidden");
+      running = true;
+      lastTime = performance.now();
+      requestAnimationFrame(update);
+    }
+
+    startButton.addEventListener("click", startGame);
+
+    // Keyboard fallback is useful for desktop testing.
+    window.addEventListener("keydown", (event) => {
+      if (!keyboardFallback && running) return;
+
+      if (event.key === "ArrowLeft") movePlayer(-1);
+      if (event.key === "ArrowRight") movePlayer(1);
+      if (event.key === " " && !running) startGame();
+    });
+
+    setPlayerLane();
+  </script>
+</body>
+</html>
