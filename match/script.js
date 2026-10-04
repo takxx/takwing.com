@@ -1016,29 +1016,51 @@ function triggerDynamiteExplosion(
   col,
   explodedSet
 ) {
+  // Start with the initially triggered dynamite.
   const toExplode = [{ row, col }];
+
   let totalCleared = 0;
 
+  // Process explosions until no chained dynamites remain.
   while (toExplode.length > 0) {
     const current = toExplode.pop();
-    const key =
+
+    const currentKey =
       `${current.row},${current.col}`;
 
-    if (explodedSet.has(key)) {
+    // Skip cells that have already been cleared.
+    if (explodedSet.has(currentKey)) {
       continue;
     }
 
-    explodedSet.add(key);
+    explodedSet.add(currentKey);
 
-    if (!board[current.row][current.col]) {
+    const currentValue =
+      board[current.row][current.col];
+
+    // Ignore empty cells, though this should normally
+    // not happen for a queued dynamite position.
+    if (!currentValue) {
       continue;
     }
 
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        const neighborRow = current.row + dr;
-        const neighborCol = current.col + dc;
+    // Important fix:
+    // Remove the exploding dynamite itself.
+    // Without this line, the dynamite remains on the board.
+    board[current.row][current.col] = null;
 
+    totalCleared++;
+
+    // Check all eight neighboring cells.
+    for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
+      for (let colOffset = -1; colOffset <= 1; colOffset++) {
+        const neighborRow =
+          current.row + rowOffset;
+
+        const neighborCol =
+          current.col + colOffset;
+
+        // Stay within the board boundaries.
         if (
           neighborRow < 0 ||
           neighborRow >= ROWS ||
@@ -1051,23 +1073,29 @@ function triggerDynamiteExplosion(
         const neighborKey =
           `${neighborRow},${neighborCol}`;
 
+        // Skip already-cleared cells.
         if (explodedSet.has(neighborKey)) {
           continue;
         }
 
-        if (!board[neighborRow][neighborCol]) {
+        const neighborValue =
+          board[neighborRow][neighborCol];
+
+        // Skip empty cells.
+        if (!neighborValue) {
           continue;
         }
 
+        // Clear the neighboring cell.
         explodedSet.add(neighborKey);
 
-        const value =
-          board[neighborRow][neighborCol];
-
         board[neighborRow][neighborCol] = null;
+
         totalCleared++;
 
-        if (value === DYNAMITE) {
+        // If the neighbor was also dynamite, queue it
+        // for its own explosion.
+        if (neighborValue === DYNAMITE) {
           toExplode.push({
             row: neighborRow,
             col: neighborCol
