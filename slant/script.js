@@ -16,7 +16,7 @@ const statusElement = document.getElementById("status");
 const languageSelect = document.getElementById("language");
 
 /* =========================================================
-   Constants
+   Constants and state
    ========================================================= */
 
 const EMPTY = 0;
@@ -65,8 +65,6 @@ const TRANSLATIONS = {
       "The number at each node shows how many diagonals touch that node."
     ],
     languageLabel: "Language:",
-
-    // Status messages
     generating: "Generating puzzle…",
     solved: "Solved!",
     hasViolation: "There is a rule violation.",
@@ -86,8 +84,6 @@ const TRANSLATIONS = {
       "El número en cada nodo indica cuántas diagonales tocan ese nodo."
     ],
     languageLabel: "Idioma:",
-
-    // Status messages
     generating: "Generando puzzle…",
     solved: "¡Resuelto!",
     hasViolation: "Hay una violación de las reglas.",
@@ -107,8 +103,6 @@ const TRANSLATIONS = {
       "每個節點的數字表示有幾條斜線連接到該節點。"
     ],
     languageLabel: "語言：",
-
-    // Status messages
     generating: "正在生成謎題…",
     solved: "已解開！",
     hasViolation: "有違規情況。",
@@ -133,8 +127,7 @@ function copyGrid(grid) {
 
 function shuffle(array) {
   for (let index = array.length - 1; index > 0; index--) {
-    const other =
-      Math.floor(Math.random() * (index + 1));
+    const other = Math.floor(Math.random() * (index + 1));
 
     [array[index], array[other]] =
       [array[other], array[index]];
@@ -144,11 +137,7 @@ function shuffle(array) {
 }
 
 function gridsEqual(first, second) {
-  if (!first || !second) {
-    return false;
-  }
-
-  if (first.length !== second.length) {
+  if (!first || !second || first.length !== second.length) {
     return false;
   }
 
@@ -180,7 +169,7 @@ function nodeId(row, column) {
 }
 
 /* =========================================================
-   Disjoint set
+   Disjoint set for solution generation and loop display
    ========================================================= */
 
 class DisjointSet {
@@ -195,8 +184,7 @@ class DisjointSet {
 
   find(value) {
     if (this.parent[value] !== value) {
-      this.parent[value] =
-        this.find(this.parent[value]);
+      this.parent[value] = this.find(this.parent[value]);
     }
 
     return this.parent[value];
@@ -213,6 +201,60 @@ class DisjointSet {
     if (this.rank[rootA] < this.rank[rootB]) {
       [rootA, rootB] = [rootB, rootA];
     }
+
+    this.parent[rootB] = rootA;
+
+    if (this.rank[rootA] === this.rank[rootB]) {
+      this.rank[rootA]++;
+    }
+
+    return true;
+  }
+}
+
+/* =========================================================
+   Rollback disjoint set for uniqueness solver
+   ========================================================= */
+
+class RollbackDisjointSet {
+  constructor(size) {
+    this.parent = Array.from(
+      { length: size },
+      (_, index) => index
+    );
+
+    this.rank = Array(size).fill(0);
+  }
+
+  find(value) {
+    // No path compression: it would make rollback harder.
+    while (this.parent[value] !== value) {
+      value = this.parent[value];
+    }
+
+    return value;
+  }
+
+  union(first, second, trail) {
+    let rootA = this.find(first);
+    let rootB = this.find(second);
+
+    if (rootA === rootB) {
+      return false;
+    }
+
+    if (this.rank[rootA] < this.rank[rootB]) {
+      [rootA, rootB] = [rootB, rootA];
+    }
+
+    trail.push({
+      type: "union",
+      childRoot: rootB,
+      parentRoot: rootA,
+      oldParent: this.parent[rootB],
+      oldParentRank: this.rank[rootA],
+      oldChildRank: this.rank[rootB]
+    });
 
     this.parent[rootB] = rootA;
 
@@ -276,12 +318,7 @@ function adjacentCells(nodeRow, nodeColumn) {
   return cells;
 }
 
-function touchingOrientation(
-  cellRow,
-  cellColumn,
-  nodeRow,
-  nodeColumn
-) {
+function touchingOrientation(cellRow, cellColumn, nodeRow, nodeColumn) {
   if (
     cellRow === nodeRow - 1 &&
     cellColumn === nodeColumn - 1
@@ -306,13 +343,7 @@ function touchingOrientation(
   return BACKSLASH;
 }
 
-function touchesNode(
-  cellRow,
-  cellColumn,
-  type,
-  nodeRow,
-  nodeColumn
-) {
+function touchesNode(cellRow, cellColumn, type, nodeRow, nodeColumn) {
   return type === touchingOrientation(
     cellRow,
     cellColumn,
@@ -321,16 +352,11 @@ function touchesNode(
   );
 }
 
-function countNodeConnections(
-  state,
-  nodeRow,
-  nodeColumn
-) {
+function countNodeConnections(state, nodeRow, nodeColumn) {
   let count = 0;
 
   for (const cell of adjacentCells(nodeRow, nodeColumn)) {
-    const value =
-      state[cell.row][cell.column];
+    const value = state[cell.row][cell.column];
 
     if (
       value !== EMPTY &&
@@ -350,31 +376,24 @@ function countNodeConnections(
 }
 
 /* =========================================================
-   Loop detection
+   Loop detection for player display
    ========================================================= */
 
 function hasLoop(state) {
   const pointCount =
     (boardSize + 1) * (boardSize + 1);
 
-  const dsu =
-    new DisjointSet(pointCount);
+  const dsu = new DisjointSet(pointCount);
 
   for (let row = 0; row < boardSize; row++) {
     for (let column = 0; column < boardSize; column++) {
-      const value =
-        state[row][column];
+      const value = state[row][column];
 
       if (value === EMPTY) {
         continue;
       }
 
-      const endpoints =
-        diagonalEndpoints(
-          row,
-          column,
-          value
-        );
+      const endpoints = diagonalEndpoints(row, column, value);
 
       if (
         dsu.find(endpoints[0]) ===
@@ -383,10 +402,7 @@ function hasLoop(state) {
         return true;
       }
 
-      dsu.union(
-        endpoints[0],
-        endpoints[1]
-      );
+      dsu.union(endpoints[0], endpoints[1]);
     }
   }
 
@@ -397,27 +413,20 @@ function findLoopCells(state) {
   const pointCount =
     (boardSize + 1) * (boardSize + 1);
 
-  const adjacency =
-    Array.from(
-      { length: pointCount },
-      () => []
-    );
+  const adjacency = Array.from(
+    { length: pointCount },
+    () => []
+  );
 
   for (let row = 0; row < boardSize; row++) {
     for (let column = 0; column < boardSize; column++) {
-      const value =
-        state[row][column];
+      const value = state[row][column];
 
       if (value === EMPTY) {
         continue;
       }
 
-      const endpoints =
-        diagonalEndpoints(
-          row,
-          column,
-          value
-        );
+      const endpoints = diagonalEndpoints(row, column, value);
 
       const edge = {
         from: endpoints[0],
@@ -449,40 +458,24 @@ function findLoopCells(state) {
 
     visited[start] = true;
 
-    const stack = [
-      {
-        node: start,
-        edgeIndex: 0
-      }
-    ];
+    const stack = [{
+      node: start,
+      edgeIndex: 0
+    }];
 
     while (stack.length > 0) {
-      const currentFrame =
-        stack[stack.length - 1];
+      const frame = stack[stack.length - 1];
+      const current = frame.node;
+      const edges = adjacency[current];
 
-      const current =
-        currentFrame.node;
-
-      const edges =
-        adjacency[current];
-
-      if (
-        currentFrame.edgeIndex >= edges.length
-      ) {
+      if (frame.edgeIndex >= edges.length) {
         stack.pop();
         continue;
       }
 
-      const edge =
-        edges[currentFrame.edgeIndex];
-
-      currentFrame.edgeIndex++;
-
-      const next =
-        edge.to;
-
-      const cameFromEdge =
-        parentEdge[current];
+      const edge = edges[frame.edgeIndex++];
+      const next = edge.to;
+      const cameFromEdge = parentEdge[current];
 
       if (
         cameFromEdge &&
@@ -505,14 +498,13 @@ function findLoopCells(state) {
         continue;
       }
 
-      const cycle =
-        collectCycleCells(
-          current,
-          next,
-          edge,
-          parentNode,
-          parentEdge
-        );
+      const cycle = collectCycleCells(
+        current,
+        next,
+        edge,
+        parentNode,
+        parentEdge
+      );
 
       for (const key of cycle) {
         allLoopCells.add(key);
@@ -541,8 +533,7 @@ function collectCycleCells(
       edge: parentEdge[cursor]
     });
 
-    cursor =
-      parentNode[cursor];
+    cursor = parentNode[cursor];
   }
 
   cursor = secondNode;
@@ -553,8 +544,7 @@ function collectCycleCells(
       edge: parentEdge[cursor]
     });
 
-    cursor =
-      parentNode[cursor];
+    cursor = parentNode[cursor];
   }
 
   firstPath.reverse();
@@ -578,13 +568,10 @@ function collectCycleCells(
     index < firstPath.length;
     index++
   ) {
-    const edge =
-      firstPath[index].edge;
+    const edge = firstPath[index].edge;
 
     if (edge) {
-      cycle.add(
-        cellKey(edge.row, edge.column)
-      );
+      cycle.add(cellKey(edge.row, edge.column));
     }
   }
 
@@ -593,22 +580,14 @@ function collectCycleCells(
     index < secondPath.length;
     index++
   ) {
-    const edge =
-      secondPath[index].edge;
+    const edge = secondPath[index].edge;
 
     if (edge) {
-      cycle.add(
-        cellKey(edge.row, edge.column)
-      );
+      cycle.add(cellKey(edge.row, edge.column));
     }
   }
 
-  cycle.add(
-    cellKey(
-      closingEdge.row,
-      closingEdge.column
-    )
-  );
+  cycle.add(cellKey(closingEdge.row, closingEdge.column));
 
   return cycle;
 }
@@ -619,13 +598,11 @@ function collectCycleCells(
 
 function generateLoopFreeSolution() {
   for (let attempt = 0; attempt < 80; attempt++) {
-    const candidate =
-      makeGrid(boardSize, boardSize);
+    const candidate = makeGrid(boardSize, boardSize);
 
-    const dsu =
-      new DisjointSet(
-        (boardSize + 1) * (boardSize + 1)
-      );
+    const dsu = new DisjointSet(
+      (boardSize + 1) * (boardSize + 1)
+    );
 
     const cells = [];
 
@@ -648,25 +625,18 @@ function generateLoopFreeSolution() {
       let placed = false;
 
       for (const orientation of orientations) {
-        const endpoints =
-          diagonalEndpoints(
-            cell.row,
-            cell.column,
-            orientation
-          );
+        const endpoints = diagonalEndpoints(
+          cell.row,
+          cell.column,
+          orientation
+        );
 
         if (
           dsu.find(endpoints[0]) !==
           dsu.find(endpoints[1])
         ) {
-          candidate[cell.row][cell.column] =
-            orientation;
-
-          dsu.union(
-            endpoints[0],
-            endpoints[1]
-          );
-
+          candidate[cell.row][cell.column] = orientation;
+          dsu.union(endpoints[0], endpoints[1]);
           placed = true;
           break;
         }
@@ -687,8 +657,7 @@ function generateLoopFreeSolution() {
 }
 
 function generateFallbackSolution() {
-  const fallback =
-    makeGrid(boardSize, boardSize);
+  const fallback = makeGrid(boardSize, boardSize);
 
   for (let row = 0; row < boardSize; row++) {
     for (let column = 0; column < boardSize; column++) {
@@ -703,21 +672,19 @@ function generateFallbackSolution() {
 }
 
 function calculateAllClues(solutionState) {
-  const result =
-    makeGrid(
-      boardSize + 1,
-      boardSize + 1,
-      null
-    );
+  const result = makeGrid(
+    boardSize + 1,
+    boardSize + 1,
+    null
+  );
 
   for (let row = 0; row <= boardSize; row++) {
     for (let column = 0; column <= boardSize; column++) {
-      result[row][column] =
-        countNodeConnections(
-          solutionState,
-          row,
-          column
-        );
+      result[row][column] = countNodeConnections(
+        solutionState,
+        row,
+        column
+      );
     }
   }
 
@@ -733,376 +700,427 @@ function allNodePositions() {
     }
   }
 
-  positions.sort((first, second) => {
-    const firstDegree =
-      adjacentCells(
-        first.row,
-        first.column
-      ).length;
-
-    const secondDegree =
-      adjacentCells(
-        second.row,
-        second.column
-      ).length;
-
-    return secondDegree - firstDegree;
-  });
-
   return positions;
 }
 
-function chooseInitialClues(
-  positions,
-  fullClues
-) {
-  const selected = [];
-
-  const density =
-    boardSize >= 25 ? 0.34 :
-    boardSize >= 20 ? 0.28 :
-    0.22;
-
-  const target =
-    Math.ceil(positions.length * density);
-
-  for (
-    let index = 0;
-    index < positions.length &&
-    selected.length < target;
-    index++
-  ) {
-    const position =
-      positions[index];
-
-    const spread =
-      (position.row + position.column) % 3;
-
-    if (
-      spread !== 1 ||
-      selected.length < target * 0.35
-    ) {
-      selected.push(position);
-    }
-  }
-
-  return selected;
-}
-
-function createPuzzle() {
-  solution =
-    generateLoopFreeSolution();
-
-  const fullClues =
-    calculateAllClues(solution);
-
-  clues =
-    makeGrid(
-      boardSize + 1,
-      boardSize + 1,
-      null
-    );
-
-  const positions =
-    allNodePositions();
-
-  const selected =
-    chooseInitialClues(
-      positions,
-      fullClues
-    );
-
-  for (const position of selected) {
-    clues[position.row][position.column] =
-      fullClues[position.row][position.column];
-  }
-
-  let result =
-    fastUniquenessCheck(
-      clues,
-      solution
-    );
-
-  let cursor = 0;
-
-  while (
-    !result.unique &&
-    cursor < positions.length
-  ) {
-    const batchSize =
-      boardSize >= 25 ? 18 :
-      boardSize >= 20 ? 12 :
-      8;
-
-    for (
-      let count = 0;
-      count < batchSize &&
-      cursor < positions.length;
-      count++
-    ) {
-      const position =
-        positions[cursor++];
-
-      if (
-        clues[position.row][position.column] === null
-      ) {
-        clues[position.row][position.column] =
-          fullClues[position.row][position.column];
-      }
-    }
-
-    result =
-      fastUniquenessCheck(
-        clues,
-        solution
-      );
-  }
-
-  if (!result.unique) {
-    completePuzzleWithFallback(
-      positions,
-      fullClues
-    );
-  }
-
-  if (boardSize <= 20) {
-    pruneFast(
-      positions,
-      solution
-    );
-  }
-
-  board =
-    makeGrid(
-      boardSize,
-      boardSize
-    );
-}
-
-function completePuzzleWithFallback(
-  positions,
-  fullClues
-) {
-  for (const position of positions) {
-    if (
-      clues[position.row][position.column] === null
-    ) {
-      clues[position.row][position.column] =
-        fullClues[position.row][position.column];
-    }
-  }
-}
-
 /* =========================================================
-   Solver
+   Puzzle creation and clue minimization
    ========================================================= */
 
-function fastUniquenessCheck(
-  currentClues,
-  knownSolution
-) {
-  const result =
-    collectSolutions(
-      currentClues,
-      2,
-      boardSize >= 25
-        ? 250000
-        : 500000,
-      boardSize >= 25
-        ? 700
-        : 1200
-    );
+function createPuzzle() {
+  solution = generateLoopFreeSolution();
 
-  return {
-    unique:
-      result.complete &&
-      result.solutions.length === 1 &&
-      gridsEqual(
-        result.solutions[0],
-        knownSolution
-      ),
-    complete: result.complete,
-    result
-  };
+  const fullClues = calculateAllClues(solution);
+
+  clues = copyGrid(fullClues);
+
+  minimizeClues();
+
+  board = makeGrid(boardSize, boardSize);
 }
 
-function pruneFast(
-  positions,
-  knownSolution
-) {
-  const maximumAttempts =
-    boardSize >= 20
-      ? 20
-      : 50;
+function minimizeClues() {
+  const startTime = performance.now();
 
-  let attempts = 0;
+  // Total time allowed for clue removal, in milliseconds.
+  // Increase for sparser puzzles; decrease for faster generation.
+  const budget =
+    boardSize <= 15 ? 2500 :
+    boardSize <= 20 ? 5000 :
+    8000;
+
+  // Stop after removing this proportion of the original clues.
+  // This avoids trying all 441 clues on a 20x20 board.
+  const maximumRemovals = Math.floor(
+    (boardSize + 1) * (boardSize + 1) * 0.30
+  );
+
+  const positions = shuffle(allNodePositions());
+
+  sortClueRemovalOrder(positions);
+
+  let removed = 0;
 
   for (const position of positions) {
-    if (attempts >= maximumAttempts) {
+    if (removed >= maximumRemovals) {
       break;
     }
 
-    if (
-      clues[position.row][position.column] === null
-    ) {
+    if (performance.now() - startTime > budget) {
+      break;
+    }
+
+    const row = position.row;
+    const column = position.column;
+
+    if (clues[row][column] === null) {
       continue;
     }
 
-    const oldValue =
-      clues[position.row][position.column];
+    const savedClue = clues[row][column];
 
-    clues[position.row][position.column] =
-      null;
+    clues[row][column] = null;
 
-    const result =
-      fastUniquenessCheck(
-        clues,
-        knownSolution
-      );
-
-    attempts++;
-
-    if (!result.unique) {
-      clues[position.row][position.column] =
-        oldValue;
+    if (isUniquelySolvable()) {
+      removed++;
+    } else {
+      clues[row][column] = savedClue;
     }
   }
 }
+
+function sortClueRemovalOrder(positions) {
+  positions.sort((first, second) => {
+    return (
+      clueRemovalPriority(first) -
+      clueRemovalPriority(second)
+    );
+  });
+}
+
+function clueRemovalPriority(position) {
+  const row = position.row;
+  const column = position.column;
+  const value = clues[row][column];
+
+  const isCorner =
+    (row === 0 || row === boardSize) &&
+    (column === 0 || column === boardSize);
+
+  const isEdge =
+    row === 0 ||
+    row === boardSize ||
+    column === 0 ||
+    column === boardSize;
+
+  if (value === 0 || value === 4) {
+    return 0;
+  }
+
+  if (isCorner && value === 1) {
+    return 1;
+  }
+
+  if (isEdge && value === 2) {
+    return 2;
+  }
+
+  return 3;
+}
+
+function isUniquelySolvable() {
+  const timeLimit =
+    boardSize <= 15 ? 500 :
+    boardSize <= 20 ? 800 :
+    1200;
+
+  const result = collectSolutions(
+    clues,
+    2,
+    timeLimit
+  );
+
+  return (
+    result.complete &&
+    result.solutions.length === 1 &&
+    gridsEqual(result.solutions[0], solution)
+  );
+}
+
+/* =========================================================
+   Fast uniqueness solver
+   ========================================================= */
 
 function collectSolutions(
   currentClues,
   limit = 2,
-  nodeLimit = Infinity,
   timeLimit = Infinity
 ) {
+  const nodeCount =
+    (boardSize + 1) * (boardSize + 1);
+
+  const cellCount = boardSize * boardSize;
+
+  const values = new Int8Array(cellCount);
+  const remaining = { count: cellCount };
+
+  const dsu = new RollbackDisjointSet(nodeCount);
+  const trail = [];
+
+  // The queue may contain duplicate node indexes. That is harmless:
+  // propagation simply rechecks the node.
+  const queue = [];
+
   const solutions = [];
   const startTime = performance.now();
 
-  let nodesVisited = 0;
   let timedOut = false;
 
-  function search(state) {
-    if (
-      solutions.length >= limit ||
-      timedOut
-    ) {
-      return;
+  function nodeIndex(row, column) {
+    return row * (boardSize + 1) + column;
+  }
+
+  function enqueueNode(row, column) {
+    queue.push(nodeIndex(row, column));
+  }
+
+  function enqueueCell(row, column) {
+    enqueueNode(row, column);
+    enqueueNode(row + 1, column);
+    enqueueNode(row, column + 1);
+    enqueueNode(row + 1, column + 1);
+  }
+
+  function isTimedOut() {
+    if (timedOut) {
+      return true;
     }
 
-    nodesVisited++;
-
     if (
-      nodesVisited > nodeLimit ||
+      timeLimit !== Infinity &&
       performance.now() - startTime > timeLimit
     ) {
       timedOut = true;
-      return;
     }
 
-    if (
-      !propagate(
-        state,
-        currentClues
-      )
-    ) {
-      return;
-    }
-
-    if (isComplete(state)) {
-      if (
-        isValidComplete(
-          state,
-          currentClues
-        ) &&
-        !solutions.some(existing =>
-          gridsEqual(existing, state)
-        )
-      ) {
-        solutions.push(
-          copyGrid(state)
-        );
-      }
-
-      return;
-    }
-
-    const cell =
-      chooseMostConstrainedCell(
-        state,
-        currentClues
-      );
-
-    if (!cell) {
-      return;
-    }
-
-    const values =
-      [BACKSLASH, SLASH];
-
-    if (Math.random() < 0.5) {
-      values.reverse();
-    }
-
-    for (const value of values) {
-      const next =
-        copyGrid(state);
-
-      next[cell.row][cell.column] =
-        value;
-
-      search(next);
-
-      if (
-        solutions.length >= limit ||
-        timedOut
-      ) {
-        return;
-      }
-    }
+    return timedOut;
   }
 
-  search(
-    makeGrid(
-      boardSize,
-      boardSize
-    )
-  );
+  function rollback(mark, queueMark) {
+    while (trail.length > mark) {
+      const entry = trail.pop();
 
-  return {
-    solutions,
-    complete: !timedOut,
-    nodesVisited
-  };
-}
+      if (entry.type === "value") {
+        values[entry.index] = EMPTY;
+        remaining.count++;
+      } else {
+        dsu.parent[entry.childRoot] =
+          entry.oldParent;
 
-function propagate(state, currentClues) {
-  let changed = true;
+        dsu.rank[entry.parentRoot] =
+          entry.oldParentRank;
 
-  while (changed) {
-    changed = false;
+        dsu.rank[entry.childRoot] =
+          entry.oldChildRank;
+      }
+    }
 
+    queue.length = queueMark;
+  }
+
+  function assignCell(row, column, value) {
+    const index = row * boardSize + column;
+
+    if (values[index] !== EMPTY) {
+      return values[index] === value;
+    }
+
+    const endpoints = diagonalEndpoints(row, column, value);
+
+    if (
+      dsu.find(endpoints[0]) ===
+      dsu.find(endpoints[1])
+    ) {
+      return false;
+    }
+
+    values[index] = value;
+    remaining.count--;
+
+    trail.push({
+      type: "value",
+      index
+    });
+
+    if (!dsu.union(endpoints[0], endpoints[1], trail)) {
+      values[index] = EMPTY;
+      remaining.count++;
+      trail.pop();
+      return false;
+    }
+
+    enqueueCell(row, column);
+
+    return true;
+  }
+
+  function propagate() {
+    let operations = 0;
+
+    while (queue.length > 0) {
+      if (++operations % 512 === 0 && isTimedOut()) {
+        return false;
+      }
+
+      const node = queue.pop();
+
+      const row = Math.floor(node / (boardSize + 1));
+      const column = node % (boardSize + 1);
+      const clue = currentClues[row][column];
+
+      if (clue === null) {
+        continue;
+      }
+
+      const neighbours = adjacentCells(row, column);
+
+      let connected = 0;
+      const unknown = [];
+
+      for (const cell of neighbours) {
+        const value =
+          values[cell.row * boardSize + cell.column];
+
+        if (value === EMPTY) {
+          unknown.push(cell);
+        } else if (
+          touchesNode(
+            cell.row,
+            cell.column,
+            value,
+            row,
+            column
+          )
+        ) {
+          connected++;
+        }
+      }
+
+      if (
+        connected > clue ||
+        connected + unknown.length < clue
+      ) {
+        return false;
+      }
+
+      if (connected === clue) {
+        for (const cell of unknown) {
+          const forbidden = touchingOrientation(
+            cell.row,
+            cell.column,
+            row,
+            column
+          );
+
+          const required =
+            forbidden === BACKSLASH
+              ? SLASH
+              : BACKSLASH;
+
+          if (!assignCell(cell.row, cell.column, required)) {
+            return false;
+          }
+        }
+      } else if (
+        connected + unknown.length === clue
+      ) {
+        for (const cell of unknown) {
+          const required = touchingOrientation(
+            cell.row,
+            cell.column,
+            row,
+            column
+          );
+
+          if (!assignCell(cell.row, cell.column, required)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  function chooseCell() {
+    let best = null;
+    let bestScore = -1;
+
+    for (let row = 0; row < boardSize; row++) {
+      for (let column = 0; column < boardSize; column++) {
+        if (values[row * boardSize + column] !== EMPTY) {
+          continue;
+        }
+
+        let score = 0;
+
+        const nodes = [
+          [row, column],
+          [row + 1, column],
+          [row, column + 1],
+          [row + 1, column + 1]
+        ];
+
+        for (const [nodeRow, nodeColumn] of nodes) {
+          if (currentClues[nodeRow][nodeColumn] !== null) {
+            score += 10;
+          }
+        }
+
+        const neighbours = [
+          [row - 1, column],
+          [row + 1, column],
+          [row, column - 1],
+          [row, column + 1]
+        ];
+
+        for (const [
+          neighbourRow,
+          neighbourColumn
+        ] of neighbours) {
+          if (
+            neighbourRow >= 0 &&
+            neighbourRow < boardSize &&
+            neighbourColumn >= 0 &&
+            neighbourColumn < boardSize &&
+            values[
+              neighbourRow * boardSize + neighbourColumn
+            ] !== EMPTY
+          ) {
+            score++;
+          }
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          best = { row, column };
+        }
+      }
+    }
+
+    return best;
+  }
+
+  function valuesToGrid() {
+    const result = makeGrid(boardSize, boardSize);
+
+    for (let row = 0; row < boardSize; row++) {
+      for (let column = 0; column < boardSize; column++) {
+        result[row][column] =
+          values[row * boardSize + column];
+      }
+    }
+
+    return result;
+  }
+
+  function isValidCompleteValues() {
     for (let row = 0; row <= boardSize; row++) {
       for (let column = 0; column <= boardSize; column++) {
-        const clue =
-          currentClues[row][column];
+        const clue = currentClues[row][column];
 
         if (clue === null) {
           continue;
         }
 
-        const neighbours =
-          adjacentCells(row, column);
+        let actual = 0;
 
-        let connected = 0;
-        const unknown = [];
-
-        for (const cell of neighbours) {
+        for (const cell of adjacentCells(row, column)) {
           const value =
-            state[cell.row][cell.column];
+            values[cell.row * boardSize + cell.column];
 
-          if (value === EMPTY) {
-            unknown.push(cell);
-          } else if (
+          if (
+            value !== EMPTY &&
             touchesNode(
               cell.row,
               cell.column,
@@ -1111,202 +1129,73 @@ function propagate(state, currentClues) {
               column
             )
           ) {
-            connected++;
+            actual++;
           }
         }
 
-        if (
-          connected > clue ||
-          connected + unknown.length < clue
-        ) {
+        if (actual !== clue) {
           return false;
         }
-
-        if (connected === clue) {
-          for (const cell of unknown) {
-            const forbidden =
-              touchingOrientation(
-                cell.row,
-                cell.column,
-                row,
-                column
-              );
-
-            const allowed =
-              forbidden === BACKSLASH
-                ? SLASH
-                : BACKSLASH;
-
-            if (
-              !assignForced(
-                state,
-                cell.row,
-                cell.column,
-                allowed
-              )
-            ) {
-              return false;
-            }
-
-            changed = true;
-          }
-        } else if (
-          connected + unknown.length === clue
-        ) {
-          for (const cell of unknown) {
-            const required =
-              touchingOrientation(
-                cell.row,
-                cell.column,
-                row,
-                column
-              );
-
-            if (
-              !assignForced(
-                state,
-                cell.row,
-                cell.column,
-                required
-              )
-            ) {
-              return false;
-            }
-
-            changed = true;
-          }
-        }
       }
     }
 
-    if (hasLoop(state)) {
-      return false;
+    return true;
+  }
+
+  function search() {
+    if (solutions.length >= limit || isTimedOut()) {
+      return;
+    }
+
+    if (remaining.count === 0) {
+      if (isValidCompleteValues()) {
+        solutions.push(valuesToGrid());
+      }
+
+      return;
+    }
+
+    const cell = chooseCell();
+
+    if (!cell) {
+      return;
+    }
+
+    for (const value of [BACKSLASH, SLASH]) {
+      const trailMark = trail.length;
+      const queueMark = queue.length;
+
+      if (assignCell(cell.row, cell.column, value)) {
+        if (propagate()) {
+          search();
+        }
+      }
+
+      rollback(trailMark, queueMark);
+
+      if (solutions.length >= limit || isTimedOut()) {
+        return;
+      }
     }
   }
 
-  return true;
-}
-
-function assignForced(
-  state,
-  row,
-  column,
-  value
-) {
-  if (state[row][column] === EMPTY) {
-    state[row][column] = value;
-
-    return !hasLoop(state);
-  }
-
-  return state[row][column] === value;
-}
-
-function isComplete(state) {
-  return state.every(row =>
-    row.every(value => value !== EMPTY)
-  );
-}
-
-function isValidComplete(
-  state,
-  currentClues
-) {
-  if (hasLoop(state)) {
-    return false;
-  }
-
+  // Seed propagation from every numbered node.
   for (let row = 0; row <= boardSize; row++) {
     for (let column = 0; column <= boardSize; column++) {
-      const clue =
-        currentClues[row][column];
-
-      if (
-        clue !== null &&
-        countNodeConnections(
-          state,
-          row,
-          column
-        ) !== clue
-      ) {
-        return false;
+      if (currentClues[row][column] !== null) {
+        enqueueNode(row, column);
       }
     }
   }
 
-  return true;
-}
-
-function chooseMostConstrainedCell(
-  state,
-  currentClues
-) {
-  let best = null;
-  let bestScore = -1;
-
-  for (let row = 0; row < boardSize; row++) {
-    for (let column = 0; column < boardSize; column++) {
-      if (
-        state[row][column] !== EMPTY
-      ) {
-        continue;
-      }
-
-      let nearbyClues = 0;
-      let filledNeighbours = 0;
-
-      const nodes = [
-        [row, column],
-        [row + 1, column],
-        [row, column + 1],
-        [row + 1, column + 1]
-      ];
-
-      for (const [nodeRow, nodeColumn] of nodes) {
-        if (
-          currentClues[nodeRow][nodeColumn] !== null
-        ) {
-          nearbyClues++;
-        }
-      }
-
-      const neighbours = [
-        [row - 1, column],
-        [row + 1, column],
-        [row, column - 1],
-        [row, column + 1]
-      ];
-
-      for (const [
-        neighbourRow,
-        neighbourColumn
-      ] of neighbours) {
-        if (
-          neighbourRow >= 0 &&
-          neighbourRow < boardSize &&
-          neighbourColumn >= 0 &&
-          neighbourColumn < boardSize &&
-          state[neighbourRow][neighbourColumn] !== EMPTY
-        ) {
-          filledNeighbours++;
-        }
-      }
-
-      const score =
-        nearbyClues * 10 +
-        filledNeighbours;
-
-      if (score > bestScore) {
-        bestScore = score;
-        best = {
-          row,
-          column
-        };
-      }
-    }
+  if (propagate()) {
+    search();
   }
 
-  return best;
+  return {
+    solutions,
+    complete: !timedOut
+  };
 }
 
 /* =========================================================
@@ -1314,55 +1203,31 @@ function chooseMostConstrainedCell(
    ========================================================= */
 
 function getMaxBoardSize() {
-  const calculatedSize =
-    200 + boardSize * 50;
-
+  const calculatedSize = 200 + boardSize * 50;
   const horizontalPadding = 32;
 
-  const availableWidth =
-    Math.max(
-      1,
-      document.documentElement.clientWidth -
-        horizontalPadding
-    );
-
-  return Math.min(
-    calculatedSize,
-    availableWidth
+  const availableWidth = Math.max(
+    1,
+    document.documentElement.clientWidth - horizontalPadding
   );
+
+  return Math.min(calculatedSize, availableWidth);
 }
 
 function getNodeRadius() {
-  return Math.max(
-    9,
-    cellSize * 0.26
-  );
+  return Math.max(9, cellSize * 0.26);
 }
 
 function resizeCanvas() {
-  canvasSize =
-    Math.floor(
-      getMaxBoardSize()
-    );
+  canvasSize = Math.floor(getMaxBoardSize());
 
-  canvas.style.width =
-    `${canvasSize}px`;
+  canvas.style.width = `${canvasSize}px`;
+  canvas.style.height = `${canvasSize}px`;
 
-  canvas.style.height =
-    `${canvasSize}px`;
+  deviceScale = window.devicePixelRatio || 1;
 
-  deviceScale =
-    window.devicePixelRatio || 1;
-
-  canvas.width =
-    Math.floor(
-      canvasSize * deviceScale
-    );
-
-  canvas.height =
-    Math.floor(
-      canvasSize * deviceScale
-    );
+  canvas.width = Math.floor(canvasSize * deviceScale);
+  canvas.height = Math.floor(canvasSize * deviceScale);
 
   ctx.setTransform(
     deviceScale,
@@ -1373,41 +1238,19 @@ function resizeCanvas() {
     0
   );
 
-  const nominalCellSize =
-    canvasSize / boardSize;
+  const nominalCellSize = canvasSize / boardSize;
+  const radius = Math.max(9, nominalCellSize * 0.26);
+  const usableSize = canvasSize - 2 * radius;
 
-  const radius =
-    Math.max(
-      9,
-      nominalCellSize * 0.26
-    );
-
-  const usableSize =
-    canvasSize - 2 * radius;
-
-  cellSize =
-    usableSize / boardSize;
-
+  cellSize = usableSize / boardSize;
   boardOrigin = radius;
 }
 
 function draw(highlights) {
-  ctx.clearRect(
-    0,
-    0,
-    canvasSize,
-    canvasSize
-  );
+  ctx.clearRect(0, 0, canvasSize, canvasSize);
 
-  ctx.fillStyle =
-    COLORS.background;
-
-  ctx.fillRect(
-    0,
-    0,
-    canvasSize,
-    canvasSize
-  );
+  ctx.fillStyle = COLORS.background;
+  ctx.fillRect(0, 0, canvasSize, canvasSize);
 
   drawGrid();
   drawDiagonals(highlights.loopCells);
@@ -1415,22 +1258,11 @@ function draw(highlights) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle =
-    COLORS.grid;
+  ctx.strokeStyle = COLORS.grid;
+  ctx.lineWidth = Math.max(1, cellSize * 0.018);
 
-  ctx.lineWidth =
-    Math.max(
-      1,
-      cellSize * 0.018
-    );
-
-  for (
-    let index = 0;
-    index <= boardSize;
-    index++
-  ) {
-    const position =
-      boardOrigin + index * cellSize;
+  for (let index = 0; index <= boardSize; index++) {
+    const position = boardOrigin + index * cellSize;
 
     drawLine(
       position,
@@ -1451,42 +1283,24 @@ function drawGrid() {
 function drawDiagonals(loopCells) {
   for (let row = 0; row < boardSize; row++) {
     for (let column = 0; column < boardSize; column++) {
-      const value =
-        board[row][column];
+      const value = board[row][column];
 
       if (value === EMPTY) {
         continue;
       }
 
-      const x =
-        boardOrigin + column * cellSize;
+      const x = boardOrigin + column * cellSize;
+      const y = boardOrigin + row * cellSize;
+      const padding = cellSize * 0.18;
+      const inLoop = loopCells.has(cellKey(row, column));
 
-      const y =
-        boardOrigin + row * cellSize;
+      ctx.strokeStyle = inLoop
+        ? COLORS.invalid
+        : COLORS.diagonal;
 
-      const padding =
-        cellSize * 0.18;
-
-      const inLoop =
-        loopCells.has(
-          cellKey(row, column)
-        );
-
-      ctx.strokeStyle =
-        inLoop
-          ? COLORS.invalid
-          : COLORS.diagonal;
-
-      ctx.lineWidth =
-        inLoop
-          ? Math.max(
-              3,
-              cellSize * 0.075
-            )
-          : Math.max(
-              2,
-              cellSize * 0.055
-            );
+      ctx.lineWidth = inLoop
+        ? Math.max(3, cellSize * 0.075)
+        : Math.max(2, cellSize * 0.055);
 
       ctx.lineCap = "round";
 
@@ -1510,82 +1324,43 @@ function drawDiagonals(loopCells) {
 }
 
 function drawNodes(highlights) {
-  const radius =
-    getNodeRadius();
+  const radius = getNodeRadius();
 
   for (let row = 0; row <= boardSize; row++) {
     for (let column = 0; column <= boardSize; column++) {
-      const x =
-        boardOrigin + column * cellSize;
+      const x = boardOrigin + column * cellSize;
+      const y = boardOrigin + row * cellSize;
+      const key = nodeKey(row, column);
+      const clue = clues[row][column];
 
-      const y =
-        boardOrigin + row * cellSize;
+      let color = COLORS.node;
 
-      const key =
-        nodeKey(row, column);
-
-      const clue =
-        clues[row][column];
-
-      let color =
-        COLORS.node;
-
-      if (
-        highlights.badNodes.has(key)
-      ) {
-        color =
-          COLORS.invalid;
-      } else if (
-        highlights.completeNodes.has(key)
-      ) {
-        color =
-          COLORS.complete;
+      if (highlights.badNodes.has(key)) {
+        color = COLORS.invalid;
+      } else if (highlights.completeNodes.has(key)) {
+        color = COLORS.complete;
       }
 
       ctx.beginPath();
-
-      ctx.arc(
-        x,
-        y,
-        radius,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fillStyle =
-        color;
-
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
       ctx.fill();
 
       if (clue !== null) {
-        ctx.fillStyle =
-          COLORS.text;
-
-        ctx.font =
-          `800 ${Math.max(
-            12,
-            cellSize * 0.28
-          )}px system-ui`;
-
+        ctx.fillStyle = COLORS.text;
+        ctx.font = `800 ${Math.max(
+          12,
+          cellSize * 0.28
+        )}px system-ui`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-
-        ctx.fillText(
-          clue,
-          x,
-          y
-        );
+        ctx.fillText(clue, x, y);
       }
     }
   }
 }
 
-function drawLine(
-  x1,
-  y1,
-  x2,
-  y2
-) {
+function drawLine(x1, y1, x2, y2) {
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
@@ -1593,7 +1368,7 @@ function drawLine(
 }
 
 /* =========================================================
-   Highlights and state
+   Highlights and game state
    ========================================================= */
 
 function calculateHighlights() {
@@ -1603,39 +1378,23 @@ function calculateHighlights() {
 
   for (let row = 0; row <= boardSize; row++) {
     for (let column = 0; column <= boardSize; column++) {
-      const neighbours =
-        adjacentCells(row, column);
+      const neighbours = adjacentCells(row, column);
 
-      const complete =
-        neighbours.every(cell =>
-          board[cell.row][cell.column] !== EMPTY
-        );
+      const complete = neighbours.every(cell =>
+        board[cell.row][cell.column] !== EMPTY
+      );
 
       if (!complete) {
         continue;
       }
 
-      const actual =
-        countNodeConnections(
-          board,
-          row,
-          column
-        );
+      const actual = countNodeConnections(board, row, column);
+      const clue = clues[row][column];
 
-      const clue =
-        clues[row][column];
-
-      if (
-        clue !== null &&
-        actual !== clue
-      ) {
-        badNodes.add(
-          nodeKey(row, column)
-        );
+      if (clue !== null && actual !== clue) {
+        badNodes.add(nodeKey(row, column));
       } else {
-        completeNodes.add(
-          nodeKey(row, column)
-        );
+        completeNodes.add(nodeKey(row, column));
       }
     }
   }
@@ -1648,32 +1407,41 @@ function calculateHighlights() {
 }
 
 function isSolved() {
-  return (
-    isComplete(board) &&
-    isValidComplete(board, clues)
-  );
+  if (!board.every(row => row.every(value => value !== EMPTY))) {
+    return false;
+  }
+
+  if (hasLoop(board)) {
+    return false;
+  }
+
+  for (let row = 0; row <= boardSize; row++) {
+    for (let column = 0; column <= boardSize; column++) {
+      const clue = clues[row][column];
+
+      if (
+        clue !== null &&
+        countNodeConnections(board, row, column) !== clue
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 function updateDisplay() {
-  const highlights =
-    calculateHighlights();
+  const highlights = calculateHighlights();
 
   draw(highlights);
 
-  const language =
-    languageSelect?.value || "en";
-
-  const translation =
-    TRANSLATIONS[language] ||
-    TRANSLATIONS.en;
+  const language = languageSelect?.value || "en";
+  const translation = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   if (isSolved()) {
-    statusElement.textContent =
-      translation.solved;
-
-    statusElement.className =
-      "good";
-
+    statusElement.textContent = translation.solved;
+    statusElement.className = "good";
     return;
   }
 
@@ -1681,20 +1449,13 @@ function updateDisplay() {
     highlights.badNodes.size > 0 ||
     highlights.loopCells.size > 0
   ) {
-    statusElement.textContent =
-      translation.hasViolation;
-
-    statusElement.className =
-      "bad";
-
+    statusElement.textContent = translation.hasViolation;
+    statusElement.className = "bad";
     return;
   }
 
-  statusElement.textContent =
-    translation.noViolations;
-
-  statusElement.className =
-    "";
+  statusElement.textContent = translation.noViolations;
+  statusElement.className = "";
 }
 
 /* =========================================================
@@ -1703,8 +1464,7 @@ function updateDisplay() {
 
 function updateUndoRedoButtons() {
   if (undoButton) {
-    undoButton.disabled =
-      historyIndex <= 0;
+    undoButton.disabled = historyIndex <= 0;
   }
 
   if (redoButton) {
@@ -1714,44 +1474,31 @@ function updateUndoRedoButtons() {
 }
 
 function resetHistory() {
-  history = [
-    copyGrid(board)
-  ];
-
+  history = [copyGrid(board)];
   historyIndex = 0;
 
   updateUndoRedoButtons();
 }
 
 function saveHistory() {
-  const snapshot =
-    copyGrid(board);
+  const snapshot = copyGrid(board);
 
   if (
     historyIndex >= 0 &&
-    gridsEqual(
-      history[historyIndex],
-      snapshot
-    )
+    gridsEqual(history[historyIndex], snapshot)
   ) {
     updateUndoRedoButtons();
     return;
   }
 
-  history =
-    history.slice(
-      0,
-      historyIndex + 1
-    );
-
+  history = history.slice(0, historyIndex + 1);
   history.push(snapshot);
 
   if (history.length > maxHistory) {
     history.shift();
   }
 
-  historyIndex =
-    history.length - 1;
+  historyIndex = history.length - 1;
 
   updateUndoRedoButtons();
 }
@@ -1762,11 +1509,7 @@ function undo() {
   }
 
   historyIndex--;
-
-  board =
-    copyGrid(
-      history[historyIndex]
-    );
+  board = copyGrid(history[historyIndex]);
 
   updateDisplay();
   updateUndoRedoButtons();
@@ -1781,11 +1524,7 @@ function redo() {
   }
 
   historyIndex++;
-
-  board =
-    copyGrid(
-      history[historyIndex]
-    );
+  board = copyGrid(history[historyIndex]);
 
   updateDisplay();
   updateUndoRedoButtons();
@@ -1796,24 +1535,18 @@ function redo() {
    ========================================================= */
 
 function getCellFromPointer(event) {
-  const rectangle =
-    canvas.getBoundingClientRect();
+  const rectangle = canvas.getBoundingClientRect();
 
-  const x =
-    event.clientX - rectangle.left;
+  const x = event.clientX - rectangle.left;
+  const y = event.clientY - rectangle.top;
 
-  const y =
-    event.clientY - rectangle.top;
+  const column = Math.floor(
+    (x - boardOrigin) / cellSize
+  );
 
-  const column =
-    Math.floor(
-      (x - boardOrigin) / cellSize
-    );
-
-  const row =
-    Math.floor(
-      (y - boardOrigin) / cellSize
-    );
+  const row = Math.floor(
+    (y - boardOrigin) / cellSize
+  );
 
   if (
     row < 0 ||
@@ -1824,10 +1557,7 @@ function getCellFromPointer(event) {
     return null;
   }
 
-  return {
-    row,
-    column
-  };
+  return { row, column };
 }
 
 function changeCell(row, column, mode) {
@@ -1835,7 +1565,6 @@ function changeCell(row, column, mode) {
   let next;
 
   if (mode === "primary") {
-    // Original left-click behavior
     if (current === EMPTY) {
       next = BACKSLASH;
     } else if (current === BACKSLASH) {
@@ -1844,7 +1573,6 @@ function changeCell(row, column, mode) {
       next = EMPTY;
     }
   } else {
-    // Original right-click behavior
     if (current === EMPTY) {
       next = SLASH;
     } else if (current === SLASH) {
@@ -1854,57 +1582,46 @@ function changeCell(row, column, mode) {
     }
   }
 
-  if (next === current) return;
+  if (next === current) {
+    return;
+  }
 
   board[row][column] = next;
+
   saveHistory();
   updateDisplay();
 }
 
-canvas.addEventListener(
-  "contextmenu",
-  event => {
-    event.preventDefault();
+canvas.addEventListener("contextmenu", event => {
+  event.preventDefault();
+});
+
+canvas.addEventListener("pointerdown", event => {
+  event.preventDefault();
+
+  const cell = getCellFromPointer(event);
+
+  if (!cell) {
+    return;
   }
-);
 
-canvas.addEventListener(
-  "pointerdown",
-  event => {
-    event.preventDefault();
-
-    const cell =
-      getCellFromPointer(event);
-
-    if (!cell) {
-      return;
-    }
-
-    changeCell(
-      cell.row,
-      cell.column,
-      event.button === 0 ? "primary" : "secondary"
-    );
-  }
-);
+  changeCell(
+    cell.row,
+    cell.column,
+    event.button === 0 ? "primary" : "secondary"
+  );
+});
 
 /* =========================================================
    Game controls
    ========================================================= */
 
 function startNewGame() {
-  const language =
-    languageSelect?.value || "en";
+  const language = languageSelect?.value || "en";
+  const translation = TRANSLATIONS[language] || TRANSLATIONS.en;
 
-  const translation =
-    TRANSLATIONS[language] ||
-    TRANSLATIONS.en;
-
-  statusElement.textContent =
-    translation.generating;
-
-  statusElement.className =
-    "";
+  statusElement.textContent = translation.generating;
+  statusElement.className = "";
 
   if (newButton) {
     newButton.disabled = true;
@@ -1923,52 +1640,27 @@ function startNewGame() {
   }, 20);
 }
 
-newButton?.addEventListener(
-  "click",
-  startNewGame
-);
+newButton?.addEventListener("click", startNewGame);
 
-resetButton?.addEventListener(
-  "click",
-  () => {
-    board =
-      makeGrid(
-        boardSize,
-        boardSize
-      );
+resetButton?.addEventListener("click", () => {
+  board = makeGrid(boardSize, boardSize);
 
-    resetHistory();
-    updateDisplay();
-  }
-);
+  resetHistory();
+  updateDisplay();
+});
 
-undoButton?.addEventListener(
-  "click",
-  undo
-);
+undoButton?.addEventListener("click", undo);
+redoButton?.addEventListener("click", redo);
 
-redoButton?.addEventListener(
-  "click",
-  redo
-);
+sizeControl?.addEventListener("change", () => {
+  boardSize = Number(sizeControl.value) || 15;
+  startNewGame();
+});
 
-sizeControl?.addEventListener(
-  "change",
-  () => {
-    boardSize =
-      Number(sizeControl.value) || 15;
-
-    startNewGame();
-  }
-);
-
-window.addEventListener(
-  "resize",
-  () => {
-    resizeCanvas();
-    updateDisplay();
-  }
-);
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  updateDisplay();
+});
 
 /* =========================================================
    Language
@@ -1998,91 +1690,60 @@ function getBrowserLanguage() {
 }
 
 function applyTranslations(language) {
-  const translation =
-    TRANSLATIONS[language] ||
-    TRANSLATIONS.en;
-
-  const elements =
-    document.querySelectorAll(
-      "[data-i18n]"
-    );
+  const translation = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const elements = document.querySelectorAll("[data-i18n]");
 
   for (const element of elements) {
-    const key =
-      element.dataset.i18n;
+    const key = element.dataset.i18n;
 
     if (key === "rulesList") {
       element.innerHTML = "";
 
       for (const rule of translation.rulesList) {
-        const listItem =
-          document.createElement("li");
-
-        listItem.textContent =
-          rule;
-
-        element.appendChild(
-          listItem
-        );
+        const listItem = document.createElement("li");
+        listItem.textContent = rule;
+        element.appendChild(listItem);
       }
 
       continue;
     }
 
     if (translation[key]) {
-      element.textContent =
-        translation[key];
+      element.textContent = translation[key];
     }
   }
 }
 
 function initializeLanguage() {
-  let language =
-    getBrowserLanguage();
+  let language = getBrowserLanguage();
 
   try {
-    const savedLanguage =
-      localStorage.getItem(
-        "puzzle-language"
-      );
+    const savedLanguage = localStorage.getItem("puzzle-language");
 
-    if (
-      savedLanguage &&
-      TRANSLATIONS[savedLanguage]
-    ) {
-      language =
-        savedLanguage;
+    if (savedLanguage && TRANSLATIONS[savedLanguage]) {
+      language = savedLanguage;
     }
   } catch {
     // Ignore unavailable localStorage.
   }
 
   if (languageSelect) {
-    languageSelect.value =
-      language;
-
+    languageSelect.value = language;
     applyTranslations(language);
 
-    languageSelect.addEventListener(
-      "change",
-      () => {
-        const selected =
-          TRANSLATIONS[languageSelect.value]
-            ? languageSelect.value
-            : "en";
+    languageSelect.addEventListener("change", () => {
+      const selected = TRANSLATIONS[languageSelect.value]
+        ? languageSelect.value
+        : "en";
 
-        applyTranslations(selected);
+      applyTranslations(selected);
 
-        try {
-          localStorage.setItem(
-            "puzzle-language",
-            selected
-          );
-        } catch {
-          // Ignore unavailable localStorage.
-        }
+      try {
+        localStorage.setItem("puzzle-language", selected);
+      } catch {
+        // Ignore unavailable localStorage.
       }
-    );
+    });
   } else {
     applyTranslations(language);
   }
