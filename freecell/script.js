@@ -46,15 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
       restart: '重新開始',
       undo: '還原',
       hint: '提示',
-      freeCell: '自由格',
-      hintText: '拖曳或點擊卡片來移動它們。',
+      freeCell: '空格',
+      hintText: '拖曳或點擊卡片來移動卡牌。',
       moves: '步數',
       foundations: '牌疊',
       youWon: '你贏了！',
       noHint: '找不到明顯的移動。',
       moveCardToFoundation: '將 {card} 移動到牌疊。',
       moveCardToColumn: '將 {card} 移動到第 {column} 列。',
-      moveCardToFree: '將 {card} 移動到自由格 {free}。'
+      moveCardToFree: '將 {card} 移動到空格 {free}。'
     }
   };
 
