@@ -1,16 +1,21 @@
 :root {
   --tile-width: 58px;
   --tile-height: 78px;
-  --tile-shadow-width: 8px;
 
-  /* Mahjong tile palette */
-  --tile-face-light: #fffdf7;
-  --tile-face: #f7efdd;
-  --tile-face-dark: #e2d3b3;
-  --tile-side-light: #e9dcc0;
-  --tile-side: #d6c4a0;
-  --tile-side-dark: #b49f74;
-  --tile-side-deep: #8a7350;
+  /* Ivory tile face */
+  --tile-face-light: #fffef5;
+  --tile-face: #f8f1dc;
+  --tile-face-dark: #e8ddc2;
+
+  /* Jade-green tile sides */
+  --tile-side-light: #63b18d;
+  --tile-side: #3d8f6d;
+  --tile-side-dark: #286c51;
+  --tile-side-deep: #174c39;
+
+  /* Extra jade shades */
+  --tile-side-mid: #327d5d;
+  --tile-side-shadow: #205b43;
 }
 
 * {
@@ -28,7 +33,9 @@ body {
   overflow: auto;
 
   color: white;
-  font-family: "Iowan Old Style",
+
+  font-family:
+    "Iowan Old Style",
     "Palatino Linotype",
     "URW Palladio L",
     "P052",
@@ -153,7 +160,6 @@ select {
     inset 0 0 30px rgba(0, 0, 0, 0.25),
     0 12px 28px rgba(0, 0, 0, 0.4);
 
-  /* Subtle scene depth; individual tiles still use their own perspective */
   perspective: 1600px;
 }
 
@@ -178,14 +184,14 @@ select {
   appearance: none;
   -webkit-appearance: none;
 
-  /* Ivory top face with light falling from upper-left */
+  /* Ivory front face */
   background:
     linear-gradient(
       155deg,
       var(--tile-face-light) 0%,
-      var(--tile-face) 38%,
+      var(--tile-face) 40%,
       var(--tile-face-dark) 78%,
-      #d2bf9b 100%
+      #d6c7a7 100%
     );
 
   color: #222;
@@ -197,31 +203,29 @@ select {
   cursor: pointer;
 
   /*
-    Layered 3D effect:
-    - inner highlights shape the raised face
-    - hard offsets form the tile's right/bottom thickness
-    - blurred shadows make it float above lower layers
+    The tile face is ivory.
+    The offset shadows create jade-green sides and thickness.
   */
   box-shadow:
     /* Face bevel */
     inset 1px 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 2px 0 rgba(255, 255, 255, 0.6),
-    inset -2px -2px 3px rgba(122, 96, 58, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.65),
+    inset -2px -2px 3px rgba(116, 91, 50, 0.25),
 
-    /* Right-side thickness */
+    /* Right-side jade thickness */
     2px 0 0 var(--tile-side-light),
     3px 1px 0 var(--tile-side),
-    4px 2px 0 #c8b58c,
+    4px 2px 0 var(--tile-side-mid),
 
-    /* Bottom-side thickness */
+    /* Bottom-side jade thickness */
     0 2px 0 var(--tile-side-light),
     1px 3px 0 var(--tile-side),
-    2px 4px 0 #c8b58c,
+    2px 4px 0 var(--tile-side-mid),
     3px 5px 0 var(--tile-side-dark),
-    4px 6px 0 #9d8760,
+    4px 6px 0 var(--tile-side-shadow),
     5px 7px 0 var(--tile-side-deep),
 
-    /* Contact and ambient shadows */
+    /* Ambient shadows */
     7px 10px 9px rgba(0, 0, 0, 0.36),
     11px 16px 20px rgba(0, 0, 0, 0.2);
 
@@ -239,9 +243,10 @@ select {
     outline 0.12s ease;
 }
 
-/*
-  One fixed content layer inside every tile.
-*/
+/* -----------------------------
+   Tile content
+----------------------------- */
+
 .tile-content {
   position: absolute;
   inset: 0;
@@ -257,9 +262,6 @@ select {
   pointer-events: none;
 }
 
-/*
-  The fallback and image use the exact same dimensions.
-*/
 .tile-fallback,
 .tile-image {
   position: absolute;
@@ -277,9 +279,6 @@ select {
   user-select: none;
 }
 
-/*
-  Unicode fallback.
-*/
 .tile-fallback {
   display: flex;
   align-items: center;
@@ -295,20 +294,10 @@ select {
   line-height: 1;
 }
 
-/*
-  Image sizing.
-
-  contain keeps the entire image visible and resizes it
-  to fit inside the tile.
-*/
 .tile-image {
   object-fit: contain;
 }
 
-/*
-  Important: this overrides display:flex on .tile-fallback.
-  Without this rule, hidden fallback text can remain visible.
-*/
 .tile-fallback[hidden],
 .tile-image[hidden] {
   display: none !important;
@@ -327,7 +316,7 @@ select {
   content: "";
 }
 
-/* Raised inner face */
+/* Raised ivory inner face */
 .tile::before {
   inset: 3px;
 
@@ -339,7 +328,7 @@ select {
     inset 0 -1px 0 rgba(120, 95, 55, 0.18);
 }
 
-/* Lower inner edge catches shadow */
+/* Jade-tinted lower inner edge */
 .tile::after {
   right: 4px;
   bottom: 3px;
@@ -353,7 +342,7 @@ select {
     linear-gradient(
       to bottom,
       rgba(255, 255, 255, 0.45),
-      rgba(120, 95, 55, 0.22)
+      rgba(35, 94, 68, 0.35)
     );
 }
 
@@ -371,21 +360,24 @@ select {
     translate(-1px, -2px);
 
   box-shadow:
+    /* Face bevel */
     inset 1px 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 2px 0 rgba(255, 255, 255, 0.6),
-    inset -2px -2px 3px rgba(122, 96, 58, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.65),
+    inset -2px -2px 3px rgba(116, 91, 50, 0.25),
 
+    /* Jade sides */
     2px 0 0 var(--tile-side-light),
     3px 1px 0 var(--tile-side),
-    4px 2px 0 #c8b58c,
+    4px 2px 0 var(--tile-side-mid),
 
     0 2px 0 var(--tile-side-light),
     1px 3px 0 var(--tile-side),
-    2px 4px 0 #c8b58c,
+    2px 4px 0 var(--tile-side-mid),
     3px 5px 0 var(--tile-side-dark),
-    4px 6px 0 #9d8760,
+    4px 6px 0 var(--tile-side-shadow),
     5px 7px 0 var(--tile-side-deep),
 
+    /* Hover shadows */
     9px 14px 11px rgba(0, 0, 0, 0.4),
     14px 21px 24px rgba(0, 0, 0, 0.22);
 }
@@ -405,21 +397,24 @@ select {
     translate(-3px, -6px);
 
   box-shadow:
+    /* Face bevel */
     inset 1px 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 2px 0 rgba(255, 255, 255, 0.6),
-    inset -2px -2px 3px rgba(122, 96, 58, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.65),
+    inset -2px -2px 3px rgba(116, 91, 50, 0.25),
 
+    /* Jade sides */
     2px 0 0 var(--tile-side-light),
     3px 1px 0 var(--tile-side),
-    4px 2px 0 #c8b58c,
+    4px 2px 0 var(--tile-side-mid),
 
     0 2px 0 var(--tile-side-light),
     1px 3px 0 var(--tile-side),
-    2px 4px 0 #c8b58c,
+    2px 4px 0 var(--tile-side-mid),
     3px 5px 0 var(--tile-side-dark),
-    4px 6px 0 #9d8760,
+    4px 6px 0 var(--tile-side-shadow),
     5px 7px 0 var(--tile-side-deep),
 
+    /* Selected shadows */
     10px 18px 14px rgba(0, 0, 0, 0.45),
     16px 26px 30px rgba(0, 0, 0, 0.28);
 }
@@ -431,6 +426,7 @@ select {
 .tile.hinted {
   outline: 4px solid #ffd54a;
   outline-offset: 4px;
+
   animation: hintPulse 0.7s ease-in-out infinite alternate;
 }
 
