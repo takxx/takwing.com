@@ -291,23 +291,22 @@
     }
   };
 
-  function detectLanguage() {
-    const navLang = (navigator.language || "").toLowerCase();
+function detectLanguage() {
+  const urlLang = new URLSearchParams(window.location.search)
+    .get("lang")
+    ?.toLowerCase();
 
-    if (
-      navLang.startsWith("zh-tw") ||
-      navLang.startsWith("zh-hant") ||
-      navLang.startsWith("zh")
-    ) {
-      return "zh-TW";
-    }
+  if (urlLang === "en") return "en";
+  if (urlLang === "es") return "es";
+  if (urlLang && urlLang.startsWith("zh")) return "zh-TW";
 
-    if (navLang.startsWith("es")) {
-      return "es";
-    }
+  const navLang = (navigator.language || "").toLowerCase();
 
-    return "en";
-  }
+  if (navLang.startsWith("zh")) return "zh-TW";
+  if (navLang.startsWith("es")) return "es";
+
+  return "en";
+}
 
   let currentLang = detectLanguage();
 

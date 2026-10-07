@@ -11,7 +11,6 @@ const roundDisplay = document.getElementById("round");
 const message = document.getElementById("message");
 const languageSelect = document.getElementById("languageSelect");
 
-
 /* =================================
    Configuration
 ================================= */
@@ -21,7 +20,6 @@ const LIGHT_TIME = 430;
 const GAP_TIME = 140;
 const FEEDBACK_TIME = 180;
 const SWIPE_THRESHOLD = 8;
-
 
 /*
   Hexagon adjacency map.
@@ -46,7 +44,6 @@ const neighbors = {
   5: [0, 4, 6],
   6: [0, 5, 1]
 };
-
 
 /* =================================
    Translations
@@ -96,41 +93,93 @@ const translations = {
   }
 };
 
-function getInitialLanguage() {
-  const savedLanguage = localStorage.getItem("hexSimonLanguage");
+const supportedLanguages = ["en", "es", "zh-Hant"];
+const languageStorageKey = "hexSimonLanguage";
 
-  if (savedLanguage && translations[savedLanguage]) {
-    return savedLanguage;
+/* ---------- Language detection ---------- */
+
+function normalizeLanguage(language) {
+  if (!language) return null;
+
+  const normalized = language.toLowerCase();
+
+  // Traditional Chinese (any zh variant → zh-Hant)
+  if (
+    normalized.startsWith("zh") ||
+    normalized.startsWith("yue") ||
+    normalized.startsWith("cmn")
+  ) {
+    return "zh-Hant";
   }
 
-  const languages =
-    navigator.languages || [navigator.language];
+  // Spanish
+  if (normalized.startsWith("es")) {
+    return "es";
+  }
 
-  for (const browserLanguage of languages) {
-    const normalized = browserLanguage.toLowerCase();
+  // English fallback for anything English-like
+  if (normalized.startsWith("en")) {
+    return "en";
+  }
 
-    if (
-      normalized === "zh-tw" ||
-      normalized === "zh-hk" ||
-      normalized === "zh-mo" ||
-      normalized.startsWith("zh-hant")
-    ) {
-      return "zh-Hant";
-    }
+  return null;
+}
 
-    if (normalized.startsWith("es")) {
-      return "es";
+function getLanguageFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return normalizeLanguage(params.get("lang"));
+}
+
+function getLanguageFromBrowser() {
+  const browserLanguages =
+    Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language];
+
+  for (const browserLanguage of browserLanguages) {
+    const normalized = normalizeLanguage(browserLanguage);
+
+    if (normalized) {
+      return normalized;
     }
   }
 
   return "en";
 }
 
+function getInitialLanguage() {
+  // 1. URL parameter
+  const urlLanguage = getLanguageFromUrl();
+
+  if (urlLanguage) {
+    return urlLanguage;
+  }
+
+  // 2. Saved preference
+  try {
+    const savedLanguage = normalizeLanguage(
+      localStorage.getItem(languageStorageKey)
+    );
+
+    if (savedLanguage && translations[savedLanguage]) {
+      return savedLanguage;
+    }
+  } catch {
+    // Storage may be unavailable in some contexts.
+  }
+
+  // 3. Browser language
+  return getLanguageFromBrowser();
+}
+
 let language = getInitialLanguage();
 let text = translations[language];
 
+/* ---------- Translation application ---------- */
+
 function applyTranslations() {
-  document.documentElement.lang = language;
+  document.documentElement.lang =
+    language === "zh-Hant" ? "zh-Hant" : language;
 
   document.querySelectorAll("[data-i18n]").forEach(element => {
     const key = element.dataset.i18n;
@@ -154,16 +203,19 @@ function applyTranslations() {
 }
 
 function changeLanguage(newLanguage) {
-  language = translations[newLanguage]
-    ? newLanguage
+  const normalized = normalizeLanguage(newLanguage);
+
+  language = (normalized && translations[normalized])
+    ? normalized
     : "en";
 
   text = translations[language];
 
-  localStorage.setItem(
-    "hexSimonLanguage",
-    language
-  );
+  try {
+    localStorage.setItem(languageStorageKey, language);
+  } catch {
+    // Ignore storage errors.
+  }
 
   applyTranslations();
 
@@ -171,7 +223,6 @@ function changeLanguage(newLanguage) {
     setMessage("watchSequence");
   }
 }
-
 
 /* =================================
    Audio
@@ -235,7 +286,6 @@ function playHexSound(index) {
   oscillator.stop(now + 0.4);
 }
 
-
 /* =================================
    Game state
 ================================= */
@@ -290,7 +340,6 @@ function addNextSequenceItem() {
   );
 }
 
-
 /* =================================
    Sequence playback
 ================================= */
@@ -337,7 +386,6 @@ async function playSequence(currentGameId) {
   acceptingInput = true;
   setMessage("yourTurn");
 }
-
 
 /* =================================
    Game flow
@@ -453,7 +501,6 @@ function selectHexagon(index) {
     roundComplete();
   }
 }
-
 
 /* =================================
    Pointer and swipe handling
@@ -666,7 +713,6 @@ function finishPointer(event) {
   pointerStartY = 0;
 }
 
-
 /* =================================
    Event listeners
 ================================= */
@@ -699,7 +745,6 @@ board.addEventListener(
   "pointercancel",
   handlePointerCancel
 );
-
 
 /* =================================
    Initialization

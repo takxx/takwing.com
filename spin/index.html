@@ -2,33 +2,83 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
   <title>Pinning Wheel</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="app">
-    <section class="wheel-area">
+    <section class="wheel-area" aria-label="Pinning wheel">
       <div class="wheel-wrap" id="wheelWrap">
-        <div class="pointer" id="pointer"></div>
-        <canvas id="wheel"></canvas>
+        <div
+          class="pointer"
+          id="pointer"
+          aria-hidden="true"
+        ></div>
+
+        <canvas
+          id="wheel"
+          aria-label="Spinning options wheel"
+        ></canvas>
       </div>
     </section>
 
     <aside class="options-panel">
-      <h1>Wheel options</h1>
-      <p>Enter one option per line, then click or touch the wheel.</p>
+      <div class="language-row">
+        <label for="lang" data-i18n="language">Language:</label>
 
-      <textarea id="optionInput">1
+        <select id="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-Hant">中文</option>
+        </select>
+      </div>
+
+      <h1 data-i18n="title">Wheel options</h1>
+
+      <p data-i18n="instructions">
+        Enter one option per line, then click or touch the wheel.
+      </p>
+
+      <label
+        for="optionInput"
+        class="visually-hidden"
+        data-i18n="optionsLabel"
+      >
+        Wheel options
+      </label>
+
+      <textarea
+        id="optionInput"
+        data-i18n-placeholder="optionsPlaceholder"
+        placeholder="Enter one option per line"
+      >1
 2
 3
 4
 5
 6</textarea>
 
-      <button id="applyButton">Apply options</button>
+      <button
+        id="applyButton"
+        type="button"
+        data-i18n="apply"
+      >
+        Apply options
+      </button>
 
-      <div class="result" id="result">Ready</div>
+      <div
+        class="result"
+        id="result"
+        role="status"
+        aria-live="polite"
+        data-i18n="ready"
+      >
+        Ready
+      </div>
     </aside>
   </main>
 

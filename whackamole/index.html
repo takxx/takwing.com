@@ -50,7 +50,7 @@
 
     .language-row {
       display: flex;
-      justify-content: flex-end;
+      justify-content: center;
       align-items: center;
       gap: 7px;
       margin: 0 0 10px;
@@ -256,15 +256,6 @@
   <main class="game">
     <h1 id="gameTitle">Whack-a-Mole!</h1>
 
-    <div class="language-row">
-      <label for="languageSelect" id="languageLabel">Language:</label>
-      <select id="languageSelect">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <option value="zh-Hant">中文（廣東話）</option>
-      </select>
-    </div>
-
     <section class="hud" id="hud" aria-label="Game information">
       <div class="stat">
         <span class="stat-label" id="stageLabel">Stage</span>
@@ -309,6 +300,16 @@
       Click or tap an animal to score points. Each stage has a higher target,
       and the animals appear faster as you progress.
     </p>
+    <br />
+    <div class="language-row">
+      <label for="languageSelect" id="languageLabel">Language:</label>
+      <select id="languageSelect">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">中文（廣東話）</option>
+      </select>
+    </div>
+
   </main>
 
   <script>
@@ -384,13 +385,46 @@
     const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
     const LANGUAGE_STORAGE_KEY = "whack-a-mole-language";
 
-    function getBrowserLanguage() {
-      const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    function getLangFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const lang = params.get("lang");
+      if (!lang) return null;
 
+      const normalized = lang.toLowerCase();
+
+      if (normalized === "en") return "en";
+      if (normalized === "es") return "es";
+      if (
+        normalized === "zh" ||
+        normalized === "zh-tw" ||
+        normalized === "zh-hk" ||
+        normalized === "zh-hant"
+      ) {
+        return "zh-Hant";
+      }
+
+      if (normalized.startsWith("en")) return "en";
+      if (normalized.startsWith("es")) return "es";
+      if (normalized.startsWith("zh")) return "zh-Hant";
+
+      return null;
+    }
+
+    function getBrowserLanguage() {
+      // 1. Priority: ?lang=... in URL
+      const urlLang = getLangFromUrl();
+      if (urlLang && SUPPORTED_LANGUAGES.includes(urlLang)) {
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, urlLang);
+        return urlLang;
+      }
+
+      // 2. Saved preference
+      const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
       if (SUPPORTED_LANGUAGES.includes(savedLanguage)) {
         return savedLanguage;
       }
 
+      // 3. Browser languages
       const browserLanguages =
         navigator.languages || [navigator.language || "en"];
 

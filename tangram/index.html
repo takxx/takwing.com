@@ -4,19 +4,74 @@
   <meta charset="UTF-8">
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0,  maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   >
   <title>Tangram Workshop</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Ensure language controls are always clickable */
+    .language-row,
+    .language-row * {
+      pointer-events: auto !important;
+      user-select: auto !important;
+      touch-action: manipulation;
+    }
+
+    .language-row {
+      position: relative;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4em;
+      padding: 0.25em 0.5em;
+      border-radius: 6px;
+    }
+
+    /* Keep header above SVG so it doesn’t intercept clicks */
+    header#info {
+      position: relative;
+      z-index: 10;
+      pointer-events: none; /* let clicks pass through except on interactive elements */
+    }
+
+    header#info > * {
+      pointer-events: auto;
+    }
+
+    /* Ensure SVG doesn’t cover the header */
+    #workspace {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      touch-action: none;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      position: relative;
+    }
+  </style>
 </head>
 <body>
   <header id="info">
-    <h1>🧩 Tangram Workshop</h1>
-    <p>
+    <h1 data-i18n="title">🧩 Tangram Workshop</h1>
+    <p data-i18n="instructions">
       Drag pieces to build anything.<br>
       Right-click or tap to rotate.<br>
       Double-click or double-tap to flip.
     </p>
+    <br />
+    <div class="language-row">
+      <label for="lang" data-i18n="language">Language:</label>
+      <select id="lang">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">中文</option>
+      </select>
+    </div>
   </header>
 
   <svg

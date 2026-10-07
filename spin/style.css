@@ -1,9 +1,10 @@
 :root {
-  --background: #10131a;
-  --panel: #1b202b;
-  --text: #f4f7fb;
-  --muted: #9ca8ba;
-  --accent: #67d5ff;
+  /* Keep your original palette for text / accents */
+  --background: #0b1a12;        /* darker, more “casino room” */
+  --panel: #0f2419;             /* deep green panel */
+  --text: #eaf6ef;              /* soft off‑white */
+  --muted: #b8d4c3;             /* muted green‑gray */
+  --accent: #7fd99f;            /* lighter casino‑green accent */
 }
 
 * {
@@ -14,7 +15,13 @@ body {
   margin: 0;
   min-height: 100vh;
   overflow: hidden;
-  background: var(--background);
+  background:
+    radial-gradient(
+      ellipse at center,
+      #0d261a 0%,
+      #071810 55%,
+      #030d08 100%
+    );
   color: var(--text);
   font-family: system-ui, sans-serif;
 }
@@ -28,12 +35,44 @@ body {
   padding: 24px;
 }
 
+/* ---------- Casino green wheel area ---------- */
+
 .wheel-area {
   min-width: 0;
   height: calc(100vh - 48px);
   display: grid;
   place-items: center;
+
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      ellipse at 30% 20%,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0) 40%
+    ),
+    linear-gradient(
+      160deg,
+      #0f6b42 0%,
+      #0b5233 45%,
+      #073a24 100%
+    );
+  box-shadow:
+    inset 0 0 50px rgba(0, 0, 0, 0.55),
+    0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
 }
+
+/* Optional: if you later add a felt texture image, use this pattern:
+.wheel-area::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("felt-texture.png") repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.12;
+  pointer-events: none;
+}
+*/
 
 .wheel-wrap {
   position: relative;
@@ -42,13 +81,14 @@ body {
   cursor: pointer;
   touch-action: none;
   user-select: none;
+  z-index: 1; /* keep above background */
 }
 
 canvas {
   display: block;
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 18px 25px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 18px 25px rgba(0, 0, 0, 0.55));
 }
 
 /* Three-dimensional flexible pointer */
@@ -127,17 +167,28 @@ canvas {
   }
 }
 
+/* ---------- Options panel (casino style) ---------- */
+
 .options-panel {
   padding: 20px;
-  border: 1px solid #2c3443;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
-  background: var(--panel);
-  box-shadow: 0 15px 40px #0004;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(15, 36, 25, 0.95) 0%,
+      rgba(9, 24, 17, 0.95) 100%
+    );
+  box-shadow:
+    0 15px 40px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 h1 {
   margin: 0 0 6px;
   font-size: 1.35rem;
+  color: #e6f4ea;
+  letter-spacing: 0.2px;
 }
 
 p {
@@ -146,23 +197,52 @@ p {
   font-size: 0.9rem;
 }
 
+/* Language row */
+.language-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #a9cfb7;
+  margin-bottom: 4px;
+}
+
+.language-row label {
+  white-space: nowrap;
+}
+
+#lang {
+  appearance: none;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 28, 18, 0.8);
+  color: #e6f3eb;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
 textarea {
   width: 100%;
   min-height: 180px;
   padding: 12px;
   resize: vertical;
-  border: 1px solid #3a4557;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   outline: none;
-  background: #10141c;
+  background: rgba(6, 22, 14, 0.75);
   color: var(--text);
   font: inherit;
   line-height: 1.6;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px #67d5ff22;
+  box-shadow:
+    0 0 0 3px rgba(127, 217, 159, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 button {
@@ -171,15 +251,27 @@ button {
   padding: 12px;
   border: 0;
   border-radius: 10px;
-  background: var(--accent);
-  color: #071018;
+  background: linear-gradient(
+    180deg,
+    #95e5b3 0%,
+    #7fd99f 100%
+  );
+  color: #062214;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
+  box-shadow:
+    0 6px 16px rgba(30, 120, 60, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 120ms ease, filter 120ms ease;
 }
 
 button:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.05);
+}
+
+button:active {
+  transform: translateY(1px);
 }
 
 .result {
@@ -188,7 +280,27 @@ button:hover {
   text-align: center;
   font-size: 1.15rem;
   font-weight: 700;
+  color: #dff6e7;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
+
+/* Visually hidden helper (for accessibility labels) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Responsive ---------- */
 
 @media (orientation: portrait), (max-width: 700px) {
   body {
@@ -205,6 +317,7 @@ button:hover {
 
   .wheel-area {
     height: auto;
+    min-height: 320px;
   }
 
   .wheel-wrap {
