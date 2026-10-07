@@ -33,7 +33,33 @@ const COLORS = {
   text: "#ffffff"
 };
 
-let boardSize = Number(sizeControl?.value) || 15;
+/* Narrow-screen default size */
+const NARROW_BREAKPOINT = 768;
+const NARROW_DEFAULT_SIZE = 10;
+const WIDE_DEFAULT_SIZE = 15;
+
+function isNarrowScreen() {
+  const width =
+    window.innerWidth ||
+    document.documentElement.clientWidth ||
+    document.body.clientWidth ||
+    1024;
+
+  return width < NARROW_BREAKPOINT;
+}
+
+function getDefaultBoardSize() {
+  // Prefer explicit control value if present and not default
+  const controlValue = Number(sizeControl?.value);
+
+  if (!Number.isNaN(controlValue) && controlValue > 0) {
+    return controlValue;
+  }
+
+  return isNarrowScreen() ? NARROW_DEFAULT_SIZE : WIDE_DEFAULT_SIZE;
+}
+
+let boardSize = getDefaultBoardSize();
 let board = [];
 let solution = [];
 let clues = [];
@@ -1668,13 +1694,42 @@ undoButton?.addEventListener("click", undo);
 redoButton?.addEventListener("click", redo);
 
 sizeControl?.addEventListener("change", () => {
-  boardSize = Number(sizeControl.value) || 15;
+  boardSize = Number(sizeControl.value) || getDefaultBoardSize();
   startNewGame();
 });
 
+/* Track narrow/wide state so we can adapt default on resize */
+let lastWasNarrow = isNarrowScreen();
+
 window.addEventListener("resize", () => {
+  const nowNarrow = isNarrowScreen();
+
+  // If crossing the breakpoint and user hasn't chosen an explicit size,
+  // adjust the default board size.
+  if (nowNarrow !== lastWasNarrow) {
+    const controlValue = Number(sizeControl?.value);
+    const hasExplicitSize =
+      !Number.isNaN(controlValue) &&
+      controlValue > 0 &&
+      controlValue !== NARROW_DEFAULT_SIZE &&
+      controlValue !== WIDE_DEFAULT_SIZE;
+
+    if (!hasExplicitSize) {
+      boardSize = nowNarrow ? NARROW_DEFAULT_SIZE : WIDE_DEFAULT_SIZE;
+
+      // Keep the size control in sync with the new default
+      if (sizeControl) {
+        sizeControl.value = String(boardSize);
+      }
+
+      startNewGame();
+    }
+  }
+
   resizeCanvas();
   updateDisplay();
+
+  lastWasNarrow = nowNarrow;
 });
 
 /* =========================================================
