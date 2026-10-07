@@ -53,6 +53,8 @@ let boardOrigin = 0;
 
 const TRANSLATIONS = {
   en: {
+    htmlLang: "en",
+
     puzzleTitle: "Slant",
     sizeLabel: "Board size:",
     newButton: "New puzzle",
@@ -72,6 +74,8 @@ const TRANSLATIONS = {
   },
 
   es: {
+    htmlLang: "es",
+
     puzzleTitle: "Diagonales",
     sizeLabel: "Tamaño del tablero:",
     newButton: "Nuevo puzzle",
@@ -90,7 +94,9 @@ const TRANSLATIONS = {
     noViolations: "No hay violaciones de reglas actualmente."
   },
 
-  "zh-Hant": {
+  zh: {
+    htmlLang: "zh-Hant",
+
     puzzleTitle: "斜線謎題",
     sizeLabel: "棋盤大小：",
     newButton: "新謎題",
@@ -109,6 +115,8 @@ const TRANSLATIONS = {
     noViolations: "目前沒有違規。"
   }
 };
+
+const SUPPORTED_LANGUAGES = Object.keys(TRANSLATIONS);
 
 /* =========================================================
    General helpers
@@ -227,7 +235,6 @@ class RollbackDisjointSet {
   }
 
   find(value) {
-    // No path compression: it would make rollback harder.
     while (this.parent[value] !== value) {
       value = this.parent[value];
     }
@@ -722,15 +729,11 @@ function createPuzzle() {
 function minimizeClues() {
   const startTime = performance.now();
 
-  // Total time allowed for clue removal, in milliseconds.
-  // Increase for sparser puzzles; decrease for faster generation.
   const budget =
     boardSize <= 15 ? 2500 :
     boardSize <= 20 ? 5000 :
     8000;
 
-  // Stop after removing this proportion of the original clues.
-  // This avoids trying all 441 clues on a 20x20 board.
   const maximumRemovals = Math.floor(
     (boardSize + 1) * (boardSize + 1) * 0.30
   );
@@ -847,8 +850,6 @@ function collectSolutions(
   const dsu = new RollbackDisjointSet(nodeCount);
   const trail = [];
 
-  // The queue may contain duplicate node indexes. That is harmless:
-  // propagation simply rechecks the node.
   const queue = [];
 
   const solutions = [];
@@ -1179,7 +1180,6 @@ function collectSolutions(
     }
   }
 
-  // Seed propagation from every numbered node.
   for (let row = 0; row <= boardSize; row++) {
     for (let column = 0; column <= boardSize; column++) {
       if (currentClues[row][column] !== null) {
@@ -1431,13 +1431,29 @@ function isSolved() {
   return true;
 }
 
-function updateDisplay() {
-  const highlights = calculateHighlights();
+function getCurrentLanguage() {
+  if (languageSelect && TRANSLATIONS[languageSelect.value]) {
+    return languageSelect.value;
+  }
 
+  return "en";
+}
+
+function updateDisplay() {
+  // Guard against calling before the puzzle is created
+  if (
+    !Array.isArray(board) ||
+    board.length !== boardSize ||
+    !Array.isArray(clues) ||
+    clues.length !== boardSize + 1
+  ) {
+    return;
+  }
+
+  const highlights = calculateHighlights();
   draw(highlights);
 
-  const language = languageSelect?.value || "en";
-  const translation = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const translation = TRANSLATIONS[getCurrentLanguage()];
 
   if (isSolved()) {
     statusElement.textContent = translation.solved;
@@ -1617,8 +1633,7 @@ canvas.addEventListener("pointerdown", event => {
    ========================================================= */
 
 function startNewGame() {
-  const language = languageSelect?.value || "en";
-  const translation = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const translation = TRANSLATIONS[getCurrentLanguage()];
 
   statusElement.textContent = translation.generating;
   statusElement.className = "";
@@ -1666,23 +1681,36 @@ window.addEventListener("resize", () => {
    Language
    ========================================================= */
 
+function getLanguageFromUrl() {
+  const urlLanguage = new URLSearchParams(
+    window.location.search
+  ).get("lang");
+
+  if (!urlLanguage) {
+    return null;
+  }
+
+  const normalized = urlLanguage.trim().toLowerCase();
+
+  if (SUPPORTED_LANGUAGES.includes(normalized)) {
+    return normalized;
+  }
+
+  return null;
+}
+
 function getBrowserLanguage() {
-  const language = (
+  const browserLanguage = (
     navigator.language ||
     navigator.userLanguage ||
     "en"
   ).toLowerCase();
 
-  if (
-    language.startsWith("zh-hk") ||
-    language.startsWith("zh-tw") ||
-    language.startsWith("zh-mo") ||
-    language.startsWith("zh")
-  ) {
-    return "zh-Hant";
+  if (browserLanguage.startsWith("zh")) {
+    return "zh";
   }
 
-  if (language.startsWith("es")) {
+  if (browserLanguage.startsWith("es")) {
     return "es";
   }
 
@@ -1691,6 +1719,9 @@ function getBrowserLanguage() {
 
 function applyTranslations(language) {
   const translation = TRANSLATIONS[language] || TRANSLATIONS.en;
+
+  document.documentElement.lang = translation.htmlLang;
+
   const elements = document.querySelectorAll("[data-i18n]");
 
   for (const element of elements) {
@@ -1714,39 +1745,48 @@ function applyTranslations(language) {
   }
 }
 
-function initializeLanguage() {
-  let language = getBrowserLanguage();
-
-  try {
-    const savedLanguage = localStorage.getItem("puzzle-language");
-
-    if (savedLanguage && TRANSLATIONS[savedLanguage]) {
-      language = savedLanguage;
-    }
-  } catch {
-    // Ignore unavailable localStorage.
-  }
+function setLanguage(language, savePreference) {
+  const selected = TRANSLATIONS[language]
+    ? language
+    : "en";
 
   if (languageSelect) {
-    languageSelect.value = language;
-    applyTranslations(language);
-
-    languageSelect.addEventListener("change", () => {
-      const selected = TRANSLATIONS[languageSelect.value]
-        ? languageSelect.value
-        : "en";
-
-      applyTranslations(selected);
-
-      try {
-        localStorage.setItem("puzzle-language", selected);
-      } catch {
-        // Ignore unavailable localStorage.
-      }
-    });
-  } else {
-    applyTranslations(language);
+    languageSelect.value = selected;
   }
+
+  applyTranslations(selected);
+
+  if (savePreference) {
+    try {
+      localStorage.setItem("puzzle-language", selected);
+    } catch {
+      // Ignore unavailable localStorage.
+    }
+  }
+}
+
+function initializeLanguage() {
+  const urlLanguage = getLanguageFromUrl();
+
+  let language = urlLanguage || getBrowserLanguage();
+
+  if (!urlLanguage) {
+    try {
+      const savedLanguage = localStorage.getItem("puzzle-language");
+
+      if (savedLanguage && TRANSLATIONS[savedLanguage]) {
+        language = savedLanguage;
+      }
+    } catch {
+      // Ignore unavailable localStorage.
+    }
+  }
+
+  setLanguage(language, false);
+
+  languageSelect?.addEventListener("change", () => {
+    setLanguage(languageSelect.value, true);
+  });
 }
 
 /* =========================================================
