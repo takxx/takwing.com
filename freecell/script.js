@@ -73,36 +73,58 @@ document.addEventListener('DOMContentLoaded', () => {
     return text;
   }
 
-  function detectLanguage() {
-    try {
-      const saved = localStorage.getItem('freecell_lang');
+function detectLanguage() {
+  // 1. Query-string language has highest priority.
+  // Supported examples: ?lang=en, ?lang=es, ?lang=zh
+  const queryLanguage =
+    new URLSearchParams(window.location.search)
+      .get('lang')
+      ?.toLowerCase();
 
-      if (saved && translations[saved]) {
-        return saved;
-      }
-    } catch {
-      // Ignore unavailable storage.
-    }
+  const queryLanguageMap = {
+    en: 'en',
+    es: 'es',
+    zh: 'zh-TW'
+  };
 
-    const browserLanguage =
-      navigator.languages?.[0] ||
-      navigator.language ||
-      'en';
+  const languageFromQuery =
+    queryLanguageMap[queryLanguage];
 
-    if (
-      browserLanguage.startsWith('zh-HK') ||
-      browserLanguage.startsWith('zh-TW') ||
-      browserLanguage === 'zh'
-    ) {
-      return 'zh-TW';
-    }
-
-    if (browserLanguage.startsWith('es')) {
-      return 'es';
-    }
-
-    return 'en';
+  if (languageFromQuery) {
+    return languageFromQuery;
   }
+
+  // 2. Fall back to the saved language.
+  try {
+    const saved = localStorage.getItem('freecell_lang');
+
+    if (saved && translations[saved]) {
+      return saved;
+    }
+  } catch {
+    // Ignore unavailable storage.
+  }
+
+  // 3. Fall back to the browser language.
+  const browserLanguage =
+    navigator.languages?.[0] ||
+    navigator.language ||
+    'en';
+
+  if (
+    browserLanguage.startsWith('zh-HK') ||
+    browserLanguage.startsWith('zh-TW') ||
+    browserLanguage === 'zh'
+  ) {
+    return 'zh-TW';
+  }
+
+  if (browserLanguage.startsWith('es')) {
+    return 'es';
+  }
+
+  return 'en';
+}
 
   function setLanguage(language) {
     currentLang = translations[language] ? language : 'en';
@@ -421,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateStatus() {
     status.textContent =
-      `${t('foundations')}: ${foundationCount}/52`;
+      `${foundationCount}/52`;
   }
 
   /* =========================================================
