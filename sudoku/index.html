@@ -291,9 +291,11 @@ select:focus-visible {
 
 .controls {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 10px;
+  width: 100%;
   margin-top: 12px;
+  align-items: stretch;
 }
 
 .numbers {
@@ -301,6 +303,7 @@ select:focus-visible {
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 8px;
+  min-width: 0;
 }
 
 .numbers button {
@@ -312,11 +315,14 @@ select:focus-visible {
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 8px;
+  min-width: 0;
 }
 
 .actions button {
+  min-width: 0;
   padding: 14px 10px;
   font-weight: 700;
 }
@@ -352,20 +358,6 @@ select:focus-visible {
 .language-control select {
   min-width: 145px;
   padding: 7px 9px;
-}
-
-/* Larger screens */
-
-@media (min-width: 560px) {
-  .controls {
-    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
-    align-items: stretch;
-  }
-
-  .actions {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
-  }
 }
 
 /* Reduced motion */
