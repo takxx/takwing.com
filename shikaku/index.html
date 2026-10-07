@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shikaku – Simple Click</title>
+
+<style>
+  :root {
+    --bg:#0b0f14;
+    --panel:#121820;
+    --cell:#1b2330;
+
+    /* Normal grid lines */
+    --grid:rgba(107,114,128,.55);
+
+    /* Subtle fifth-row and fifth-column lines */
+    --major-grid:rgba(156,163,175,.38);
+
+    --text:#e5e7eb;
+    --muted:#9ca3af;
+    --select:#fbbf24;
+    --bad:#f87171;
+    --ok:#34d399;
+  }
+
+  * {
+    box-sizing:border-box;
+  }
+
+  html,
+  body {
+    margin:0;
+    min-height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font:15px system-ui,-apple-system,sans-serif;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  main {
+    width:min(92vw,820px);
+    margin:0 auto;
+    padding:20px 0 35px;
+  }
+
+  h1 {
+    margin:0 0 12px;
+    font-size:24px;
+  }
+
+  .bar {
+    width:100%;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:12px;
+    padding:10px;
+    border-radius:12px;
+    background:var(--panel);
+  }
+
+  button,
+  select {
+    border:1px solid #374151;
+    border-radius:6px;
+    padding:7px 10px;
+    background:#1f2937;
+    color:var(--text);
+    cursor:pointer;
+  }
+
+  button:hover {
+    background:#374151;
+  }
+
+  #board {
+    width:100%;
+    aspect-ratio:1 / 1;
+    display:grid;
+    grid-template-columns:repeat(var(--n),minmax(0,1fr));
+    grid-template-rows:repeat(var(--n),minmax(0,1fr));
+
+    /* Soft outer border */
+    border:2px solid rgba(156,163,175,.45);
+    background:var(--grid);
+  }
+
+  .cell {
+    position:relative;
+    min-width:0;
+    min-height:0;
+    overflow:hidden;
+    display:grid;
+    place-items:center;
+    background:var(--cell);
+
+    /* Regular internal grid lines */
+    border:1px solid var(--grid);
+    cursor:pointer;
+  }
+
+  /*
+    Subtle Sudoku-style dividers.
+
+    These are only slightly stronger than the normal grid lines.
+    They are intentionally thin and semi-transparent.
+  */
+  .cell.major-column {
+    border-right:2px solid var(--major-grid);
+  }
+
+  .cell.major-row {
+    border-bottom:2px solid var(--major-grid);
+  }
+
+  .cell.selected {
+    outline:4px solid var(--select);
+    outline-offset:-4px;
+    z-index:5;
+  }
+
+  .cell.filled {
+    background:var(--fill);
+  }
+
+  .cell.filled::after {
+    content:"";
+    position:absolute;
+    inset:0;
+    border:2px solid rgba(255,255,255,.6);
+    pointer-events:none;
+  }
+
+  .clue {
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    z-index:3;
+    pointer-events:none;
+    color:#fff;
+    font-size:clamp(10px,1.8vw,16px);
+    line-height:1;
+    font-weight:700;
+    text-shadow:0 1px 2px #000;
+  }
+
+  #status {
+    width:100%;
+    min-height:18px;
+    margin:8px auto 0;
+    color:var(--muted);
+    font-size:13px;
+    text-align:center;
+  }
+
+  .instructions {
+    margin-top:12px;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .instructions b {
+    color:#d1d5db;
+  }
+
+  .instructions ul {
+    margin:6px 0 0;
+    padding-left:20px;
+  }
+
+  .instructions li {
+    margin:4px 0;
+  }
+</style>
+</head>
+
+<body>
+<main>
+  <h1>Shikaku</h1>
+
+  <div class="bar">
+    <label>
+      Size
+      <select id="size">
+        <option value="12" selected>12×12</option>
+        <option value="18">18×18</option>
+        <option value="24">24×24</option>
+      </select>
+    </label>
+
+    <button id="new">New puzzle</button>
+    <button id="undo">Undo</button>
+  </div>
+
+  <div id="board"></div>
+  <div id="status"></div>
+
+  <div class="instructions">
+    <b>How to play:</b>
+    <ul>
+      <li>Click one corner, then the opposite corner to place a rectangle.</li>
+      <li>Double-click a filled cell to remove that rectangle.</li>
+      <li>Fill the board with rectangles so each clue’s rectangle has exactly that area and contains only its clue.</li>
+    </ul>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+let N = 12;
+let clues = [];
+let solution = [];
+let placed = [];
+let history = [];
+let firstCorner = null;
+
+const preferred = new Set([12,18,24,30,36,48,60,72]);
+
+const palette = [
+  "#3b6e8f",
+  "#7b5b93",
+  "#8a6b3f",
+  "#3d7a67",
+  "#8c5266",
+  "#5d7a48",
+  "#8a6ea8",
+  "#41768f",
+  "#8f7250",
+  "#4a7d78",
+  "#96586a",
+  "#6a8455",
+  "#7d6fae",
+  "#4a6f93",
+  "#97755a",
+  "#537f7a"
+];
+
+const $ = id => document.getElementById(id);
+const cellKey = (r,c) => r * N + c;
+
+function area(t) {
+  return (t.r2 - t.r1 + 1) * (t.c2 - t.c1 + 1);
+}
+
+function contains(t,r,c) {
+  return (
+    r >= t.r1 &&
+    r <= t.r2 &&
+    c >= t.c1 &&
+    c <= t.c2
+  );
+}
+
+function overlaps(a,b) {
+  return !(
+    a.r2 < b.r1 ||
+    b.r2 < a.r1 ||
+    a.c2 < b.c1 ||
+    b.c2 < a.c1
+  );
+}
+
+function touches(a,b) {
+  return !(
+    a.r2 + 1 < b.r1 ||
+    b.r2 + 1 < a.r1 ||
+    a.c2 + 1 < b.c1 ||
+    b.c2 + 1 < a.c1
+  );
+}
+
+function rectangleFrom(a,b) {
+  return {
+    r1:Math.min(a.r,b.r),
+    c1:Math.min(a.c,b.c),
+    r2:Math.max(a.r,b.r),
+    c2:Math.max(a.c,b.c)
+  };
+}
+
+function factorCount(n) {
+  let count = 0;
+
+  for (let d = 1; d * d <= n; d++) {
+    if (n % d === 0) {
+      count += d * d === n ? 1 : 2;
+    }
+  }
+
+  return count;
+}
+
+function areaScore(n) {
+  if (preferred.has(n)) return 100;
+  if (n > 1 && factorCount(n) >= 6) return 55;
+  if (n > 1 && factorCount(n) >= 4) return 28;
+  if (n === 1) return -70;
+  return -20;
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i],array[j]] = [array[j],array[i]];
+  }
+
+  return array;
+}
+
+function maxRectangleArea() {
+  return Math.ceil(N * N * 0.40);
+}
+
+function pairLimit() {
+  return N * N * 0.60;
+}
+
+function sizeLimitsOk(tiling) {
+  const maxArea = maxRectangleArea();
+  const pairMax = pairLimit();
+
+  for (const t of tiling) {
+    if (area(t) > maxArea) {
+      return false;
+    }
+  }
+
+  for (let i = 0; i < tiling.length; i++) {
+    for (let j = i + 1; j < tiling.length; j++) {
+      if (area(tiling[i]) + area(tiling[j]) > pairMax) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function randomTiling() {
+  const result = [];
+
+  function split(r1,c1,r2,c2) {
+    const h = r2 - r1 + 1;
+    const w = c2 - c1 + 1;
+    const a = h * w;
+
+    if (
+      a <= 30 ||
+      (h <= 2 && w <= 2) ||
+      Math.random() < .22
+    ) {
+      result.push({r1,c1,r2,c2});
+      return;
+    }
+
+    const choices = [];
+
+    if (w >= 2) {
+      for (let c = c1; c < c2; c++) {
+        choices.push(["vertical",c]);
+      }
+    }
+
+    if (h >= 2) {
+      for (let r = r1; r < r2; r++) {
+        choices.push(["horizontal",r]);
+      }
+    }
+
+    shuffle(choices);
+
+    const [direction,cut] = choices[0];
+
+    if (direction === "vertical") {
+      split(r1,c1,r2,cut);
+      split(r1,cut + 1,r2,c2);
+    } else {
+      split(r1,c1,cut,c2);
+      split(cut + 1,c1,r2,c2);
+    }
+  }
+
+  split(0,0,N - 1,N - 1);
+
+  if (!sizeLimitsOk(result)) {
+    return null;
+  }
+
+  return result;
+}
+
+function candidateRectangles(clue) {
+  const result = [];
+
+  for (let r1 = 0; r1 < N; r1++) {
+    for (let c1 = 0; c1 < N; c1++) {
+      for (let r2 = r1; r2 < N; r2++) {
+        for (let c2 = c1; c2 < N; c2++) {
+          const t = {r1,c1,r2,c2};
+
+          if (area(t) !== clue.n) continue;
+          if (!contains(t,clue.r,clue.c)) continue;
+
+          const enclosedClues =
+            clues.filter(q => contains(t,q.r,q.c));
+
+          if (enclosedClues.length === 1) {
+            result.push(t);
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+function solve(limit = 2) {
+  const candidates = clues.map(candidateRectangles);
+
+  if (candidates.some(list => list.length === 0)) {
+    return [];
+  }
+
+  const occupied = Array(N * N).fill(-1);
+  const chosen = Array(clues.length).fill(null);
+  const answers = [];
+
+  function search(done) {
+    if (answers.length >= limit) return;
+
+    if (done === clues.length) {
+      answers.push(chosen.map(t => ({...t})));
+      return;
+    }
+
+    let bestIndex = -1;
+    let bestOptions = null;
+
+    for (let i = 0; i < clues.length; i++) {
+      if (chosen[i]) continue;
+
+      const valid = candidates[i].filter(t => {
+        for (let r = t.r1; r <= t.r2; r++) {
+          for (let c = t.c1; c <= t.c2; c++) {
+            if (occupied[cellKey(r,c)] !== -1) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      });
+
+      if (valid.length === 0) return;
+
+      if (!bestOptions || valid.length < bestOptions.length) {
+        bestIndex = i;
+        bestOptions = valid;
+      }
+    }
+
+    for (const t of bestOptions) {
+      chosen[bestIndex] = t;
+
+      for (let r = t.r1; r <= t.r2; r++) {
+        for (let c = t.c1; c <= t.c2; c++) {
+          occupied[cellKey(r,c)] = bestIndex;
+        }
+      }
+
+      search(done + 1);
+
+      for (let r = t.r1; r <= t.r2; r++) {
+        for (let c = t.c1; c <= t.c2; c++) {
+          occupied[cellKey(r,c)] = -1;
+        }
+      }
+
+      chosen[bestIndex] = null;
+
+      if (answers.length >= limit) return;
+    }
+  }
+
+  search(0);
+  return answers;
+}
+
+function chooseColor(rectangle) {
+  const touchingColors = placed
+    .filter(existing => touches(existing,rectangle))
+    .map(existing => existing.color);
+
+  const available = palette.filter(
+    color => !touchingColors.includes(color)
+  );
+
+  if (available.length) {
+    return available[0];
+  }
+
+  const counts = new Map(
+    palette.map(color => [color,0])
+  );
+
+  for (const existing of placed) {
+    counts.set(
+      existing.color,
+      (counts.get(existing.color) || 0) + 1
+    );
+  }
+
+  return [...counts.entries()]
+    .sort((a,b) => a[1] - b[1])[0][0];
+}
+
+function buildPuzzle() {
+  for (let attempt = 0; attempt < 300; attempt++) {
+    const tiling = randomTiling();
+
+    if (!tiling) continue;
+
+    const badCount = tiling.filter(t => {
+      const a = area(t);
+      return a === 1 || a < 6 || factorCount(a) < 4;
+    }).length;
+
+    const score = tiling.reduce(
+      (sum,t) => sum + areaScore(area(t)),
+      0
+    );
+
+    const preferredCount =
+      tiling.filter(t => preferred.has(area(t))).length;
+
+    if (badCount > Math.ceil(tiling.length * .28)) continue;
+    if (score < tiling.length * 8) continue;
+
+    if (N >= 12 && preferredCount === 0 && attempt < 100) {
+      continue;
+    }
+
+    clues = tiling.map(t => {
+      const cells = [];
+
+      for (let r = t.r1; r <= t.r2; r++) {
+        for (let c = t.c1; c <= t.c2; c++) {
+          cells.push({r,c});
+        }
+      }
+
+      const selected =
+        cells[Math.floor(Math.random() * cells.length)];
+
+      return {
+        r:selected.r,
+        c:selected.c,
+        n:area(t)
+      };
+    });
+
+    const answers = solve(2);
+
+    if (answers.length === 1) {
+      solution = answers[0];
+      return {preferredCount,badCount};
+    }
+  }
+
+  let tiling = null;
+
+  for (let attempt = 0; attempt < 2000 && !tiling; attempt++) {
+    const candidate = randomTiling();
+
+    if (candidate && sizeLimitsOk(candidate)) {
+      tiling = candidate;
+    }
+  }
+
+  if (!tiling) {
+    return {preferredCount:0,badCount:0};
+  }
+
+  clues = tiling.map(t => ({
+    r:t.r1 + Math.floor(Math.random() * (t.r2 - t.r1 + 1)),
+    c:t.c1 + Math.floor(Math.random() * (t.c2 - t.c1 + 1)),
+    n:area(t)
+  }));
+
+  const answers = solve(2);
+  solution = answers[0] || tiling;
+
+  return {preferredCount:0,badCount:0};
+}
+
+function getCell(r,c) {
+  return $("board").children[cellKey(r,c)];
+}
+
+function clearSelection() {
+  document.querySelectorAll(".selected").forEach(cell => {
+    cell.classList.remove("selected");
+  });
+
+  firstCorner = null;
+}
+
+function ensureSelectionVisible() {
+  document.querySelectorAll(".selected").forEach(cell => {
+    cell.classList.remove("selected");
+  });
+
+  if (firstCorner) {
+    getCell(firstCorner.r,firstCorner.c)
+      .classList.add("selected");
+  }
+}
+
+function render() {
+  const board = $("board");
+
+  board.style.setProperty("--n",N);
+  board.innerHTML = "";
+
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const cell = document.createElement("div");
+
+      cell.className = "cell";
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+
+      /*
+        Add a stronger vertical divider after columns 5, 10, 15, ...
+        The final column does not need an internal divider.
+      */
+      if ((c + 1) % 5 === 0 && c < N - 1) {
+        cell.classList.add("major-column");
+      }
+
+      /*
+        Add a stronger horizontal divider after rows 5, 10, 15, ...
+        The final row does not need an internal divider.
+      */
+      if ((r + 1) % 5 === 0 && r < N - 1) {
+        cell.classList.add("major-row");
+      }
+
+      const placedRectangle =
+        placed.find(t => contains(t,r,c));
+
+      if (placedRectangle) {
+        cell.classList.add("filled");
+        cell.style.setProperty(
+          "--fill",
+          placedRectangle.color
+        );
+      }
+
+      const clue = clues.find(q => q.r === r && q.c === c);
+
+      if (clue) {
+        const label = document.createElement("span");
+
+        label.className = "clue";
+        label.textContent = clue.n;
+
+        cell.appendChild(label);
+      }
+
+      board.appendChild(cell);
+    }
+  }
+
+  ensureSelectionVisible();
+  updateStatus();
+}
+
+function updateStatus() {
+  const totalCells = N * N;
+  const covered = new Set();
+
+  for (const t of placed) {
+    for (let r = t.r1; r <= t.r2; r++) {
+      for (let c = t.c1; c <= t.c2; c++) {
+        covered.add(cellKey(r,c));
+      }
+    }
+  }
+
+  if (
+    covered.size === totalCells &&
+    placed.length === clues.length
+  ) {
+    setStatus("Solved!","var(--ok)");
+  } else if (placed.length === 0) {
+    setStatus("");
+  } else {
+    setStatus(`${placed.length}/${clues.length} rectangles placed.`);
+  }
+}
+
+function setStatus(text,color = "") {
+  $("status").textContent = text;
+  $("status").style.color = color || "var(--muted)";
+}
+
+function legalRectangle(t) {
+  const enclosed = clues.filter(q => contains(t,q.r,q.c));
+
+  if (enclosed.length !== 1) return false;
+  if (enclosed[0].n !== area(t)) return false;
+  if (placed.some(existing => overlaps(existing,t))) return false;
+
+  return true;
+}
+
+function placeRectangle(t) {
+  if (!legalRectangle(t)) {
+    setStatus(
+      "Invalid rectangle (area, clue count, or overlap).",
+      "var(--bad)"
+    );
+
+    return;
+  }
+
+  history.push(
+    placed.map(existing => ({...existing}))
+  );
+
+  placed.push({
+    ...t,
+    color:chooseColor(t)
+  });
+
+  clearSelection();
+  render();
+}
+
+function removeRectangleAt(point) {
+  const index = placed.findIndex(
+    t => contains(t,point.r,point.c)
+  );
+
+  if (index < 0) return false;
+
+  history.push(
+    placed.map(existing => ({...existing}))
+  );
+
+  placed.splice(index,1);
+  render();
+
+  return true;
+}
+
+function cellFromEvent(event) {
+  const cell = event.target.closest(".cell");
+
+  if (!cell) return null;
+
+  return {
+    r:+cell.dataset.r,
+    c:+cell.dataset.c
+  };
+}
+
+let lastClickTime = 0;
+let lastClickCell = null;
+
+$("board").addEventListener("click",event => {
+  const point = cellFromEvent(event);
+
+  if (!point) return;
+
+  const now = Date.now();
+
+  const isDoubleClick =
+    now - lastClickTime < 320 &&
+    lastClickCell &&
+    lastClickCell.r === point.r &&
+    lastClickCell.c === point.c;
+
+  lastClickTime = now;
+  lastClickCell = point;
+
+  if (isDoubleClick) {
+    if (removeRectangleAt(point)) {
+      clearSelection();
+      return;
+    }
+  }
+
+  handleTap(point);
+});
+
+function handleTap(point) {
+  if (!firstCorner) {
+    firstCorner = point;
+    ensureSelectionVisible();
+    setStatus(
+      "First corner selected. Click the opposite corner."
+    );
+
+    return;
+  }
+
+  if (
+    firstCorner.r === point.r &&
+    firstCorner.c === point.c
+  ) {
+    clearSelection();
+    setStatus("");
+    return;
+  }
+
+  const rectangle = rectangleFrom(firstCorner,point);
+
+  clearSelection();
+
+  if (!legalRectangle(rectangle)) {
+    firstCorner = point;
+    ensureSelectionVisible();
+    setStatus(
+      "Invalid rectangle. This cell is now the first corner."
+    );
+
+    return;
+  }
+
+  placeRectangle(rectangle);
+}
+
+$("undo").onclick = () => {
+  if (!history.length) {
+    setStatus("Nothing to undo.");
+    return;
+  }
+
+  placed = history.pop();
+
+  clearSelection();
+  render();
+
+  setStatus("Last rectangle removed.");
+};
+
+$("new").onclick = () => {
+  N = +$("size").value;
+  placed = [];
+  history = [];
+
+  clearSelection();
+  buildPuzzle();
+  render();
+
+  setStatus(`New puzzle: ${clues.length} rectangles.`);
+};
+
+$("size").onchange = () => {
+  $("new").click();
+};
+
+$("new").click();
+</script>
+</body>
+</html>
