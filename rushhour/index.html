@@ -324,11 +324,44 @@
     // Supported languages (must match <option> values)
     const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
 
+    // Read language from URL: ?lang=en, ?lang=es, ?lang=zh, ?lang=zh-Hant
+    function getLanguageFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const langParam = params.get("lang");
+      if (!langParam) return null;
+
+      const normalized = langParam.trim();
+
+      // Direct matches
+      if (SUPPORTED_LANGUAGES.includes(normalized)) {
+        return normalized;
+      }
+
+      // Map "zh" to "zh-Hant" to match your existing options
+      if (normalized === "zh") {
+        return "zh-Hant";
+      }
+
+      // Try base code (e.g. "en-US" -> "en")
+      const base = normalized.split("-")[0].toLowerCase();
+      if (SUPPORTED_LANGUAGES.includes(base)) {
+        return base;
+      }
+
+      return null;
+    }
+
     // Determine initial language:
-    // 1) Use stored preference if available
-    // 2) Otherwise, use browser's preferred language (if supported)
-    // 3) Otherwise, default to English
+    // 1) Use URL ?lang=... if present and supported
+    // 2) Use stored preference if available
+    // 3) Otherwise, use browser's preferred language (if supported)
+    // 4) Otherwise, default to English
     function getInitialLanguage() {
+      const fromURL = getLanguageFromURL();
+      if (fromURL) {
+        return fromURL;
+      }
+
       const stored = localStorage.getItem("rush-hour-language");
       if (stored && SUPPORTED_LANGUAGES.includes(stored)) {
         return stored;
