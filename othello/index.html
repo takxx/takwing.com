@@ -13,15 +13,6 @@
         <h1 data-i18n="title">Othello</h1>
         <p class="subtitle" data-i18n="subtitle">Play against the computer</p>
       </div>
-
-      <label class="language-control">
-        <span data-i18n="language">Language</span>
-        <select id="languageSelect" aria-label="Language">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="zh-Hant">繁體中文</option>
-        </select>
-      </label>
     </header>
 
     <section class="game-layout">
@@ -79,6 +70,14 @@
           <h2 data-i18n="status">Status</h2>
           <p id="statusText" aria-live="polite"></p>
         </section>
+      <label class="language-control">
+        <span data-i18n="language">Language</span>
+        <select id="languageSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-Hant">繁體中文</option>
+        </select>
+      </label>
       </aside>
 
       <section class="board-area">
@@ -87,7 +86,9 @@
         </div>
 
         <p class="hint-message" id="hintMessage" aria-live="polite"></p>
+
       </section>
+
     </section>
   </main>
 

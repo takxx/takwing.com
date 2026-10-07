@@ -161,7 +161,36 @@ let aiThinking = false;
 let record = loadRecord();
 let nextStarter = loadNextStarter();
 
+function getLangFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const lang = params.get("lang");
+  if (!lang) return null;
+
+  const normalized = lang.toLowerCase();
+
+  // Map common codes to our supported keys
+  if (normalized === "en") return "en";
+  if (normalized === "es") return "es";
+  if (normalized === "zh" || normalized === "zh-tw" || normalized === "zh-hk" || normalized === "zh-hant") {
+    return "zh-Hant";
+  }
+
+  // If it's something like "en-US", still accept "en"
+  if (normalized.startsWith("en")) return "en";
+  if (normalized.startsWith("es")) return "es";
+  if (normalized.startsWith("zh")) return "zh-Hant";
+
+  return null;
+}
+
 function detectLanguage() {
+  // 1. Priority: ?lang=... in URL
+  const urlLang = getLangFromUrl();
+  if (urlLang && translations[urlLang]) {
+    return urlLang;
+  }
+
+  // 2. Existing browser-language fallback
   const browserLanguages = Array.isArray(navigator.languages)
     ? navigator.languages
     : [navigator.language];
