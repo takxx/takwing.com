@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Shikaku – Simple Click</title>
+<title>Shikaku</title>
 
 <style>
   :root {
@@ -11,10 +11,7 @@
     --panel:#121820;
     --cell:#1b2330;
 
-    /* Normal grid lines */
     --grid:rgba(107,114,128,.55);
-
-    /* Subtle fifth-row and fifth-column lines */
     --major-grid:rgba(156,163,175,.38);
 
     --text:#e5e7eb;
@@ -70,10 +67,18 @@
     background:#1f2937;
     color:var(--text);
     cursor:pointer;
+    font:inherit;
   }
 
-  button:hover {
+  button:hover,
+  select:hover {
     background:#374151;
+  }
+
+  button:focus-visible,
+  select:focus-visible {
+    outline:2px solid #fff;
+    outline-offset:2px;
   }
 
   #board {
@@ -82,8 +87,6 @@
     display:grid;
     grid-template-columns:repeat(var(--n),minmax(0,1fr));
     grid-template-rows:repeat(var(--n),minmax(0,1fr));
-
-    /* Soft outer border */
     border:2px solid rgba(156,163,175,.45);
     background:var(--grid);
   }
@@ -96,18 +99,10 @@
     display:grid;
     place-items:center;
     background:var(--cell);
-
-    /* Regular internal grid lines */
     border:1px solid var(--grid);
     cursor:pointer;
   }
 
-  /*
-    Subtle Sudoku-style dividers.
-
-    These are only slightly stronger than the normal grid lines.
-    They are intentionally thin and semi-transparent.
-  */
   .cell.major-column {
     border-right:2px solid var(--major-grid);
   }
@@ -175,37 +170,70 @@
   .instructions li {
     margin:4px 0;
   }
+
+  .language-control {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-top:24px;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .language-control select {
+    min-width:145px;
+  }
 </style>
 </head>
 
 <body>
 <main>
-  <h1>Shikaku</h1>
+  <h1 id="title">Shikaku</h1>
 
   <div class="bar">
-    <label>
-      Size
-      <select id="size">
-        <option value="12" selected>12×12</option>
-        <option value="18">18×18</option>
-        <option value="24">24×24</option>
-      </select>
-    </label>
+    <label for="size" id="sizeLabel">Size</label>
 
-    <button id="new">New puzzle</button>
-    <button id="undo">Undo</button>
+    <select id="size" aria-label="Size">
+      <option value="12" selected>12×12</option>
+      <option value="18">18×18</option>
+      <option value="24">24×24</option>
+    </select>
+
+    <button id="new" type="button">New puzzle</button>
+    <button id="undo" type="button">Undo</button>
   </div>
 
-  <div id="board"></div>
-  <div id="status"></div>
+  <div id="board" aria-label="Shikaku board"></div>
+  <div id="status" aria-live="polite"></div>
 
   <div class="instructions">
-    <b>How to play:</b>
+    <b id="howToPlay">How to play:</b>
+
     <ul>
-      <li>Click one corner, then the opposite corner to place a rectangle.</li>
-      <li>Double-click a filled cell to remove that rectangle.</li>
-      <li>Fill the board with rectangles so each clue’s rectangle has exactly that area and contains only its clue.</li>
+      <li id="instructionOne">
+        Click one corner, then the opposite corner to place a rectangle.
+      </li>
+
+      <li id="instructionTwo">
+        Double-click a filled cell to remove that rectangle.
+      </li>
+
+      <li id="instructionThree">
+        Fill the board with rectangles so each clue’s rectangle has exactly
+        that area and contains only its clue.
+      </li>
     </ul>
+  </div>
+
+  <div class="language-control">
+    <label for="language" id="languageLabel">Language</label>
+
+    <select id="language" aria-label="Language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh">繁體中文</option>
+    </select>
   </div>
 </main>
 
@@ -219,7 +247,9 @@ let placed = [];
 let history = [];
 let firstCorner = null;
 
-const preferred = new Set([12,18,24,30,36,48,60,72]);
+const preferred = new Set([
+  12,18,24,30,36,48,60,72
+]);
 
 const palette = [
   "#3b6e8f",
@@ -239,6 +269,203 @@ const palette = [
   "#97755a",
   "#537f7a"
 ];
+
+const LANGUAGE_STORAGE_KEY = "shikaku-language";
+const SUPPORTED_LANGUAGES = ["en", "es", "zh"];
+
+const translations = {
+  en: {
+    title: "Shikaku",
+    documentTitle: "Shikaku",
+    size: "Size",
+    sizeLabel: "Size",
+    newPuzzle: "New puzzle",
+    undo: "Undo",
+    language: "Language",
+    boardLabel: "Shikaku board",
+    howToPlay: "How to play:",
+    instructionOne:
+      "Click one corner, then the opposite corner to place a rectangle.",
+    instructionTwo:
+      "Double-click a filled cell to remove that rectangle.",
+    instructionThree:
+      "Fill the board with rectangles so each clue’s rectangle has exactly that area and contains only its clue.",
+    solved: "Solved!",
+    noRectangles: "",
+    rectanglesPlaced: (placed, total) =>
+      `${placed}/${total} rectangles placed.`,
+    invalidRectangle:
+      "Invalid rectangle (area, clue count, or overlap).",
+    firstCorner:
+      "First corner selected. Click the opposite corner.",
+    sameCorner: "",
+    invalidNewFirst:
+      "Invalid rectangle. This cell is now the first corner.",
+    nothingToUndo: "Nothing to undo.",
+    lastRectangleRemoved: "Last rectangle removed.",
+    newPuzzleStatus: count =>
+      `New puzzle: ${count} rectangles.`
+  },
+
+  es: {
+    title: "Shikaku",
+    documentTitle: "Shikaku",
+    size: "Tamaño",
+    sizeLabel: "Tamaño",
+    newPuzzle: "Nuevo rompecabezas",
+    undo: "Deshacer",
+    language: "Idioma",
+    boardLabel: "Tablero de Shikaku",
+    howToPlay: "Cómo jugar:",
+    instructionOne:
+      "Haz clic en una esquina y después en la esquina opuesta para colocar un rectángulo.",
+    instructionTwo:
+      "Haz doble clic en una celda rellenada para eliminar ese rectángulo.",
+    instructionThree:
+      "Rellena el tablero con rectángulos de modo que el rectángulo de cada pista tenga exactamente esa superficie y contenga solo su pista.",
+    solved: "¡Resuelto!",
+    noRectangles: "",
+    rectanglesPlaced: (placed, total) =>
+      `${placed}/${total} rectángulos colocados.`,
+    invalidRectangle:
+      "Rectángulo no válido (superficie, cantidad de pistas o solapamiento).",
+    firstCorner:
+      "Primera esquina seleccionada. Haz clic en la esquina opuesta.",
+    sameCorner: "",
+    invalidNewFirst:
+      "Rectángulo no válido. Esta celda es ahora la primera esquina.",
+    nothingToUndo: "No hay nada que deshacer.",
+    lastRectangleRemoved: "Se ha eliminado el último rectángulo.",
+    newPuzzleStatus: count =>
+      `Nuevo rompecabezas: ${count} rectángulos.`
+  },
+
+  zh: {
+    title: "數方",
+    documentTitle: "數方",
+    size: "大小",
+    sizeLabel: "大小",
+    newPuzzle: "新題目",
+    undo: "復原",
+    language: "語言",
+    boardLabel: "數方棋盤",
+    howToPlay: "玩法：",
+    instructionOne:
+      "先點擊一個角落，再點擊對角的角落來放置矩形。",
+    instructionTwo:
+      "在已填色的格子上雙擊，即可移除該矩形。",
+    instructionThree:
+      "用矩形填滿棋盤，讓每個提示數字所在的矩形面積正確，而且每個矩形只包含一個提示數字。",
+    solved: "完成！",
+    noRectangles: "",
+    rectanglesPlaced: (placed, total) =>
+      `已放置 ${placed}/${total} 個矩形。`,
+    invalidRectangle:
+      "矩形無效（面積、提示數量或重疊不符合要求）。",
+    firstCorner:
+      "已選擇第一個角落。請點擊對角的角落。",
+    sameCorner: "",
+    invalidNewFirst:
+      "矩形無效。這個格子現在成為第一個角落。",
+    nothingToUndo: "沒有可復原的操作。",
+    lastRectangleRemoved: "已移除上一個矩形。",
+    newPuzzleStatus: count =>
+      `新題目：${count} 個矩形。`
+  }
+};
+
+function normalizeLanguage(language) {
+  if (!language) {
+    return null;
+  }
+
+  const normalized = language.toLowerCase().split("-")[0];
+
+  return SUPPORTED_LANGUAGES.includes(normalized)
+    ? normalized
+    : null;
+}
+
+function getInitialLanguage() {
+  const urlLanguage = normalizeLanguage(
+    new URLSearchParams(window.location.search).get("lang")
+  );
+
+  if (urlLanguage) {
+    return urlLanguage;
+  }
+
+  let savedLanguage = null;
+
+  try {
+    savedLanguage = normalizeLanguage(
+      localStorage.getItem(LANGUAGE_STORAGE_KEY)
+    );
+  } catch {
+    savedLanguage = null;
+  }
+
+  if (savedLanguage) {
+    return savedLanguage;
+  }
+
+  const browserLanguages = Array.isArray(navigator.languages)
+    ? navigator.languages
+    : [navigator.language];
+
+  for (const browserLanguage of browserLanguages) {
+    const preferredLanguage = normalizeLanguage(
+      browserLanguage
+    );
+
+    if (preferredLanguage) {
+      return preferredLanguage;
+    }
+  }
+
+  return "en";
+}
+
+let currentLanguage = getInitialLanguage();
+
+function t(key) {
+  return translations[currentLanguage][key]
+    ?? translations.en[key]
+    ?? key;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLanguage;
+  document.title = t("documentTitle");
+
+  $("title").textContent = t("title");
+
+  $("sizeLabel").textContent = t("sizeLabel");
+  $("size").setAttribute("aria-label", t("sizeLabel"));
+
+  $("new").textContent = t("newPuzzle");
+  $("undo").textContent = t("undo");
+
+  $("board").setAttribute(
+    "aria-label",
+    t("boardLabel")
+  );
+
+  $("howToPlay").textContent = t("howToPlay");
+  $("instructionOne").textContent = t("instructionOne");
+  $("instructionTwo").textContent = t("instructionTwo");
+  $("instructionThree").textContent = t("instructionThree");
+
+  $("languageLabel").textContent = t("language");
+  $("language").setAttribute(
+    "aria-label",
+    t("language")
+  );
+
+  updateStatus();
+}
+
+/* DOM helpers */
 
 const $ = id => document.getElementById(id);
 const cellKey = (r,c) => r * N + c;
@@ -306,6 +533,7 @@ function areaScore(n) {
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
+
     [array[i],array[j]] = [array[j],array[i]];
   }
 
@@ -332,7 +560,9 @@ function sizeLimitsOk(tiling) {
 
   for (let i = 0; i < tiling.length; i++) {
     for (let j = i + 1; j < tiling.length; j++) {
-      if (area(tiling[i]) + area(tiling[j]) > pairMax) {
+      if (
+        area(tiling[i]) + area(tiling[j]) > pairMax
+      ) {
         return false;
       }
     }
@@ -528,7 +758,12 @@ function buildPuzzle() {
 
     const badCount = tiling.filter(t => {
       const a = area(t);
-      return a === 1 || a < 6 || factorCount(a) < 4;
+
+      return (
+        a === 1 ||
+        a < 6 ||
+        factorCount(a) < 4
+      );
     }).length;
 
     const score = tiling.reduce(
@@ -539,10 +774,19 @@ function buildPuzzle() {
     const preferredCount =
       tiling.filter(t => preferred.has(area(t))).length;
 
-    if (badCount > Math.ceil(tiling.length * .28)) continue;
-    if (score < tiling.length * 8) continue;
+    if (badCount > Math.ceil(tiling.length * .28)) {
+      continue;
+    }
 
-    if (N >= 12 && preferredCount === 0 && attempt < 100) {
+    if (score < tiling.length * 8) {
+      continue;
+    }
+
+    if (
+      N >= 12 &&
+      preferredCount === 0 &&
+      attempt < 100
+    ) {
       continue;
     }
 
@@ -575,7 +819,11 @@ function buildPuzzle() {
 
   let tiling = null;
 
-  for (let attempt = 0; attempt < 2000 && !tiling; attempt++) {
+  for (
+    let attempt = 0;
+    attempt < 2000 && !tiling;
+    attempt++
+  ) {
     const candidate = randomTiling();
 
     if (candidate && sizeLimitsOk(candidate)) {
@@ -588,8 +836,12 @@ function buildPuzzle() {
   }
 
   clues = tiling.map(t => ({
-    r:t.r1 + Math.floor(Math.random() * (t.r2 - t.r1 + 1)),
-    c:t.c1 + Math.floor(Math.random() * (t.c2 - t.c1 + 1)),
+    r:t.r1 + Math.floor(
+      Math.random() * (t.r2 - t.r1 + 1)
+    ),
+    c:t.c1 + Math.floor(
+      Math.random() * (t.c2 - t.c1 + 1)
+    ),
     n:area(t)
   }));
 
@@ -635,19 +887,19 @@ function render() {
       cell.className = "cell";
       cell.dataset.r = r;
       cell.dataset.c = c;
+      cell.setAttribute(
+        "aria-label",
+        currentLanguage === "zh"
+          ? `第 ${r + 1} 行，第 ${c + 1} 列`
+          : currentLanguage === "es"
+            ? `Fila ${r + 1}, columna ${c + 1}`
+            : `Row ${r + 1}, column ${c + 1}`
+      );
 
-      /*
-        Add a stronger vertical divider after columns 5, 10, 15, ...
-        The final column does not need an internal divider.
-      */
       if ((c + 1) % 5 === 0 && c < N - 1) {
         cell.classList.add("major-column");
       }
 
-      /*
-        Add a stronger horizontal divider after rows 5, 10, 15, ...
-        The final row does not need an internal divider.
-      */
       if ((r + 1) % 5 === 0 && r < N - 1) {
         cell.classList.add("major-row");
       }
@@ -663,7 +915,9 @@ function render() {
         );
       }
 
-      const clue = clues.find(q => q.r === r && q.c === c);
+      const clue = clues.find(
+        q => q.r === r && q.c === c
+      );
 
       if (clue) {
         const label = document.createElement("span");
@@ -698,25 +952,35 @@ function updateStatus() {
     covered.size === totalCells &&
     placed.length === clues.length
   ) {
-    setStatus("Solved!","var(--ok)");
+    setStatus(t("solved"), "var(--ok)");
   } else if (placed.length === 0) {
-    setStatus("");
+    setStatus(t("noRectangles"));
   } else {
-    setStatus(`${placed.length}/${clues.length} rectangles placed.`);
+    setStatus(
+      t("rectanglesPlaced")(
+        placed.length,
+        clues.length
+      )
+    );
   }
 }
 
 function setStatus(text,color = "") {
   $("status").textContent = text;
-  $("status").style.color = color || "var(--muted)";
+  $("status").style.color =
+    color || "var(--muted)";
 }
 
 function legalRectangle(t) {
-  const enclosed = clues.filter(q => contains(t,q.r,q.c));
+  const enclosed = clues.filter(
+    q => contains(t,q.r,q.c)
+  );
 
   if (enclosed.length !== 1) return false;
   if (enclosed[0].n !== area(t)) return false;
-  if (placed.some(existing => overlaps(existing,t))) return false;
+  if (placed.some(existing => overlaps(existing,t))) {
+    return false;
+  }
 
   return true;
 }
@@ -724,7 +988,7 @@ function legalRectangle(t) {
 function placeRectangle(t) {
   if (!legalRectangle(t)) {
     setStatus(
-      "Invalid rectangle (area, clue count, or overlap).",
+      t("invalidRectangle"),
       "var(--bad)"
     );
 
@@ -805,10 +1069,8 @@ function handleTap(point) {
   if (!firstCorner) {
     firstCorner = point;
     ensureSelectionVisible();
-    setStatus(
-      "First corner selected. Click the opposite corner."
-    );
 
+    setStatus(t("firstCorner"));
     return;
   }
 
@@ -817,7 +1079,7 @@ function handleTap(point) {
     firstCorner.c === point.c
   ) {
     clearSelection();
-    setStatus("");
+    setStatus(t("sameCorner"));
     return;
   }
 
@@ -828,10 +1090,8 @@ function handleTap(point) {
   if (!legalRectangle(rectangle)) {
     firstCorner = point;
     ensureSelectionVisible();
-    setStatus(
-      "Invalid rectangle. This cell is now the first corner."
-    );
 
+    setStatus(t("invalidNewFirst"));
     return;
   }
 
@@ -840,7 +1100,7 @@ function handleTap(point) {
 
 $("undo").onclick = () => {
   if (!history.length) {
-    setStatus("Nothing to undo.");
+    setStatus(t("nothingToUndo"));
     return;
   }
 
@@ -849,7 +1109,7 @@ $("undo").onclick = () => {
   clearSelection();
   render();
 
-  setStatus("Last rectangle removed.");
+  setStatus(t("lastRectangleRemoved"));
 };
 
 $("new").onclick = () => {
@@ -861,13 +1121,33 @@ $("new").onclick = () => {
   buildPuzzle();
   render();
 
-  setStatus(`New puzzle: ${clues.length} rectangles.`);
+  setStatus(
+    t("newPuzzleStatus")(clues.length)
+  );
 };
 
 $("size").onchange = () => {
   $("new").click();
 };
 
+$("language").onchange = () => {
+  currentLanguage = $("language").value;
+
+  try {
+    localStorage.setItem(
+      LANGUAGE_STORAGE_KEY,
+      currentLanguage
+    );
+  } catch {
+    /* Storage may be unavailable. */
+  }
+
+  applyTranslations();
+  setStatus(t("newPuzzleStatus")(clues.length));
+};
+
+$("language").value = currentLanguage;
+applyTranslations();
 $("new").click();
 </script>
 </body>
