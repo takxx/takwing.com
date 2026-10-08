@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dominoes</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="board-area" aria-label="Domino board">
+      <h1 class="mobile-title" data-i18n="title">Dominoes</h1>
+
+      <div
+        id="board"
+        class="board"
+        role="grid"
+        aria-label="Domino board"
+      ></div>
+    </section>
+
+    <aside class="sidebar">
+      <header class="desktop-title">
+        <h1 data-i18n="title">Dominoes</h1>
+        <p data-i18n="subtitle">Double-six draw dominoes</p>
+      </header>
+
+      <section class="status-card" aria-live="polite">
+        <div class="stat-row">
+          <span data-i18n="wins">Wins</span>
+          <strong id="score">0 – 0</strong>
+        </div>
+
+        <div class="stat-row">
+          <span data-i18n="boneyard">Boneyard</span>
+          <strong id="boneyard-count">0</strong>
+        </div>
+
+        <p id="game-status" class="game-status"></p>
+      </section>
+
+      <section class="computer-section">
+        <div class="section-heading">
+          <h2 data-i18n="computer">Computer</h2>
+          <span id="computer-count">0</span>
+        </div>
+
+        <div
+          id="computer-hand"
+          class="computer-hand"
+          aria-label="Computer tiles"
+        ></div>
+      </section>
+
+      <section class="player-section">
+        <div class="section-heading">
+          <h2 data-i18n="yourHand">Your hand</h2>
+          <span id="player-count">0</span>
+        </div>
+
+        <div
+          id="player-hand"
+          class="player-hand"
+          aria-label="Your domino tiles"
+        ></div>
+      </section>
+
+      <section
+        id="side-picker"
+        class="side-picker is-hidden"
+        aria-live="polite"
+      >
+        <p data-i18n="chooseSide">Choose an end for this tile.</p>
+
+        <div class="button-row">
+          <button id="play-left" type="button" data-i18n="left">
+            Left
+          </button>
+
+          <button id="play-right" type="button" data-i18n="right">
+            Right
+          </button>
+
+          <button
+            id="cancel-play"
+            type="button"
+            class="secondary-button"
+            data-i18n="cancel"
+          >
+            Cancel
+          </button>
+        </div>
+      </section>
+
+      <section class="controls">
+        <button id="new-game" type="button" data-i18n="newGame">
+          New game
+        </button>
+
+        <label for="language-select" data-i18n="language">
+          Language
+        </label>
+
+        <select id="language-select">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh">繁體中文</option>
+        </select>
+      </section>
+
+      <section class="instructions">
+        <h2 data-i18n="howToPlay">How to play</h2>
+        <p data-i18n="instructions">
+          Click a domino that matches an open end. If it matches both ends,
+          choose left or right. Drawing is automatic when no tile can be played.
+        </p>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
