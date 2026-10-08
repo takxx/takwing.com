@@ -4,9 +4,9 @@ const STARTING_CREDITS = 100;
 const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
 
 const symbols = [
-  { icon: "🦐", payout: 5, name: "shrimp" },
+  { icon: "🐚", payout: 5, name: "shell" },
   { icon: "🐢", payout: 8, name: "turtle" },
-  { icon: "🐚", payout: 18, name: "shell" },
+  { icon: "🦑", payout: 18, name: "cuttlefish" },
   { icon: "🐠", payout: 28, name: "fish" },
   { icon: "🪸", payout: 38, name: "coral" },
   { icon: "🪎", payout: 88, name: "treasure" }
