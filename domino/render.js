@@ -31,8 +31,8 @@
   Directed flow convention:
   - WE = west → east   (move right / dc +1)
   - EW = east → west   (move left  / dc -1)
-  - SN = south → north (move up   / dr -1)
-  - NS = north → south (move down / dr +1)
+  - SN = south → north (move up    / dr -1)
+  - NS = north → south (move down  / dr +1)
 
   Clockwise turns:
   - WE → NS
@@ -85,8 +85,8 @@ function add(point, flow, amount = 1) {
   const direction = FLOW_DIRECTIONS[flow];
 
   return {
-    row: point.row + (direction.dr * amount),
-    col: point.col + (direction.dc * amount)
+    row: point.row + direction.dr * amount,
+    col: point.col + direction.dc * amount
   };
 }
 
@@ -170,9 +170,7 @@ export function createRenderer(elements) {
   function write(point, descriptor) {
     if (!inside(point)) {
       throw new Error(
-        `Cannot write outside board at ${
-          coordinate(point.row, point.col)
-        }.`
+        `Cannot write outside board at ${coordinate(point.row, point.col)}.`
       );
     }
 
@@ -184,41 +182,26 @@ export function createRenderer(elements) {
   }
 
   function markerRoleFor(side) {
-    return side === "left"
-      ? "open-left"
-      : "open-right";
+    return side === "left" ? "open-left" : "open-right";
   }
 
   function matchingRoleFor(side) {
-    return side === "left"
-      ? "right"
-      : "left";
+    return side === "left" ? "right" : "left";
   }
 
   function exposedRoleFor(side) {
-    return side === "left"
-      ? "left"
-      : "right";
+    return side === "left" ? "left" : "right";
   }
 
   function setOpenMarker(side, point, pip, flow) {
-    write(
-      point,
-      [
-        pip,
-        markerRoleFor(side),
-        flow
-      ]
-    );
+    write(point, [pip, markerRoleFor(side), flow]);
   }
 
   function assertEndpointMarker(side, matchingPip) {
     const endpoint = endpoints[side];
 
     if (!endpoint) {
-      throw new Error(
-        `The ${side} endpoint has not been initialized.`
-      );
+      throw new Error(`The ${side} endpoint has not been initialized.`);
     }
 
     const descriptor = read(endpoint.marker);
@@ -299,11 +282,7 @@ export function createRenderer(elements) {
   /*
     Every candidate starts at the exact current marker.
 
-    Only the second half changes direction during a turn.
-    This guarantees that a turn remains physically touching.
-
-    The next marker is always one cell beyond the exposed half,
-    regardless of flow direction.
+    The next marker is one cell beyond the exposed half.
   */
   function createCandidate(marker, flow) {
     const first = marker;
@@ -336,10 +315,7 @@ export function createRenderer(elements) {
   function chooseNormalPath(side) {
     const endpoint = endpoints[side];
 
-    const straight = createCandidate(
-      endpoint.marker,
-      endpoint.flow
-    );
+    const straight = createCandidate(endpoint.marker, endpoint.flow);
 
     if (
       !shouldTurnAt(endpoint.marker, endpoint.flow)
@@ -386,40 +362,14 @@ export function createRenderer(elements) {
     grid = createEmptyBoard();
     visualTiles = [];
 
-    const center = {
-      row: 8,
-      col: 8
-    };
+    const center = { row: 8, col: 8 };
+    const leftMarker = { row: 8, col: 7 };
+    const rightMarker = { row: 8, col: 9 };
 
-    const leftMarker = {
-      row: 8,
-      col: 7
-    };
+    write(center, [opening.value, "double", "EW"]);
 
-    const rightMarker = {
-      row: 8,
-      col: 9
-    };
-
-    write(center, [
-      opening.value,
-      "double",
-      "EW"
-    ]);
-
-    setOpenMarker(
-      "left",
-      leftMarker,
-      opening.value,
-      "EW"
-    );
-
-    setOpenMarker(
-      "right",
-      rightMarker,
-      opening.value,
-      "WE"
-    );
+    setOpenMarker("left", leftMarker, opening.value, "EW");
+    setOpenMarker("right", rightMarker, opening.value, "WE");
 
     visualTiles.push({
       kind: "double",
@@ -458,49 +408,32 @@ export function createRenderer(elements) {
   */
   function placeNormal(placement) {
     const side = placement.side;
-    const endpoint = endpoints[side];
 
     assertEndpointMarker(side, placement.matching);
 
     const path = chooseNormalPath(side);
 
     if (!path) {
-      throw new Error(
-        `No contiguous route is available for the ${side} chain.`
-      );
+      throw new Error(`No contiguous route is available for the ${side} chain.`);
     }
 
-    write(
-      path.first,
-      [
-        placement.matching,
-        matchingRoleFor(side),
-        path.flow
-      ]
-    );
-
-    write(
-      path.second,
-      [
-        placement.exposed,
-        exposedRoleFor(side),
-        path.flow
-      ]
-    );
-
-    setOpenMarker(
-      side,
-      path.nextMarker,
-      placement.exposed,
+    write(path.first, [
+      placement.matching,
+      matchingRoleFor(side),
       path.flow
-    );
+    ]);
+
+    write(path.second, [
+      placement.exposed,
+      exposedRoleFor(side),
+      path.flow
+    ]);
+
+    setOpenMarker(side, path.nextMarker, placement.exposed, path.flow);
 
     visualTiles.push({
       kind: "normal",
-      cells: [
-        path.first,
-        path.second
-      ]
+      cells: [path.first, path.second]
     });
 
     endpoints[side] = {
@@ -513,13 +446,10 @@ export function createRenderer(elements) {
   /*
     A double consumes the current reserved marker as its center.
 
-    It renders perpendicular to the current flow:
-    - WE/EW flow → vertical double
-    - SN/NS flow → horizontal double
+    Its center advances the chain by exactly one grid cell in the current
+    flow, regardless of whether that flow is horizontal or vertical.
 
-    The next marker must be immediately beyond the double’s visual footprint:
-    - horizontal flow: one cell beyond the center
-    - vertical flow: two cells beyond the center
+    The other half of the double is rendered perpendicular to the chain.
   */
   function placeDouble(placement) {
     const side = placement.side;
@@ -528,24 +458,10 @@ export function createRenderer(elements) {
     assertEndpointMarker(side, placement.matching);
 
     const center = endpoint.marker;
+    const nextMarker = add(center, endpoint.flow, 1);
 
-    const doubleChainLength = isHorizontalFlow(endpoint.flow)
-      ? 1
-      : 2;
-
-    const nextMarker = add(
-      center,
-      endpoint.flow,
-      doubleChainLength
-    );
-
-    if (
-      !inside(nextMarker)
-      || !isEmpty(nextMarker)
-    ) {
-      throw new Error(
-        `No space is available for a ${side} double.`
-      );
+    if (!inside(nextMarker) || !isEmpty(nextMarker)) {
+      throw new Error(`No space is available for a ${side} double.`);
     }
 
     write(center, [
@@ -575,13 +491,8 @@ export function createRenderer(elements) {
   }
 
   function place(placement) {
-    if (
-      placement.side !== "left"
-      && placement.side !== "right"
-    ) {
-      throw new Error(
-        `Invalid placement side "${placement.side}".`
-      );
+    if (placement.side !== "left" && placement.side !== "right") {
+      throw new Error(`Invalid placement side "${placement.side}".`);
     }
 
     if (
@@ -592,9 +503,7 @@ export function createRenderer(elements) {
       || placement.exposed < 0
       || placement.exposed > 6
     ) {
-      throw new Error(
-        "Placement pips must be integers from 0 through 6."
-      );
+      throw new Error("Placement pips must be integers from 0 through 6.");
     }
 
     if (placement.double) {
@@ -617,10 +526,7 @@ export function createRenderer(elements) {
         cell.className = "board-cell";
         cell.dataset.coordinate = coordinate(row, col);
         cell.setAttribute("role", "gridcell");
-        cell.setAttribute(
-          "aria-label",
-          coordinate(row, col)
-        );
+        cell.setAttribute("aria-label", coordinate(row, col));
 
         if (descriptor) {
           const [pip, role, flow] = descriptor;
@@ -643,14 +549,11 @@ export function createRenderer(elements) {
 
   function renderNormalTile(tileData, unit) {
     const [first, second] = tileData.cells;
-
     const firstDescriptor = read(first);
     const secondDescriptor = read(second);
 
     if (!firstDescriptor || !secondDescriptor) {
-      throw new Error(
-        "Cannot render a normal domino without both board descriptors."
-      );
+      throw new Error("Cannot render a normal domino without both board descriptors.");
     }
 
     const horizontal = first.row === second.row;
@@ -658,9 +561,7 @@ export function createRenderer(elements) {
     const startCol = Math.min(first.col, second.col);
 
     const tile = document.createElement("div");
-    tile.className = `board-domino ${
-      horizontal ? "horizontal" : "vertical"
-    }`;
+    tile.className = `board-domino ${horizontal ? "horizontal" : "vertical"}`;
 
     tile.style.left = `${startCol * unit}px`;
     tile.style.top = `${startRow * unit}px`;
@@ -668,10 +569,8 @@ export function createRenderer(elements) {
     tile.style.height = `${horizontal ? unit : unit * 2}px`;
 
     /*
-      DOM order needs to follow physical screen order.
-
-      For west/upward movement, `first` is physically after `second` in normal
-      CSS left-to-right/top-to-bottom order, so reverse the pip sequence.
+      DOM order follows physical screen order. For west/upward movement,
+      reverse the pip sequence to match the displayed tile orientation.
     */
     const firstBeforeSecond = horizontal
       ? first.col < second.col
@@ -690,25 +589,18 @@ export function createRenderer(elements) {
   }
 
   /*
-    Doubles are perpendicular to their directed flow.
+    Doubles are drawn perpendicular to their directed flow:
+    - horizontal chain flow → vertical double
+    - vertical chain flow   → horizontal double
 
-    Horizontal chain flow (WE/EW):
-    - vertical double
-    - occupies one cell along the chain
-    - next marker is one cell beyond its center
-
-    Vertical chain flow (SN/NS):
-    - horizontal double
-    - occupies two cells along the chain
-    - next marker is two cells beyond its center
+    This is only their visual orientation. In the grid model, the chain
+    advances one cell from the double's center in every flow direction.
   */
   function renderDoubleTile(tileData, unit) {
     const descriptor = read(tileData.center);
 
     if (!descriptor) {
-      throw new Error(
-        "Cannot render a double without its board descriptor."
-      );
+      throw new Error("Cannot render a double without its board descriptor.");
     }
 
     const [pip] = descriptor;
@@ -767,16 +659,10 @@ export function createRenderer(elements) {
 
       const button = document.createElement("button");
       button.type = "button";
-      button.className = `hand-domino${
-        playable ? " playable" : ""
-      }`;
-
+      button.className = `hand-domino${playable ? " playable" : ""}`;
       button.disabled = !playable;
       button.title = `${tile.a}-${tile.b}`;
-      button.setAttribute(
-        "aria-label",
-        `${tile.a}-${tile.b}`
-      );
+      button.setAttribute("aria-label", `${tile.a}-${tile.b}`);
 
       button.append(
         createPipHalf(tile.a),
