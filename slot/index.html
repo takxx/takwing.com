@@ -3,13 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Lucky 7 Slot Machine</title>
+  <meta name="description" content="Ocean Treasures, a colorful 3 by 3 ocean-themed slot game" />
+  <title>Ocean Treasures</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <main class="machine">
-    <div class="top-bar">
+    <div class="bubble bubble-one" aria-hidden="true"></div>
+    <div class="bubble bubble-two" aria-hidden="true"></div>
+    <div class="bubble bubble-three" aria-hidden="true"></div>
+
+    <header class="top-bar">
+      <div class="brand-mark" aria-hidden="true">🌊</div>
+
       <label for="languageSelect" data-i18n="languageLabel">
         Language
       </label>
@@ -19,15 +26,17 @@
         <option value="es">Español</option>
         <option value="zh-Hant">繁體中文</option>
       </select>
-    </div>
+    </header>
 
-    <h1 data-i18n="title">LUCKY 7</h1>
+    <header class="hero">
+      <p class="eyebrow" data-i18n="eyebrow">UNDERWATER ADVENTURE</p>
+      <h1 data-i18n="title">OCEAN TREASURES</h1>
+      <p class="subtitle" data-i18n="subtitle">
+        Dive in and discover your lucky catch!
+      </p>
+    </header>
 
-    <div class="subtitle" data-i18n="subtitle">
-      Choose your paylines and spin!
-    </div>
-
-    <div class="status">
+    <section class="status" aria-label="Game status">
       <div class="status-box">
         <span data-i18n="credits">Credits</span>
         <strong id="credits">100</strong>
@@ -42,113 +51,179 @@
         <span data-i18n="lastWin">Last Win</span>
         <strong id="lastWin">0</strong>
       </div>
-    </div>
+    </section>
 
-    <section class="board" aria-label="Slot machine board">
-      <svg
-        class="payline-indicators"
-        viewBox="0 0 300 300"
-        preserveAspectRatio="none"
-        aria-hidden="true"
+    <section
+      class="board-shell"
+      aria-label="Ocean Treasures slot machine board"
+    >
+      <div class="board-top-light" aria-hidden="true"></div>
+
+      <div
+        class="board"
+        id="board"
+        role="grid"
+        aria-label="Slot machine symbols"
       >
-        <line class="payline line-top" x1="-12" y1="50" x2="312" y2="50" />
-        <line class="payline line-centre" x1="-12" y1="150" x2="312" y2="150" />
-        <line class="payline line-bottom" x1="-12" y1="250" x2="312" y2="250" />
-        <line
-          class="payline line-diagonal-down"
-          x1="-12"
-          y1="-12"
-          x2="312"
-          y2="312"
-        />
-        <line
-          class="payline line-diagonal-up"
-          x1="-12"
-          y1="312"
-          x2="312"
-          y2="-12"
-        />
-      </svg>
+        <svg
+          class="payline-indicators"
+          viewBox="0 0 300 300"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <line class="payline line-top" x1="-12" y1="50" x2="312" y2="50" />
+          <line class="payline line-centre" x1="-12" y1="150" x2="312" y2="150" />
+          <line class="payline line-bottom" x1="-12" y1="250" x2="312" y2="250" />
+          <line
+            class="payline line-diagonal-down"
+            x1="-12"
+            y1="-12"
+            x2="312"
+            y2="312"
+          />
+          <line
+            class="payline line-diagonal-up"
+            x1="-12"
+            y1="312"
+            x2="312"
+            y2="-12"
+          />
+        </svg>
 
-      <div class="cell">🍒</div>
-      <div class="cell">🍋</div>
-      <div class="cell">🍊</div>
+        <div class="cell" role="gridcell" aria-label="Symbol 1">🐚</div>
+        <div class="cell" role="gridcell" aria-label="Symbol 2">🐠</div>
+        <div class="cell" role="gridcell" aria-label="Symbol 3">🪸</div>
 
-      <div class="cell">🔔</div>
-      <div class="cell">7️⃣</div>
-      <div class="cell">🍒</div>
+        <div class="cell" role="gridcell" aria-label="Symbol 4">🐬</div>
+        <div class="cell jackpot-symbol" role="gridcell" aria-label="Symbol 5">
+          💎
+        </div>
+        <div class="cell" role="gridcell" aria-label="Symbol 6">🐚</div>
 
-      <div class="cell">🍋</div>
-      <div class="cell">🍊</div>
-      <div class="cell">🔔</div>
+        <div class="cell" role="gridcell" aria-label="Symbol 7">🐠</div>
+        <div class="cell" role="gridcell" aria-label="Symbol 8">🪸</div>
+        <div class="cell" role="gridcell" aria-label="Symbol 9">🐬</div>
+      </div>
+
+      <div class="board-bottom-light" aria-hidden="true"></div>
     </section>
 
     <div class="legend">
-      <span class="gold-dot">●</span>
-      <span data-i18n="selectedLine">Selected line</span>
+      <span class="legend-item">
+        <span class="gold-dot" aria-hidden="true">●</span>
+        <span data-i18n="selectedLine">Selected line</span>
+      </span>
 
-      &nbsp;
-
-      <span class="green-dot">●</span>
-      <span data-i18n="winningLine">Winning line</span>
+      <span class="legend-item">
+        <span class="green-dot" aria-hidden="true">●</span>
+        <span data-i18n="winningLine">Winning line</span>
+      </span>
     </div>
 
-    <div class="line-options">
-      <p data-i18n="lineCost">
+    <section class="line-options" aria-labelledby="lineOptionsTitle">
+      <p id="lineOptionsTitle" data-i18n="lineCost">
         Choose paylines — 1 credit per line
       </p>
 
       <div class="line-buttons">
-        <button class="line-button selected" data-lines="1">
+        <button
+          class="line-button selected"
+          type="button"
+          data-lines="1"
+          aria-pressed="true"
+        >
           <span data-line-count="1">1 Line</span>
         </button>
 
-        <button class="line-button" data-lines="3">
+        <button
+          class="line-button"
+          type="button"
+          data-lines="3"
+          aria-pressed="false"
+        >
           <span data-line-count="3">3 Lines</span>
         </button>
 
-        <button class="line-button" data-lines="5">
+        <button
+          class="line-button"
+          type="button"
+          data-lines="5"
+          aria-pressed="false"
+        >
           <span data-line-count="5">5 Lines</span>
         </button>
       </div>
-    </div>
+    </section>
 
-    <div class="sound-controls">
-      <button class="sound-button" id="soundButton" type="button">
-        🔊 <span data-i18n="soundOn">Sound on</span>
+    <div class="action-row">
+      <button
+        class="sound-button"
+        id="soundButton"
+        type="button"
+        aria-pressed="true"
+      >
+        <span class="sound-icon" aria-hidden="true">🔊</span>
+        <span class="sound-label" data-i18n="soundOn">Sound on</span>
+      </button>
+
+      <button
+        class="spin-button"
+        id="spinButton"
+        type="button"
+      >
+        <span class="spin-icon" aria-hidden="true">⚓</span>
+        <span data-i18n="spin">DIVE IN</span>
       </button>
     </div>
 
-    <button class="spin-button" id="spinButton" type="button">
-      <span data-i18n="spin">SPIN</span>
-    </button>
-
-    <button class="reset-button" id="resetButton" type="button">
+    <button
+      class="reset-button"
+      id="resetButton"
+      type="button"
+    >
       <span data-i18n="reset">Reset Credits</span>
     </button>
 
-    <div class="message" id="message" aria-live="polite">
-      <span data-i18n="goodLuck">Good luck!</span>
+    <div
+      class="message"
+      id="message"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span data-i18n="goodLuck">Good luck, explorer!</span>
     </div>
 
-    <div class="paytable">
-      <span data-i18n="paytableIntro">
-        Three matching symbols on a line pays:
-      </span>
+    <section class="paytable" aria-labelledby="paytableTitle">
+      <h2 id="paytableTitle" data-i18n="paytableTitle">
+        Treasure map
+      </h2>
 
-      <br />
+      <p data-i18n="paytableIntro">
+        Three matching treasures on a line pays:
+      </p>
 
-      🍒 ×5 · 🍋 ×10 · 🍊 ×15 · 🔔 ×20 · 7️⃣ ×50
-    </div>
+      <div class="payout-list">
+	      <span>🦐 x5</span>
+        <span>🐢 ×8</span>
+        <span>🐚 ×18</span>
+        <span>🐠 ×28</span>
+        <span>🪸 ×38</span>
+        <span>🪎 ×88</span>
+      </div>
+    </section>
 
-<!--   <div class="expected-value">
-      <h2 data-i18n="expectedValueTitle">
-        Expected win
+    <!--<section class="expected-value" aria-labelledby="expectedValueTitle">
+      <h2 id="expectedValueTitle" data-i18n="expectedValueTitle">
+        Current dive statistics
       </h2>
 
       <p id="expectedWin"></p>
       <p id="expectedNet"></p>
-    </div> -->
+    </section>-->
+
+    <footer class="footer-note" data-i18n="footerNote">
+      A relaxing ocean game of chance
+    </footer>
   </main>
 
   <script src="script.js"></script>

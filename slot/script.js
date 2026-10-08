@@ -1,18 +1,19 @@
+"use strict";
+
 const STARTING_CREDITS = 100;
 const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
 
 const symbols = [
-  { icon: "🍒", payout: 5 },
-  { icon: "🍋", payout: 10 },
-  { icon: "🍊", payout: 15 },
-  { icon: "🔔", payout: 20 },
-  { icon: "7️⃣", payout: 50 }
+  { icon: "🦐", payout: 5, name: "shrimp" },
+  { icon: "🐢", payout: 8, name: "turtle" },
+  { icon: "🐚", payout: 18, name: "shell" },
+  { icon: "🐠", payout: 28, name: "fish" },
+  { icon: "🪸", payout: 38, name: "coral" },
+  { icon: "🪎", payout: 88, name: "treasure" }
 ];
 
 const paylines = {
-  1: [
-    [3, 4, 5]
-  ],
+  1: [[3, 4, 5]],
 
   3: [
     [0, 1, 2],
@@ -50,122 +51,165 @@ const activeLines = {
 const translations = {
   en: {
     languageLabel: "Language",
-    title: "LUCKY 7",
-    subtitle: "Choose your paylines and spin!",
+    eyebrow: "UNDERWATER ADVENTURE",
+    title: "OCEAN TREASURES",
+    subtitle: "Dive in and discover your lucky catch!",
     credits: "Credits",
     lines: "Lines",
     lastWin: "Last Win",
     selectedLine: "Selected line",
     winningLine: "Winning line",
     lineCost: "Choose paylines — 1 credit per line",
-    spin: "SPIN",
+    spin: "DIVE IN",
     reset: "Reset Credits",
-    goodLuck: "Good luck!",
+    goodLuck: "Good luck, explorer!",
     soundOn: "Sound on",
     soundOff: "Sound off",
-    paytableIntro: "Three matching symbols on a line pays:",
-    expectedValueTitle: "Expected win",
-    expectedWin: value => `Expected gross win: ${value} credits per spin`,
-    expectedNet: value => `Expected net result: ${value} credits per spin`,
-    insufficientCredits: "Not enough credits!",
-    spinning: "Spinning...",
-    won: value => `🎉 You won ${value} credits!`,
-    noWin: "No win this time. Try again!",
+    paytableTitle: "Treasure map",
+    paytableIntro: "Three matching treasures on a line pays:",
+    expectedValueTitle: "Current dive statistics",
+    expectedWin: value =>
+      `Expected gross win: ${value} credits per spin`,
+    expectedNet: value =>
+      `Expected net result: ${value} credits per spin`,
+    insufficientCredits: "Not enough credits for this dive!",
+    spinning: "Searching the depths...",
+    won: value => `🎉 You found ${value} credits!`,
+    noWin: "No treasure this time. Dive again!",
     linesSelected: value =>
       `${value} payline${value === 1 ? "" : "s"} selected`,
-    creditsReset: "Credits reset!",
-    line: value => `${value} Line${value === 1 ? "" : "s"}`
+    creditsReset: "Credits restored!",
+    line: value => `${value} Line${value === 1 ? "" : "s"}`,
+    footerNote: "A relaxing ocean game of chance"
   },
 
   es: {
     languageLabel: "Idioma",
-    title: "SIETE DE LA SUERTE",
-    subtitle: "¡Elige tus líneas de pago y gira!",
+    eyebrow: "AVENTURA SUBMARINA",
+    title: "TESOROS DEL OCÉANO",
+    subtitle: "¡Sumérgete y descubre tu captura de la suerte!",
     credits: "Créditos",
     lines: "Líneas",
     lastWin: "Última ganancia",
     selectedLine: "Línea seleccionada",
     winningLine: "Línea ganadora",
     lineCost: "Elige líneas de pago — 1 crédito por línea",
-    spin: "GIRAR",
+    spin: "SUMÉRGETE",
     reset: "Restablecer créditos",
-    goodLuck: "¡Buena suerte!",
+    goodLuck: "¡Buena suerte, explorador!",
     soundOn: "Sonido activado",
     soundOff: "Sonido desactivado",
-    paytableIntro: "Tres símbolos iguales en una línea pagan:",
-    expectedValueTitle: "Ganancia esperada",
+    paytableTitle: "Mapa del tesoro",
+    paytableIntro: "Tres tesoros iguales en una línea pagan:",
+    expectedValueTitle: "Estadísticas de la inmersión",
     expectedWin: value =>
       `Ganancia bruta esperada: ${value} créditos por giro`,
     expectedNet: value =>
       `Resultado neto esperado: ${value} créditos por giro`,
-    insufficientCredits: "¡No tienes suficientes créditos!",
-    spinning: "Girando...",
-    won: value => `🎉 ¡Has ganado ${value} créditos!`,
-    noWin: "No has ganado esta vez. ¡Inténtalo de nuevo!",
+    insufficientCredits: "¡No tienes créditos suficientes para bucear!",
+    spinning: "Buscando en las profundidades...",
+    won: value => `🎉 ¡Has encontrado ${value} créditos!`,
+    noWin: "No hay tesoro esta vez. ¡Vuelve a bucear!",
     linesSelected: value =>
       `${value} línea${value === 1 ? "" : "s"} seleccionada${value === 1 ? "" : "s"}`,
-    creditsReset: "¡Créditos restablecidos!",
-    line: value => `${value} línea${value === 1 ? "" : "s"}`
+    creditsReset: "¡Créditos restaurados!",
+    line: value => `${value} línea${value === 1 ? "" : "s"}`,
+    footerNote: "Un relajante juego de azar oceánico"
   },
 
   "zh-Hant": {
     languageLabel: "語言",
-    title: "幸運 7",
-    subtitle: "選擇賠付線並開始旋轉！",
+    eyebrow: "深海探險",
+    title: "海洋寶藏",
+    subtitle: "潛入深海，尋找你的幸運寶藏！",
     credits: "點數",
     lines: "線數",
     lastWin: "上次獎金",
     selectedLine: "已選線",
     winningLine: "中獎線",
     lineCost: "選擇賠付線 — 每條線 1 點",
-    spin: "旋轉",
+    spin: "潛入深海",
     reset: "重設點數",
-    goodLuck: "祝你好運！",
+    goodLuck: "祝你好運，探險家！",
     soundOn: "音效開啟",
     soundOff: "音效關閉",
-    paytableIntro: "同一條線上有三個相同符號可得：",
-    expectedValueTitle: "期望獎金",
-    expectedWin: value => `每次旋轉的期望總獎金：${value} 點`,
-    expectedNet: value => `每次旋轉的期望淨結果：${value} 點`,
-    insufficientCredits: "點數不足！",
-    spinning: "旋轉中……",
-    won: value => `🎉 你贏得了 ${value} 點！`,
-    noWin: "這次沒有中獎，再試一次吧！",
+    paytableTitle: "寶藏地圖",
+    paytableIntro: "同一條線上有三個相同寶藏可得：",
+    expectedValueTitle: "本次潛水統計",
+    expectedWin: value =>
+      `每次旋轉的期望總獎金：${value} 點`,
+    expectedNet: value =>
+      `每次旋轉的期望淨結果：${value} 點`,
+    insufficientCredits: "點數不足，無法潛水！",
+    spinning: "正在探索深海……",
+    won: value => `🎉 你找到 ${value} 點寶藏！`,
+    noWin: "這次沒有找到寶藏，再潛一次吧！",
     linesSelected: value => `已選擇 ${value} 條賠付線`,
-    creditsReset: "點數已重設！",
-    line: value => `${value} 條線`
+    creditsReset: "點數已恢復！",
+    line: value => `${value} 條線`,
+    footerNote: "輕鬆愉快的海洋機會遊戲"
   }
 };
 
+/* ------------------------------------------------------------------
+   DOM references
+------------------------------------------------------------------ */
+
 const cells = [...document.querySelectorAll(".cell")];
-const lineButtons = [...document.querySelectorAll(".line-button")];
-const paylineElements = [...document.querySelectorAll(".payline")];
+const lineButtons = [
+  ...document.querySelectorAll(".line-button")
+];
+const paylineElements = [
+  ...document.querySelectorAll(".payline")
+];
 
 const creditsDisplay = document.getElementById("credits");
-const selectedLinesDisplay = document.getElementById("selectedLines");
-const lastWinDisplay = document.getElementById("lastWin");
+const selectedLinesDisplay =
+  document.getElementById("selectedLines");
+const lastWinDisplay =
+  document.getElementById("lastWin");
 const message = document.getElementById("message");
+
 const spinButton = document.getElementById("spinButton");
 const resetButton = document.getElementById("resetButton");
 const soundButton = document.getElementById("soundButton");
-const languageSelect = document.getElementById("languageSelect");
-const expectedWinDisplay = document.getElementById("expectedWin");
-const expectedNetDisplay = document.getElementById("expectedNet");
+const languageSelect =
+  document.getElementById("languageSelect");
+
+const soundIcon =
+  soundButton?.querySelector(".sound-icon");
+const soundLabel =
+  soundButton?.querySelector(".sound-label");
+
+const expectedWinDisplay =
+  document.getElementById("expectedWin");
+const expectedNetDisplay =
+  document.getElementById("expectedNet");
+
+/* ------------------------------------------------------------------
+   State
+------------------------------------------------------------------ */
 
 let credits = STARTING_CREDITS;
 let selectedLines = 1;
 let isSpinning = false;
-let audioContext;
-let soundEnabled = true;
 let currentLanguage = detectBrowserLanguage();
 
+let audioContext = null;
+let masterGain = null;
+let soundEnabled = true;
+
+/* ------------------------------------------------------------------
+   Translation functions
+------------------------------------------------------------------ */
+
 function detectBrowserLanguage() {
-  const browserLanguages = navigator.languages?.length
+  const languages = navigator.languages?.length
     ? navigator.languages
     : [navigator.language];
 
-  for (const browserLanguage of browserLanguages) {
-    const normalized = browserLanguage.toLowerCase();
+  for (const language of languages) {
+    const normalized = language.toLowerCase();
 
     if (normalized.startsWith("zh")) {
       return "zh-Hant";
@@ -188,7 +232,7 @@ function t(key, value) {
 
   return typeof translation === "function"
     ? translation(value)
-    : translation;
+    : translation ?? key;
 }
 
 function formatNumber(value) {
@@ -200,8 +244,7 @@ function applyTranslations() {
   languageSelect.value = currentLanguage;
 
   document.querySelectorAll("[data-i18n]").forEach(element => {
-    const key = element.dataset.i18n;
-    element.textContent = t(key);
+    element.textContent = t(element.dataset.i18n);
   });
 
   document.querySelectorAll("[data-line-count]").forEach(element => {
@@ -211,6 +254,10 @@ function applyTranslations() {
 
   updateSoundButton();
   updateExpectedValue();
+
+  if (isSpinning) {
+    message.textContent = t("spinning");
+  }
 }
 
 function setLanguage(language) {
@@ -218,26 +265,43 @@ function setLanguage(language) {
     ? language
     : "en";
 
-  localStorage.setItem("lucky7-language", currentLanguage);
+  localStorage.setItem(
+    "ocean-treasures-language",
+    currentLanguage
+  );
+
   applyTranslations();
-  updateMessageForCurrentState();
 }
 
-function updateMessageForCurrentState() {
-  if (isSpinning) {
-    message.textContent = t("spinning");
-  }
-}
-
-function randomSymbol() {
-  return symbols[
-    Math.floor(Math.random() * symbols.length)
-  ];
-}
+/* ------------------------------------------------------------------
+   Display and payline functions
+------------------------------------------------------------------ */
 
 function updateDisplays() {
   creditsDisplay.textContent = formatNumber(credits);
-  selectedLinesDisplay.textContent = formatNumber(selectedLines);
+  selectedLinesDisplay.textContent =
+    formatNumber(selectedLines);
+}
+
+function updateSoundButton() {
+  if (!soundButton) {
+    return;
+  }
+
+  if (soundIcon) {
+    soundIcon.textContent = soundEnabled ? "🔊" : "🔇";
+  }
+
+  if (soundLabel) {
+    soundLabel.textContent = soundEnabled
+      ? t("soundOn")
+      : t("soundOff");
+  }
+
+  soundButton.setAttribute(
+    "aria-pressed",
+    String(soundEnabled)
+  );
 }
 
 function updatePaylineIndicators() {
@@ -246,7 +310,11 @@ function updatePaylineIndicators() {
   });
 
   activeLines[selectedLines].forEach(selector => {
-    document.querySelector(selector).classList.add("active");
+    const line = document.querySelector(selector);
+
+    if (line) {
+      line.classList.add("active");
+    }
   });
 }
 
@@ -262,161 +330,13 @@ function clearWinningCells() {
   updatePaylineIndicators();
 }
 
-function getAudioContext() {
-  if (!audioContext) {
-    const AudioContext =
-      window.AudioContext || window.webkitAudioContext;
+/* ------------------------------------------------------------------
+   Game logic
+------------------------------------------------------------------ */
 
-    if (!AudioContext) {
-      return null;
-    }
-
-    audioContext = new AudioContext();
-  }
-
-  if (audioContext.state === "suspended") {
-    audioContext.resume();
-  }
-
-  return audioContext;
-}
-
-function playSound(type) {
-  if (!soundEnabled) return;
-
-  const context = getAudioContext();
-
-  if (!context) return;
-
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-
-  oscillator.connect(gain);
-  gain.connect(context.destination);
-
-  const now = context.currentTime;
-
-  if (type === "spin") {
-    oscillator.type = "triangle";
-    oscillator.frequency.setValueAtTime(180, now);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      70,
-      now + 0.12
-    );
-
-    gain.gain.setValueAtTime(0.04, now);
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      now + 0.12
-    );
-
-    oscillator.start(now);
-    oscillator.stop(now + 0.12);
-  }
-
-  if (type === "win") {
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(500, now);
-    oscillator.frequency.setValueAtTime(700, now + 0.12);
-    oscillator.frequency.setValueAtTime(950, now + 0.24);
-
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      now + 0.45
-    );
-
-    oscillator.start(now);
-    oscillator.stop(now + 0.45);
-  }
-
-  if (type === "lose") {
-    oscillator.type = "sawtooth";
-    oscillator.frequency.setValueAtTime(180, now);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      80,
-      now + 0.3
-    );
-
-    gain.gain.setValueAtTime(0.12, now);
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      now + 0.3
-    );
-
-    oscillator.start(now);
-    oscillator.stop(now + 0.3);
-  }
-}
-
-function updateSoundButton() {
-  soundButton.innerHTML = soundEnabled
-    ? `🔊 <span>${t("soundOn")}</span>`
-    : `🔇 <span>${t("soundOff")}</span>`;
-}
-
-function spinCell(cell, duration, index) {
-  return new Promise(resolve => {
-    cell.classList.add("spinning");
-
-    const column = index % 3;
-    const direction = column === 1 ? "down" : "up";
-
-    const reelSymbols = [...symbols, ...symbols];
-
-    const reel = document.createElement("div");
-    reel.className = `reel ${direction}`;
-
-    reel.innerHTML = reelSymbols
-      .map(symbol => {
-        return `
-          <div class="reel-symbol">
-            ${symbol.icon}
-          </div>
-        `;
-      })
-      .join("");
-
-    cell.innerHTML = "";
-    cell.appendChild(reel);
-
-    const soundInterval = window.setInterval(() => {
-      playSound("spin");
-    }, 180);
-
-    window.setTimeout(() => {
-      window.clearInterval(soundInterval);
-
-      const result = randomSymbol();
-
-      cell.innerHTML = result.icon;
-      cell.classList.remove("spinning");
-
-      resolve(result);
-    }, duration);
-  });
-}
-
-function highlightWinningLine(line) {
-  line.forEach(index => {
-    cells[index].classList.add("win");
-  });
-
-  const lineIndicators = {
-    "0,1,2": ".line-top",
-    "3,4,5": ".line-centre",
-    "6,7,8": ".line-bottom",
-    "0,4,8": ".line-diagonal-down",
-    "6,4,2": ".line-diagonal-up"
-  };
-
-  const indicator = lineIndicators[line.join(",")];
-
-  if (indicator) {
-    const lineElement = document.querySelector(indicator);
-    lineElement.classList.remove("active");
-    lineElement.classList.add("winner");
-  }
+function randomSymbol() {
+  const index = Math.floor(Math.random() * symbols.length);
+  return symbols[index];
 }
 
 function findWinningLines(results) {
@@ -425,11 +345,11 @@ function findWinningLines(results) {
   paylines[selectedLines].forEach(line => {
     const [a, b, c] = line;
 
-    const isMatch =
+    const matching =
       results[a].icon === results[b].icon &&
       results[b].icon === results[c].icon;
 
-    if (isMatch) {
+    if (matching) {
       winningLines.push({
         line,
         payout: results[a].payout,
@@ -441,44 +361,54 @@ function findWinningLines(results) {
   return winningLines;
 }
 
-/*
-  Assumptions:
-  - Every symbol is equally likely: 1 / 5.
-  - Each payline is evaluated independently.
-  - A winning line pays its symbol payout.
-  - The spin cost is one credit per selected line.
+function highlightWinningLine(line) {
+  line.forEach(index => {
+    cells[index].classList.add("win");
+  });
 
-  For one line:
-  E[line] =
-    (5 + 10 + 15 + 20 + 50) / 5^3
-    = 100 / 125
-    = 0.8 credits
+  const lineSelectors = {
+    "0,1,2": ".line-top",
+    "3,4,5": ".line-centre",
+    "6,7,8": ".line-bottom",
+    "0,4,8": ".line-diagonal-down",
+    "6,4,2": ".line-diagonal-up"
+  };
 
-  Therefore:
-  - 1 selected line: gross EV = 0.8, net EV = -0.2
-  - 3 selected lines: gross EV = 2.4, net EV = -0.6
-  - 5 selected lines: gross EV = 4.0, net EV = -1.0
-*/
+  const selector = lineSelectors[line.join(",")];
+
+  if (!selector) {
+    return;
+  }
+
+  const lineElement = document.querySelector(selector);
+
+  if (lineElement) {
+    lineElement.classList.remove("active");
+    lineElement.classList.add("winner");
+  }
+}
+
+/* ------------------------------------------------------------------
+   Expected-value display
+------------------------------------------------------------------ */
+
 function calculateExpectedValue(lineCount) {
   const expectedWinPerLine =
     symbols.reduce((sum, symbol) => {
       return sum + symbol.payout;
     }, 0) / Math.pow(symbols.length, 3);
 
-  const expectedGrossWin =
-    expectedWinPerLine * lineCount;
+  const gross = expectedWinPerLine * lineCount;
+  const net = gross - lineCount;
 
-  const spinCost = lineCount;
-  const expectedNetResult =
-    expectedGrossWin - spinCost;
-
-  return {
-    gross: expectedGrossWin,
-    net: expectedNetResult
-  };
+  return { gross, net };
 }
 
 function updateExpectedValue() {
+  if (!expectedWinDisplay || !expectedNetDisplay) {
+    return;
+  }
+
   const expected = calculateExpectedValue(selectedLines);
 
   expectedWinDisplay.textContent = t(
@@ -492,8 +422,251 @@ function updateExpectedValue() {
   );
 }
 
+/* ------------------------------------------------------------------
+   Audio
+------------------------------------------------------------------ */
+
+function getAudioContext() {
+  if (!audioContext) {
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      console.warn("Web Audio API is not supported.");
+      return null;
+    }
+
+    audioContext = new AudioContextClass();
+
+    masterGain = audioContext.createGain();
+    masterGain.gain.value = 0.8;
+    masterGain.connect(audioContext.destination);
+  }
+
+  return audioContext;
+}
+
+function resumeAudio() {
+  const context = getAudioContext();
+
+  if (!context) {
+    return null;
+  }
+
+  if (context.state === "suspended") {
+    context.resume().catch(error => {
+      console.warn("Unable to resume audio:", error);
+    });
+  }
+
+  return context;
+}
+
+function createTone({
+  frequency,
+  endFrequency = frequency,
+  duration = 0.15,
+  type = "sine",
+  volume = 0.08,
+  startTime = null,
+  attack = 0.01,
+  release = 0.08
+}) {
+  const context = resumeAudio();
+
+  if (!context || !masterGain) {
+    return;
+  }
+
+  const now = startTime ?? context.currentTime;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+
+  if (endFrequency !== frequency) {
+    oscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(20, endFrequency),
+      now + duration
+    );
+  }
+
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.linearRampToValueAtTime(
+    volume,
+    now + attack
+  );
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    now + duration + release
+  );
+
+  oscillator.connect(gain);
+  gain.connect(masterGain);
+
+  oscillator.start(now);
+  oscillator.stop(now + duration + release);
+}
+
+function playSound(type) {
+  if (!soundEnabled) {
+    return;
+  }
+
+  const context = resumeAudio();
+
+  if (!context) {
+    return;
+  }
+
+  const now = context.currentTime;
+
+  if (type === "spin") {
+    createTone({
+      frequency: 220,
+      endFrequency: 120,
+      duration: 0.12,
+      type: "triangle",
+      volume: 0.08,
+      startTime: now
+    });
+
+    return;
+  }
+
+  if (type === "stop") {
+    createTone({
+      frequency: 420,
+      endFrequency: 240,
+      duration: 0.16,
+      type: "sine",
+      volume: 0.1,
+      startTime: now
+    });
+
+    return;
+  }
+
+  if (type === "win") {
+    const notes = [
+      { frequency: 392, delay: 0 },
+      { frequency: 494, delay: 0.13 },
+      { frequency: 587, delay: 0.26 },
+      { frequency: 784, delay: 0.4 }
+    ];
+
+    notes.forEach(note => {
+      createTone({
+        frequency: note.frequency,
+        duration: 0.22,
+        type: "sine",
+        volume: 0.14,
+        startTime: now + note.delay,
+        attack: 0.015,
+        release: 0.12
+      });
+    });
+
+    return;
+  }
+
+  if (type === "bigWin") {
+    const notes = [
+      { frequency: 392, delay: 0 },
+      { frequency: 494, delay: 0.12 },
+      { frequency: 587, delay: 0.24 },
+      { frequency: 784, delay: 0.38 },
+      { frequency: 988, delay: 0.54 }
+    ];
+
+    notes.forEach(note => {
+      createTone({
+        frequency: note.frequency,
+        duration: 0.28,
+        type: "sine",
+        volume: 0.16,
+        startTime: now + note.delay,
+        attack: 0.015,
+        release: 0.14
+      });
+    });
+
+    return;
+  }
+
+  if (type === "lose") {
+    createTone({
+      frequency: 220,
+      endFrequency: 110,
+      duration: 0.35,
+      type: "triangle",
+      volume: 0.09,
+      startTime: now
+    });
+  }
+}
+
+/* ------------------------------------------------------------------
+   Reel animation
+------------------------------------------------------------------ */
+
+function spinCell(cell, duration, index) {
+  return new Promise(resolve => {
+    cell.classList.add("spinning");
+
+    const column = index % 3;
+    const direction = column === 1 ? "down" : "up";
+    const reelSymbols = [...symbols, ...symbols];
+
+    const reel = document.createElement("div");
+    reel.className = `reel ${direction}`;
+
+    reel.innerHTML = reelSymbols
+      .map(symbol => {
+        return `
+          <div class="reel-symbol" aria-hidden="true">
+            ${symbol.icon}
+          </div>
+        `;
+      })
+      .join("");
+
+    cell.replaceChildren(reel);
+
+    const soundInterval = setInterval(() => {
+      playSound("spin");
+    }, 180);
+
+    setTimeout(() => {
+      clearInterval(soundInterval);
+
+      const result = randomSymbol();
+
+      cell.replaceChildren(
+        document.createTextNode(result.icon)
+      );
+
+      cell.classList.remove("spinning");
+
+      playSound("stop");
+      resolve(result);
+    }, duration);
+  });
+}
+
+/* ------------------------------------------------------------------
+   Spin
+------------------------------------------------------------------ */
+
 async function spin() {
-  if (isSpinning) return;
+  if (isSpinning) {
+    return;
+  }
+
+  // This must happen immediately inside the button event.
+  resumeAudio();
 
   const spinCost = selectedLines;
 
@@ -504,8 +677,13 @@ async function spin() {
   }
 
   isSpinning = true;
+
   spinButton.disabled = true;
   resetButton.disabled = true;
+
+  lineButtons.forEach(button => {
+    button.disabled = true;
+  });
 
   clearWinningCells();
 
@@ -515,35 +693,45 @@ async function spin() {
 
   message.textContent = t("spinning");
 
-  const columnDurations = [
-    1400,
-    1900,
-    2400
-  ];
+  const columnDurations = [1100, 1550, 2000];
+  const results = [];
 
-  const results = await Promise.all(
-    cells.map((cell, index) => {
-      const column = index % 3;
-      const duration = columnDurations[column];
+  for (let column = 0; column < 3; column++) {
+    const columnResults = await Promise.all(
+      cells
+        .map((cell, index) => ({ cell, index }))
+        .filter(({ index }) => index % 3 === column)
+        .map(({ cell, index }) =>
+          spinCell(cell, columnDurations[column], index)
+        )
+    );
 
-      return spinCell(cell, duration, index);
-    })
-  );
+    columnResults.forEach((result, row) => {
+      results[row * 3 + column] = result;
+    });
+  }
 
   const winningLines = findWinningLines(results);
 
-  let totalWin = 0;
+  const totalWin = winningLines.reduce(
+    (sum, winningLine) => sum + winningLine.payout,
+    0
+  );
 
   winningLines.forEach(winningLine => {
-    totalWin += winningLine.payout;
     highlightWinningLine(winningLine.line);
   });
 
   if (totalWin > 0) {
     credits += totalWin;
     lastWinDisplay.textContent = formatNumber(totalWin);
-    message.textContent = t("won", formatNumber(totalWin));
-    playSound("win");
+
+    message.textContent = t(
+      "won",
+      formatNumber(totalWin)
+    );
+
+    playSound(totalWin >= 50 ? "bigWin" : "win");
   } else {
     lastWinDisplay.textContent = "0";
     message.textContent = t("noWin");
@@ -554,18 +742,32 @@ async function spin() {
 
   spinButton.disabled = false;
   resetButton.disabled = false;
+
+  lineButtons.forEach(button => {
+    button.disabled = false;
+  });
+
   isSpinning = false;
 }
 
+/* ------------------------------------------------------------------
+   Event listeners
+------------------------------------------------------------------ */
+
 lineButtons.forEach(button => {
   button.addEventListener("click", () => {
-    if (isSpinning) return;
+    if (isSpinning) {
+      return;
+    }
 
     lineButtons.forEach(item => {
       item.classList.remove("selected");
+      item.setAttribute("aria-pressed", "false");
     });
 
     button.classList.add("selected");
+    button.setAttribute("aria-pressed", "true");
+
     selectedLines = Number(button.dataset.lines);
 
     clearWinningCells();
@@ -584,17 +786,21 @@ languageSelect.addEventListener("change", event => {
 });
 
 soundButton.addEventListener("click", () => {
+  // Unlock/resume audio from a direct user gesture.
+  resumeAudio();
+
   soundEnabled = !soundEnabled;
+  updateSoundButton();
 
   if (soundEnabled) {
-    getAudioContext();
+    playSound("stop");
   }
-
-  updateSoundButton();
 });
 
 resetButton.addEventListener("click", () => {
-  if (isSpinning) return;
+  if (isSpinning) {
+    return;
+  }
 
   credits = STARTING_CREDITS;
   lastWinDisplay.textContent = "0";
@@ -607,7 +813,27 @@ resetButton.addEventListener("click", () => {
 
 spinButton.addEventListener("click", spin);
 
-const savedLanguage = localStorage.getItem("lucky7-language");
+document.addEventListener("keydown", event => {
+  const target = event.target;
+
+  const typing =
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement;
+
+  if (event.code === "Space" && !typing) {
+    event.preventDefault();
+    spin();
+  }
+});
+
+/* ------------------------------------------------------------------
+   Initialization
+------------------------------------------------------------------ */
+
+const savedLanguage = localStorage.getItem(
+  "ocean-treasures-language"
+);
 
 if (savedLanguage && SUPPORTED_LANGUAGES.includes(savedLanguage)) {
   currentLanguage = savedLanguage;
