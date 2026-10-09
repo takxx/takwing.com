@@ -483,9 +483,9 @@ function detectLanguage() {
   function createFoundationCard(card) {
     const element = createCardElement(card);
 
-    element.style.width = '68px';
-    element.style.height = '92px';
-    element.style.cursor = 'default';
+//    element.style.width = '68px';
+//    element.style.height = '92px';
+//    element.style.cursor = 'default';
 
     return element;
   }
