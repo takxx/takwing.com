@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="A Chinese Checkers coordinate board with computer opponents and extended-jump rules.">
+  <title>Chinese Checkers Coordinate Board</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <main class="app-shell">
+    <header class="page-header">
+      <h1 data-i18n="title">Chinese Checkers Coordinate Board</h1>
+
+      <p class="description" data-i18n="description">
+        Your starting tip is (0, 0). The first coordinate moves forward-left
+        and the second moves forward-right.
+      </p>
+    </header>
+
+    <div class="game-layout">
+      <section
+        class="board-panel"
+        data-i18n-aria-label="boardPanelAriaLabel"
+        aria-label="Chinese Checkers board">
+
+        <svg
+          id="board"
+          viewBox="-275 -305 550 620"
+          preserveAspectRatio="xMidYMid meet"
+          role="grid"
+          aria-label="Chinese Checkers coordinate board">
+        </svg>
+      </section>
+
+      <aside class="side-panel">
+        <section
+          class="status-panel"
+          data-i18n-aria-label="statusAriaLabel"
+          aria-label="Game status">
+
+          <div class="game-options">
+	          
+            <label for="opponentCount" data-i18n="opponentCountLabel">
+              Computer opponents
+            </label>
+
+            <select id="opponentCount">
+              <option value="1" data-i18n="oneOpponentOption">
+                1 computer
+              </option>
+
+              <option value="2" data-i18n="twoOpponentsOption">
+                2 computers
+              </option>
+            </select>
+          </div>
+
+          <p id="turnStatus" class="turn-status" aria-live="polite">
+            Loading game…
+          </p>
+
+          <p id="readout" class="readout" aria-live="polite">
+            Select one of your marbles.
+          </p>
+
+<div class="results" aria-live="polite">
+  <span class="result-item result-win">
+    <span data-i18n="winsLabel">Wins</span>
+    <strong id="winCount">0</strong>
+  </span>
+
+  <span class="result-item result-loss">
+    <span data-i18n="lossesLabel">Losses</span>
+    <strong id="lossCount">0</strong>
+  </span>
+</div>
+
+          <div class="controls">
+            <button id="resetMoveButton" type="button" disabled>
+              Reset move
+            </button>
+
+            <button id="restartButton" type="button">
+              Restart game
+            </button>
+          </div>
+        </section>
+
+        <section
+          class="summary-panel"
+          data-i18n-aria-label="boardSummaryAriaLabel"
+          aria-label="Board summary">
+          <p>
+            <span data-i18n="boardHolesLabel">Board holes:</span>
+            <strong id="totalHoles">0</strong>.
+            <span data-i18n="centralHexagonLabel">Central hexagon:</span>
+            <strong id="centralHoles">0</strong>.
+            <span data-i18n="outerTriangleLabel">Each outer triangle:</span>
+            <strong id="armHoles">0</strong>.
+          </p>
+        </section>
+
+        <section class="rules-panel" aria-labelledby="rulesTitle">
+          <h2 id="rulesTitle" data-i18n="rulesTitle">Variant rules</h2>
+
+          <div class="rules-grid">
+            <article>
+              <h3 data-i18n="ruleObjectiveTitle">Objective</h3>
+              <p data-i18n="ruleObjectiveText">
+                Move all ten of your marbles from your home triangle into the
+                triangle directly opposite it.
+              </p>
+            </article>
+
+            <article>
+              <h3 data-i18n="ruleStepTitle">Step move</h3>
+              <p data-i18n="ruleStepText">
+                Move one marble to an adjacent empty hole. A step ends your turn.
+              </p>
+            </article>
+
+            <article>
+              <h3 data-i18n="ruleExtendedJumpTitle">Extended jump</h3>
+              <p data-i18n="ruleExtendedJumpText">
+                Jump exactly one marble at any straight-line distance:
+                x --- o --- x. Both clear segments must be equal in length.
+              </p>
+            </article>
+
+            <article>
+              <h3 data-i18n="ruleMultipleJumpTitle">Multiple jumps</h3>
+              <p data-i18n="ruleMultipleJumpText">
+                After a jump, click the same jumping marble to finish the
+                sequence. A marble cannot land on the same hole twice in one
+                jump sequence.
+              </p>
+            </article>
+
+            <article>
+              <h3 data-i18n="ruleTerritoryTitle">Territory restriction</h3>
+              <p data-i18n="ruleTerritoryText">
+                A marble may pass through another player's territory but may not
+                finish a move there, whether or not that triangle contains marbles.
+              </p>
+            </article>
+
+            <article>
+              <h3 data-i18n="ruleNoCaptureTitle">No captures</h3>
+              <p data-i18n="ruleNoCaptureText">
+                Jumped marbles remain on the board. They are never removed.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <footer
+          class="language-panel"
+          data-i18n-aria-label="languageSelectorAriaLabel"
+          aria-label="Language selection">
+
+          <span data-i18n="languageLabel">Language:</span>
+
+          <div
+            class="language-controls"
+            data-i18n-aria-label="languageSelectorAriaLabel"
+            role="group"
+            aria-label="Language selection">
+
+            <button
+              type="button"
+              class="language-button"
+              data-language="en"
+              lang="en"
+              aria-pressed="true">
+              English
+            </button>
+
+            <button
+              type="button"
+              class="language-button"
+              data-language="es"
+              lang="es"
+              aria-pressed="false">
+              Español
+            </button>
+
+            <button
+              type="button"
+              class="language-button"
+              data-language="zh"
+              lang="zh-Hant"
+              aria-pressed="false">
+              繁體中文
+            </button>
+          </div>
+        </footer>
+      </aside>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
