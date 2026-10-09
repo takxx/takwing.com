@@ -11,81 +11,78 @@
 </head>
 
 <body>
-<div id="board">
+  <div id="board">
 
-  <header>
-    <h1 data-i18n="title">FreeCell</h1>
+    <header>
+      <h1 data-i18n="title">FreeCell</h1>
+      <div id="status"></div>
 
-    <div class="controls">
-      <button id="newBtn" type="button" data-i18n="newGame">New</button>
-      <button id="restartBtn" type="button" data-i18n="restart">Restart</button>
-      <button id="undoBtn" type="button" data-i18n="undo">Undo</button>
-      <button id="hintBtn" type="button" data-i18n="hint">Hint</button>
-      <select id="langSelect" aria-label="Language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <option value="zh-TW">繁體中文</option>
-      </select>
+      <div class="controls">
+        <button id="newBtn" type="button" data-i18n="newGame">New</button>
+        <button id="restartBtn" type="button" data-i18n="restart">Restart</button>
+        <button id="undoBtn" type="button" data-i18n="undo">Undo</button>
+        <button id="hintBtn" type="button" data-i18n="hint">Hint</button>
+        <select id="langSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-TW">繁體中文</option>
+        </select>
+      </div>
+
+    </header>
+
+    <div class="row" id="topRow">
+      <div class="slot small" data-type="free" data-index="0">
+        <div class="label" data-i18n="freeCell">Free</div>
+      </div>
+
+      <div class="slot small" data-type="free" data-index="1">
+        <div class="label" data-i18n="freeCell">Free</div>
+      </div>
+
+      <div class="slot small" data-type="free" data-index="2">
+        <div class="label" data-i18n="freeCell">Free</div>
+      </div>
+
+      <div class="slot small" data-type="free" data-index="3">
+        <div class="label" data-i18n="freeCell">Free</div>
+      </div>
+
+      <div class="top-row-spacer" aria-hidden="true"></div>
+
+      <div class="slot small" data-type="home" data-index="0">
+        <div class="label">♥</div>
+      </div>
+
+      <div class="slot small" data-type="home" data-index="1">
+        <div class="label">♦</div>
+      </div>
+
+      <div class="slot small" data-type="home" data-index="2">
+        <div class="label">♣</div>
+      </div>
+
+      <div class="slot small" data-type="home" data-index="3">
+        <div class="label">♠</div>
+      </div>
+  <div class="hint" data-i18n="hintText">
+    Drag or click cards to move them. Double-click a card to move it to a foundation.
+  </div>    </div>
+
+    <div class="row" id="tableauRow">
+      <div class="stack" data-type="tableau" data-index="0"></div>
+      <div class="stack" data-type="tableau" data-index="1"></div>
+      <div class="stack" data-type="tableau" data-index="2"></div>
+      <div class="stack" data-type="tableau" data-index="3"></div>
+      <div class="stack" data-type="tableau" data-index="4"></div>
+      <div class="stack" data-type="tableau" data-index="5"></div>
+      <div class="stack" data-type="tableau" data-index="6"></div>
+      <div class="stack" data-type="tableau" data-index="7"></div>
     </div>
 
-    <div id="status"></div>
-  </header>
 
-  <div class="row" id="topRow">
-    <div class="slot small" data-type="free" data-index="0">
-      <div class="label" data-i18n="freeCell">Free</div> 1
-    </div>
-
-    <div class="slot small" data-type="free" data-index="1">
-      <div class="label" data-i18n="freeCell">Free</div> 2
-    </div>
-
-    <div class="slot small" data-type="free" data-index="2">
-      <div class="label" data-i18n="freeCell">Free</div> 3
-    </div>
-
-    <div class="slot small" data-type="free" data-index="3">
-      <div class="label" data-i18n="freeCell">Free</div> 4
-    </div>
-
-    <div style="width:24px"></div>
-
-    <div class="slot small" data-type="home" data-index="0">
-      <div class="label">♥</div>
-    </div>
-
-    <div class="slot small" data-type="home" data-index="1">
-      <div class="label">♦</div>
-    </div>
-
-    <div class="slot small" data-type="home" data-index="2">
-      <div class="label">♣</div>
-    </div>
-
-    <div class="slot small" data-type="home" data-index="3">
-      <div class="label">♠</div>
-    </div>
   </div>
 
-  <div class="row" id="tableauRow">
-    <div class="stack" data-type="tableau" data-index="0"></div>
-    <div class="stack" data-type="tableau" data-index="1"></div>
-    <div class="stack" data-type="tableau" data-index="2"></div>
-    <div class="stack" data-type="tableau" data-index="3"></div>
-    <div class="stack" data-type="tableau" data-index="4"></div>
-    <div class="stack" data-type="tableau" data-index="5"></div>
-    <div class="stack" data-type="tableau" data-index="6"></div>
-    <div class="stack" data-type="tableau" data-index="7"></div>
-  </div>
-
-  <footer>
-    <div class="hint" data-i18n="hintText">
-      Drag or click cards to move them. Double-click a card to move it to a foundation.
-    </div>
-
-  </footer>
-</div>
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

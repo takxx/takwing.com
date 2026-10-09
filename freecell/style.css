@@ -1,153 +1,263 @@
 /* Root tokens */
 :root {
---card-width: 88px;
---card-height: 116px;
---small-card-width: 68px;
---small-card-height: 92px;
---card-background: #eee;
---card-border: #aaa;
---card-red: #b00000;
---button-background: #222;
---button-hover: #333;
+  --card-ratio: 88 / 116;
+  --board-gap: clamp(5px, 1vw, 14px);
+  --card-overlap: clamp(18px, 3vw, 30px);
+
+  --card-background: #eee;
+  --card-border: #aaa;
+  --card-red: #b00000;
+
+  --button-background: #271f15;
+  --button-hover: #4d3e2b;
+
+  --board-max-width: 1120px;
 }
 
 /* Global reset */
+* {
+  box-sizing: border-box;
+}
 
-{ box-sizing: border-box; }
-html, body { height: 100%; }
-html { background: linear-gradient(180deg, #064 0%, #003 100%); }
+html,
 body {
-margin: 0;
-padding: 22px 14px 14px;
-color: #fff;
-background: linear-gradient(180deg, #064 0%, #003 100%);
-font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-overscroll-behavior: none;
-user-select: none;
--webkit-user-select: none;
-touch-action: pan-y;
+  height: 100%;
 }
-#board { max-width: 980px; margin: 0 auto; }
 
-/* Header / controls (kept minimal) */
-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-h1 { margin: 0; font-size: 18px; line-height: 1.2; }
-button, #langSelect {
-padding: 6px 10px;
-border: 0;
-border-radius: 6px;
-background: var(--button-background);
-color: #fff;
-font: inherit;
-cursor: pointer;
+html {
+  background: linear-gradient(180deg, #064 0%, #003 100%);
 }
-button:hover, #langSelect:hover { background: var(--button-hover); }
 
-/* Board layout */
-.row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+body {
+  margin: 0;
+  padding: clamp(12px, 2vw, 28px);
+  color: #fff;
+  background: linear-gradient(180deg, #064 0%, #003 100%);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
 
-/* Slots (free cells / foundations) */
+/* Board container: fluid on small screens, centered and capped on wide screens */
+#board {
+  width: min(100%, var(--board-max-width));
+  margin-inline: auto;
+}
+
+/* Header / controls */
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: clamp(10px, 1.5vw, 18px);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(18px, 2.4vw, 26px);
+  line-height: 1.2;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+button,
+#langSelect {
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--button-background);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover,
+#langSelect:hover {
+  background: var(--button-hover);
+}
+
+#status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  opacity: .9;
+}
+
+/* Board rows */
+.row {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--board-gap);
+  margin-bottom: var(--board-gap);
+}
+
+/* Top row: four free cells, a proportional divider, four foundations */
+#topRow {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr))
+    minmax(10px, 4%)
+    repeat(4, minmax(0, 1fr));
+}
+
+.top-row-spacer {
+  width: 100%;
+  min-height: 1px;
+}
+
+/* Slots: free cells and foundations */
 .slot {
-width: var(--card-width);
-height: var(--card-height);
-display: flex;
-align-items: center;
-justify-content: center;
-border-radius: 8px;
-background: rgba(255,255,255,.06);
-position: relative;
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--card-ratio);
+  display: grid;
+  place-items: center;
+  border-radius: clamp(6px, 1vw, 10px);
+  background: rgba(255, 255, 255, .06);
+  font-size: clamp(16px, 2.2vw, 26px);
+  font-weight: 700;
 }
-.slot.small { width: var(--small-card-width); height: var(--small-card-height); }
 
-/* Card stack & cards */
+.slot .label {
+  position: absolute;
+  top: 8%;
+  left: 8%;
+  font-size: clamp(10px, 1.5vw, 14px);
+  font-weight: 600;
+  opacity: .7;
+}
+
+/* Tableau stacks */
 .stack {
-position: relative;
-width: 92px;
-height: 420px;
-contain: layout;
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--card-ratio);
+  min-height: calc(100% );
+  border-radius: clamp(6px, 1vw, 10px);
+  background: rgba(255, 255, 255, .04);
+  contain: layout;
 }
+
+/* Cards */
 .card {
-position: absolute;
-top: 0;
-left: 0;
-width: var(--card-width);
-height: var(--card-height);
-padding: 6px;
-display: flex;
-flex-direction: column;
-color: #000;
-background: var(--card-background);
-border: 1px solid var(--card-border);
-border-radius: 8px;
-box-shadow: 0 6px 14px rgba(0,0,0,.45);
-font-weight: 600;
-cursor: pointer;
-touch-action: none;
-contain: layout style;
-will-change: left, top, transform;
-/* Childs respond to card width for responsive sizing */
-container-type: inline-size;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  aspect-ratio: var(--card-ratio);
+  padding: clamp(4px, 1vw, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: clamp(6px, 1vw, 10px);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .4);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: none;
+  contain: layout style;
+  will-change: left, top, transform;
+  container-type: inline-size;
 }
-.card.red { color: var(--card-red); }
 
-/* Top rank (left/top) */
+.card.red {
+  color: var(--card-red);
+}
+
+/* Card rank and suit scale with the rendered card width */
 .card .top {
-position: absolute;
-top: 6px;
-left: 6px;
-z-index: 1;
-font-size: clamp(12px, 14cqw, 18px);
-font-weight: 700;
-line-height: 1;
+  position: absolute;
+  top: 6%;
+  left: 7%;
+  z-index: 1;
+  font-size: clamp(11px, 15cqw, 20px);
+  font-weight: 700;
+  line-height: 1;
 }
 
-/* Center suit grows with card width */
 .card .suit {
-display: flex;
-align-items: center;
-justify-content: center;
-flex: 1 1 auto;
-font-size: clamp(30px, 42cqw, 82px);
-font-weight: 400;
-line-height: .85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  font-size: clamp(28px, 42cqw, 82px);
+  font-weight: 400;
+  line-height: .85;
 }
 
-/* Bottom rank (rotated, for upside-down readability) */
 .card .bottom {
-position: absolute;
-right: 6px;
-bottom: 6px;
-z-index: 1;
-font-size: clamp(12px, 14cqw, 18px);
-font-weight: 700;
-transform: rotate(180deg);
-transform-origin: center;
+  position: absolute;
+  right: 7%;
+  bottom: 6%;
+  z-index: 1;
+  font-size: clamp(11px, 15cqw, 20px);
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(180deg);
+  transform-origin: center;
 }
 
-/* Drag helpers (optional) */
+/* Drag helpers */
 .drag-ghost {
-z-index: 9999;
-margin: 0;
-opacity: .9;
-cursor: grabbing;
-pointer-events: none;
-will-change: left, top;
-}
-.dragging-source { opacity: .25; }
-
-/* Footer / hints (optional) */
-footer { margin-top: 18px; font-size: 13px; opacity: .9; }
-
-/* Small screens: allow card width to adapt, keep suit responsive */
-@media (max-width: 760px) {
-:root { --card-overlap: 24px; }
-body { padding: 18px 14px 14px; }
-.slot.small { width: calc((100vw - 42px) / 8); }
-.stack { width: calc((100vw - 42px) / 8); }
-.stack .card { width: calc((100vw - 50px) / 8); }
-.card { font-size: 11px; }
-/* Do not force fixed suit size here; it scales with cqw via .suit */
+  z-index: 9999;
+  margin: 0;
+  opacity: .9;
+  cursor: grabbing;
+  pointer-events: none;
+  will-change: left, top;
 }
 
-/* Accessibility: hide decorative elements from screen readers when needed; kept minimal in markup changes */
-[aria-hidden="true"] { /* no-op placeholder if needed later */ }
+.dragging-source {
+  opacity: .25;
+}
+
+/* Footer */
+footer {
+  margin: 0;
+  font-size: clamp(12px, 1.5vw, 14px);
+  line-height: 1.45;
+  opacity: .9;
+  text-align: center;
+}
+
+/* Overlay the hint across the free-cell and foundation slots. */
+#topRow {
+  position: relative;
+}
+
+#topRow + #tableauRow + footer {
+  /* Not a sibling selector match: footer is inside #board, not after #tableauRow. */
+}
+
+/* Accessibility */
+[aria-hidden="true"] {
+  /* Intentional no-op placeholder */
+}
+
+#topRow {
+  position: relative;
+}
+
+#topRow .hint {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.2);
+  left: 0;
+  right: 0;
+  top: 60%;
+  transform: translateY(-50%);
+  z-index: 0;
+  text-align: center;
+  pointer-events: none;
+}
