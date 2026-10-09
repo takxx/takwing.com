@@ -26,10 +26,10 @@ const CREDITS_STORAGE_KEY =
 
 const symbols = [
   { icon: "🐚", payout: 5, name: "shell" },
-  { icon: "🐢", payout: 8, name: "turtle" },
-  { icon: "🦑", payout: 18, name: "cuttlefish" },
-  { icon: "🐠", payout: 28, name: "fish" },
-  { icon: "🪸", payout: 38, name: "coral" },
+  { icon: "🦑", payout: 8, name: "cuttlefish" },
+  { icon: "🐠", payout: 18, name: "fish" },
+  { icon: "🪸", payout: 28, name: "coral" },
+  { icon: "🐢", payout: 38, name: "turtle" },
   { icon: "🪎", payout: 88, name: "treasure" }
 ];
 
