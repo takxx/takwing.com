@@ -29,20 +29,11 @@ const DYNAMITE_POINTS_TIMED = 100;
 const DYNAMITE_CASCADE_LEVEL = 5;
 const MAX_PENDING_DYNAMITES = 2;
 
-const LANGUAGE_STORAGE_KEY =
-  "sea-matches-language";
+const LANGUAGE_STORAGE_KEY = "sea-matches-language";
+const BEST_RELAXED_STORAGE_KEY = "seaMatchesBestRelaxed";
+const BEST_TIMED_STORAGE_KEY = "seaMatchesBestTimed";
 
-const BEST_RELAXED_STORAGE_KEY =
-  "seaMatchesBestRelaxed";
-
-const BEST_TIMED_STORAGE_KEY =
-  "seaMatchesBestTimed";
-
-const SUPPORTED_LANGUAGES = [
-  "en",
-  "es",
-  "zh-TW"
-];
+const SUPPORTED_LANGUAGES = ["en", "es", "zh-TW"];
 
 const URL_LANGUAGE_MAP = {
   en: "en",
@@ -129,38 +120,17 @@ const translations = {
    DOM references
 ------------------------------------------------------------------ */
 
-const boardElement =
-  document.getElementById("board");
-
-const scoreElement =
-  document.getElementById("score");
-
-const movesElement =
-  document.getElementById("moves");
-
-const messageElement =
-  document.getElementById("message");
-
-const newGameButton =
-  document.getElementById("newGame");
-
-const hintButton =
-  document.getElementById("hintButton");
-
-const languageSelect =
-  document.getElementById("languageSelect");
-
-const modeSelect =
-  document.getElementById("modeSelect");
-
-const timerWrap =
-  document.getElementById("timerWrap");
-
-const timerElement =
-  document.getElementById("timer");
-
-const bestScoreElement =
-  document.getElementById("bestScore");
+const boardElement = document.getElementById("board");
+const scoreElement = document.getElementById("score");
+const movesElement = document.getElementById("moves");
+const messageElement = document.getElementById("message");
+const newGameButton = document.getElementById("newGame");
+const hintButton = document.getElementById("hintButton");
+const languageSelect = document.getElementById("languageSelect");
+const modeSelect = document.getElementById("modeSelect");
+const timerWrap = document.getElementById("timerWrap");
+const timerElement = document.getElementById("timer");
+const bestScoreElement = document.getElementById("bestScore");
 
 /* ------------------------------------------------------------------
    State
@@ -174,7 +144,6 @@ let busy = false;
 let gameOverShown = false;
 
 let currentLanguage = "en";
-
 let pointerStart = null;
 let audioContext = null;
 let hintCells = [];
@@ -190,10 +159,7 @@ let bestScoreTimed = 0;
 let resizeTimeout = null;
 let reshuffleCheckInterval = null;
 
-// Score progress toward the next score-based dynamite.
 let pointsSinceLastDynamite = 0;
-
-// FIFO queue for pending dynamites.
 let pendingDynamites = [];
 
 /* ------------------------------------------------------------------
@@ -203,10 +169,7 @@ let pendingDynamites = [];
 function readStorage(key, fallback = null) {
   try {
     const value = localStorage.getItem(key);
-
-    return value === null
-      ? fallback
-      : value;
+    return value === null ? fallback : value;
   } catch {
     return fallback;
   }
@@ -216,21 +179,15 @@ function writeStorage(key, value) {
   try {
     localStorage.setItem(key, String(value));
   } catch {
-    /*
-      The game continues to work for the current session
-      if storage is disabled or unavailable.
-    */
+    /* Storage may be unavailable; game continues normally. */
   }
 }
 
 function readScore(key) {
   const value = Number(readStorage(key, "0"));
-
-  if (!Number.isFinite(value) || value < 0) {
-    return 0;
-  }
-
-  return Math.floor(value);
+  return Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : 0;
 }
 
 /* ------------------------------------------------------------------
@@ -238,26 +195,13 @@ function readScore(key) {
 ------------------------------------------------------------------ */
 
 function updateBoardSize() {
-  const isPortrait =
-    window.innerHeight > window.innerWidth;
+  const isPortrait = window.innerHeight > window.innerWidth;
 
-  if (isPortrait) {
-    ROWS = 10;
-    COLS = 7;
-  } else {
-    ROWS = 7;
-    COLS = 10;
-  }
+  ROWS = isPortrait ? 10 : 7;
+  COLS = isPortrait ? 7 : 10;
 
-  document.documentElement.style.setProperty(
-    "--rows",
-    String(ROWS)
-  );
-
-  document.documentElement.style.setProperty(
-    "--cols",
-    String(COLS)
-  );
+  document.documentElement.style.setProperty("--rows", String(ROWS));
+  document.documentElement.style.setProperty("--cols", String(COLS));
 }
 
 /* ------------------------------------------------------------------
@@ -265,31 +209,20 @@ function updateBoardSize() {
 ------------------------------------------------------------------ */
 
 function getQueryLanguage() {
-  const params = new URLSearchParams(
-    window.location.search
-  );
-
-  const requestedLanguage =
-    params.get("lang")?.trim().toLowerCase();
-
-  return URL_LANGUAGE_MAP[requestedLanguage] || null;
+  const params = new URLSearchParams(window.location.search);
+  const requested = params.get("lang")?.trim().toLowerCase();
+  return URL_LANGUAGE_MAP[requested] || null;
 }
 
 function getSavedLanguage() {
-  const savedLanguage = readStorage(
-    LANGUAGE_STORAGE_KEY
-  );
-
-  return SUPPORTED_LANGUAGES.includes(savedLanguage)
-    ? savedLanguage
-    : null;
+  const saved = readStorage(LANGUAGE_STORAGE_KEY);
+  return SUPPORTED_LANGUAGES.includes(saved) ? saved : null;
 }
 
 function getBrowserLanguage() {
-  const browserLanguages =
-    navigator.languages?.length
-      ? navigator.languages
-      : [navigator.language];
+  const browserLanguages = navigator.languages?.length
+    ? navigator.languages
+    : [navigator.language];
 
   for (const language of browserLanguages) {
     const normalized = String(language)
@@ -304,16 +237,7 @@ function getBrowserLanguage() {
       normalized.startsWith("zh-tw-") ||
       normalized.startsWith("zh-hk-") ||
       normalized.startsWith("zh-mo-") ||
-      normalized.startsWith("zh-hant-")
-    ) {
-      return "zh-TW";
-    }
-
-    /*
-      Your only Chinese translation is Traditional Chinese,
-      so Simplified Chinese also falls back to zh-TW.
-    */
-    if (
+      normalized.startsWith("zh-hant-") ||
       normalized === "zh-cn" ||
       normalized === "zh-hans" ||
       normalized.startsWith("zh-cn-") ||
@@ -322,17 +246,11 @@ function getBrowserLanguage() {
       return "zh-TW";
     }
 
-    if (
-      normalized === "es" ||
-      normalized.startsWith("es-")
-    ) {
+    if (normalized === "es" || normalized.startsWith("es-")) {
       return "es";
     }
 
-    if (
-      normalized === "en" ||
-      normalized.startsWith("en-")
-    ) {
+    if (normalized === "en" || normalized.startsWith("en-")) {
       return "en";
     }
   }
@@ -341,19 +259,11 @@ function getBrowserLanguage() {
 }
 
 function getInitialLanguage() {
-  return (
-    getQueryLanguage() ||
-    getSavedLanguage() ||
-    getBrowserLanguage() ||
-    "en"
-  );
+  return getQueryLanguage() || getSavedLanguage() || getBrowserLanguage();
 }
 
 function translate(key, ...args) {
-  const language =
-    translations[currentLanguage] ||
-    translations.en;
-
+  const language = translations[currentLanguage] || translations.en;
   const value = language[key];
 
   if (typeof value === "function") {
@@ -364,24 +274,18 @@ function translate(key, ...args) {
 }
 
 function setLanguage(language) {
-  currentLanguage =
-    SUPPORTED_LANGUAGES.includes(language)
-      ? language
-      : "en";
+  currentLanguage = SUPPORTED_LANGUAGES.includes(language)
+    ? language
+    : "en";
 
-  writeStorage(
-    LANGUAGE_STORAGE_KEY,
-    currentLanguage
-  );
+  writeStorage(LANGUAGE_STORAGE_KEY, currentLanguage);
 
   if (languageSelect) {
     languageSelect.value = currentLanguage;
   }
 
   document.documentElement.lang =
-    currentLanguage === "zh-TW"
-      ? "zh-Hant"
-      : currentLanguage;
+    currentLanguage === "zh-TW" ? "zh-Hant" : currentLanguage;
 
   document.documentElement.classList.remove(
     "lang-en",
@@ -393,40 +297,22 @@ function setLanguage(language) {
     `lang-${currentLanguage.toLowerCase()}`
   );
 
-  document.querySelectorAll("[data-i18n]")
-    .forEach(element => {
-      const key = element.dataset.i18n;
-      const translation =
-        translations[currentLanguage][key];
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    const key = element.dataset.i18n;
+    const translation = translations[currentLanguage][key];
 
-      /*
-        Function translations, such as match(count),
-        are updated when they are used by the game.
-        Static HTML translations are applied here.
-      */
-      if (typeof translation === "string") {
-        element.textContent = translation;
-      }
-    });
+    if (typeof translation === "string") {
+      element.textContent = translation;
+    }
+  });
 
-  if (
-    modeSelect &&
-    modeSelect.options.length >= 2
-  ) {
-    modeSelect.options[0].textContent =
-      translate("modeRelaxed");
-
-    modeSelect.options[1].textContent =
-      translate("modeTimed");
+  if (modeSelect && modeSelect.options.length >= 2) {
+    modeSelect.options[0].textContent = translate("modeRelaxed");
+    modeSelect.options[1].textContent = translate("modeTimed");
   }
 
-  if (
-    !busy &&
-    !gameOverShown &&
-    messageElement
-  ) {
-    messageElement.textContent =
-      translate("instructions");
+  if (!busy && !gameOverShown && messageElement) {
+    messageElement.textContent = translate("instructions");
   }
 }
 
@@ -437,8 +323,7 @@ function setLanguage(language) {
 function getAudioContext() {
   if (!audioContext) {
     const AudioContextClass =
-      window.AudioContext ||
-      window.webkitAudioContext;
+      window.AudioContext || window.webkitAudioContext;
 
     if (!AudioContextClass) {
       return null;
@@ -461,43 +346,21 @@ function playMatchSound(index = 0) {
     context.resume().catch(() => {});
   }
 
-  const oscillator =
-    context.createOscillator();
-
-  const gain =
-    context.createGain();
-
-  const startTime =
-    context.currentTime + index * 0.075;
-
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const startTime = context.currentTime + index * 0.075;
   const frequency = 520 + index * 55;
 
   oscillator.type = "sine";
-
-  oscillator.frequency.setValueAtTime(
-    frequency,
-    startTime
-  );
-
+  oscillator.frequency.setValueAtTime(frequency, startTime);
   oscillator.frequency.exponentialRampToValueAtTime(
     frequency * 1.35,
     startTime + 0.11
   );
 
-  gain.gain.setValueAtTime(
-    0.0001,
-    startTime
-  );
-
-  gain.gain.exponentialRampToValueAtTime(
-    0.16,
-    startTime + 0.015
-  );
-
-  gain.gain.exponentialRampToValueAtTime(
-    0.0001,
-    startTime + 0.14
-  );
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.16, startTime + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.14);
 
   oscillator.connect(gain);
   gain.connect(context.destination);
@@ -507,16 +370,9 @@ function playMatchSound(index = 0) {
 }
 
 function playMatchSounds(numberOfMatchedAnimals) {
-  const soundCount = Math.max(
-    1,
-    numberOfMatchedAnimals - 2
-  );
+  const soundCount = Math.max(1, numberOfMatchedAnimals - 2);
 
-  for (
-    let index = 0;
-    index < soundCount;
-    index++
-  ) {
+  for (let index = 0; index < soundCount; index++) {
     playMatchSound(index);
   }
 }
@@ -534,38 +390,16 @@ function playDynamiteSound() {
 
   const time = context.currentTime;
 
-  const oscillator =
-    context.createOscillator();
-
-  const oscillatorGain =
-    context.createGain();
+  const oscillator = context.createOscillator();
+  const oscillatorGain = context.createGain();
 
   oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(90, time);
+  oscillator.frequency.exponentialRampToValueAtTime(40, time + 0.35);
 
-  oscillator.frequency.setValueAtTime(
-    90,
-    time
-  );
-
-  oscillator.frequency.exponentialRampToValueAtTime(
-    40,
-    time + 0.35
-  );
-
-  oscillatorGain.gain.setValueAtTime(
-    0.0001,
-    time
-  );
-
-  oscillatorGain.gain.exponentialRampToValueAtTime(
-    0.25,
-    time + 0.02
-  );
-
-  oscillatorGain.gain.exponentialRampToValueAtTime(
-    0.0001,
-    time + 0.35
-  );
+  oscillatorGain.gain.setValueAtTime(0.0001, time);
+  oscillatorGain.gain.exponentialRampToValueAtTime(0.25, time + 0.02);
+  oscillatorGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.35);
 
   oscillator.connect(oscillatorGain);
   oscillatorGain.connect(context.destination);
@@ -573,62 +407,26 @@ function playDynamiteSound() {
   oscillator.start(time);
   oscillator.stop(time + 0.36);
 
-  const bufferSize =
-    context.sampleRate * 0.4;
-
-  const buffer = context.createBuffer(
-    1,
-    bufferSize,
-    context.sampleRate
-  );
-
+  const bufferSize = context.sampleRate * 0.4;
+  const buffer = context.createBuffer(1, bufferSize, context.sampleRate);
   const data = buffer.getChannelData(0);
 
-  for (
-    let index = 0;
-    index < bufferSize;
-    index++
-  ) {
+  for (let index = 0; index < bufferSize; index++) {
     data[index] = Math.random() * 2 - 1;
   }
 
-  const noise =
-    context.createBufferSource();
+  const noise = context.createBufferSource();
+  const noiseFilter = context.createBiquadFilter();
+  const noiseGain = context.createGain();
 
   noise.buffer = buffer;
-
-  const noiseFilter =
-    context.createBiquadFilter();
-
   noiseFilter.type = "lowpass";
+  noiseFilter.frequency.setValueAtTime(900, time);
+  noiseFilter.frequency.exponentialRampToValueAtTime(120, time + 0.3);
 
-  noiseFilter.frequency.setValueAtTime(
-    900,
-    time
-  );
-
-  noiseFilter.frequency.exponentialRampToValueAtTime(
-    120,
-    time + 0.3
-  );
-
-  const noiseGain =
-    context.createGain();
-
-  noiseGain.gain.setValueAtTime(
-    0.0001,
-    time
-  );
-
-  noiseGain.gain.exponentialRampToValueAtTime(
-    0.22,
-    time + 0.01
-  );
-
-  noiseGain.gain.exponentialRampToValueAtTime(
-    0.0001,
-    time + 0.35
-  );
+  noiseGain.gain.setValueAtTime(0.0001, time);
+  noiseGain.gain.exponentialRampToValueAtTime(0.22, time + 0.01);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.35);
 
   noise.connect(noiseFilter);
   noiseFilter.connect(noiseGain);
@@ -647,9 +445,7 @@ function playDynamiteSound() {
 ------------------------------------------------------------------ */
 
 function randomAnimal() {
-  return animals[
-    Math.floor(Math.random() * animals.length)
-  ];
+  return animals[Math.floor(Math.random() * animals.length)];
 }
 
 function wait(milliseconds) {
@@ -671,25 +467,15 @@ function updateBestScore() {
 
   if (gameMode === "relaxed") {
     bestScoreRelaxed = score;
-
-    writeStorage(
-      BEST_RELAXED_STORAGE_KEY,
-      bestScoreRelaxed
-    );
+    writeStorage(BEST_RELAXED_STORAGE_KEY, bestScoreRelaxed);
   } else {
     bestScoreTimed = score;
-
-    writeStorage(
-      BEST_TIMED_STORAGE_KEY,
-      bestScoreTimed
-    );
+    writeStorage(BEST_TIMED_STORAGE_KEY, bestScoreTimed);
   }
 }
 
 function formatTime(seconds) {
-  return String(
-    Math.max(0, Math.ceil(seconds))
-  ).padStart(2, "0");
+  return String(Math.max(0, Math.ceil(seconds))).padStart(2, "0");
 }
 
 function updateTimerDisplay() {
@@ -699,26 +485,18 @@ function updateTimerDisplay() {
 
   if (gameMode === "timed") {
     timerWrap.hidden = false;
-    timerElement.textContent =
-      formatTime(timeLeft);
+    timerElement.textContent = formatTime(timeLeft);
   } else {
     timerWrap.hidden = true;
   }
 }
 
 function addTime(seconds) {
-  if (
-    gameMode !== "timed" ||
-    gameOverShown ||
-    seconds <= 0
-  ) {
+  if (gameMode !== "timed" || gameOverShown || seconds <= 0) {
     return;
   }
 
-  timeLeft = Math.min(
-    TIMED_MAX_SECONDS,
-    timeLeft + seconds
-  );
+  timeLeft = Math.min(TIMED_MAX_SECONDS, timeLeft + seconds);
 
   if (timerEndTime !== null) {
     timerEndTime += seconds * 1000;
@@ -728,16 +506,11 @@ function addTime(seconds) {
 }
 
 function scheduleTimerTick() {
-  if (
-    gameMode !== "timed" ||
-    gameOverShown ||
-    timerEndTime === null
-  ) {
+  if (gameMode !== "timed" || gameOverShown || timerEndTime === null) {
     return;
   }
 
-  const millisecondsRemaining =
-    timerEndTime - Date.now();
+  const millisecondsRemaining = timerEndTime - Date.now();
 
   if (millisecondsRemaining <= 0) {
     timeLeft = 0;
@@ -746,18 +519,11 @@ function scheduleTimerTick() {
     return;
   }
 
-  timeLeft =
-    millisecondsRemaining / 1000;
-
+  timeLeft = millisecondsRemaining / 1000;
   updateTimerDisplay();
 
-  const nextUpdate =
-    millisecondsRemaining % 1000 || 1000;
-
-  timerTimeout = setTimeout(
-    scheduleTimerTick,
-    nextUpdate
-  );
+  const nextUpdate = millisecondsRemaining % 1000 || 1000;
+  timerTimeout = setTimeout(scheduleTimerTick, nextUpdate);
 }
 
 function startTimer() {
@@ -768,10 +534,7 @@ function startTimer() {
   }
 
   timeLeft = TIMED_START_SECONDS;
-
-  timerEndTime =
-    Date.now() +
-    TIMED_START_SECONDS * 1000;
+  timerEndTime = Date.now() + TIMED_START_SECONDS * 1000;
 
   updateTimerDisplay();
   scheduleTimerTick();
@@ -803,10 +566,7 @@ function createBoard() {
   do {
     board = Array.from(
       { length: ROWS },
-      () => Array.from(
-        { length: COLS },
-        randomAnimal
-      )
+      () => Array.from({ length: COLS }, randomAnimal)
     );
   } while (findMatches().size > 0);
 
@@ -822,8 +582,7 @@ function render() {
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
-      const cell =
-        document.createElement("button");
+      const cell = document.createElement("button");
 
       cell.type = "button";
       cell.className = "cell";
@@ -831,7 +590,6 @@ function render() {
       cell.dataset.col = col;
 
       const value = board[row][col];
-
       cell.textContent = value || "";
 
       cell.setAttribute(
@@ -859,14 +617,11 @@ function render() {
         cell.classList.add("selected");
       }
 
-      const isHintCell = hintCells.some(hint => {
-        return (
-          hint.row === row &&
-          hint.col === col
-        );
-      });
-
-      if (isHintCell) {
+      if (
+        hintCells.some(
+          hint => hint.row === row && hint.col === col
+        )
+      ) {
         cell.classList.add("hint");
       }
 
@@ -883,8 +638,7 @@ function render() {
   }
 
   if (bestScoreElement) {
-    bestScoreElement.textContent =
-      getBestScore();
+    bestScoreElement.textContent = getBestScore();
   }
 
   updateTimerDisplay();
@@ -917,10 +671,7 @@ function findMatches() {
         board[row][col] === board[row][start];
 
       if (!same) {
-        if (
-          col - start >= 3 &&
-          board[row][start]
-        ) {
+        if (col - start >= 3 && board[row][start]) {
           for (let x = start; x < col; x++) {
             matches.add(`${row},${x}`);
           }
@@ -941,10 +692,7 @@ function findMatches() {
         board[row][col] === board[start][col];
 
       if (!same) {
-        if (
-          row - start >= 3 &&
-          board[start][col]
-        ) {
+        if (row - start >= 3 && board[start][col]) {
           for (let y = start; y < row; y++) {
             matches.add(`${y},${col}`);
           }
@@ -963,10 +711,7 @@ function findMatches() {
 ------------------------------------------------------------------ */
 
 function queueDynamite() {
-  if (
-    pendingDynamites.length >=
-    MAX_PENDING_DYNAMITES
-  ) {
+  if (pendingDynamites.length >= MAX_PENDING_DYNAMITES) {
     return;
   }
 
@@ -995,14 +740,12 @@ function placePendingDynamites() {
       return;
     }
 
-    const randomIndex = Math.floor(
-      Math.random() * emptyCells.length
-    );
+    const cell =
+      emptyCells[
+        Math.floor(Math.random() * emptyCells.length)
+      ];
 
-    const cell = emptyCells[randomIndex];
-
-    board[cell.row][cell.col] =
-      pendingDynamites.shift();
+    board[cell.row][cell.col] = pendingDynamites.shift();
   }
 }
 
@@ -1017,11 +760,8 @@ function collapseColumns() {
     }
 
     for (let row = ROWS - 1; row >= 0; row--) {
-      const indexFromBottom =
-        ROWS - 1 - row;
-
-      board[row][col] =
-        remaining[indexFromBottom] ?? null;
+      const indexFromBottom = ROWS - 1 - row;
+      board[row][col] = remaining[indexFromBottom] ?? null;
     }
   }
 }
@@ -1047,11 +787,7 @@ function refillBoard() {
 ------------------------------------------------------------------ */
 
 function scoreForMatch(count, cascadeLevel) {
-  const basePoints = Math.max(
-    1,
-    count - 2
-  );
-
+  const basePoints = Math.max(1, count - 2);
   return basePoints * cascadeLevel;
 }
 
@@ -1073,9 +809,7 @@ function addScore(points) {
       ? DYNAMITE_POINTS_TIMED
       : DYNAMITE_POINTS_RELAXED;
 
-  while (
-    pointsSinceLastDynamite >= threshold
-  ) {
+  while (pointsSinceLastDynamite >= threshold) {
     pointsSinceLastDynamite -= threshold;
     queueDynamite();
   }
@@ -1100,33 +834,24 @@ async function resolveMatches() {
 
     playMatchSounds(matches.size);
 
-    const cells = [
-      ...document.querySelectorAll(".cell")
-    ];
+    const cells = [...document.querySelectorAll(".cell")];
 
     for (const match of matches) {
-      const [row, col] =
-        match.split(",").map(Number);
-
-      const index = row * COLS + col;
-
-      cells[index]?.classList.add("matched");
+      const [row, col] = match.split(",").map(Number);
+      cells[row * COLS + col]?.classList.add("matched");
     }
 
-    pointsThisMove += scoreForMatch(
-      matches.size,
-      cascadeLevel
-    );
+    pointsThisMove += scoreForMatch(matches.size, cascadeLevel);
 
-    messageElement.textContent =
-      translate("match", matches.size);
+    if (messageElement) {
+      messageElement.textContent =
+        translate("match", matches.size);
+    }
 
     await wait(300);
 
     for (const match of matches) {
-      const [row, col] =
-        match.split(",").map(Number);
-
+      const [row, col] = match.split(",").map(Number);
       board[row][col] = null;
     }
 
@@ -1141,32 +866,12 @@ async function resolveMatches() {
   if (pointsThisMove > 0) {
     addScore(pointsThisMove);
 
-    if (
-      cascadeLevel >= DYNAMITE_CASCADE_LEVEL
-    ) {
+    if (cascadeLevel >= DYNAMITE_CASCADE_LEVEL) {
       queueDynamite();
     }
 
     refillBoard();
     render();
-  }
-
-  if (!findPossibleMove()) {
-    if (
-      gameMode === "relaxed" &&
-      !boardHasDynamite()
-    ) {
-      showGameOver();
-      return;
-    }
-
-    reshuffleBoard();
-    return;
-  }
-
-  if (!gameOverShown) {
-    messageElement.textContent =
-      translate("instructions");
   }
 }
 
@@ -1186,43 +891,46 @@ function boardHasDynamite() {
   return false;
 }
 
-function triggerDynamiteExplosion(
-  row,
-  col,
-  explodedSet
-) {
+function clearCell(row, col, explodedSet) {
+  const key = `${row},${col}`;
+
+  if (
+    explodedSet.has(key) ||
+    row < 0 ||
+    row >= ROWS ||
+    col < 0 ||
+    col >= COLS ||
+    !board[row][col]
+  ) {
+    return false;
+  }
+
+  explodedSet.add(key);
+  board[row][col] = null;
+
+  return true;
+}
+
+function triggerDynamiteExplosion(row, col, explodedSet) {
   const toExplode = [{ row, col }];
   let totalCleared = 0;
 
   while (toExplode.length > 0) {
     const current = toExplode.pop();
-
-    const currentKey =
-      `${current.row},${current.col}`;
+    const currentKey = `${current.row},${current.col}`;
 
     if (explodedSet.has(currentKey)) {
       continue;
     }
 
-    explodedSet.add(currentKey);
-
-    const currentValue =
-      board[current.row][current.col];
-
-    if (!currentValue) {
-      continue;
+    if (clearCell(current.row, current.col, explodedSet)) {
+      totalCleared++;
     }
-
-    board[current.row][current.col] = null;
-    totalCleared++;
 
     for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
       for (let colOffset = -1; colOffset <= 1; colOffset++) {
-        const neighborRow =
-          current.row + rowOffset;
-
-        const neighborCol =
-          current.col + colOffset;
+        const neighborRow = current.row + rowOffset;
+        const neighborCol = current.col + colOffset;
 
         if (
           neighborRow < 0 ||
@@ -1233,23 +941,17 @@ function triggerDynamiteExplosion(
           continue;
         }
 
-        const neighborKey =
-          `${neighborRow},${neighborCol}`;
+        const neighborKey = `${neighborRow},${neighborCol}`;
 
         if (explodedSet.has(neighborKey)) {
           continue;
         }
 
-        const neighborValue =
-          board[neighborRow][neighborCol];
+        const neighborValue = board[neighborRow][neighborCol];
 
-        if (!neighborValue) {
-          continue;
+        if (clearCell(neighborRow, neighborCol, explodedSet)) {
+          totalCleared++;
         }
-
-        explodedSet.add(neighborKey);
-        board[neighborRow][neighborCol] = null;
-        totalCleared++;
 
         if (neighborValue === DYNAMITE) {
           toExplode.push({
@@ -1283,21 +985,26 @@ function clearEntireBoard() {
    Explosion resolution
 ------------------------------------------------------------------ */
 
-async function resolveExplosion(
-  cleared,
-  message
-) {
+async function resolveExplosion(cleared, message) {
   addScore(cleared);
 
-  messageElement.textContent = message;
-  render();
+  if (messageElement) {
+    messageElement.textContent = message;
+  }
 
+  render();
   await wait(250);
 
   refillBoard();
   render();
-
   await wait(180);
+
+  /*
+    This is the important fix:
+    refilled animals may create new groups of 3 or more.
+    Resolve those matches before checking for game over.
+  */
+  await resolveMatches();
 
   await checkAfterExplosion();
 }
@@ -1307,21 +1014,14 @@ async function resolveExplosion(
 ------------------------------------------------------------------ */
 
 async function attemptSwap(first, second) {
-  const firstValue =
-    board[first.row][first.col];
+  const firstValue = board[first.row][first.col];
+  const secondValue = board[second.row][second.col];
 
-  const secondValue =
-    board[second.row][second.col];
-
-  if (
-    firstValue === DYNAMITE &&
-    secondValue === DYNAMITE
-  ) {
+  if (firstValue === DYNAMITE && secondValue === DYNAMITE) {
     swap(first, second);
     render();
 
     await wait(150);
-
     playDynamiteSound();
 
     const cleared = clearEntireBoard();
@@ -1334,76 +1034,30 @@ async function attemptSwap(first, second) {
     return;
   }
 
-  if (
-    firstValue === DYNAMITE &&
-    secondValue !== DYNAMITE
-  ) {
+  if (firstValue === DYNAMITE || secondValue === DYNAMITE) {
+    const dynamiteCell = firstValue === DYNAMITE ? first : second;
+    const animalCell = firstValue === DYNAMITE ? second : first;
+    const animalValue =
+      firstValue === DYNAMITE ? secondValue : firstValue;
+
     swap(first, second);
     render();
 
     await wait(150);
-
     playDynamiteSound();
 
     const explodedSet = new Set();
 
     triggerDynamiteExplosion(
-      second.row,
-      second.col,
+      dynamiteCell.row,
+      dynamiteCell.col,
       explodedSet
     );
 
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
-        if (board[row][col] === secondValue) {
-          const key = `${row},${col}`;
-
-          if (!explodedSet.has(key)) {
-            explodedSet.add(key);
-            board[row][col] = null;
-          }
-        }
-      }
-    }
-
-    const cleared = explodedSet.size;
-
-    await resolveExplosion(
-      cleared,
-      translate("dynamiteCleared", cleared)
-    );
-
-    return;
-  }
-
-  if (
-    secondValue === DYNAMITE &&
-    firstValue !== DYNAMITE
-  ) {
-    swap(first, second);
-    render();
-
-    await wait(150);
-
-    playDynamiteSound();
-
-    const explodedSet = new Set();
-
-    triggerDynamiteExplosion(
-      first.row,
-      first.col,
-      explodedSet
-    );
-
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        if (board[row][col] === firstValue) {
-          const key = `${row},${col}`;
-
-          if (!explodedSet.has(key)) {
-            explodedSet.add(key);
-            board[row][col] = null;
-          }
+        if (board[row][col] === animalValue) {
+          clearCell(row, col, explodedSet);
         }
       }
     }
@@ -1427,23 +1081,27 @@ async function attemptSwap(first, second) {
     swap(first, second);
     moves--;
 
-    messageElement.textContent =
-      translate("invalidSwap");
+    if (messageElement) {
+      messageElement.textContent = translate("invalidSwap");
+    }
 
     render();
-  } else {
-    await resolveMatches();
+    busy = false;
+    return;
   }
 
-  busy = false;
+  await resolveMatches();
+  await checkAfterExplosion();
 }
 
 async function checkAfterExplosion() {
+  if (gameOverShown) {
+    busy = false;
+    return;
+  }
+
   if (!findPossibleMove()) {
-    if (
-      gameMode === "relaxed" &&
-      !boardHasDynamite()
-    ) {
+    if (gameMode === "relaxed" && !boardHasDynamite()) {
       showGameOver();
       busy = false;
       return;
@@ -1456,8 +1114,9 @@ async function checkAfterExplosion() {
 
   busy = false;
 
-  messageElement.textContent =
-    translate("instructions");
+  if (messageElement) {
+    messageElement.textContent = translate("instructions");
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -1465,11 +1124,11 @@ async function checkAfterExplosion() {
 ------------------------------------------------------------------ */
 
 function areNeighbors(first, second) {
-  const distance =
+  return (
     Math.abs(first.row - second.row) +
-    Math.abs(first.col - second.col);
-
-  return distance === 1;
+      Math.abs(first.col - second.col) ===
+    1
+  );
 }
 
 async function handleDynamiteClick(row, col) {
@@ -1478,16 +1137,10 @@ async function handleDynamiteClick(row, col) {
   }
 
   busy = true;
-
   playDynamiteSound();
 
   const explodedSet = new Set();
-
-  const cleared = triggerDynamiteExplosion(
-    row,
-    col,
-    explodedSet
-  );
+  const cleared = triggerDynamiteExplosion(row, col, explodedSet);
 
   await resolveExplosion(
     cleared,
@@ -1496,7 +1149,7 @@ async function handleDynamiteClick(row, col) {
 }
 
 function handleTap(row, col) {
-  if (gameOverShown) {
+  if (gameOverShown || busy) {
     return;
   }
 
@@ -1507,15 +1160,8 @@ function handleTap(row, col) {
   }
 
   if (cellValue === DYNAMITE) {
-    if (!busy) {
-      moves++;
-      handleDynamiteClick(row, col);
-    }
-
-    return;
-  }
-
-  if (busy) {
+    moves++;
+    handleDynamiteClick(row, col);
     return;
   }
 
@@ -1525,10 +1171,7 @@ function handleTap(row, col) {
     return;
   }
 
-  if (
-    selected.row === row &&
-    selected.col === col
-  ) {
+  if (selected.row === row && selected.col === col) {
     selected = null;
     render();
     return;
@@ -1554,11 +1197,7 @@ function handleTap(row, col) {
 function handleSwipe(start, endX, endY) {
   const deltaX = endX - start.x;
   const deltaY = endY - start.y;
-
-  const distance = Math.max(
-    Math.abs(deltaX),
-    Math.abs(deltaY)
-  );
+  const distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
 
   if (distance < 18) {
     handleTap(start.row, start.col);
@@ -1581,11 +1220,7 @@ function handleSwipe(start, endX, endY) {
     targetCol < COLS &&
     board[targetRow][targetCol];
 
-  if (
-    !validTarget ||
-    busy ||
-    gameOverShown
-  ) {
+  if (!validTarget || busy || gameOverShown) {
     selected = null;
     render();
     return;
@@ -1613,66 +1248,44 @@ function handleSwipe(start, endX, endY) {
 ------------------------------------------------------------------ */
 
 if (boardElement) {
-  boardElement.addEventListener(
-    "pointerdown",
-    event => {
-      const cell =
-        event.target.closest(".cell");
+  boardElement.addEventListener("pointerdown", event => {
+    const cell = event.target.closest(".cell");
 
-      if (!cell || busy || gameOverShown) {
-        return;
-      }
-
-      const row = Number(cell.dataset.row);
-      const col = Number(cell.dataset.col);
-
-      if (!board[row][col]) {
-        return;
-      }
-
-      pointerStart = {
-        row,
-        col,
-        x: event.clientX,
-        y: event.clientY
-      };
-
-      cell.setPointerCapture?.(
-        event.pointerId
-      );
+    if (!cell || busy || gameOverShown) {
+      return;
     }
-  );
 
-  boardElement.addEventListener(
-    "pointerup",
-    event => {
-      if (!pointerStart) {
-        return;
-      }
+    const row = Number(cell.dataset.row);
+    const col = Number(cell.dataset.col);
 
-      const start = {
-        row: pointerStart.row,
-        col: pointerStart.col,
-        x: pointerStart.x,
-        y: pointerStart.y
-      };
-
-      pointerStart = null;
-
-      handleSwipe(
-        start,
-        event.clientX,
-        event.clientY
-      );
+    if (!board[row][col]) {
+      return;
     }
-  );
 
-  boardElement.addEventListener(
-    "pointercancel",
-    () => {
-      pointerStart = null;
+    pointerStart = {
+      row,
+      col,
+      x: event.clientX,
+      y: event.clientY
+    };
+
+    cell.setPointerCapture?.(event.pointerId);
+  });
+
+  boardElement.addEventListener("pointerup", event => {
+    if (!pointerStart) {
+      return;
     }
-  );
+
+    const start = { ...pointerStart };
+    pointerStart = null;
+
+    handleSwipe(start, event.clientX, event.clientY);
+  });
+
+  boardElement.addEventListener("pointercancel", () => {
+    pointerStart = null;
+  });
 }
 
 /* ------------------------------------------------------------------
@@ -1684,12 +1297,10 @@ function findPossibleMove() {
     for (let col = 0; col < COLS; col++) {
       const first = { row, col };
 
-      const directions = [
+      for (const direction of [
         { row: 0, col: 1 },
         { row: 1, col: 0 }
-      ];
-
-      for (const direction of directions) {
+      ]) {
         const second = {
           row: row + direction.row,
           col: col + direction.col
@@ -1697,12 +1308,7 @@ function findPossibleMove() {
 
         if (
           second.row >= ROWS ||
-          second.col >= COLS
-        ) {
-          continue;
-        }
-
-        if (
+          second.col >= COLS ||
           !board[first.row][first.col] ||
           !board[second.row][second.col]
         ) {
@@ -1710,10 +1316,7 @@ function findPossibleMove() {
         }
 
         swap(first, second);
-
-        const createsMatch =
-          findMatches().size > 0;
-
+        const createsMatch = findMatches().size > 0;
         swap(first, second);
 
         if (createsMatch) {
@@ -1730,10 +1333,7 @@ function createPlayableBoard() {
   do {
     board = Array.from(
       { length: ROWS },
-      () => Array.from(
-        { length: COLS },
-        randomAnimal
-      )
+      () => Array.from({ length: COLS }, randomAnimal)
     );
   } while (
     findMatches().size > 0 ||
@@ -1753,15 +1353,15 @@ function reshuffleBoard() {
 
   render();
 
-  messageElement.textContent =
-    translate("reshuffled");
+  if (messageElement) {
+    messageElement.textContent = translate("reshuffled");
 
-  setTimeout(() => {
-    if (!busy && !gameOverShown) {
-      messageElement.textContent =
-        translate("instructions");
-    }
-  }, 1200);
+    setTimeout(() => {
+      if (!busy && !gameOverShown) {
+        messageElement.textContent = translate("instructions");
+      }
+    }, 1200);
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -1778,8 +1378,9 @@ function showHint() {
       if (board[row][col] === DYNAMITE) {
         hintCells = [{ row, col }];
 
-        messageElement.textContent =
-          translate("dynamiteHint");
+        if (messageElement) {
+          messageElement.textContent = translate("dynamiteHint");
+        }
 
         render();
 
@@ -1787,8 +1388,7 @@ function showHint() {
           hintCells = [];
 
           if (!busy && !gameOverShown) {
-            messageElement.textContent =
-              translate("instructions");
+            messageElement.textContent = translate("instructions");
           }
 
           render();
@@ -1806,13 +1406,11 @@ function showHint() {
     return;
   }
 
-  hintCells = [
-    hint.first,
-    hint.second
-  ];
+  hintCells = [hint.first, hint.second];
 
-  messageElement.textContent =
-    translate("hintMessage");
+  if (messageElement) {
+    messageElement.textContent = translate("hintMessage");
+  }
 
   render();
 
@@ -1820,8 +1418,7 @@ function showHint() {
     hintCells = [];
 
     if (!busy && !gameOverShown) {
-      messageElement.textContent =
-        translate("instructions");
+      messageElement.textContent = translate("instructions");
     }
 
     render();
@@ -1841,21 +1438,14 @@ function finishGame(messageKey) {
   busy = true;
 
   stopTimer();
-
-  /*
-    Save the score only when the game ends.
-    addScore() also updates the display during play,
-    but this guarantees the final score is persisted.
-  */
   updateBestScore();
-
   render();
 
-  const finalMessage =
-    translate(messageKey);
+  const finalMessage = translate(messageKey);
 
-  messageElement.textContent =
-    finalMessage;
+  if (messageElement) {
+    messageElement.textContent = finalMessage;
+  }
 
   setTimeout(() => {
     alert(finalMessage);
@@ -1896,15 +1486,13 @@ function startNewGame() {
 
   createBoard();
 
-  messageElement.textContent =
-    translate("instructions");
+  if (messageElement) {
+    messageElement.textContent = translate("instructions");
+  }
 }
 
 function setGameMode(mode) {
-  gameMode =
-    mode === "timed"
-      ? "timed"
-      : "relaxed";
+  gameMode = mode === "timed" ? "timed" : "relaxed";
 
   if (modeSelect) {
     modeSelect.value = gameMode;
@@ -1914,13 +1502,8 @@ function setGameMode(mode) {
 }
 
 function loadBestScores() {
-  bestScoreRelaxed = readScore(
-    BEST_RELAXED_STORAGE_KEY
-  );
-
-  bestScoreTimed = readScore(
-    BEST_TIMED_STORAGE_KEY
-  );
+  bestScoreRelaxed = readScore(BEST_RELAXED_STORAGE_KEY);
+  bestScoreTimed = readScore(BEST_TIMED_STORAGE_KEY);
 }
 
 /* ------------------------------------------------------------------
@@ -1928,48 +1511,33 @@ function loadBestScores() {
 ------------------------------------------------------------------ */
 
 if (languageSelect) {
-  languageSelect.addEventListener(
-    "change",
-    event => {
-      setLanguage(event.target.value);
-    }
-  );
+  languageSelect.addEventListener("change", event => {
+    setLanguage(event.target.value);
+  });
 }
 
 if (modeSelect) {
-  modeSelect.addEventListener(
-    "change",
-    event => {
-      setGameMode(event.target.value);
-    }
-  );
+  modeSelect.addEventListener("change", event => {
+    setGameMode(event.target.value);
+  });
 }
 
 if (hintButton) {
-  hintButton.addEventListener(
-    "click",
-    showHint
-  );
+  hintButton.addEventListener("click", showHint);
 }
 
 if (newGameButton) {
-  newGameButton.addEventListener(
-    "click",
-    startNewGame
-  );
+  newGameButton.addEventListener("click", startNewGame);
 }
 
-window.addEventListener(
-  "resize",
-  () => {
-    clearTimeout(resizeTimeout);
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimeout);
 
-    resizeTimeout = setTimeout(() => {
-      updateBoardSize();
-      startNewGame();
-    }, 150);
-  }
-);
+  resizeTimeout = setTimeout(() => {
+    updateBoardSize();
+    startNewGame();
+  }, 150);
+});
 
 /* ------------------------------------------------------------------
    Startup
@@ -1981,8 +1549,7 @@ updateBoardSize();
 currentLanguage = getInitialLanguage();
 setLanguage(currentLanguage);
 
-gameMode =
-  modeSelect?.value || "relaxed";
+gameMode = modeSelect?.value || "relaxed";
 
 createBoard();
 
@@ -1996,10 +1563,7 @@ reshuffleCheckInterval = setInterval(() => {
     !gameOverShown &&
     !findPossibleMove()
   ) {
-    if (
-      gameMode === "relaxed" &&
-      !boardHasDynamite()
-    ) {
+    if (gameMode === "relaxed" && !boardHasDynamite()) {
       showGameOver();
     } else {
       reshuffleBoard();
