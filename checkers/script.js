@@ -1096,7 +1096,7 @@ function enumerateJumpChains(piece, player) {
     const occupiedAtCurrentPosition = new Set(occupiedKeys);
     occupiedAtCurrentPosition.add(coordinateKey(currentX, currentY));
 
-    const jumps = getPlayableJumpsAtPosition(
+    const jumps = getExtendedJumpsAtPosition(
       piece,
       player,
       currentX,
@@ -1111,19 +1111,10 @@ function enumerateJumpChains(piece, player) {
       }
 
       exploredOptions += 1;
+
       const [landingX, landingY] = jump.to;
       const landingKey = coordinateKey(landingX, landingY);
       const nextMoves = [...moves, jump];
-
-      chains.push({
-        moves: nextMoves,
-        from: [piece.x, piece.y],
-        to: [landingX, landingY]
-      });
-
-      if (nextMoves.length >= COMPUTER_MAX_JUMP_DEPTH) {
-        return;
-      }
 
       const nextVisitedLandings = new Set(visitedLandings);
       nextVisitedLandings.add(landingKey);
@@ -1132,24 +1123,29 @@ function enumerateJumpChains(piece, player) {
       nextOccupiedKeys.delete(coordinateKey(currentX, currentY));
       nextOccupiedKeys.add(landingKey);
 
-      explore(
-        landingX,
-        landingY,
-        nextVisitedLandings,
-        nextOccupiedKeys,
-        nextMoves
-      );
+      // A jump may pass through another player's triangle, but the
+      // computer may end the turn there only if the landing is legal.
+      if (canPlayerEndMoveAt(player, landingX, landingY)) {
+        chains.push({
+          moves: nextMoves,
+          from: [piece.x, piece.y],
+          to: [landingX, landingY]
+        });
+      }
+
+      if (nextMoves.length < COMPUTER_MAX_JUMP_DEPTH) {
+        explore(
+          landingX,
+          landingY,
+          nextVisitedLandings,
+          nextOccupiedKeys,
+          nextMoves
+        );
+      }
     });
   }
 
-  explore(
-    piece.x,
-    piece.y,
-    new Set([originKey]),
-    baseOccupiedKeys,
-    []
-  );
-
+  explore(piece.x, piece.y, new Set([originKey]), baseOccupiedKeys, []);
   return chains;
 }
 
