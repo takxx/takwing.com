@@ -3,7 +3,6 @@
 
   This is the only module that imports both game.js and render.js.
 
-  Its job:
   1. Start and reset rounds.
   2. Ask game.js whether moves are legal.
   3. Tell render.js to draw accepted game placements.

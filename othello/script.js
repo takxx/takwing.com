@@ -36,6 +36,41 @@ const POSITION_WEIGHTS = [
   [120, -25, 20, 5, 5, 20, -25, 120]
 ];
 
+/* ------------------------------------------------------------------
+   Storage keys
+------------------------------------------------------------------ */
+
+const LANGUAGE_STORAGE_KEY =
+  "othello-language";
+
+const WINS_STORAGE_KEY =
+  "othello-wins";
+
+const LOSSES_STORAGE_KEY =
+  "othello-losses";
+
+const DRAWS_STORAGE_KEY =
+  "othello-draws";
+
+const NEXT_STARTER_STORAGE_KEY =
+  "othello-next-starter";
+
+const SUPPORTED_LANGUAGES = [
+  "en",
+  "es",
+  "zh-Hant"
+];
+
+const URL_LANGUAGE_MAP = {
+  en: "en",
+  es: "es",
+  zh: "zh-Hant"
+};
+
+/* ------------------------------------------------------------------
+   Translations
+------------------------------------------------------------------ */
+
 const translations = {
   en: {
     title: "Othello",
@@ -55,9 +90,12 @@ const translations = {
     computerTurn: "Computer is thinking…",
     youStart: "You start.",
     computerStarts: "The computer starts.",
-    yourTurnAfterPass: "The computer has no legal move. Your turn.",
-    computerPassed: "The computer has no legal move and passes.",
-    youPassed: "You have no legal move and must pass.",
+    yourTurnAfterPass:
+      "The computer has no legal move. Your turn.",
+    computerPassed:
+      "The computer has no legal move and passes.",
+    youPassed:
+      "You have no legal move and must pass.",
     gameOver: "Game over.",
     youWin: "You win!",
     youLose: "You lose.",
@@ -90,7 +128,8 @@ const translations = {
       "El ordenador no tiene movimientos legales. Es tu turno.",
     computerPassed:
       "El ordenador no tiene movimientos legales y pasa.",
-    youPassed: "No tienes movimientos legales y debes pasar.",
+    youPassed:
+      "No tienes movimientos legales y debes pasar.",
     gameOver: "Fin de la partida.",
     youWin: "¡Has ganado!",
     youLose: "Has perdido.",
@@ -119,9 +158,12 @@ const translations = {
     computerTurn: "電腦思考中……",
     youStart: "由你先手。",
     computerStarts: "由電腦先手。",
-    yourTurnAfterPass: "電腦沒有合法步法。輪到你。",
-    computerPassed: "電腦沒有合法步法，跳過回合。",
-    youPassed: "你沒有合法步法，必須跳過回合。",
+    yourTurnAfterPass:
+      "電腦沒有合法步法。輪到你。",
+    computerPassed:
+      "電腦沒有合法步法，跳過回合。",
+    youPassed:
+      "你沒有合法步法，必須跳過回合。",
     gameOver: "遊戲結束。",
     youWin: "你贏了！",
     youLose: "你輸了。",
@@ -133,49 +175,95 @@ const translations = {
   }
 };
 
+/* ------------------------------------------------------------------
+   DOM elements
+------------------------------------------------------------------ */
+
 const elements = {
   board: document.getElementById("board"),
-  languageSelect: document.getElementById("languageSelect"),
-  newGameButton: document.getElementById("newGameButton"),
-  hintButton: document.getElementById("hintButton"),
-  statusText: document.getElementById("statusText"),
-  hintMessage: document.getElementById("hintMessage"),
-  humanScore: document.getElementById("humanScore"),
-  aiScore: document.getElementById("aiScore"),
-  wins: document.getElementById("wins"),
-  losses: document.getElementById("losses"),
-  draws: document.getElementById("draws"),
-  humanLabel: document.getElementById("humanLabel")
+  languageSelect:
+    document.getElementById("languageSelect"),
+  newGameButton:
+    document.getElementById("newGameButton"),
+  hintButton:
+    document.getElementById("hintButton"),
+  statusText:
+    document.getElementById("statusText"),
+  hintMessage:
+    document.getElementById("hintMessage"),
+  humanScore:
+    document.getElementById("humanScore"),
+  aiScore:
+    document.getElementById("aiScore"),
+  wins:
+    document.getElementById("wins"),
+  losses:
+    document.getElementById("losses"),
+  draws:
+    document.getElementById("draws"),
+  humanLabel:
+    document.getElementById("humanLabel")
 };
 
-let currentLanguage = detectLanguage();
-let humanColor = BLACK;
-let aiColor = WHITE;
-let currentPlayer = BLACK;
-let board = [];
-let legalMoves = [];
-let highlightedHint = null;
-let gameOver = false;
-let aiThinking = false;
+/* ------------------------------------------------------------------
+   Safe localStorage helpers
+------------------------------------------------------------------ */
 
-let record = loadRecord();
-let nextStarter = loadNextStarter();
+function readStorage(key, fallback = null) {
+  try {
+    const value = localStorage.getItem(key);
+
+    return value === null
+      ? fallback
+      : value;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    localStorage.setItem(
+      key,
+      String(value)
+    );
+  } catch {
+    /*
+      The game still works for this session
+      if storage is unavailable.
+    */
+  }
+}
+
+/* ------------------------------------------------------------------
+   Language detection
+------------------------------------------------------------------ */
 
 function getLangFromUrl() {
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(
+    window.location.search
+  );
+
   const lang = params.get("lang");
-  if (!lang) return null;
+
+  if (!lang) {
+    return null;
+  }
 
   const normalized = lang.toLowerCase();
 
-  // Map common codes to our supported keys
   if (normalized === "en") return "en";
   if (normalized === "es") return "es";
-  if (normalized === "zh" || normalized === "zh-tw" || normalized === "zh-hk" || normalized === "zh-hant") {
+
+  if (
+    normalized === "zh" ||
+    normalized === "zh-tw" ||
+    normalized === "zh-hk" ||
+    normalized === "zh-hant"
+  ) {
     return "zh-Hant";
   }
 
-  // If it's something like "en-US", still accept "en"
   if (normalized.startsWith("en")) return "en";
   if (normalized.startsWith("es")) return "es";
   if (normalized.startsWith("zh")) return "zh-Hant";
@@ -183,24 +271,19 @@ function getLangFromUrl() {
   return null;
 }
 
-function detectLanguage() {
-  // 1. Priority: ?lang=... in URL
-  const urlLang = getLangFromUrl();
-  if (urlLang && translations[urlLang]) {
-    return urlLang;
-  }
-
-  // 2. Existing browser-language fallback
-  const browserLanguages = Array.isArray(navigator.languages)
-    ? navigator.languages
-    : [navigator.language];
+function detectBrowserLanguage() {
+  const browserLanguages =
+    Array.isArray(navigator.languages)
+      ? navigator.languages
+      : [navigator.language];
 
   for (const language of browserLanguages) {
     if (!language) {
       continue;
     }
 
-    const normalized = language.toLowerCase();
+    const normalized =
+      String(language).toLowerCase();
 
     if (normalized.startsWith("zh")) {
       return "zh-Hant";
@@ -218,59 +301,146 @@ function detectLanguage() {
   return "en";
 }
 
+function detectSavedLanguage() {
+  const savedLanguage = readStorage(
+    LANGUAGE_STORAGE_KEY
+  );
+
+  return SUPPORTED_LANGUAGES.includes(savedLanguage)
+    ? savedLanguage
+    : null;
+}
+
+function detectInitialLanguage() {
+  return (
+    getLangFromUrl() ||
+    detectSavedLanguage() ||
+    detectBrowserLanguage() ||
+    "en"
+  );
+}
+
+function saveLanguage(language) {
+  writeStorage(
+    LANGUAGE_STORAGE_KEY,
+    language
+  );
+}
+
+/* ------------------------------------------------------------------
+   Game state
+------------------------------------------------------------------ */
+
+let currentLanguage = detectInitialLanguage();
+
+let humanColor = BLACK;
+let aiColor = WHITE;
+let currentPlayer = BLACK;
+let board = [];
+let legalMoves = [];
+let highlightedHint = null;
+let gameOver = false;
+let aiThinking = false;
+
+let record = loadRecord();
+let nextStarter = loadNextStarter();
+
+/* ------------------------------------------------------------------
+   Persistent record (wins / losses / draws)
+------------------------------------------------------------------ */
+
 function loadRecord() {
-  try {
-    return {
-      wins: Number(localStorage.getItem("othello-wins")) || 0,
-      losses: Number(localStorage.getItem("othello-losses")) || 0,
-      draws: Number(localStorage.getItem("othello-draws")) || 0
-    };
-  } catch {
-    return { wins: 0, losses: 0, draws: 0 };
-  }
+  const wins = Number(
+    readStorage(WINS_STORAGE_KEY, "0")
+  );
+
+  const losses = Number(
+    readStorage(LOSSES_STORAGE_KEY, "0")
+  );
+
+  const draws = Number(
+    readStorage(DRAWS_STORAGE_KEY, "0")
+  );
+
+  return {
+    wins: Number.isFinite(wins) && wins >= 0
+      ? Math.floor(wins)
+      : 0,
+
+    losses: Number.isFinite(losses) && losses >= 0
+      ? Math.floor(losses)
+      : 0,
+
+    draws: Number.isFinite(draws) && draws >= 0
+      ? Math.floor(draws)
+      : 0
+  };
 }
 
 function saveRecord() {
-  try {
-    localStorage.setItem("othello-wins", String(record.wins));
-    localStorage.setItem("othello-losses", String(record.losses));
-    localStorage.setItem("othello-draws", String(record.draws));
-  } catch {
-    // Storage may be unavailable. The game still works for this session.
-  }
+  writeStorage(
+    WINS_STORAGE_KEY,
+    record.wins
+  );
+
+  writeStorage(
+    LOSSES_STORAGE_KEY,
+    record.losses
+  );
+
+  writeStorage(
+    DRAWS_STORAGE_KEY,
+    record.draws
+  );
 }
 
-function loadNextStarter() {
-  try {
-    const saved = localStorage.getItem("othello-next-starter");
+/* ------------------------------------------------------------------
+   Persistent next starter (who begins next game)
+------------------------------------------------------------------ */
 
-    if (saved === "black" || saved === "white") {
-      return saved === "black" ? BLACK : WHITE;
-    }
-  } catch {
-    // Ignore storage errors.
+function loadNextStarter() {
+  const saved = readStorage(
+    NEXT_STARTER_STORAGE_KEY
+  );
+
+  if (saved === "black") {
+    return BLACK;
+  }
+
+  if (saved === "white") {
+    return WHITE;
   }
 
   // Random initial starting order.
-  return Math.random() < 0.5 ? BLACK : WHITE;
+  return Math.random() < 0.5
+    ? BLACK
+    : WHITE;
 }
 
 function saveNextStarter() {
-  try {
-    localStorage.setItem(
-      "othello-next-starter",
-      nextStarter === BLACK ? "black" : "white"
-    );
-  } catch {
-    // Ignore storage errors.
-  }
+  writeStorage(
+    NEXT_STARTER_STORAGE_KEY,
+    nextStarter === BLACK
+      ? "black"
+      : "white"
+  );
 }
 
-function t(key, replacements = {}) {
-  let text = translations[currentLanguage][key] ?? translations.en[key];
+/* ------------------------------------------------------------------
+   Translation helpers
+------------------------------------------------------------------ */
 
-  for (const [name, value] of Object.entries(replacements)) {
-    text = text.replace(`{${name}}`, value);
+function t(key, replacements = {}) {
+  let text =
+    translations[currentLanguage][key] ??
+    translations.en[key];
+
+  for (const [name, value] of
+    Object.entries(replacements)) {
+    text = text.replace(
+      `{${name}}`,
+      value
+    );
   }
 
   return text;
@@ -278,17 +448,42 @@ function t(key, replacements = {}) {
 
 function applyTranslations() {
   document.documentElement.lang =
-    currentLanguage === "zh-Hant" ? "zh-Hant" : currentLanguage;
+    currentLanguage === "zh-Hant"
+      ? "zh-Hant"
+      : currentLanguage;
 
-  document.querySelectorAll("[data-i18n]").forEach((element) => {
-    const key = element.dataset.i18n;
-    element.textContent = t(key);
-  });
+  document
+    .querySelectorAll("[data-i18n]")
+    .forEach(element => {
+      const key = element.dataset.i18n;
 
-  elements.humanLabel.textContent = t("you");
-  elements.languageSelect.value = currentLanguage;
+      element.textContent = t(key);
+    });
+
+  elements.humanLabel.textContent =
+    t("you");
+
+  if (elements.languageSelect) {
+    elements.languageSelect.value =
+      currentLanguage;
+  }
+
   updateStatus();
 }
+
+function setLanguage(language) {
+  currentLanguage =
+    SUPPORTED_LANGUAGES.includes(language)
+      ? language
+      : "en";
+
+  saveLanguage(currentLanguage);
+  applyTranslations();
+}
+
+/* ------------------------------------------------------------------
+   Board helpers
+------------------------------------------------------------------ */
 
 function createInitialBoard() {
   const newBoard = Array.from(
@@ -305,7 +500,7 @@ function createInitialBoard() {
 }
 
 function cloneBoard(sourceBoard) {
-  return sourceBoard.map((row) => [...row]);
+  return sourceBoard.map(row => [...row]);
 }
 
 function isInside(row, col) {
@@ -318,23 +513,33 @@ function isInside(row, col) {
 }
 
 function getFlips(sourceBoard, row, col, color) {
-  if (!isInside(row, col) || sourceBoard[row][col] !== EMPTY) {
+  if (
+    !isInside(row, col) ||
+    sourceBoard[row][col] !== EMPTY
+  ) {
     return [];
   }
 
   const opponent = -color;
   const flips = [];
 
-  for (const [rowDirection, colDirection] of DIRECTIONS) {
+  for (const [rowDirection, colDirection] of
+    DIRECTIONS) {
     const line = [];
-    let nextRow = row + rowDirection;
-    let nextCol = col + colDirection;
+
+    let nextRow =
+      row + rowDirection;
+
+    let nextCol =
+      col + colDirection;
 
     while (
       isInside(nextRow, nextCol) &&
-      sourceBoard[nextRow][nextCol] === opponent
+      sourceBoard[nextRow][nextCol] ===
+        opponent
     ) {
       line.push([nextRow, nextCol]);
+
       nextRow += rowDirection;
       nextCol += colDirection;
     }
@@ -342,7 +547,8 @@ function getFlips(sourceBoard, row, col, color) {
     if (
       line.length > 0 &&
       isInside(nextRow, nextCol) &&
-      sourceBoard[nextRow][nextCol] === color
+      sourceBoard[nextRow][nextCol] ===
+        color
     ) {
       flips.push(...line);
     }
@@ -356,7 +562,8 @@ function getLegalMoves(sourceBoard, color) {
 
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let col = 0; col < BOARD_SIZE; col += 1) {
-      const flips = getFlips(sourceBoard, row, col, color);
+      const flips =
+        getFlips(sourceBoard, row, col, color);
 
       if (flips.length > 0) {
         moves.push({ row, col, flips });
@@ -368,7 +575,9 @@ function getLegalMoves(sourceBoard, color) {
 }
 
 function makeMove(sourceBoard, move, color) {
-  const nextBoard = cloneBoard(sourceBoard);
+  const nextBoard =
+    cloneBoard(sourceBoard);
+
   nextBoard[move.row][move.col] = color;
 
   for (const [row, col] of move.flips) {
@@ -395,21 +604,31 @@ function countPieces(sourceBoard) {
   return { black, white };
 }
 
+/* ------------------------------------------------------------------
+   Rendering
+------------------------------------------------------------------ */
+
 function renderBoard() {
   elements.board.innerHTML = "";
 
   const humanLegalMove =
-    !gameOver && !aiThinking && currentPlayer === humanColor
+    !gameOver &&
+    !aiThinking &&
+    currentPlayer === humanColor
       ? legalMoves
       : [];
 
   const legalMoveKeys = new Set(
-    humanLegalMove.map((move) => `${move.row}-${move.col}`)
+    humanLegalMove.map(
+      move => `${move.row}-${move.col}`
+    )
   );
 
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let col = 0; col < BOARD_SIZE; col += 1) {
-      const cell = document.createElement("button");
+      const cell =
+        document.createElement("button");
+
       const value = board[row][col];
       const key = `${row}-${col}`;
 
@@ -418,6 +637,7 @@ function renderBoard() {
       cell.dataset.row = String(row);
       cell.dataset.col = String(col);
       cell.setAttribute("role", "gridcell");
+
       cell.setAttribute(
         "aria-label",
         `${String.fromCharCode(65 + col)}${row + 1}`
@@ -436,13 +656,25 @@ function renderBoard() {
       }
 
       if (value !== EMPTY) {
-        const disk = document.createElement("span");
-        disk.className = `disk ${value === BLACK ? "black" : "white"}`;
-        disk.setAttribute("aria-hidden", "true");
+        const disk =
+          document.createElement("span");
+
+        disk.className =
+          `disk ${value === BLACK ? "black" : "white"}`;
+
+        disk.setAttribute(
+          "aria-hidden",
+          "true"
+        );
+
         cell.appendChild(disk);
       }
 
-      cell.addEventListener("click", handleCellClick);
+      cell.addEventListener(
+        "click",
+        handleCellClick
+      );
+
       elements.board.appendChild(cell);
     }
   }
@@ -452,14 +684,31 @@ function renderBoard() {
 
 function updateScores() {
   const counts = countPieces(board);
-  const humanCount = humanColor === BLACK ? counts.black : counts.white;
-  const aiCount = aiColor === BLACK ? counts.black : counts.white;
 
-  elements.humanScore.textContent = String(humanCount);
-  elements.aiScore.textContent = String(aiCount);
-  elements.wins.textContent = String(record.wins);
-  elements.losses.textContent = String(record.losses);
-  elements.draws.textContent = String(record.draws);
+  const humanCount =
+    humanColor === BLACK
+      ? counts.black
+      : counts.white;
+
+  const aiCount =
+    aiColor === BLACK
+      ? counts.black
+      : counts.white;
+
+  elements.humanScore.textContent =
+    String(humanCount);
+
+  elements.aiScore.textContent =
+    String(aiCount);
+
+  elements.wins.textContent =
+    String(record.wins);
+
+  elements.losses.textContent =
+    String(record.losses);
+
+  elements.draws.textContent =
+    String(record.draws);
 }
 
 function updateStatus(message = null) {
@@ -473,19 +722,25 @@ function updateStatus(message = null) {
   }
 
   if (aiThinking) {
-    elements.statusText.textContent = t("computerTurn");
+    elements.statusText.textContent =
+      t("computerTurn");
+
     return;
   }
 
   if (currentPlayer === humanColor) {
-    elements.statusText.textContent = t("yourTurn");
+    elements.statusText.textContent =
+      t("yourTurn");
   } else {
-    elements.statusText.textContent = t("computerTurn");
+    elements.statusText.textContent =
+      t("computerTurn");
   }
 }
 
 function positionName(row, col) {
-  const column = String.fromCharCode(65 + col);
+  const column =
+    String.fromCharCode(65 + col);
+
   const rowNumber = row + 1;
 
   return t("movePosition", {
@@ -493,6 +748,10 @@ function positionName(row, col) {
     row: rowNumber
   });
 }
+
+/* ------------------------------------------------------------------
+   Game flow
+------------------------------------------------------------------ */
 
 function beginNewGame() {
   // The human keeps the same colour; only the starting side changes.
@@ -504,33 +763,54 @@ function beginNewGame() {
   saveNextStarter();
 
   board = createInitialBoard();
-  legalMoves = getLegalMoves(board, currentPlayer);
+  legalMoves =
+    getLegalMoves(board, currentPlayer);
+
   highlightedHint = null;
   gameOver = false;
   aiThinking = false;
+
   elements.hintMessage.textContent = "";
 
   renderBoard();
 
   updateStatus(
-    currentPlayer === humanColor ? t("youStart") : t("computerStarts")
+    currentPlayer === humanColor
+      ? t("youStart")
+      : t("computerStarts")
   );
 
   if (currentPlayer === aiColor) {
-    window.setTimeout(makeComputerTurn, 350);
+    window.setTimeout(
+      makeComputerTurn,
+      350
+    );
   }
 }
 
 function handleCellClick(event) {
-  if (gameOver || aiThinking || currentPlayer !== humanColor) {
+  if (
+    gameOver ||
+    aiThinking ||
+    currentPlayer !== humanColor
+  ) {
     return;
   }
 
-  const row = Number(event.currentTarget.dataset.row);
-  const col = Number(event.currentTarget.dataset.col);
-  const move = legalMoves.find(
-    (candidate) => candidate.row === row && candidate.col === col
+  const row = Number(
+    event.currentTarget.dataset.row
   );
+
+  const col = Number(
+    event.currentTarget.dataset.col
+  );
+
+  const move = legalMoves.find(candidate => {
+    return (
+      candidate.row === row &&
+      candidate.col === col
+    );
+  });
 
   if (!move) {
     return;
@@ -538,14 +818,22 @@ function handleCellClick(event) {
 
   highlightedHint = null;
   elements.hintMessage.textContent = "";
-  board = makeMove(board, move, humanColor);
+
+  board = makeMove(
+    board,
+    move,
+    humanColor
+  );
+
   currentPlayer = aiColor;
 
   continueGame();
 }
 
 function continueGame() {
-  legalMoves = getLegalMoves(board, currentPlayer);
+  legalMoves =
+    getLegalMoves(board, currentPlayer);
+
   renderBoard();
 
   if (legalMoves.length > 0) {
@@ -553,7 +841,10 @@ function continueGame() {
       aiThinking = true;
       updateStatus();
 
-      window.setTimeout(makeComputerTurn, 300);
+      window.setTimeout(
+        makeComputerTurn,
+        300
+      );
     } else {
       aiThinking = false;
       updateStatus();
@@ -563,7 +854,8 @@ function continueGame() {
   }
 
   const opponent = -currentPlayer;
-  const opponentMoves = getLegalMoves(board, opponent);
+  const opponentMoves =
+    getLegalMoves(board, opponent);
 
   if (opponentMoves.length === 0) {
     finishGame();
@@ -573,26 +865,35 @@ function continueGame() {
   if (currentPlayer === humanColor) {
     // Human has no move, so the computer continues.
     updateStatus(t("youPassed"));
+
     currentPlayer = aiColor;
     aiThinking = true;
 
-    window.setTimeout(makeComputerTurn, 700);
+    window.setTimeout(
+      makeComputerTurn,
+      700
+    );
   } else {
     // Computer has no move, so the human continues.
     aiThinking = false;
     currentPlayer = humanColor;
     legalMoves = opponentMoves;
+
     renderBoard();
     updateStatus(t("computerPassed"));
   }
 }
 
 function makeComputerTurn() {
-  if (gameOver || currentPlayer !== aiColor) {
+  if (
+    gameOver ||
+    currentPlayer !== aiColor
+  ) {
     return;
   }
 
-  const moves = getLegalMoves(board, aiColor);
+  const moves =
+    getLegalMoves(board, aiColor);
 
   if (moves.length === 0) {
     aiThinking = false;
@@ -600,8 +901,11 @@ function makeComputerTurn() {
     return;
   }
 
-  const depth = chooseSearchDepth(board);
-  const bestMove = findBestMove(board, aiColor, depth);
+  const depth =
+    chooseSearchDepth(board);
+
+  const bestMove =
+    findBestMove(board, aiColor, depth);
 
   if (!bestMove) {
     aiThinking = false;
@@ -609,7 +913,12 @@ function makeComputerTurn() {
     return;
   }
 
-  board = makeMove(board, bestMove, aiColor);
+  board = makeMove(
+    board,
+    bestMove,
+    aiColor
+  );
+
   currentPlayer = humanColor;
   aiThinking = false;
   highlightedHint = null;
@@ -625,8 +934,16 @@ function finishGame() {
   highlightedHint = null;
 
   const counts = countPieces(board);
-  const humanCount = humanColor === BLACK ? counts.black : counts.white;
-  const aiCount = aiColor === BLACK ? counts.black : counts.white;
+
+  const humanCount =
+    humanColor === BLACK
+      ? counts.black
+      : counts.white;
+
+  const aiCount =
+    aiColor === BLACK
+      ? counts.black
+      : counts.white;
 
   if (humanCount > aiCount) {
     record.wins += 1;
@@ -640,18 +957,32 @@ function finishGame() {
   renderBoard();
 
   if (humanCount > aiCount) {
-    updateStatus(`${t("gameOver")} ${t("youWin")}`);
+    updateStatus(
+      `${t("gameOver")} ${t("youWin")}`
+    );
   } else if (humanCount < aiCount) {
-    updateStatus(`${t("gameOver")} ${t("youLose")}`);
+    updateStatus(
+      `${t("gameOver")} ${t("youLose")}`
+    );
   } else {
-    updateStatus(`${t("gameOver")} ${t("draw")}`);
+    updateStatus(
+      `${t("gameOver")} ${t("draw")}`
+    );
   }
 }
 
+/* ------------------------------------------------------------------
+   AI search
+------------------------------------------------------------------ */
+
 function chooseSearchDepth(sourceBoard) {
   const counts = countPieces(sourceBoard);
-  const occupied = counts.black + counts.white;
-  const empty = BOARD_SIZE * BOARD_SIZE - occupied;
+
+  const occupied =
+    counts.black + counts.white;
+
+  const empty =
+    BOARD_SIZE * BOARD_SIZE - occupied;
 
   if (empty <= 10) {
     return 8;
@@ -669,7 +1000,8 @@ function chooseSearchDepth(sourceBoard) {
 }
 
 function findBestMove(sourceBoard, color, depth) {
-  const moves = getLegalMoves(sourceBoard, color);
+  const moves =
+    getLegalMoves(sourceBoard, color);
 
   if (moves.length === 0) {
     return null;
@@ -678,11 +1010,13 @@ function findBestMove(sourceBoard, color, depth) {
   let bestScore = -Infinity;
   let bestMoves = [];
 
-  // Searching stronger-looking moves first improves alpha-beta pruning.
-  const orderedMoves = orderMoves(sourceBoard, moves, color);
+  const orderedMoves =
+    orderMoves(sourceBoard, moves, color);
 
   for (const move of orderedMoves) {
-    const nextBoard = makeMove(sourceBoard, move, color);
+    const nextBoard =
+      makeMove(sourceBoard, move, color);
+
     const score = -negamax(
       nextBoard,
       -color,
@@ -701,8 +1035,9 @@ function findBestMove(sourceBoard, color, depth) {
     }
   }
 
-  // Small randomization prevents repetitive identical games when scores tie.
-  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+  return bestMoves[
+    Math.floor(Math.random() * bestMoves.length)
+  ];
 }
 
 function negamax(
@@ -714,25 +1049,36 @@ function negamax(
   rootColor,
   passed
 ) {
-  const moves = getLegalMoves(sourceBoard, playerToMove);
+  const moves =
+    getLegalMoves(sourceBoard, playerToMove);
+
   const opponent = -playerToMove;
 
   if (depth <= 0) {
-    return evaluateBoard(sourceBoard, rootColor);
+    return evaluateBoard(
+      sourceBoard,
+      rootColor
+    );
   }
 
   if (moves.length === 0) {
-    const opponentMoves = getLegalMoves(sourceBoard, opponent);
+    const opponentMoves =
+      getLegalMoves(sourceBoard, opponent);
 
     if (opponentMoves.length === 0) {
-      return terminalScore(sourceBoard, rootColor);
+      return terminalScore(
+        sourceBoard,
+        rootColor
+      );
     }
 
     if (passed) {
-      return evaluateBoard(sourceBoard, rootColor);
+      return evaluateBoard(
+        sourceBoard,
+        rootColor
+      );
     }
 
-    // A pass does not change the board, but the side to move changes.
     return -negamax(
       sourceBoard,
       opponent,
@@ -745,10 +1091,14 @@ function negamax(
   }
 
   let best = -Infinity;
-  const orderedMoves = orderMoves(sourceBoard, moves, playerToMove);
+
+  const orderedMoves =
+    orderMoves(sourceBoard, moves, playerToMove);
 
   for (const move of orderedMoves) {
-    const nextBoard = makeMove(sourceBoard, move, playerToMove);
+    const nextBoard =
+      makeMove(sourceBoard, move, playerToMove);
+
     const score = -negamax(
       nextBoard,
       opponent,
@@ -771,16 +1121,34 @@ function negamax(
 }
 
 function orderMoves(sourceBoard, moves, color) {
-  return [...moves].sort((first, second) => {
-    const firstScore = quickMoveScore(sourceBoard, first, color);
-    const secondScore = quickMoveScore(sourceBoard, second, color);
-    return secondScore - firstScore;
-  });
+  return [...moves].sort(
+    (first, second) => {
+      const firstScore =
+        quickMoveScore(
+          sourceBoard,
+          first,
+          color
+        );
+
+      const secondScore =
+        quickMoveScore(
+          sourceBoard,
+          second,
+          color
+        );
+
+      return secondScore - firstScore;
+    }
+  );
 }
 
 function quickMoveScore(sourceBoard, move, color) {
-  const nextBoard = makeMove(sourceBoard, move, color);
-  const opponentMobility = getLegalMoves(nextBoard, -color).length;
+  const nextBoard =
+    makeMove(sourceBoard, move, color);
+
+  const opponentMobility =
+    getLegalMoves(nextBoard, -color).length;
+
   const isCorner =
     (move.row === 0 || move.row === 7) &&
     (move.col === 0 || move.col === 7);
@@ -795,11 +1163,25 @@ function quickMoveScore(sourceBoard, move, color) {
 
 function evaluateBoard(sourceBoard, perspective) {
   const counts = countPieces(sourceBoard);
-  const ownCount = perspective === BLACK ? counts.black : counts.white;
-  const opponentCount = perspective === BLACK ? counts.white : counts.black;
 
-  const ownMoves = getLegalMoves(sourceBoard, perspective).length;
-  const opponentMoves = getLegalMoves(sourceBoard, -perspective).length;
+  const ownCount =
+    perspective === BLACK
+      ? counts.black
+      : counts.white;
+
+  const opponentCount =
+    perspective === BLACK
+      ? counts.white
+      : counts.black;
+
+  const ownMoves =
+    getLegalMoves(sourceBoard, perspective).length;
+
+  const opponentMoves =
+    getLegalMoves(
+      sourceBoard,
+      -perspective
+    ).length;
 
   let positionScore = 0;
   let corners = 0;
@@ -811,15 +1193,21 @@ function evaluateBoard(sourceBoard, perspective) {
       const cell = sourceBoard[row][col];
 
       if (cell === perspective) {
-        positionScore += POSITION_WEIGHTS[row][col];
+        positionScore +=
+          POSITION_WEIGHTS[row][col];
 
-        if (isFrontier(sourceBoard, row, col)) {
+        if (
+          isFrontier(sourceBoard, row, col)
+        ) {
           frontierOwn += 1;
         }
       } else if (cell === -perspective) {
-        positionScore -= POSITION_WEIGHTS[row][col];
+        positionScore -=
+          POSITION_WEIGHTS[row][col];
 
-        if (isFrontier(sourceBoard, row, col)) {
+        if (
+          isFrontier(sourceBoard, row, col)
+        ) {
           frontierOpponent += 1;
         }
       }
@@ -833,24 +1221,31 @@ function evaluateBoard(sourceBoard, perspective) {
     [7, 7]
   ];
 
-  for (const [row, col] of cornerCoordinates) {
+  for (const [row, col] of
+    cornerCoordinates) {
     if (sourceBoard[row][col] === perspective) {
       corners += 1;
-    } else if (sourceBoard[row][col] === -perspective) {
+    } else if (
+      sourceBoard[row][col] === -perspective
+    ) {
       corners -= 1;
     }
   }
 
-  const pieceDifference = ownCount - opponentCount;
-  const mobilityDifference = ownMoves - opponentMoves;
-  const frontierDifference = frontierOpponent - frontierOwn;
+  const pieceDifference =
+    ownCount - opponentCount;
 
-  /*
-    Mobility and corners matter more than raw piece count early in the game.
-    Piece count becomes increasingly useful near the end.
-  */
-  const occupied = ownCount + opponentCount;
-  const endgameWeight = occupied > 44 ? 4 : 1;
+  const mobilityDifference =
+    ownMoves - opponentMoves;
+
+  const frontierDifference =
+    frontierOpponent - frontierOwn;
+
+  const occupied =
+    ownCount + opponentCount;
+
+  const endgameWeight =
+    occupied > 44 ? 4 : 1;
 
   return (
     positionScore * 1.0 +
@@ -863,28 +1258,47 @@ function evaluateBoard(sourceBoard, perspective) {
 
 function terminalScore(sourceBoard, perspective) {
   const counts = countPieces(sourceBoard);
-  const ownCount = perspective === BLACK ? counts.black : counts.white;
-  const opponentCount = perspective === BLACK ? counts.white : counts.black;
+
+  const ownCount =
+    perspective === BLACK
+      ? counts.black
+      : counts.white;
+
+  const opponentCount =
+    perspective === BLACK
+      ? counts.white
+      : counts.black;
 
   if (ownCount > opponentCount) {
-    return 100000 + (ownCount - opponentCount) * 100;
+    return (
+      100000 +
+      (ownCount - opponentCount) * 100
+    );
   }
 
   if (ownCount < opponentCount) {
-    return -100000 + (ownCount - opponentCount) * 100;
+    return (
+      -100000 +
+      (ownCount - opponentCount) * 100
+    );
   }
 
   return 0;
 }
 
 function isFrontier(sourceBoard, row, col) {
-  for (const [rowDirection, colDirection] of DIRECTIONS) {
-    const nextRow = row + rowDirection;
-    const nextCol = col + colDirection;
+  for (const [rowDirection, colDirection] of
+    DIRECTIONS) {
+    const nextRow =
+      row + rowDirection;
+
+    const nextCol =
+      col + colDirection;
 
     if (
       isInside(nextRow, nextCol) &&
-      sourceBoard[nextRow][nextCol] === EMPTY
+      sourceBoard[nextRow][nextCol] ===
+        EMPTY
     ) {
       return true;
     }
@@ -893,38 +1307,54 @@ function isFrontier(sourceBoard, row, col) {
   return false;
 }
 
+/* ------------------------------------------------------------------
+   Hint
+------------------------------------------------------------------ */
+
 function showHint() {
   if (gameOver) {
     return;
   }
 
-  if (currentPlayer !== humanColor || aiThinking) {
-    elements.hintMessage.textContent = t("noHint");
+  if (
+    currentPlayer !== humanColor ||
+    aiThinking
+  ) {
+    elements.hintMessage.textContent =
+      t("noHint");
+
     return;
   }
 
-  const moves = getLegalMoves(board, humanColor);
+  const moves =
+    getLegalMoves(board, humanColor);
 
   if (moves.length === 0) {
-    elements.hintMessage.textContent = t("noHint");
+    elements.hintMessage.textContent =
+      t("noHint");
+
     return;
   }
 
-  elements.hintMessage.textContent = t("thinkingHint");
+  elements.hintMessage.textContent =
+    t("thinkingHint");
+
   elements.hintButton.disabled = true;
 
-  // Yield to the browser so the message can render before the search begins.
   window.setTimeout(() => {
-    const bestMove = findBestMove(
-      board,
-      humanColor,
-      chooseSearchDepth(board)
-    );
+    const bestMove =
+      findBestMove(
+        board,
+        humanColor,
+        chooseSearchDepth(board)
+      );
 
     elements.hintButton.disabled = false;
 
     if (!bestMove) {
-      elements.hintMessage.textContent = t("noHint");
+      elements.hintMessage.textContent =
+        t("noHint");
+
       return;
     }
 
@@ -933,27 +1363,44 @@ function showHint() {
       col: bestMove.col
     };
 
-    elements.hintMessage.textContent = t("hintMessage", {
-      position: positionName(bestMove.row, bestMove.col)
-    });
+    elements.hintMessage.textContent =
+      t("hintMessage", {
+        position: positionName(
+          bestMove.row,
+          bestMove.col
+        )
+      });
 
     renderBoard();
   }, 20);
 }
 
-elements.newGameButton.addEventListener("click", beginNewGame);
-elements.hintButton.addEventListener("click", showHint);
+/* ------------------------------------------------------------------
+   Event listeners
+------------------------------------------------------------------ */
 
-elements.languageSelect.addEventListener("change", (event) => {
-  currentLanguage = event.target.value;
-  applyTranslations();
+elements.newGameButton.addEventListener(
+  "click",
+  beginNewGame
+);
 
-  if (highlightedHint) {
-    elements.hintMessage.textContent = t("hintMessage", {
-      position: positionName(highlightedHint.row, highlightedHint.col)
-    });
-  }
-});
+elements.hintButton.addEventListener(
+  "click",
+  showHint
+);
+
+if (elements.languageSelect) {
+  elements.languageSelect.addEventListener(
+    "change",
+    event => {
+      setLanguage(event.target.value);
+    }
+  );
+}
+
+/* ------------------------------------------------------------------
+   Initialization
+------------------------------------------------------------------ */
 
 applyTranslations();
 beginNewGame();

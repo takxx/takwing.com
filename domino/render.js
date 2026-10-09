@@ -3,20 +3,12 @@
 
   Renderer-only module.
 
-  This file owns:
   - A01–Q17 board coordinates
   - Board descriptors and renderer invariants
   - Physical tile placement
   - Directed snake routing
   - Clockwise turns
   - DOM rendering for board and hands
-
-  This file does not own:
-  - Domino legality
-  - Turn handling
-  - Boneyard/dealing
-  - Scores
-  - Win conditions
 
   Board descriptor:
   [pip, role, flow]

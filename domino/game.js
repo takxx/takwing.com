@@ -1,18 +1,7 @@
 /*
   GAME MODULE CONTRACT
 
-  This module is intentionally independent of the board renderer.
-
-  It does not know:
-  - A01 through Q17
-  - north, south, east, west
-  - grid cells
-  - snake wrapping
-  - tile orientation
-  - HTML or CSS
-
-  It knows only:
-  - a standard 28-tile double-six set
+ - a standard 28-tile double-six set
   - each player's hand
   - boneyard
   - logical chain ends named "left" and "right"
@@ -20,12 +9,69 @@
   - automatic drawing
   - turns
   - wins and blocked rounds
+  - persistent win scores
 */
 
 export const PLAYER = Object.freeze({
   HUMAN: "human",
   COMPUTER: "computer"
 });
+
+const SCORES_STORAGE_KEY = "domino_wins_v1";
+
+function createEmptyScores() {
+  return {
+    [PLAYER.HUMAN]: 0,
+    [PLAYER.COMPUTER]: 0
+  };
+}
+
+function loadScores() {
+  const emptyScores = createEmptyScores();
+
+  try {
+    const savedScores = localStorage.getItem(SCORES_STORAGE_KEY);
+
+    if (!savedScores) {
+      return emptyScores;
+    }
+
+    const parsedScores = JSON.parse(savedScores);
+
+    return {
+      [PLAYER.HUMAN]: Number.isFinite(parsedScores?.[PLAYER.HUMAN])
+        ? Math.max(0, parsedScores[PLAYER.HUMAN])
+        : 0,
+
+      [PLAYER.COMPUTER]: Number.isFinite(parsedScores?.[PLAYER.COMPUTER])
+        ? Math.max(0, parsedScores[PLAYER.COMPUTER])
+        : 0
+    };
+  } catch {
+    /*
+      localStorage may be unavailable, or the stored value may be invalid.
+      In that case, safely start from zero.
+    */
+    return emptyScores;
+  }
+}
+
+function saveScores(scores) {
+  try {
+    localStorage.setItem(
+      SCORES_STORAGE_KEY,
+      JSON.stringify({
+        [PLAYER.HUMAN]: scores[PLAYER.HUMAN],
+        [PLAYER.COMPUTER]: scores[PLAYER.COMPUTER]
+      })
+    );
+  } catch {
+    /*
+      The game still works if localStorage is unavailable.
+      Scores will remain available for the current page session.
+    */
+  }
+}
 
 function createDoubleSixSet() {
   const tiles = [];
@@ -99,10 +145,11 @@ export function createGame() {
     turn: PLAYER.HUMAN,
     gameOver: false,
 
-    scores: {
-      [PLAYER.HUMAN]: 0,
-      [PLAYER.COMPUTER]: 0
-    },
+    /*
+      Scores are loaded once when the game is created.
+      They are then preserved between rounds.
+    */
+    scores: loadScores(),
 
     lastEvent: null
   };
@@ -255,6 +302,12 @@ export function createGame() {
 
     if (winner === PLAYER.HUMAN || winner === PLAYER.COMPUTER) {
       state.scores[winner] += 1;
+
+      /*
+        This is the important persistence call.
+        It runs whenever a player wins a round.
+      */
+      saveScores(state.scores);
     }
 
     state.lastEvent = {
@@ -291,16 +344,6 @@ export function createGame() {
     - matching: pip touching the current logical end
     - exposed: new logical end
     - double: whether it must be rendered as a double
-
-    Example:
-    {
-      type: "place",
-      side: "left",
-      tile: { id: "tile-...", a: 6, b: 1 },
-      matching: 6,
-      exposed: 1,
-      double: false
-    }
   */
   function play(player, tileId, side) {
     if (
@@ -394,6 +437,7 @@ export function createGame() {
       && legalMoves(player).length === 0
     ) {
       const drawnTile = state.boneyard.pop();
+
       state.hands[player].push(drawnTile);
       drawn.push(copyTile(drawnTile));
     }
@@ -466,7 +510,14 @@ export function createGame() {
     state.opening = null;
     state.turn = PLAYER.HUMAN;
     state.gameOver = false;
+
+    /*
+      Keep the existing scores when starting a new round.
+      These scores were loaded from localStorage when createGame()
+      was called, and updated there whenever a round ended.
+    */
     state.scores = oldScores;
+
     state.lastEvent = null;
 
     const opening = findOpening();

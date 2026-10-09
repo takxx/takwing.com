@@ -7,10 +7,41 @@ const WIN_CASH = 25000;
 const SUPPORTED_LANGUAGES = ["en", "es"];
 const LANGUAGE_STORAGE_KEY = "canaryMarketLanguage";
 
+const URL_LANGUAGE_MAP = {
+  en: "en",
+  es: "es"
+};
+
 let state;
 let language = getInitialLanguage();
 
 const $ = id => document.getElementById(id);
+
+/* ------------------------------------------------------------------
+   Language detection with URL priority
+------------------------------------------------------------------ */
+
+function getLangFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const lang = params.get("lang");
+
+  if (!lang) return null;
+
+  const normalized = lang.toLowerCase();
+
+  if (SUPPORTED_LANGUAGES.includes(normalized)) {
+    return normalized;
+  }
+
+  // Accept "en-GB", "es-AR", etc.
+  const base = normalized.split("-")[0];
+
+  if (SUPPORTED_LANGUAGES.includes(base)) {
+    return base;
+  }
+
+  return null;
+}
 
 function getBrowserLanguage() {
   const browserLanguages = [
@@ -31,15 +62,46 @@ function getBrowserLanguage() {
   return "en";
 }
 
-function getInitialLanguage() {
-  const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+function getSavedLanguage() {
+  try {
+    const savedLanguage = localStorage.getItem(
+      LANGUAGE_STORAGE_KEY
+    );
 
-  if (SUPPORTED_LANGUAGES.includes(savedLanguage)) {
-    return savedLanguage;
+    if (SUPPORTED_LANGUAGES.includes(savedLanguage)) {
+      return savedLanguage;
+    }
+  } catch {
+    // Storage may be unavailable.
   }
 
-  return getBrowserLanguage();
+  return null;
 }
+
+function getInitialLanguage() {
+  // Priority: URL → saved → browser → English
+  return (
+    getLangFromUrl() ||
+    getSavedLanguage() ||
+    getBrowserLanguage() ||
+    "en"
+  );
+}
+
+function saveLanguage(selectedLanguage) {
+  try {
+    localStorage.setItem(
+      LANGUAGE_STORAGE_KEY,
+      selectedLanguage
+    );
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+/* ------------------------------------------------------------------
+   Localization helpers
+------------------------------------------------------------------ */
 
 function getLocale() {
   return language === "es" ? "es-ES" : "en-US";
@@ -181,7 +243,7 @@ const text = {
     paid: value => `Pagaste ${money(value)} de tu deuda.`,
     timeUp: (cash, debt) =>
       `Terminaste con ${money(cash)} y una deuda de ${money(debt)}.`,
-    madeIt: "¡Lo Consegu[i]ste!",
+    madeIt: "¡Lo Conseguiste!",
     timeTitle: "Se Acabó el Tiempo",
     winText: () =>
       `Pagaste tu deuda y conseguiste ${money(WIN_CASH)}.`
@@ -243,6 +305,10 @@ function productLabel(product) {
 function islandLabel(island) {
   return islandNames[language][island];
 }
+
+/* ------------------------------------------------------------------
+   Game logic
+------------------------------------------------------------------ */
 
 function createGame() {
   const inventory = {};
@@ -518,6 +584,10 @@ function writeLog(message, type = "") {
   $("log").prepend(entry);
 }
 
+/* ------------------------------------------------------------------
+   Rendering and events
+------------------------------------------------------------------ */
+
 function render() {
   const t = currentText();
 
@@ -643,6 +713,10 @@ function render() {
   $("languageSelect").value = language;
 }
 
+/* ------------------------------------------------------------------
+   Event listeners and startup
+------------------------------------------------------------------ */
+
 $("languageSelect").value = language;
 
 $("languageSelect").addEventListener("change", event => {
@@ -652,11 +726,7 @@ $("languageSelect").addEventListener("change", event => {
     ? selectedLanguage
     : "en";
 
-  localStorage.setItem(
-    LANGUAGE_STORAGE_KEY,
-    language
-  );
-
+  saveLanguage(language);
   render();
 });
 
