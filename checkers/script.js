@@ -166,7 +166,7 @@ zh: {
   computerOne: "電腦甲",
   computerTwo: "電腦乙",
   winsLabel: "勝",
-  lossesLabel: "敗"
+  lossesLabel: "負"
 }
 };
 
