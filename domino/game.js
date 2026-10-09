@@ -453,7 +453,20 @@ export function createGame() {
     }
 
     if (!playable && state.boneyard.length === 0) {
-      finishBlockedRound();
+      const nextPlayer = oppositePlayer(player);
+
+      // The player who cannot play passes.
+      state.turn = nextPlayer;
+
+      // The round is blocked only if the other player cannot play either.
+      if (legalMoves(nextPlayer).length === 0) {
+        finishBlockedRound();
+      } else {
+        state.lastEvent = {
+          type: "pass",
+          player
+        };
+      }
     }
 
     return {
