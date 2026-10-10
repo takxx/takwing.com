@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>SFCave — Palm Grayscale</title>
+
+<style>
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #111;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+}
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <canvas id="game"></canvas>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  const GAME_W = 160;
+  const GAME_H = 240;
+
+  const COLORS = {
+    black: "#000000",
+    darkGray: "#404040",
+    gray: "#808080",
+    lightGray: "#c0c0c0",
+    white: "#ffffff"
+  };
+
+  const TRANSLATIONS = {
+    en: {
+      htmlLang: "en",
+      title: "SFCave — Palm Grayscale",
+      score: "SCORE",
+      best: "BEST",
+      gameTitle: "S F C A V E",
+      holdToRise: "HOLD TO RISE",
+      releaseToFall: "RELEASE TO FALL",
+      controls: "SPACE / CLICK / TOUCH",
+      gameOver: "GAME OVER",
+      holdToRetry: "HOLD TO RETRY"
+    },
+    es: {
+      htmlLang: "es-ES",
+      title: "SFCave — Escala de grises Palm",
+      score: "PUNTOS",
+      best: "RÉCORD",
+      gameTitle: "S F C A V E",
+      holdToRise: "MANTÉN PULSADO PARA SUBIR",
+      releaseToFall: "SUELTA PARA CAER",
+      controls: "ESPACIO / CLIC / TOQUE",
+      gameOver: "FIN DE LA PARTIDA",
+      holdToRetry: "MANTÉN PULSADO PARA REINTENTAR"
+    },
+    zh: {
+      htmlLang: "zh-Hant",
+      title: "SFCave — Palm 灰階版",
+      score: "分數",
+      best: "最佳",
+      gameTitle: "S F C A V E",
+      holdToRise: "撳住上升",
+      releaseToFall: "放開下降",
+      controls: "空白鍵 / 撳一下 / 輕觸",
+      gameOver: "遊戲結束",
+      holdToRetry: "撳住再嚟一次"
+    }
+  };
+
+  function detectLanguage() {
+    const requested = new URLSearchParams(window.location.search).get("lang");
+
+    if (requested && Object.hasOwn(TRANSLATIONS, requested.toLowerCase())) {
+      return requested.toLowerCase();
+    }
+
+    const preferences = [
+      ...(navigator.languages || []),
+      navigator.language
+    ].filter(Boolean);
+
+    for (const preference of preferences) {
+      const code = preference.toLowerCase();
+
+      if (code.startsWith("es")) return "es";
+      if (code.startsWith("zh")) return "zh";
+      if (code.startsWith("en")) return "en";
+    }
+
+    return "en";
+  }
+
+  const languageCode = detectLanguage();
+  const t = TRANSLATIONS[languageCode];
+
+  document.documentElement.lang = t.htmlLang;
+  document.title = t.title;
+
+  let running = false;
+  let gameOver = false;
+  let score = 0;
+  let best = Number(localStorage.getItem("sfcave_gray_best") || 0);
+
+  const scrollSpeedStart = 0.55;
+  let scrollSpeed = scrollSpeedStart;
+
+  const ribbon = {
+    x: 34,
+    y: GAME_H / 2,
+    vy: 0,
+    radius: 1,
+    trail: []
+  };
+
+  const step = 2;
+  const ceiling = [];
+  const floor = [];
+
+  let caveCenter = GAME_H / 2;
+  let caveGap = 78;
+  let targetCenter = GAME_H / 2;
+  let targetGap = 78;
+
+  let frame = 0;
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    const scale = Math.min(viewportW / GAME_W, viewportH / GAME_H);
+    const cssWidth = Math.floor(GAME_W * scale);
+    const cssHeight = Math.floor(GAME_H * scale);
+
+    canvas.style.width = cssWidth + "px";
+    canvas.style.height = cssHeight + "px";
+
+    canvas.width = Math.max(1, Math.floor(cssWidth * dpr));
+    canvas.height = Math.max(1, Math.floor(cssHeight * dpr));
+
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", resize);
+  resize();
+
+  function resetGame() {
+    running = false;
+    gameOver = false;
+    score = 0;
+    scrollSpeed = scrollSpeedStart;
+    frame = 0;
+
+    ribbon.x = 34;
+    ribbon.y = GAME_H / 2;
+    ribbon.vy = 0;
+    ribbon.trail = [];
+
+    ceiling.length = 0;
+    floor.length = 0;
+
+    caveCenter = GAME_H / 2;
+    caveGap = 78;
+    targetCenter = GAME_H / 2;
+    targetGap = 78;
+
+    const columns = Math.ceil(GAME_W / step) + 2;
+
+    for (let i = 0; i < columns; i++) {
+      ceiling.push(caveCenter - caveGap / 2);
+      floor.push(caveCenter + caveGap / 2);
+    }
+  }
+
+  const input = {
+    space: false,
+    mouse: false,
+    touch: false
+  };
+
+  function holding() {
+    return input.space || input.mouse || input.touch;
+  }
+
+  function startOrRestart() {
+    if (gameOver) resetGame();
+    running = true;
+  }
+
+  window.addEventListener("keydown", e => {
+    if (e.code === "Space") {
+      e.preventDefault();
+      input.space = true;
+      startOrRestart();
+    }
+  });
+
+  window.addEventListener("keyup", e => {
+    if (e.code === "Space") input.space = false;
+  });
+
+  canvas.addEventListener("mousedown", e => {
+    e.preventDefault();
+    input.mouse = true;
+    startOrRestart();
+  });
+
+  window.addEventListener("mouseup", () => {
+    input.mouse = false;
+  });
+
+  canvas.addEventListener("touchstart", e => {
+    e.preventDefault();
+    input.touch = true;
+    startOrRestart();
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", e => {
+    e.preventDefault();
+    input.touch = false;
+  }, { passive: false });
+
+  canvas.addEventListener("touchcancel", () => {
+    input.touch = false;
+  });
+
+  function updateCave() {
+    frame++;
+
+    if (frame % 42 === 0) {
+      targetCenter = 32 + Math.random() * (GAME_H - 64);
+    }
+
+    if (frame % 55 === 0 && caveGap > 42) {
+      targetGap = Math.max(42, caveGap - 2 - Math.floor(Math.random() * 4));
+    }
+
+    caveCenter += (targetCenter - caveCenter) * 0.025;
+    caveGap += (targetGap - caveGap) * 0.02;
+
+    const top = Math.round(caveCenter - caveGap / 2);
+    const bottom = Math.round(caveCenter + caveGap / 2);
+
+    ceiling.push(top);
+    floor.push(bottom);
+
+    ceiling.shift();
+    floor.shift();
+  }
+
+  function update() {
+    if (!running || gameOver) return;
+
+    score += scrollSpeed * 0.12;
+    scrollSpeed = scrollSpeedStart + Math.floor(score / 80) * 0.03;
+
+    if (holding()) {
+      ribbon.vy -= 0.09;
+    } else {
+      ribbon.vy += 0.07;
+    }
+
+    ribbon.vy *= 0.94;
+    ribbon.vy = Math.max(-1.15, Math.min(1.35, ribbon.vy));
+
+    ribbon.y += ribbon.vy;
+
+    ribbon.trail.push({
+      x: ribbon.x,
+      y: Math.round(ribbon.y)
+    });
+
+    if (ribbon.trail.length > 14) {
+      ribbon.trail.shift();
+    }
+
+    updateCave();
+
+    const index = Math.floor(ribbon.x / step);
+    const ceilY = ceiling[index] ?? 0;
+    const floorY = floor[index] ?? GAME_H;
+
+    if (
+      ribbon.y - ribbon.radius < ceilY ||
+      ribbon.y + ribbon.radius > floorY ||
+      ribbon.y < 0 ||
+      ribbon.y > GAME_H
+    ) {
+      gameOver = true;
+      best = Math.max(best, Math.floor(score));
+      localStorage.setItem("sfcave_gray_best", best);
+    }
+  }
+
+  function drawPixelText(text, x, y, align = "left", color = COLORS.white) {
+    ctx.fillStyle = color;
+    ctx.font = "8px monospace";
+    ctx.textAlign = align;
+    ctx.textBaseline = "top";
+    ctx.fillText(text, x, y);
+  }
+
+  function drawCave() {
+    ctx.fillStyle = COLORS.black;
+    ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+    for (let i = 0; i < ceiling.length; i++) {
+      const x = i * step;
+      const top = Math.round(ceiling[i]);
+      const bottom = Math.round(floor[i]);
+
+      ctx.fillStyle = COLORS.lightGray;
+      ctx.fillRect(x, 0, step, top);
+      ctx.fillRect(x, bottom, step, GAME_H - bottom);
+
+      ctx.fillStyle = COLORS.darkGray;
+      ctx.fillRect(x, top - 1, step, 1);
+      ctx.fillRect(x, bottom, step, 1);
+    }
+  }
+
+  function drawRibbon() {
+    ctx.strokeStyle = COLORS.white;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+
+    for (let i = 0; i < ribbon.trail.length; i++) {
+      const p = ribbon.trail[i];
+
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+
+    ctx.stroke();
+
+    ctx.fillStyle = COLORS.white;
+    ctx.fillRect(
+      Math.round(ribbon.x) - 1,
+      Math.round(ribbon.y) - 1,
+      3,
+      3
+    );
+  }
+
+  function drawUI() {
+    drawPixelText(
+      t.score + " " + String(Math.floor(score)).padStart(4, "0"),
+      4,
+      4
+    );
+
+    drawPixelText(
+      t.best + " " + String(best).padStart(4, "0"),
+      GAME_W - 4,
+      4,
+      "right",
+      COLORS.gray
+    );
+
+    if (!running && !gameOver) {
+      drawPixelText(t.gameTitle, GAME_W / 2, 84, "center", COLORS.white);
+      drawPixelText(t.holdToRise, GAME_W / 2, 112, "center", COLORS.lightGray);
+      drawPixelText(t.releaseToFall, GAME_W / 2, 126, "center", COLORS.lightGray);
+      drawPixelText(t.controls, GAME_W / 2, 150, "center", COLORS.gray);
+    }
+
+    if (gameOver) {
+      ctx.fillStyle = "rgba(0,0,0,0.72)";
+      ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+      drawPixelText(t.gameOver, GAME_W / 2, 92, "center", COLORS.white);
+      drawPixelText(t.score + " " + Math.floor(score), GAME_W / 2, 116, "center", COLORS.lightGray);
+      drawPixelText(t.best + " " + best, GAME_W / 2, 130, "center", COLORS.lightGray);
+      drawPixelText(t.holdToRetry, GAME_W / 2, 158, "center", COLORS.gray);
+    }
+  }
+
+  function loop() {
+    update();
+
+    const scale = canvas.width / GAME_W;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+
+    drawCave();
+    drawRibbon();
+    drawUI();
+
+    requestAnimationFrame(loop);
+  }
+
+  resetGame();
+  loop();
+})();
+</script>
+
+</body>
+</html>
