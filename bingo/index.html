@@ -96,9 +96,6 @@
       text-shadow: 1px 2px 2px rgba(0, 0, 0, 0.4);
     }
 
-    /*
-      Bingo header colors
-    */
     .header-b {
       background: #d83b3b;
     }
@@ -119,15 +116,14 @@
       background: #8a4fc7;
     }
 
-    /*
-      All unselected squares stay neutral
-    */
     .cell {
       aspect-ratio: 1 / 1;
       padding: 5px;
       color: #173d2b;
       background: var(--card-cream);
-      font-size: clamp(0.7rem, 2.5vw, 1.5rem);
+
+      /* Larger bingo numbers */
+      font-size: clamp(1.15rem, 5.5vw, 2.1rem);
       font-weight: bold;
       line-height: 1.15;
       text-align: center;
@@ -146,9 +142,6 @@
       filter: brightness(1.08);
     }
 
-    /*
-      Selected squares receive their column's highlight color
-    */
     .cell.selected.col-b {
       color: white;
       background: #d83b3b;
@@ -180,13 +173,10 @@
         0 0 8px rgba(255, 255, 255, 0.45);
     }
 
-    /*
-      Free center space
-    */
     .free-space {
       color: white;
       background: #bd2630 !important;
-      font-size: clamp(0.65rem, 2.3vw, 0.95rem);
+      font-size: clamp(0.8rem, 3vw, 1.1rem);
       cursor: default;
     }
 
@@ -251,6 +241,16 @@
       .cell,
       .column-header {
         border-radius: 5px;
+      }
+
+      /* Extra-large numbers on phones */
+      .cell {
+        font-size: clamp(1.35rem, 6.5vw, 2.2rem);
+        padding: 2px;
+      }
+
+      .free-space {
+        font-size: clamp(0.85rem, 3.4vw, 1.15rem);
       }
     }
   </style>
@@ -352,7 +352,6 @@
         shuffle(createNumberPool(column.min, column.max)).slice(0, 5)
       );
 
-      // Add BINGO headers
       columns.forEach((column) => {
         const header = document.createElement("div");
 
@@ -362,14 +361,12 @@
         bingoCard.appendChild(header);
       });
 
-      // Add the 25 bingo squares
       for (let row = 0; row < 5; row++) {
         columns.forEach((column, columnIndex) => {
           const cell = document.createElement("div");
 
           cell.className = `cell ${column.cellClass}`;
 
-          // Center square is always the free space
           if (row === 2 && columnIndex === 2) {
             cell.textContent = "FREE";
             cell.classList.add("free-space");
@@ -421,7 +418,6 @@
     generateButton.addEventListener("click", generateCard);
     clearButton.addEventListener("click", clearMarks);
 
-    // Generate the first card when the page loads
     generateCard();
   </script>
 </body>
