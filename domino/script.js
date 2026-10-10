@@ -6,7 +6,7 @@
   1. Start and reset rounds.
   2. Ask game.js whether moves are legal.
   3. Tell render.js to draw accepted game placements.
-  4. Handle player clicks and left/right chooser.
+  4. Handle player clicks and the left/right board overlay.
   5. Run the computer turn.
   6. Apply language changes.
 */
@@ -51,6 +51,7 @@ const renderer = createRenderer(elements);
 let pendingTile = null;
 let computerThinking = false;
 let statusOverride = "";
+let pendingTileButton = null;
 
 function tileText(tile) {
   return t("tile", {
@@ -64,12 +65,58 @@ function sideText(side) {
 }
 
 function setSidePickerVisible(visible) {
+  const wasHidden = elements.sidePicker.classList.contains("is-hidden");
+
   elements.sidePicker.classList.toggle("is-hidden", !visible);
+
+  /*
+    Give keyboard users an immediate way to make their choice after
+    selecting a domino that fits both non-matching open ends.
+  */
+  if (visible && wasHidden) {
+    window.requestAnimationFrame(() => {
+      elements.playLeft.focus();
+    });
+  }
 }
 
-function clearPendingTile() {
+function rememberTileButton(tile) {
+  const tileButtons = elements.playerHand.querySelectorAll(".hand-domino");
+
+  pendingTileButton = Array.from(tileButtons).find((button) => {
+    return button.getAttribute("aria-label")?.includes(
+      `${tile.a}`
+    ) && button.getAttribute("aria-label")?.includes(
+      `${tile.b}`
+    );
+  }) || null;
+}
+
+function restoreTileFocus() {
+  if (!pendingTileButton) {
+    return;
+  }
+
+  const button = pendingTileButton;
+  pendingTileButton = null;
+
+  window.requestAnimationFrame(() => {
+    if (document.contains(button) && !button.disabled) {
+      button.focus();
+    }
+  });
+}
+
+function clearPendingTile({ restoreFocus = false } = {}) {
   pendingTile = null;
   setSidePickerVisible(false);
+
+  if (restoreFocus) {
+    restoreTileFocus();
+    return;
+  }
+
+  pendingTileButton = null;
 }
 
 function resultMessage(snapshot) {
@@ -215,12 +262,30 @@ function onHumanTileClick(tile) {
     return;
   }
 
+  /*
+    The bone can fit on exactly one end, so play it there.
+  */
   if (sides.length === 1) {
     playHumanTile(tile, sides[0]);
     return;
   }
 
+  /*
+    Both legal ends have the same exposed number, so choosing a side
+    makes no gameplay difference. Pick either legal end automatically.
+  */
+  if (snapshot.ends.left === snapshot.ends.right) {
+    const randomSide = sides[Math.floor(Math.random() * sides.length)];
+
+    playHumanTile(tile, randomSide);
+    return;
+  }
+
+  /*
+    The tile fits both different open ends. Ask the player where to play it.
+  */
   pendingTile = tile;
+  rememberTileButton(tile);
   statusOverride = t("chooseSide");
   renderApplication();
 }
@@ -241,8 +306,8 @@ function playHumanTile(tile, side) {
   }
 
   /*
-    Game emitted a purely logical left/right placement.
-    The renderer independently chooses its A01–Q17 location and geometry.
+    Game emits a logical left/right placement. The renderer chooses
+    its own A01–Q17 board location and display geometry.
   */
   renderer.place(result.placement);
   renderApplication();
@@ -323,17 +388,18 @@ function startRound() {
   const opening = game.startRound();
 
   /*
-    Renderer receives only the opener's value/tile/owner data.
-    It independently places the centered double at I09.
+    Renderer receives the opener's value/tile/owner data and places
+    the centered opening double independently.
   */
   renderer.reset(opening);
   renderApplication();
 
   if (game.snapshot().turn === PLAYER.COMPUTER) {
     window.setTimeout(beginComputerTurn, 450);
-  } else {
-    window.setTimeout(beginHumanTurn, 120);
+    return;
   }
+
+  window.setTimeout(beginHumanTurn, 120);
 }
 
 function bindEvents() {
@@ -357,7 +423,10 @@ function bindEvents() {
   });
 
   elements.cancelPlay.addEventListener("click", () => {
-    clearPendingTile();
+    clearPendingTile({
+      restoreFocus: true
+    });
+
     statusOverride = t("yourTurn");
     renderApplication();
   });

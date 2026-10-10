@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
   <title>Dominoes</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <main class="app-shell">
     <section class="board-area" aria-label="Domino board">
@@ -17,6 +21,34 @@
         role="grid"
         aria-label="Domino board"
       ></div>
+
+      <section
+        id="side-picker"
+        class="side-picker board-side-picker is-hidden"
+        aria-live="polite"
+        aria-label="Choose where to play this domino"
+      >
+        <p data-i18n="chooseSide">Choose an end for this tile.</p>
+
+        <div class="button-row">
+          <button id="play-left" type="button" data-i18n="left">
+            Left
+          </button>
+
+          <button id="play-right" type="button" data-i18n="right">
+            Right
+          </button>
+
+          <button
+            id="cancel-play"
+            type="button"
+            class="secondary-button"
+            data-i18n="cancel"
+          >
+            Cancel
+          </button>
+        </div>
+      </section>
     </section>
 
     <aside class="sidebar">
@@ -63,33 +95,6 @@
           class="player-hand"
           aria-label="Your domino tiles"
         ></div>
-      </section>
-
-      <section
-        id="side-picker"
-        class="side-picker is-hidden"
-        aria-live="polite"
-      >
-        <p data-i18n="chooseSide">Choose an end for this tile.</p>
-
-        <div class="button-row">
-          <button id="play-left" type="button" data-i18n="left">
-            Left
-          </button>
-
-          <button id="play-right" type="button" data-i18n="right">
-            Right
-          </button>
-
-          <button
-            id="cancel-play"
-            type="button"
-            class="secondary-button"
-            data-i18n="cancel"
-          >
-            Cancel
-          </button>
-        </div>
       </section>
 
       <section class="controls">
