@@ -3,17 +3,12 @@
 
   Renderer-only module.
 
-  Logical board:
-  - A01–Q17 coordinates
-  - 17 × 17 logical squares
-  - Grid state never includes the visual gutter
-
-  Visual board:
-  - An extra 0.5 cell of padding on every side
-  - Total visual size is 18 × 18 units:
-      0.5 + 17 + 0.5 = 18
-  - This allows doubles on the outer edge to extend half a cell without
-    being clipped by the board element.
+  - A01–Q17 board coordinates
+  - Board descriptors and renderer invariants
+  - Physical tile placement
+  - Directed snake routing
+  - Clockwise turns
+  - DOM rendering for board and hands
 
   Board descriptor:
   [pip, role, flow]
@@ -45,16 +40,6 @@
 
 const BOARD_SIZE = 17;
 const TURN_MARGIN = 2;
-
-/*
-  The logical board remains 17 × 17.
-
-  The rendered board has a half-cell border on every side:
-
-  0.5 + 17 + 0.5 = 18 visual units.
-*/
-const VISUAL_GUTTER = 0.5;
-const VISUAL_BOARD_SIZE = BOARD_SIZE + VISUAL_GUTTER * 2;
 
 const FLOW_DIRECTIONS = Object.freeze({
   WE: { dr: 0, dc: 1 },
@@ -189,21 +174,15 @@ export function createRenderer(elements) {
   }
 
   function markerRoleFor(side) {
-    return side === "left"
-      ? "open-left"
-      : "open-right";
+    return side === "left" ? "open-left" : "open-right";
   }
 
   function matchingRoleFor(side) {
-    return side === "left"
-      ? "right"
-      : "left";
+    return side === "left" ? "right" : "left";
   }
 
   function exposedRoleFor(side) {
-    return side === "left"
-      ? "left"
-      : "right";
+    return side === "left" ? "left" : "right";
   }
 
   function setOpenMarker(side, point, pip, flow) {
@@ -328,10 +307,7 @@ export function createRenderer(elements) {
   function chooseNormalPath(side) {
     const endpoint = endpoints[side];
 
-    const straight = createCandidate(
-      endpoint.marker,
-      endpoint.flow
-    );
+    const straight = createCandidate(endpoint.marker, endpoint.flow);
 
     if (
       !shouldTurnAt(endpoint.marker, endpoint.flow)
@@ -372,8 +348,7 @@ export function createRenderer(elements) {
     I09 = [value, "double", "EW"]
     J09 = [value, "open-right", "WE"]
 
-    Left chain starts moving west.
-    Right chain starts moving east.
+    Left chain starts moving west. Right chain starts moving east.
   */
   function reset(opening) {
     grid = createEmptyBoard();
@@ -385,19 +360,8 @@ export function createRenderer(elements) {
 
     write(center, [opening.value, "double", "EW"]);
 
-    setOpenMarker(
-      "left",
-      leftMarker,
-      opening.value,
-      "EW"
-    );
-
-    setOpenMarker(
-      "right",
-      rightMarker,
-      opening.value,
-      "WE"
-    );
+    setOpenMarker("left", leftMarker, opening.value, "EW");
+    setOpenMarker("right", rightMarker, opening.value, "WE");
 
     visualTiles.push({
       kind: "double",
@@ -421,17 +385,18 @@ export function createRenderer(elements) {
   }
 
   /*
-    A normal play always transforms the existing open marker:
+    A normal play always does this:
 
+    Existing:
     [matching, "open-left/right", oldFlow]
 
-    Into:
-
+    Becomes:
     [matching, "left/right", newFlow]
-    [exposed, "right/left", newFlow]
-    [exposed, "open-left/right", newFlow]
+    [exposed,  "right/left", newFlow]
+    [exposed,  "open-left/right", newFlow]
 
-    The current marker always becomes the matching half of the played tile.
+    The marker pip always becomes the matching half, regardless of whether
+    newFlow is straight, clockwise, or counter-clockwise.
   */
   function placeNormal(placement) {
     const side = placement.side;
@@ -441,9 +406,7 @@ export function createRenderer(elements) {
     const path = chooseNormalPath(side);
 
     if (!path) {
-      throw new Error(
-        `No contiguous route is available for the ${side} chain.`
-      );
+      throw new Error(`No contiguous route is available for the ${side} chain.`);
     }
 
     write(path.first, [
@@ -458,12 +421,7 @@ export function createRenderer(elements) {
       path.flow
     ]);
 
-    setOpenMarker(
-      side,
-      path.nextMarker,
-      placement.exposed,
-      path.flow
-    );
+    setOpenMarker(side, path.nextMarker, placement.exposed, path.flow);
 
     visualTiles.push({
       kind: "normal",
@@ -480,9 +438,10 @@ export function createRenderer(elements) {
   /*
     A double consumes the current reserved marker as its center.
 
-    The chain advances by one logical grid cell. The double itself is
-    displayed perpendicular to the chain direction, and may occupy the
-    visual 0.5-cell gutter when positioned on an outer logical edge.
+    Its center advances the chain by exactly one grid cell in the current
+    flow, regardless of whether that flow is horizontal or vertical.
+
+    The other half of the double is rendered perpendicular to the chain.
   */
   function placeDouble(placement) {
     const side = placement.side;
@@ -548,15 +507,6 @@ export function createRenderer(elements) {
     renderBoard();
   }
 
-  /*
-    The CSS board must use an 18 × 18 visual grid:
-
-    grid-template-columns: 0.5fr repeat(17, 1fr) 0.5fr;
-    grid-template-rows:    0.5fr repeat(17, 1fr) 0.5fr;
-
-    Logical cell A01 is placed in visual column 2 / row 2.
-    Logical cell Q17 is placed in visual column 18 / row 18.
-  */
   function renderGridCells() {
     const fragment = document.createDocumentFragment();
 
@@ -569,13 +519,6 @@ export function createRenderer(elements) {
         cell.dataset.coordinate = coordinate(row, col);
         cell.setAttribute("role", "gridcell");
         cell.setAttribute("aria-label", coordinate(row, col));
-
-        /*
-          CSS grid line 1 is the visual top/left half-cell gutter.
-          Logical cells therefore start at line 2.
-        */
-        cell.style.gridRow = String(row + 2);
-        cell.style.gridColumn = String(col + 2);
 
         if (descriptor) {
           const [pip, role, flow] = descriptor;
@@ -596,21 +539,13 @@ export function createRenderer(elements) {
     board.replaceChildren(fragment);
   }
 
-  /*
-    Normal tiles align directly with logical cell boundaries.
-
-    Since the logical grid begins 0.5 visual units from the board edge,
-    both left and top include VISUAL_GUTTER.
-  */
   function renderNormalTile(tileData, unit) {
     const [first, second] = tileData.cells;
     const firstDescriptor = read(first);
     const secondDescriptor = read(second);
 
     if (!firstDescriptor || !secondDescriptor) {
-      throw new Error(
-        "Cannot render a normal domino without both board descriptors."
-      );
+      throw new Error("Cannot render a normal domino without both board descriptors.");
     }
 
     const horizontal = first.row === second.row;
@@ -618,20 +553,16 @@ export function createRenderer(elements) {
     const startCol = Math.min(first.col, second.col);
 
     const tile = document.createElement("div");
-    tile.className = `board-domino ${
-      horizontal ? "horizontal" : "vertical"
-    }`;
+    tile.className = `board-domino ${horizontal ? "horizontal" : "vertical"}`;
 
-    tile.style.left = `${(startCol + VISUAL_GUTTER) * unit}px`;
-    tile.style.top = `${(startRow + VISUAL_GUTTER) * unit}px`;
+    tile.style.left = `${startCol * unit}px`;
+    tile.style.top = `${startRow * unit}px`;
     tile.style.width = `${horizontal ? unit * 2 : unit}px`;
     tile.style.height = `${horizontal ? unit : unit * 2}px`;
 
     /*
-      DOM order follows physical screen order.
-
-      For westward or upward movement, reverse the pips so the visual
-      left-to-right or top-to-bottom order matches the screen placement.
+      DOM order follows physical screen order. For west/upward movement,
+      reverse the pip sequence to match the displayed tile orientation.
     */
     const firstBeforeSecond = horizontal
       ? first.col < second.col
@@ -650,20 +581,12 @@ export function createRenderer(elements) {
   }
 
   /*
-    Doubles are visually perpendicular to their directed chain flow:
+    Doubles are drawn perpendicular to their directed flow:
+    - horizontal chain flow → vertical double
+    - vertical chain flow   → horizontal double
 
-    - Horizontal chain flow: vertical double
-    - Vertical chain flow: horizontal double
-
-    A double is centered on its logical cell. Its "other" half extends into
-    a neighboring half-cell. At a logical board edge, that half occupies
-    the visual gutter rather than falling outside the board.
-
-    Vertical double:
-      logical center row r → visual top r
-
-    Horizontal double:
-      logical center col c → visual left c
+    This is only their visual orientation. In the grid model, the chain
+    advances one cell from the double's center in every flow direction.
   */
   function renderDoubleTile(tileData, unit) {
     const descriptor = read(tileData.center);
@@ -681,30 +604,13 @@ export function createRenderer(elements) {
     }`;
 
     if (vertical) {
-      /*
-        Centered around logical row:
-        visual top = logical row
-        visual left = logical column + 0.5 gutter
-      */
-      tile.style.left = `${
-        (tileData.center.col + VISUAL_GUTTER) * unit
-      }px`;
-
-      tile.style.top = `${tileData.center.row * unit}px`;
+      tile.style.left = `${tileData.center.col * unit}px`;
+      tile.style.top = `${(tileData.center.row - 0.5) * unit}px`;
       tile.style.width = `${unit}px`;
       tile.style.height = `${unit * 2}px`;
     } else {
-      /*
-        Centered around logical column:
-        visual left = logical column
-        visual top = logical row + 0.5 gutter
-      */
-      tile.style.left = `${tileData.center.col * unit}px`;
-
-      tile.style.top = `${
-        (tileData.center.row + VISUAL_GUTTER) * unit
-      }px`;
-
+      tile.style.left = `${(tileData.center.col - 0.5) * unit}px`;
+      tile.style.top = `${tileData.center.row * unit}px`;
       tile.style.width = `${unit * 2}px`;
       tile.style.height = `${unit}px`;
     }
@@ -726,11 +632,7 @@ export function createRenderer(elements) {
       return;
     }
 
-    /*
-      One cell is computed from the 18-unit visual coordinate system,
-      not from the 17 logical cells.
-    */
-    const unit = boardWidth / VISUAL_BOARD_SIZE;
+    const unit = boardWidth / BOARD_SIZE;
 
     for (const tileData of visualTiles) {
       if (tileData.kind === "double") {
@@ -794,8 +696,6 @@ export function createRenderer(elements) {
 
   /*
     Read-only debug/testing snapshot.
-
-    This returns only the logical 17 × 17 board, without visual gutter cells.
   */
   function boardSnapshot() {
     return structuredClone(grid);
