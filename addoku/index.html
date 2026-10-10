@@ -1,0 +1,1192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Killer Sudoku</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --panel: #161b22;
+  --cell: #20272f;
+  --cell-border: rgba(148,163,184,.35);
+  --box-border: rgba(203,213,225,.65);
+  --cage: #206040;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --input-highlight: #72b7e8;
+  --notes-highlight: #d6b84c;
+  --wrong: #ef7777;
+  --good: #70c7a1;
+  --control-bg: #252d36;
+  --control-bg-hover: #303a46;
+  --control-border: #46515e;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; }
+body { user-select: none; -webkit-user-select: none; }
+main { width: min(94vw, 640px); margin: 0 auto; padding: 22px 0 35px; }
+h1 { margin: 0 0 12px; text-align: center; font-size: 24px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; padding: 10px; border: 1px solid rgba(148,163,184,.12); border-radius: 12px; background: var(--panel); }
+button, select { border: 1px solid var(--control-border); border-radius: 7px; padding: 8px 10px; background: var(--control-bg); color: var(--text); cursor: pointer; font: inherit; }
+button:hover, select:hover { border-color: #64748b; background: var(--control-bg-hover); }
+button:focus-visible, select:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+button:disabled { opacity: .55; cursor: wait; }
+.board-wrap { position: relative; width: 100%; aspect-ratio: 1; }
+#board { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: repeat(9, minmax(0, 1fr)); border: 3px solid var(--box-border); background: var(--cell-border); }
+#selection-highlight { position: absolute; z-index: 20; display: none; pointer-events: none; border: 3px solid var(--input-highlight); }
+.board-wrap.notes-mode #selection-highlight { border-color: var(--notes-highlight); }
+.cell { position: relative; display: grid; min-width: 0; min-height: 0; place-items: center; overflow: hidden; border: 1px solid var(--cell-border); background: var(--cell); cursor: pointer; }
+.cell:nth-child(3n) { border-right: 3px solid var(--box-border); }
+.cell:nth-child(n+19):nth-child(-n+27),
+.cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 3px solid var(--box-border); }
+.cell[data-value="1"] { background: #5b3035; }
+.cell[data-value="2"] { background: #60402f; }
+.cell[data-value="3"] { background: #5f542d; }
+.cell[data-value="4"] { background: #475735; }
+.cell[data-value="5"] { background: #2f5551; }
+.cell[data-value="6"] { background: #2f515f; }
+.cell[data-value="7"] { background: #334871; }
+.cell[data-value="8"] { background: #4b3c65; }
+.cell[data-value="9"] { background: #5d374f; }
+.cell.same { box-shadow: inset 0 0 0 999px rgba(255,255,255,.09); }
+.value { position: relative; z-index: 2; font-size: clamp(18px, 5.5vw, 30px); font-weight: 700; color: #7dd3fc; }
+.cell.error .value { color: var(--wrong); }
+.notes { position: absolute; inset: 2px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); color: rgba(226,232,240,.72); font-size: clamp(7px, 1.7vw, 10px); }
+.notes span { display: grid; place-items: center; }
+.cage-sum { position: absolute; top: 1px; left: 3px; z-index: 3; font-size: clamp(8px, 2vw, 11px); font-weight: 800; color: #c7d2fe; text-shadow: 0 1px 2px rgba(0,0,0,.7); pointer-events: none; }
+#status { min-height: 20px; margin: 10px 0 12px; color: var(--muted); font-size: 13px; text-align: center; }
+#status.good { color: var(--good); }
+#status.error { color: var(--wrong); }
+.controls { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-top: 12px; }
+.numbers { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 8px; }
+.numbers button { aspect-ratio: 1; padding: 0; font-size: clamp(20px, 6vw, 28px); font-weight: 800; }
+.actions { display: grid; grid-template-rows: 1fr 1fr; gap: 8px; }
+.actions button { padding: 14px 10px; font-weight: 700; }
+#notes.active { border-color: var(--notes-highlight); background: #4a4126; color: #ead57d; }
+.help { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.5; text-align: center; }
+.language-control { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 24px; color: var(--muted); font-size: 13px; }
+.language-control select { min-width: 145px; }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="heading">Killer Sudoku</h1>
+
+  <div class="bar">
+    <select id="difficulty" aria-label="Difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+    <button id="new" type="button">New game</button>
+    <button id="undo" type="button">Undo</button>
+    <button id="hint" type="button">Hint</button>
+    <button id="check" type="button">Check</button>
+  </div>
+
+  <div class="board-wrap" id="boardWrap">
+    <div id="board" role="grid" aria-label="Killer Sudoku board"></div>
+    <div id="selection-highlight" aria-hidden="true"></div>
+  </div>
+
+  <div id="status" aria-live="polite"></div>
+
+  <div class="controls">
+    <div class="numbers" aria-label="Number pad">
+      <button type="button" data-value="1">1</button>
+      <button type="button" data-value="2">2</button>
+      <button type="button" data-value="3">3</button>
+      <button type="button" data-value="4">4</button>
+      <button type="button" data-value="5">5</button>
+      <button type="button" data-value="6">6</button>
+      <button type="button" data-value="7">7</button>
+      <button type="button" data-value="8">8</button>
+      <button type="button" data-value="9">9</button>
+    </div>
+    <div class="actions">
+      <button id="notes" type="button" aria-pressed="false">Notes</button>
+      <button id="erasePad" type="button">Erase</button>
+    </div>
+  </div>
+
+  <p class="help" id="help"></p>
+
+  <div class="language-control">
+    <label for="language" id="languageLabel">Language</label>
+    <select id="language" aria-label="Language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh">繁體中文</option>
+    </select>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+const SIZE = 9;
+const BOX = 3;
+const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const MAX_HISTORY = 200;
+
+const ATTEMPT_SOLVER_LIMIT = 25000;
+const SOLVER_LIMIT = 120000;
+const GENERATION_DEADLINE_MS = 8000;
+
+const LANGUAGE_KEY = "killer-sudoku-language";
+
+const boardEl = document.getElementById("board");
+const boardWrap = document.getElementById("boardWrap");
+const highlightEl = document.getElementById("selection-highlight");
+const statusEl = document.getElementById("status");
+const difficultyEl = document.getElementById("difficulty");
+const notesButton = document.getElementById("notes");
+const languageEl = document.getElementById("language");
+const helpEl = document.getElementById("help");
+const newButton = document.getElementById("new");
+
+const translations = {
+  en: {
+    documentTitle: "Killer Sudoku",
+    heading: "Killer Sudoku",
+    difficulty: "Difficulty",
+    easy: "Easy",
+    medium: "Medium",
+    hard: "Hard",
+    newGame: "New game",
+    generating: "Generating puzzle…",
+    undo: "Undo",
+    hint: "Hint",
+    check: "Check",
+    initial: "Select a cell, then choose a number.",
+    numberPad: "Number pad",
+    notes: "Notes",
+    notesOn: "Notes: ON",
+    erase: "Erase",
+    language: "Language",
+    help: "Fill every row, column and 3×3 box with 1–9.<br>Each dashed <b>cage</b> has at least two cells, must total its corner number, and cannot repeat a digit. There are no prefilled numbers.",
+    selectCell: "Select a cell first.",
+    newPuzzle: "New unique Killer Sudoku generated.",
+    notesOnMsg: "Notes mode on.",
+    notesOffMsg: "Notes mode off.",
+    nothingToUndo: "Nothing to undo.",
+    undone: "Move undone.",
+    noHints: "No hints needed.",
+    hintPlaced: "Hint placed.",
+    solved: "Solved! Well done.",
+    mistakes: "incorrect cells",
+    invalidCages: "invalid cages",
+    noMistakes: "No incorrect entries so far.",
+    row: "Row",
+    column: "column",
+    empty: "empty",
+    value: "value",
+    generationFailed: "Could not generate a unique puzzle. Please try again."
+  },
+  es: {
+    documentTitle: "Addoku",
+    heading: "Addoku",
+    difficulty: "Dificultad",
+    easy: "Fácil",
+    medium: "Medio",
+    hard: "Difícil",
+    newGame: "Nueva partida",
+    generating: "Generando rompecabezas…",
+    undo: "Deshacer",
+    hint: "Pista",
+    check: "Comprobar",
+    initial: "Selecciona una celda y elige un número.",
+    numberPad: "Teclado numérico",
+    notes: "Notas",
+    notesOn: "Notas: ACTIVADAS",
+    erase: "Borrar",
+    language: "Idioma",
+    help: "Completa cada fila, columna y caja de 3×3 con los números del 1 al 9.<br>Cada <b>jaula</b> discontinua tiene al menos dos celdas, debe sumar el número de su esquina y no puede repetir dígitos. No hay números prefijados.",
+    selectCell: "Selecciona primero una celda.",
+    newPuzzle: "Nuevo Addoku único generado.",
+    notesOnMsg: "Modo de notas activado.",
+    notesOffMsg: "Modo de notas desactivado.",
+    nothingToUndo: "No hay nada que deshacer.",
+    undone: "Movimiento deshecho.",
+    noHints: "No hacen falta pistas.",
+    hintPlaced: "Pista colocada.",
+    solved: "¡Resuelto! Muy bien.",
+    mistakes: "celdas incorrectas",
+    invalidCages: "jaulas no válidas",
+    noMistakes: "No hay entradas incorrectas por ahora.",
+    row: "Fila",
+    column: "columna",
+    empty: "vacía",
+    value: "valor",
+    generationFailed: "No se pudo generar un rompecabezas único. Inténtalo de nuevo."
+  },
+  zh: {
+    documentTitle: "殺手數獨",
+    heading: "殺手數獨",
+    difficulty: "難度",
+    easy: "簡單",
+    medium: "中等",
+    hard: "困難",
+    newGame: "新遊戲",
+    generating: "正在產生謎題…",
+    undo: "還原",
+    hint: "提示",
+    check: "檢查",
+    initial: "請選擇一格，然後選擇數字。",
+    numberPad: "數字鍵盤",
+    notes: "筆記",
+    notesOn: "筆記：開啟",
+    erase: "清除",
+    language: "語言",
+    help: "在每行、每欄及每個 3×3 宮內填入 1 至 9。<br>每個虛線<b>籠</b>至少有兩格，其數字總和須等於角落數字，且籠內數字不可重複。沒有任何預填數字。",
+    selectCell: "請先選擇一格。",
+    newPuzzle: "已產生新的唯一解殺手數獨。",
+    notesOnMsg: "筆記模式已開啟。",
+    notesOffMsg: "筆記模式已關閉。",
+    nothingToUndo: "沒有可復原的操作。",
+    undone: "已復原操作。",
+    noHints: "不需要提示。",
+    hintPlaced: "已放置提示。",
+    solved: "完成！做得好！",
+    mistakes: "個錯誤格子",
+    invalidCages: "個無效籠",
+    noMistakes: "目前沒有錯誤答案。",
+    row: "第",
+    column: "欄",
+    empty: "空白",
+    value: "數字",
+    generationFailed: "無法產生唯一解謎題，請再試一次。"
+  }
+};
+
+const difficultySettings = {
+  easy: {
+    attempts: [
+      { minSize: 2, maxSize: 3 },
+      { minSize: 2, maxSize: 3 },
+      { minSize: 2, maxSize: 4 }
+    ]
+  },
+  medium: {
+    attempts: [
+      { minSize: 2, maxSize: 4 },
+      { minSize: 3, maxSize: 4 },
+      { minSize: 2, maxSize: 4 }
+    ]
+  },
+  hard: {
+    attempts: [
+      { minSize: 3, maxSize: 5 },
+      { minSize: 3, maxSize: 4 },
+      { minSize: 2, maxSize: 4 }
+    ]
+  }
+};
+
+let currentLanguage = getInitialLanguage();
+let solution = null;
+let cages = [];
+let cellCage = [];
+let current = emptyGrid();
+let notes = emptyNotes();
+let history = [];
+let selected = null;
+let noteMode = false;
+let generating = false;
+
+function normalizeLanguage(value) {
+  if (!value) return null;
+  const code = String(value).toLowerCase().split("-")[0];
+  return ["en", "es", "zh"].includes(code) ? code : null;
+}
+
+function getInitialLanguage() {
+  const urlLanguage = normalizeLanguage(
+    new URLSearchParams(location.search).get("lang")
+  );
+
+  if (urlLanguage) return urlLanguage;
+
+  try {
+    const saved = normalizeLanguage(localStorage.getItem(LANGUAGE_KEY));
+    if (saved) return saved;
+  } catch (_) {}
+
+  for (const language of navigator.languages || [navigator.language]) {
+    const preferred = normalizeLanguage(language);
+    if (preferred) return preferred;
+  }
+
+  return "en";
+}
+
+function t(name) {
+  return translations[currentLanguage]?.[name] ??
+    translations.en[name] ??
+    name;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLanguage;
+  document.title = t("documentTitle");
+  document.getElementById("heading").textContent = t("heading");
+
+  difficultyEl.setAttribute("aria-label", t("difficulty"));
+  difficultyEl.options[0].textContent = t("easy");
+  difficultyEl.options[1].textContent = t("medium");
+  difficultyEl.options[2].textContent = t("hard");
+
+  document.getElementById("new").textContent = t("newGame");
+  document.getElementById("undo").textContent = t("undo");
+  document.getElementById("hint").textContent = t("hint");
+  document.getElementById("check").textContent = t("check");
+
+  document.querySelector(".numbers").setAttribute("aria-label", t("numberPad"));
+  document.getElementById("erasePad").textContent = t("erase");
+  document.getElementById("languageLabel").textContent = t("language");
+  languageEl.setAttribute("aria-label", t("language"));
+  helpEl.innerHTML = t("help");
+  boardEl.setAttribute("aria-label", t("documentTitle"));
+
+  updateMode();
+  render();
+  setStatus(t("initial"));
+}
+
+function emptyGrid() {
+  return Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+}
+
+function emptyNotes() {
+  return Array.from({ length: SIZE }, () =>
+    Array.from({ length: SIZE }, () => new Set())
+  );
+}
+
+function copyGrid(grid) {
+  return grid.map(row => [...row]);
+}
+
+function copyNotes(value) {
+  return value.map(row => row.map(set => new Set(set)));
+}
+
+function shuffle(array) {
+  const result = [...array];
+
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
+
+function key(row, column) {
+  return row * SIZE + column;
+}
+
+function neighbors(row, column) {
+  return [
+    [row - 1, column],
+    [row + 1, column],
+    [row, column - 1],
+    [row, column + 1]
+  ].filter(([r, c]) => r >= 0 && r < SIZE && c >= 0 && c < SIZE);
+}
+
+function baseCandidates(grid, row, column) {
+  const used = new Set();
+
+  for (let i = 0; i < SIZE; i++) {
+    if (grid[row][i]) used.add(grid[row][i]);
+    if (grid[i][column]) used.add(grid[i][column]);
+  }
+
+  const boxRow = Math.floor(row / BOX) * BOX;
+  const boxColumn = Math.floor(column / BOX) * BOX;
+
+  for (let r = boxRow; r < boxRow + BOX; r++) {
+    for (let c = boxColumn; c < boxColumn + BOX; c++) {
+      if (grid[r][c]) used.add(grid[r][c]);
+    }
+  }
+
+  return NUMBERS.filter(value => !used.has(value));
+}
+
+function generateSolution(grid) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (grid[r][c]) continue;
+
+      for (const value of shuffle(baseCandidates(grid, r, c))) {
+        grid[r][c] = value;
+
+        if (generateSolution(grid)) return true;
+
+        grid[r][c] = 0;
+      }
+
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/*
+  Fixed cage partitioner.
+
+  Every cage is grown from a seed and is orthogonally connected. Any leftover
+  one-cell cage is merged into an adjacent cage immediately, with the size map
+  updated at the same time. This prevents the former infinite cleanup loop.
+*/
+function partitionIntoCages(minSize, maxSize) {
+  const cageId = Array.from({ length: SIZE }, () => Array(SIZE).fill(-1));
+  const sizes = new Map();
+  const cells = shuffle(
+    Array.from({ length: SIZE * SIZE }, (_, index) => [
+      Math.floor(index / SIZE),
+      index % SIZE
+    ])
+  );
+
+  let nextId = 0;
+
+  function setId(r, c, id) {
+    const oldId = cageId[r][c];
+
+    if (oldId !== -1) {
+      sizes.set(oldId, (sizes.get(oldId) ?? 1) - 1);
+    }
+
+    cageId[r][c] = id;
+    sizes.set(id, (sizes.get(id) ?? 0) + 1);
+  }
+
+  for (const [startRow, startColumn] of cells) {
+    if (cageId[startRow][startColumn] !== -1) continue;
+
+    const id = nextId++;
+    setId(startRow, startColumn, id);
+
+    const targetSize =
+      minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
+
+    while (sizes.get(id) < targetSize) {
+      const frontier = [];
+
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (cageId[r][c] !== id) continue;
+
+          for (const [nr, nc] of neighbors(r, c)) {
+            if (cageId[nr][nc] === -1) frontier.push([nr, nc]);
+          }
+        }
+      }
+
+      if (!frontier.length) break;
+
+      const [newRow, newColumn] =
+        frontier[Math.floor(Math.random() * frontier.length)];
+
+      setId(newRow, newColumn, id);
+    }
+  }
+
+  // Merge every remaining singleton into an adjacent cage.
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (sizes.get(cageId[r][c]) !== 1) continue;
+
+      const adjacentIds = neighbors(r, c)
+        .map(([nr, nc]) => cageId[nr][nc])
+        .filter(id => id !== cageId[r][c]);
+
+      if (adjacentIds.length) {
+        const targetId =
+          adjacentIds[Math.floor(Math.random() * adjacentIds.length)];
+
+        setId(r, c, targetId);
+      }
+    }
+  }
+
+  // Compact IDs after merging.
+  const usedIds = [...new Set(cageId.flat())];
+  const remap = new Map(usedIds.map((oldId, newId) => [oldId, newId]));
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      cageId[r][c] = remap.get(cageId[r][c]);
+    }
+  }
+
+  return cageId;
+}
+
+function cagesFromIdGrid(idGrid) {
+  const list = [];
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const id = idGrid[r][c];
+
+      if (!list[id]) list[id] = { cells: [], sum: 0 };
+
+      list[id].cells.push([r, c]);
+      list[id].sum += solution[r][c];
+    }
+  }
+
+  return list;
+}
+
+function buildCageIndex(cageList) {
+  const index = Array.from({ length: SIZE }, () => Array(SIZE).fill(-1));
+
+  cageList.forEach((cage, cageIndex) => {
+    for (const [r, c] of cage.cells) {
+      index[r][c] = cageIndex;
+    }
+  });
+
+  return index;
+}
+
+const cageCombinationCache = new Map();
+
+function getPossibleCageDigits(sum, size) {
+  if (size <= 0 || sum <= 0) return 0;
+
+  const cacheKey = `${sum}:${size}`;
+
+  if (cageCombinationCache.has(cacheKey)) {
+    return cageCombinationCache.get(cacheKey);
+  }
+
+  let possibleDigitsMask = 0;
+
+  function build(startValue, remainingCells, remainingSum, usedMask) {
+    if (remainingCells === 0) {
+      if (remainingSum === 0) possibleDigitsMask |= usedMask;
+      return;
+    }
+
+    for (let value = startValue; value <= 9; value++) {
+      const bit = 1 << value;
+
+      if (usedMask & bit) continue;
+      if (value > remainingSum) break;
+
+      build(
+        value + 1,
+        remainingCells - 1,
+        remainingSum - value,
+        usedMask | bit
+      );
+    }
+  }
+
+  build(1, size, sum, 0);
+
+  cageCombinationCache.set(cacheKey, possibleDigitsMask);
+
+  return possibleDigitsMask;
+}
+
+function countSolutions(
+  cageList,
+  cageIndexGrid,
+  solutionLimit = 2,
+  nodeLimit = ATTEMPT_SOLVER_LIMIT
+) {
+  let nodes = 0;
+
+  const rowMask = Array(SIZE).fill(0);
+  const columnMask = Array(SIZE).fill(0);
+  const boxMask = Array(SIZE).fill(0);
+
+  const cageRemainingSum = cageList.map(cage => cage.sum);
+  const cageRemainingCells = cageList.map(cage => cage.cells.length);
+  const cageUsedMask = cageList.map(() => 0);
+  const grid = emptyGrid();
+
+  function candidates(r, c) {
+    const cage = cageIndexGrid[r][c];
+    const box = Math.floor(r / BOX) * BOX + Math.floor(c / BOX);
+
+    const blocked =
+      rowMask[r] |
+      columnMask[c] |
+      boxMask[box] |
+      cageUsedMask[cage];
+
+    const possibleCageDigits = getPossibleCageDigits(
+      cageRemainingSum[cage],
+      cageRemainingCells[cage]
+    );
+
+    const result = [];
+
+    for (let value = 1; value <= 9; value++) {
+      const bit = 1 << value;
+
+      if (blocked & bit) continue;
+      if (!(possibleCageDigits & bit)) continue;
+
+      result.push(value);
+    }
+
+    return result;
+  }
+
+  function search() {
+    if (++nodes > nodeLimit) return -1;
+
+    let bestCell = null;
+    let bestOptions = null;
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (grid[r][c]) continue;
+
+        const options = candidates(r, c);
+
+        if (!bestCell || options.length < bestOptions.length) {
+          bestCell = [r, c];
+          bestOptions = options;
+
+          if (options.length === 0) return 0;
+        }
+      }
+    }
+
+    if (!bestCell) return 1;
+
+    const [r, c] = bestCell;
+    const cage = cageIndexGrid[r][c];
+    const box = Math.floor(r / BOX) * BOX + Math.floor(c / BOX);
+    let total = 0;
+
+    for (const value of bestOptions) {
+      const bit = 1 << value;
+
+      grid[r][c] = value;
+      rowMask[r] |= bit;
+      columnMask[c] |= bit;
+      boxMask[box] |= bit;
+      cageUsedMask[cage] |= bit;
+      cageRemainingSum[cage] -= value;
+      cageRemainingCells[cage]--;
+
+      total += search();
+
+      grid[r][c] = 0;
+      rowMask[r] &= ~bit;
+      columnMask[c] &= ~bit;
+      boxMask[box] &= ~bit;
+      cageUsedMask[cage] &= ~bit;
+      cageRemainingSum[cage] += value;
+      cageRemainingCells[cage]++;
+
+      if (total >= solutionLimit || total === -1) return total;
+    }
+
+    return total;
+  }
+
+  return search();
+}
+
+async function generatePuzzle() {
+  const settings =
+    difficultySettings[difficultyEl.value] ??
+    difficultySettings.medium;
+
+  const deadline = performance.now() + GENERATION_DEADLINE_MS;
+
+  const strategies = [
+    ...settings.attempts,
+    // Reliable fallback: smaller cages are more constraining and more likely
+    // to produce a unique puzzle.
+    { minSize: 2, maxSize: 3 },
+    { minSize: 2, maxSize: 2 }
+  ];
+
+  for (const { minSize, maxSize } of strategies) {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      if (performance.now() > deadline) return false;
+
+      solution = emptyGrid();
+      generateSolution(solution);
+
+      const idGrid = partitionIntoCages(minSize, maxSize);
+      const cageList = cagesFromIdGrid(idGrid);
+
+      if (
+        cageList.length !== 81 / 2 &&
+        cageList.some(cage => cage.cells.length < 2)
+      ) {
+        continue;
+      }
+
+      const cageIndexGrid = buildCageIndex(cageList);
+      const result = countSolutions(
+        cageList,
+        cageIndexGrid,
+        2,
+        ATTEMPT_SOLVER_LIMIT
+      );
+
+      if (result === 1) {
+        cages = cageList;
+        cellCage = cageIndexGrid;
+        return true;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  return false;
+}
+
+async function newGame() {
+  if (generating) return;
+
+  generating = true;
+  newButton.disabled = true;
+  setStatus(t("generating"));
+  await new Promise(resolve => setTimeout(resolve, 20));
+
+  cages = [];
+  cellCage = [];
+  current = emptyGrid();
+  notes = emptyNotes();
+  history = [];
+  selected = null;
+
+  render();
+
+  const generated = await generatePuzzle();
+
+  generating = false;
+  newButton.disabled = false;
+
+  if (!generated) {
+    cages = [];
+    cellCage = [];
+    render();
+    setStatus(t("generationFailed"), "error");
+    return;
+  }
+
+  current = emptyGrid();
+  notes = emptyNotes();
+  history = [];
+  selected = null;
+
+  render();
+  setStatus(t("newPuzzle"), "good");
+}
+
+function buildBoard() {
+  boardEl.replaceChildren();
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.tabIndex = 0;
+      cell.setAttribute("role", "gridcell");
+
+      cell.addEventListener("click", () => selectCell(r, c));
+      cell.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectCell(r, c);
+        }
+      });
+
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function selectCell(r, c) {
+  selected = [r, c];
+  render();
+  boardEl.children[key(r, c)]?.focus({ preventScroll: true });
+}
+
+function move(dr, dc) {
+  if (!selected) {
+    selectCell(0, 0);
+    return;
+  }
+
+  selectCell(
+    (selected[0] + dr + SIZE) % SIZE,
+    (selected[1] + dc + SIZE) % SIZE
+  );
+}
+
+function updateHighlight() {
+  if (!selected || !boardEl.children.length) {
+    highlightEl.style.display = "none";
+    return;
+  }
+
+  const cell = boardEl.children[key(...selected)];
+  const boardRect = boardWrap.getBoundingClientRect();
+  const cellRect = cell.getBoundingClientRect();
+
+  Object.assign(highlightEl.style, {
+    display: "block",
+    left: `${cellRect.left - boardRect.left}px`,
+    top: `${cellRect.top - boardRect.top}px`,
+    width: `${cellRect.width}px`,
+    height: `${cellRect.height}px`
+  });
+}
+
+function saveHistory() {
+  history.push({
+    current: copyGrid(current),
+    notes: copyNotes(notes)
+  });
+
+  if (history.length > MAX_HISTORY) history.shift();
+}
+
+function setStatus(message, type = "") {
+  statusEl.textContent = message;
+  statusEl.className = type;
+}
+
+function updateMode() {
+  boardWrap.classList.toggle("notes-mode", noteMode);
+  notesButton.classList.toggle("active", noteMode);
+  notesButton.setAttribute("aria-pressed", String(noteMode));
+  notesButton.textContent = noteMode ? t("notesOn") : t("notes");
+}
+
+function toggleNotes() {
+  noteMode = !noteMode;
+  updateMode();
+  updateHighlight();
+  setStatus(noteMode ? t("notesOnMsg") : t("notesOffMsg"));
+}
+
+function setValue(value) {
+  if (generating) return;
+
+  if (!selected) {
+    setStatus(t("selectCell"), "error");
+    return;
+  }
+
+  const [r, c] = selected;
+
+  saveHistory();
+
+  if (noteMode) {
+    if (current[r][c]) current[r][c] = 0;
+
+    if (notes[r][c].has(value)) notes[r][c].delete(value);
+    else notes[r][c].add(value);
+  } else {
+    current[r][c] = value;
+    notes[r][c].clear();
+  }
+
+  render();
+}
+
+function erase() {
+  if (generating) return;
+
+  if (!selected) {
+    setStatus(t("selectCell"), "error");
+    return;
+  }
+
+  const [r, c] = selected;
+
+  if (!current[r][c] && !notes[r][c].size) return;
+
+  saveHistory();
+  current[r][c] = 0;
+  notes[r][c].clear();
+  render();
+}
+
+function undo() {
+  const previous = history.pop();
+
+  if (!previous) {
+    setStatus(t("nothingToUndo"), "error");
+    return;
+  }
+
+  current = previous.current;
+  notes = previous.notes;
+  render();
+  setStatus(t("undone"));
+}
+
+function hint() {
+  if (generating || !solution) return;
+
+  const openCells = [];
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (current[r][c] !== solution[r][c]) openCells.push([r, c]);
+    }
+  }
+
+  if (!openCells.length) {
+    setStatus(t("noHints"), "good");
+    return;
+  }
+
+  const [r, c] = openCells[Math.floor(Math.random() * openCells.length)];
+
+  saveHistory();
+  current[r][c] = solution[r][c];
+  notes[r][c].clear();
+  selected = [r, c];
+
+  render();
+  setStatus(t("hintPlaced"), "good");
+}
+
+function check() {
+  if (generating || !solution || !cages.length) return;
+
+  let mistakes = 0;
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (current[r][c] && current[r][c] !== solution[r][c]) mistakes++;
+    }
+  }
+
+  let invalidCages = 0;
+
+  for (const cage of cages) {
+    let sum = 0;
+    let filled = 0;
+    const seen = new Set();
+
+    for (const [r, c] of cage.cells) {
+      const value = current[r][c];
+
+      if (!value) continue;
+
+      filled++;
+      sum += value;
+
+      if (seen.has(value)) {
+        invalidCages++;
+        break;
+      }
+
+      seen.add(value);
+    }
+
+    if (filled === cage.cells.length && sum !== cage.sum) invalidCages++;
+  }
+
+  if (mistakes || invalidCages) {
+    setStatus(
+      `${mistakes} ${t("mistakes")}; ${invalidCages} ${t("invalidCages")}.`,
+      "error"
+    );
+    return;
+  }
+
+  if (isSolved()) {
+    setStatus(t("solved"), "good");
+    return;
+  }
+
+  setStatus(t("noMistakes"), "good");
+}
+
+function isSolved() {
+  if (!solution || !current) return false;
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (current[r][c] !== solution[r][c]) return false;
+    }
+  }
+
+  return true;
+}
+
+function render() {
+  updateMode();
+
+  const selectedValue = selected ? current[selected[0]][selected[1]] : 0;
+  const cageStarts = new Set();
+
+  for (const cage of cages) {
+    const topLeft = cage.cells.reduce((best, cell) =>
+      cell[0] < best[0] ||
+      (cell[0] === best[0] && cell[1] < best[1])
+        ? cell
+        : best
+    );
+
+    cageStarts.add(key(...topLeft));
+  }
+
+  [...boardEl.children].forEach((cell, index) => {
+    const r = Math.floor(index / SIZE);
+    const c = index % SIZE;
+    const value = current[r][c];
+    const cageIndex = cellCage?.[r]?.[c] ?? -1;
+
+    cell.className = "cell";
+    cell.innerHTML = "";
+    delete cell.dataset.value;
+    cell.style.boxShadow = "";
+
+    if (value) {
+      cell.dataset.value = value;
+
+      if (solution && value !== solution[r][c]) cell.classList.add("error");
+
+      cell.innerHTML = `<div class="value">${value}</div>`;
+    } else if (notes[r][c].size) {
+      cell.innerHTML = `
+        <div class="notes">
+          ${NUMBERS.map(number => `
+            <span>${notes[r][c].has(number) ? number : ""}</span>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    if (
+      selectedValue &&
+      value === selectedValue &&
+      selected &&
+      !(selected[0] === r && selected[1] === c)
+    ) {
+      cell.classList.add("same");
+    }
+
+    if (cageIndex >= 0) {
+      const shadows = [];
+      const edges = [
+        [-1, 0, "inset 0 2px 0 0 var(--cage)"],
+        [1, 0, "inset 0 -2px 0 0 var(--cage)"],
+        [0, -1, "inset 2px 0 0 0 var(--cage)"],
+        [0, 1, "inset -2px 0 0 0 var(--cage)"]
+      ];
+
+      for (const [dr, dc, shadow] of edges) {
+        const nr = r + dr;
+        const nc = c + dc;
+
+        if (
+          nr < 0 || nr >= SIZE ||
+          nc < 0 || nc >= SIZE ||
+          cellCage[nr][nc] !== cageIndex
+        ) {
+          shadows.push(shadow);
+        }
+      }
+
+      cell.style.boxShadow = shadows.join(", ");
+    }
+
+    if (cageStarts.has(index)) {
+      const cageSum = document.createElement("span");
+      cageSum.className = "cage-sum";
+      cageSum.textContent = cages[cageIndex].sum;
+      cell.appendChild(cageSum);
+    }
+
+    cell.setAttribute(
+      "aria-label",
+      `${t("row")} ${r + 1}, ${t("column")} ${c + 1}, ${
+        value ? `${t("value")} ${value}` : t("empty")
+      }`
+    );
+  });
+
+  updateHighlight();
+
+  if (isSolved()) setStatus(t("solved"), "good");
+}
+
+document.addEventListener("keydown", event => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) return;
+
+  const moves = {
+    ArrowUp: [-1, 0],
+    ArrowDown: [1, 0],
+    ArrowLeft: [0, -1],
+    ArrowRight: [0, 1]
+  };
+
+  if (moves[event.key]) {
+    event.preventDefault();
+    move(...moves[event.key]);
+  } else if (["Backspace", "Delete", "0"].includes(event.key)) {
+    event.preventDefault();
+    erase();
+  } else if (event.key.toLowerCase() === "n") {
+    event.preventDefault();
+    toggleNotes();
+  } else if (event.key >= "1" && event.key <= "9") {
+    event.preventDefault();
+    setValue(Number(event.key));
+  }
+});
+
+document.querySelectorAll(".numbers button").forEach(button => {
+  button.addEventListener("click", () =>
+    setValue(Number(button.dataset.value))
+  );
+});
+
+newButton.addEventListener("click", newGame);
+document.getElementById("undo").addEventListener("click", undo);
+document.getElementById("hint").addEventListener("click", hint);
+document.getElementById("check").addEventListener("click", check);
+document.getElementById("erasePad").addEventListener("click", erase);
+document.getElementById("notes").addEventListener("click", toggleNotes);
+
+difficultyEl.addEventListener("change", newGame);
+
+languageEl.addEventListener("change", () => {
+  currentLanguage = languageEl.value;
+
+  try {
+    localStorage.setItem(LANGUAGE_KEY, currentLanguage);
+  } catch (_) {}
+
+  applyTranslations();
+});
+
+window.addEventListener("resize", updateHighlight);
+
+buildBoard();
+languageEl.value = currentLanguage;
+applyTranslations();
+newGame();
+</script>
+</body>
+</html>
