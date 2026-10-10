@@ -213,6 +213,11 @@ function renderApplication() {
   });
 
   setSidePickerVisible(Boolean(pendingTile));
+
+  elements.newGame.classList.toggle(
+    "is-hidden",
+    !snapshot.gameOver
+  );
 }
 
 function beginHumanTurn() {
