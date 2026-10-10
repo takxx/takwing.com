@@ -16,7 +16,7 @@ const langSelect = document.getElementById("lang");
 
 const translations = {
   en: {
-    title: "Wheel options",
+    title: "Wheel of decision",
     language: "Language:",
     instructions:
       "Enter one option per line, then click or touch the wheel.",
@@ -30,7 +30,7 @@ const translations = {
   },
 
   es: {
-    title: "Opciones de la ruleta",
+    title: "La ruleta de opciones",
     language: "Idioma:",
     instructions:
       "Escribe una opción por línea y luego haz clic o toca la ruleta.",
@@ -44,7 +44,7 @@ const translations = {
   },
 
   "zh-Hant": {
-    title: "轉盤選項",
+    title: "幸運輪",
     language: "語言：",
     instructions:
       "每行輸入一個選項，然後點擊或觸碰轉盤。",

@@ -114,10 +114,10 @@ es: {
   lossesLabel: "Derrotas"
 },
 zh: {
-  documentTitle: "波子棋棋盤",
+  documentTitle: "波子棋",
   title: "波子棋",
   description: "",
-  boardAriaLabel: "波子棋棋盤",
+  boardAriaLabel: "波子棋棋",
   boardPanelAriaLabel: "波子棋棋盤",
   boardSummaryAriaLabel: "棋盤摘要",
   statusAriaLabel: "遊戲狀態",
