@@ -39,8 +39,6 @@
   --control-border: #46515e;
 }
 
-/* Reset and document */
-
 * {
   box-sizing: border-box;
 }
@@ -65,8 +63,6 @@ body {
   -webkit-user-select: none;
 }
 
-/* Layout */
-
 main {
   width: min(94vw, 640px);
   margin: 0 auto;
@@ -79,8 +75,6 @@ h1 {
   font-size: 24px;
   letter-spacing: 0.02em;
 }
-
-/* Top controls */
 
 .bar {
   display: flex;
@@ -126,8 +120,6 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-/* Board */
-
 .board-wrap {
   position: relative;
   width: 100%;
@@ -143,24 +135,12 @@ select:focus-visible {
   grid-template-rows: repeat(9, minmax(0, 1fr));
   border: 3px solid var(--box-border);
   background: var(--cell-border);
+  touch-action: none;
+  cursor: crosshair;
 }
 
-#selection-highlight {
-  position: absolute;
-  z-index: 20;
-  display: none;
-  pointer-events: none;
-  border: 3px solid var(--input-highlight);
-  transition:
-    top 0.08s ease,
-    left 0.08s ease,
-    width 0.08s ease,
-    height 0.08s ease,
-    border-color 0.12s ease;
-}
-
-.board-wrap.notes-mode #selection-highlight {
-  border-color: var(--notes-highlight);
+.board-wrap.notes-mode #board {
+  cursor: cell;
 }
 
 .cell {
@@ -180,7 +160,18 @@ select:focus-visible {
   outline: none;
 }
 
-/* 3x3 region borders */
+.cell.selected {
+  background-color: rgba(114, 183, 232, 0.28);
+  box-shadow:
+    inset 0 0 0 2px var(--input-highlight);
+  z-index: 2;
+}
+
+.board-wrap.notes-mode .cell.selected {
+  background-color: rgba(214, 184, 76, 0.24);
+  box-shadow:
+    inset 0 0 0 2px var(--notes-highlight);
+}
 
 .cell:nth-child(3n) {
   border-right: 3px solid var(--box-border);
@@ -191,26 +182,64 @@ select:focus-visible {
   border-bottom: 3px solid var(--box-border);
 }
 
-/* Number backgrounds */
+.cell[data-value="1"] { background-color: var(--number-1); }
+.cell[data-value="2"] { background-color: var(--number-2); }
+.cell[data-value="3"] { background-color: var(--number-3); }
+.cell[data-value="4"] { background-color: var(--number-4); }
+.cell[data-value="5"] { background-color: var(--number-5); }
+.cell[data-value="6"] { background-color: var(--number-6); }
+.cell[data-value="7"] { background-color: var(--number-7); }
+.cell[data-value="8"] { background-color: var(--number-8); }
+.cell[data-value="9"] { background-color: var(--number-9); }
 
-.cell[data-value="1"] { background: var(--number-1); }
-.cell[data-value="2"] { background: var(--number-2); }
-.cell[data-value="3"] { background: var(--number-3); }
-.cell[data-value="4"] { background: var(--number-4); }
-.cell[data-value="5"] { background: var(--number-5); }
-.cell[data-value="6"] { background: var(--number-6); }
-.cell[data-value="7"] { background: var(--number-7); }
-.cell[data-value="8"] { background: var(--number-8); }
-.cell[data-value="9"] { background: var(--number-9); }
+.cell.selected[data-value="1"],
+.cell.selected[data-value="2"],
+.cell.selected[data-value="3"],
+.cell.selected[data-value="4"],
+.cell.selected[data-value="5"],
+.cell.selected[data-value="6"],
+.cell.selected[data-value="7"],
+.cell.selected[data-value="8"],
+.cell.selected[data-value="9"] {
+  background-image:
+    linear-gradient(
+      rgba(114, 183, 232, 0.30),
+      rgba(114, 183, 232, 0.30)
+    );
+}
 
-/* Same-number indication */
+.board-wrap.notes-mode .cell.selected[data-value="1"],
+.board-wrap.notes-mode .cell.selected[data-value="2"],
+.board-wrap.notes-mode .cell.selected[data-value="3"],
+.board-wrap.notes-mode .cell.selected[data-value="4"],
+.board-wrap.notes-mode .cell.selected[data-value="5"],
+.board-wrap.notes-mode .cell.selected[data-value="6"],
+.board-wrap.notes-mode .cell.selected[data-value="7"],
+.board-wrap.notes-mode .cell.selected[data-value="8"],
+.board-wrap.notes-mode .cell.selected[data-value="9"] {
+  background-image:
+    linear-gradient(
+      rgba(214, 184, 76, 0.26),
+      rgba(214, 184, 76, 0.26)
+    );
+}
 
 .cell.same {
   box-shadow:
     inset 0 0 0 999px rgba(255, 255, 255, 0.09);
 }
 
-/* Numbers */
+.cell.selected.same {
+  box-shadow:
+    inset 0 0 0 2px var(--input-highlight),
+    inset 0 0 0 999px rgba(255, 255, 255, 0.09);
+}
+
+.board-wrap.notes-mode .cell.selected.same {
+  box-shadow:
+    inset 0 0 0 2px var(--notes-highlight),
+    inset 0 0 0 999px rgba(255, 255, 255, 0.09);
+}
 
 .value {
   position: relative;
@@ -251,8 +280,6 @@ select:focus-visible {
   color: var(--wrong);
 }
 
-/* Pencil notes */
-
 .notes {
   position: absolute;
   inset: 2px;
@@ -269,8 +296,6 @@ select:focus-visible {
   place-items: center;
 }
 
-/* Status */
-
 #status {
   min-height: 20px;
   margin: 10px 0 12px;
@@ -286,8 +311,6 @@ select:focus-visible {
 #status.error {
   color: var(--wrong);
 }
-
-/* Number pad and actions */
 
 .controls {
   display: grid;
@@ -333,8 +356,6 @@ select:focus-visible {
   color: #ead57d;
 }
 
-/* Help */
-
 .help {
   margin-top: 14px;
   color: var(--muted);
@@ -342,8 +363,6 @@ select:focus-visible {
   line-height: 1.5;
   text-align: center;
 }
-
-/* Language selector */
 
 .language-control {
   display: flex;
@@ -359,8 +378,6 @@ select:focus-visible {
   min-width: 145px;
   padding: 7px 9px;
 }
-
-/* Reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -393,12 +410,16 @@ select:focus-visible {
   </div>
 
   <div class="board-wrap" id="boardWrap">
-    <div id="board" role="grid" aria-label="Sudoku board"></div>
-    <div id="selection-highlight" aria-hidden="true"></div>
+    <div
+      id="board"
+      role="grid"
+      aria-label="Sudoku board"
+      tabindex="0"
+    ></div>
   </div>
 
   <div id="status" aria-live="polite">
-    Select a cell, then choose a number.
+    Select one or more cells, then choose a number.
   </div>
 
   <div class="controls">
@@ -426,8 +447,9 @@ select:focus-visible {
   </div>
 
   <p class="help">
-    Select a cell, then tap a number or press keys 1–9.<br>
-    Press <b>N</b> for notes and <b>Backspace</b> to erase.
+    Tap a cell to select it.<br>
+    In <b>Notes mode</b>, drag across cells or hold <b>Shift</b> with arrow keys to select multiple cells, including irregular shapes.<br>
+    A number is added to every selected editable cell in Notes mode.
   </p>
 
   <div class="language-control">
@@ -451,14 +473,11 @@ const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 const boardWrap = document.getElementById("boardWrap");
 const boardEl = document.getElementById("board");
-const highlightEl = document.getElementById("selection-highlight");
 const statusEl = document.getElementById("status");
 const difficultyEl = document.getElementById("difficulty");
 const notesButton = document.getElementById("notes");
 const languageEl = document.getElementById("language");
-const languageLabelEl = document.querySelector(
-  ".language-control label"
-);
+const languageLabelEl = document.querySelector(".language-control label");
 const helpEl = document.querySelector(".help");
 const numbersEl = document.querySelector(".numbers");
 
@@ -489,12 +508,12 @@ const translations = {
     notesOn: "Notes: ON",
     erase: "Erase",
     language: "Language",
-    helpFirst: "Select a cell, then tap a number or press keys 1–9.",
-    helpSecond: "Press N for notes and Backspace to erase.",
-    selectCell: "Select a cell first.",
-    fixedCell: "That clue cannot be changed.",
-    notesModeOn: "Notes mode on.",
-    notesModeOff: "Notes mode off.",
+    helpFirst: "Tap a cell to select it.",
+    helpSecond: "In Notes mode, drag across cells or hold Shift with arrow keys to select multiple cells, including irregular shapes. A number is added to every selected editable cell in Notes mode.",
+    selectCell: "Select at least one cell first.",
+    fixedCell: "One or more selected cells are fixed clues.",
+    notesModeOn: "Notes mode on. You can select multiple cells.",
+    notesModeOff: "Notes mode off. Only one cell can be selected.",
     nothingToUndo: "Nothing to undo.",
     moveUndone: "Move undone.",
     noHints: "No hints needed.",
@@ -507,7 +526,8 @@ const translations = {
     empty: "empty",
     value: "value",
     row: "Row",
-    column: "column"
+    column: "column",
+    selectedCount: "cells selected"
   },
 
   es: {
@@ -527,12 +547,12 @@ const translations = {
     notesOn: "Notas: ACTIVADAS",
     erase: "Borrar",
     language: "Idioma",
-    helpFirst: "Selecciona una celda y toca un número o pulsa las teclas del 1 al 9.",
-    helpSecond: "Pulsa N para usar notas y Retroceso para borrar.",
-    selectCell: "Selecciona primero una celda.",
-    fixedCell: "Esta pista no se puede cambiar.",
-    notesModeOn: "Modo de notas activado.",
-    notesModeOff: "Modo de notas desactivado.",
+    helpFirst: "Toca una celda para seleccionarla.",
+    helpSecond: "En modo de notas, arrastra sobre varias celdas o mantén Shift con las flechas para seleccionar varias, incluidas formas irregulares. El número se añade a cada celda editable seleccionada en modo de notas.",
+    selectCell: "Selecciona al menos una celda.",
+    fixedCell: "Una o más celdas seleccionadas son pistas fijas.",
+    notesModeOn: "Modo de notas activado. Puedes seleccionar varias celdas.",
+    notesModeOff: "Modo de notas desactivado. Solo se puede seleccionar una celda.",
     nothingToUndo: "No hay nada que deshacer.",
     moveUndone: "Movimiento deshecho.",
     noHints: "No hacen falta pistas.",
@@ -545,7 +565,8 @@ const translations = {
     empty: "vacía",
     value: "valor",
     row: "Fila",
-    column: "columna"
+    column: "columna",
+    selectedCount: "celdas seleccionadas"
   },
 
   zh: {
@@ -565,12 +586,12 @@ const translations = {
     notesOn: "筆記：開啟",
     erase: "清除",
     language: "語言",
-    helpFirst: "請選擇一格，然後點擊數字或按下 1 至 9。",
-    helpSecond: "按 N 使用筆記，按 Backspace 清除。",
-    selectCell: "請先選擇一格。",
-    fixedCell: "這個提示數字不能更改。",
-    notesModeOn: "筆記模式已開啟。",
-    notesModeOff: "筆記模式已關閉。",
+    helpFirst: "點擊一格以選取。",
+    helpSecond: "筆記模式下，可拖曳選取多格，或按住 Shift 並使用方向鍵選取多格，包括不規則形狀。筆記模式下，數字會加入所有已選取的可編輯格子。",
+    selectCell: "請先選擇至少一格。",
+    fixedCell: "部分已選取的格子是固定提示。",
+    notesModeOn: "筆記模式已開啟。可以選取多格。",
+    notesModeOff: "筆記模式已關閉。只能選取一格。",
     nothingToUndo: "沒有可復原的操作。",
     moveUndone: "已復原操作。",
     noHints: "不需要提示。",
@@ -583,7 +604,8 @@ const translations = {
     empty: "空白",
     value: "數字",
     row: "第",
-    column: "列"
+    column: "列",
+    selectedCount: "格已選取"
   }
 };
 
@@ -596,15 +618,17 @@ let fixed = createEmptyGrid();
 let notes = createNotesGrid();
 
 let history = [];
-let selected = null;
-let noteMode = false;
 
-/* Language */
+let selectedCells = new Set();
+let selectionAnchor = null;
+let selectionHead = null;
+
+let noteMode = false;
+let pointerSelecting = false;
+let lastPointerCell = null;
 
 function normalizeLanguage(language) {
-  if (!language) {
-    return null;
-  }
+  if (!language) return null;
 
   const normalized = language.toLowerCase().split("-")[0];
 
@@ -618,9 +642,7 @@ function getInitialLanguage() {
     new URLSearchParams(window.location.search).get("lang")
   );
 
-  if (urlLanguage) {
-    return urlLanguage;
-  }
+  if (urlLanguage) return urlLanguage;
 
   let savedLanguage = null;
 
@@ -632,22 +654,16 @@ function getInitialLanguage() {
     savedLanguage = null;
   }
 
-  if (savedLanguage) {
-    return savedLanguage;
-  }
+  if (savedLanguage) return savedLanguage;
 
   const browserLanguages = Array.isArray(navigator.languages)
     ? navigator.languages
     : [navigator.language];
 
   for (const browserLanguage of browserLanguages) {
-    const preferredLanguage = normalizeLanguage(
-      browserLanguage
-    );
+    const preferredLanguage = normalizeLanguage(browserLanguage);
 
-    if (preferredLanguage) {
-      return preferredLanguage;
-    }
+    if (preferredLanguage) return preferredLanguage;
   }
 
   return "en";
@@ -665,10 +681,7 @@ function applyTranslations() {
 
   document.querySelector("h1").textContent = t("heading");
 
-  difficultyEl.setAttribute(
-    "aria-label",
-    t("difficultyLabel")
-  );
+  difficultyEl.setAttribute("aria-label", t("difficultyLabel"));
 
   difficultyEl.options[0].textContent = t("easy");
   difficultyEl.options[1].textContent = t("medium");
@@ -679,15 +692,9 @@ function applyTranslations() {
   document.getElementById("hint").textContent = t("hint");
   document.getElementById("check").textContent = t("check");
 
-  numbersEl.setAttribute(
-    "aria-label",
-    t("numberPadLabel")
-  );
+  numbersEl.setAttribute("aria-label", t("numberPadLabel"));
 
-  notesButton.textContent = noteMode
-    ? t("notesOn")
-    : t("notes");
-
+  notesButton.textContent = noteMode ? t("notesOn") : t("notes");
   document.getElementById("erasePad").textContent = t("erase");
 
   languageLabelEl.textContent = t("language");
@@ -701,8 +708,6 @@ function applyTranslations() {
   updateMode();
   render();
 }
-
-/* Grid helpers */
 
 function createEmptyGrid() {
   return Array.from(
@@ -735,9 +740,7 @@ function shuffled(values) {
   const result = [...values];
 
   for (let index = result.length - 1; index > 0; index--) {
-    const randomIndex = Math.floor(
-      Math.random() * (index + 1)
-    );
+    const randomIndex = Math.floor(Math.random() * (index + 1));
 
     [result[index], result[randomIndex]] = [
       result[randomIndex],
@@ -748,7 +751,23 @@ function shuffled(values) {
   return result;
 }
 
-/* Sudoku rules */
+function cellKey(row, col) {
+  return `${row},${col}`;
+}
+
+function parseCellKey(key) {
+  const [row, col] = key.split(",").map(Number);
+  return [row, col];
+}
+
+function isValidCell(row, col) {
+  return (
+    row >= 0 &&
+    row < SIZE &&
+    col >= 0 &&
+    col < SIZE
+  );
+}
 
 function isValid(grid, row, col, value) {
   for (let index = 0; index < SIZE; index++) {
@@ -781,9 +800,7 @@ function isValid(grid, row, col, value) {
 function findEmptyCell(grid) {
   for (let row = 0; row < SIZE; row++) {
     for (let col = 0; col < SIZE; col++) {
-      if (grid[row][col] === 0) {
-        return [row, col];
-      }
+      if (grid[row][col] === 0) return [row, col];
     }
   }
 
@@ -793,22 +810,16 @@ function findEmptyCell(grid) {
 function fillGrid(grid) {
   const emptyCell = findEmptyCell(grid);
 
-  if (!emptyCell) {
-    return true;
-  }
+  if (!emptyCell) return true;
 
   const [row, col] = emptyCell;
 
   for (const value of shuffled(NUMBERS)) {
-    if (!isValid(grid, row, col, value)) {
-      continue;
-    }
+    if (!isValid(grid, row, col, value)) continue;
 
     grid[row][col] = value;
 
-    if (fillGrid(grid)) {
-      return true;
-    }
+    if (fillGrid(grid)) return true;
 
     grid[row][col] = 0;
   }
@@ -819,17 +830,13 @@ function fillGrid(grid) {
 function countSolutions(grid, limit = 2) {
   const emptyCell = findEmptyCell(grid);
 
-  if (!emptyCell) {
-    return 1;
-  }
+  if (!emptyCell) return 1;
 
   const [row, col] = emptyCell;
   let solutionCount = 0;
 
   for (const value of NUMBERS) {
-    if (!isValid(grid, row, col, value)) {
-      continue;
-    }
+    if (!isValid(grid, row, col, value)) continue;
 
     grid[row][col] = value;
 
@@ -851,9 +858,7 @@ function countSolutions(grid, limit = 2) {
 function hasContradiction(grid, row, col) {
   const value = grid[row][col];
 
-  if (value === 0) {
-    return false;
-  }
+  if (value === 0) return false;
 
   for (let currentCol = 0; currentCol < SIZE; currentCol++) {
     if (
@@ -898,8 +903,6 @@ function hasContradiction(grid, row, col) {
   return false;
 }
 
-/* Puzzle generation */
-
 function generatePuzzle(difficulty) {
   solution = createEmptyGrid();
   fillGrid(solution);
@@ -922,9 +925,7 @@ function generatePuzzle(difficulty) {
   let clueCount = SIZE * SIZE;
 
   for (const [row, col] of cells) {
-    if (clueCount <= target) {
-      break;
-    }
+    if (clueCount <= target) break;
 
     const originalValue = puzzle[row][col];
     puzzle[row][col] = 0;
@@ -944,10 +945,11 @@ function generatePuzzle(difficulty) {
 
   notes = createNotesGrid();
   history = [];
-  selected = null;
-}
 
-/* Board rendering */
+  selectedCells = new Set();
+  selectionAnchor = null;
+  selectionHead = null;
+}
 
 function buildBoard() {
   boardEl.replaceChildren();
@@ -957,90 +959,136 @@ function buildBoard() {
       const cell = document.createElement("div");
 
       cell.className = "cell";
+      cell.dataset.row = String(row);
+      cell.dataset.col = String(col);
       cell.setAttribute("role", "gridcell");
-      cell.setAttribute("tabindex", "0");
-
-      cell.addEventListener("click", () => {
-        selectCell(row, col);
-      });
-
-      cell.addEventListener("keydown", event => {
-        if (
-          event.key === "Enter" ||
-          event.key === " "
-        ) {
-          event.preventDefault();
-          selectCell(row, col);
-        }
-      });
+      cell.setAttribute("tabindex", "-1");
 
       boardEl.appendChild(cell);
     }
   }
 }
 
-function selectCell(row, col) {
-  if (
-    row < 0 ||
-    row >= SIZE ||
-    col < 0 ||
-    col >= SIZE
-  ) {
-    return;
-  }
+function getCellElement(row, col) {
+  return boardEl.children[row * SIZE + col];
+}
 
-  selected = [row, col];
-  render();
+function getCellFromPoint(clientX, clientY) {
+  const boardRect = boardEl.getBoundingClientRect();
 
-  const selectedCell =
-    boardEl.children[row * SIZE + col];
+  const col = Math.floor(
+    ((clientX - boardRect.left) / boardRect.width) * SIZE
+  );
 
-  if (selectedCell) {
-    selectedCell.focus({ preventScroll: true });
+  const row = Math.floor(
+    ((clientY - boardRect.top) / boardRect.height) * SIZE
+  );
+
+  return isValidCell(row, col) ? [row, col] : null;
+}
+
+function setSingleSelection(row, col) {
+  selectedCells = new Set([cellKey(row, col)]);
+  selectionAnchor = [row, col];
+  selectionHead = [row, col];
+}
+
+function setRectangularSelection(anchor, head) {
+  const [anchorRow, anchorCol] = anchor;
+  const [headRow, headCol] = head;
+
+  const minRow = Math.min(anchorRow, headRow);
+  const maxRow = Math.max(anchorRow, headRow);
+  const minCol = Math.min(anchorCol, headCol);
+  const maxCol = Math.max(anchorCol, headCol);
+
+  selectedCells = new Set();
+
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      selectedCells.add(cellKey(row, col));
+    }
   }
 }
 
-function moveSelection(rowChange, colChange) {
-  if (!selected) {
+function extendSelectionTo(row, col) {
+  if (!isValidCell(row, col)) return;
+
+  if (!selectionHead) {
+    setSingleSelection(row, col);
+    return;
+  }
+
+  selectedCells.add(cellKey(row, col));
+  selectionHead = [row, col];
+}
+
+function selectCell(row, col, extend = false) {
+  if (!isValidCell(row, col)) return;
+
+  if (extend && noteMode) {
+    extendSelectionTo(row, col);
+  } else {
+    setSingleSelection(row, col);
+  }
+
+  render();
+  boardEl.focus({ preventScroll: true });
+}
+
+function beginPointerSelection(row, col) {
+  pointerSelecting = noteMode;
+  lastPointerCell = noteMode ? [row, col] : null;
+
+  setSingleSelection(row, col);
+  render();
+}
+
+function extendPointerSelection(row, col) {
+  if (!pointerSelecting || !noteMode) return;
+  if (!isValidCell(row, col)) return;
+
+  const key = cellKey(row, col);
+
+  if (selectedCells.has(key)) return;
+
+  selectedCells.add(key);
+  selectionHead = [row, col];
+  lastPointerCell = [row, col];
+
+  render();
+}
+
+function endPointerSelection() {
+  pointerSelecting = false;
+  lastPointerCell = null;
+}
+
+function moveSelection(rowChange, colChange, extend = false) {
+  if (selectedCells.size === 0) {
     selectCell(0, 0);
     return;
   }
 
-  const [row, col] = selected;
+  let base;
+
+  if (selectionHead) {
+    base = selectionHead;
+  } else if (selectionAnchor) {
+    base = selectionAnchor;
+  } else {
+    base = parseCellKey([...selectedCells][0]);
+  }
+
+  const [row, col] = Array.isArray(base)
+    ? base
+    : parseCellKey(base);
 
   const nextRow = (row + rowChange + SIZE) % SIZE;
   const nextCol = (col + colChange + SIZE) % SIZE;
 
-  selectCell(nextRow, nextCol);
+  selectCell(nextRow, nextCol, extend);
 }
-
-function updateHighlight() {
-  if (!selected) {
-    highlightEl.style.display = "none";
-    return;
-  }
-
-  const cell =
-    boardEl.children[selected[0] * SIZE + selected[1]];
-
-  if (!cell) {
-    highlightEl.style.display = "none";
-    return;
-  }
-
-  const cellRect = cell.getBoundingClientRect();
-  const boardRect = boardWrap.getBoundingClientRect();
-
-  highlightEl.style.display = "block";
-  highlightEl.style.left =
-    `${cellRect.left - boardRect.left}px`;
-  highlightEl.style.top =
-    `${cellRect.top - boardRect.top}px`;
-  highlightEl.style.width = `${cellRect.width}px`;
-  highlightEl.style.height = `${cellRect.height}px`;
-}
-
-/* State and interaction */
 
 function saveHistory() {
   history.push({
@@ -1060,41 +1108,45 @@ function setStatus(message, type = "") {
 
 function updateMode() {
   boardWrap.classList.toggle("notes-mode", noteMode);
-
   notesButton.classList.toggle("active", noteMode);
-
-  notesButton.setAttribute(
-    "aria-pressed",
-    String(noteMode)
-  );
-
-  notesButton.textContent = noteMode
-    ? t("notesOn")
-    : t("notes");
+  notesButton.setAttribute("aria-pressed", String(noteMode));
+  notesButton.textContent = noteMode ? t("notesOn") : t("notes");
 }
 
 function toggleNoteMode() {
   noteMode = !noteMode;
 
+  if (!noteMode && selectedCells.size > 1) {
+    const lastCell = selectionHead ?? selectionAnchor;
+
+    if (lastCell) {
+      setSingleSelection(lastCell[0], lastCell[1]);
+    }
+  }
+
   updateMode();
-  updateHighlight();
+  render();
 
   setStatus(
-    noteMode
-      ? t("notesModeOn")
-      : t("notesModeOff")
+    noteMode ? t("notesModeOn") : t("notesModeOff")
   );
 }
 
+function getEditableSelectedCells() {
+  return [...selectedCells]
+    .map(parseCellKey)
+    .filter(([row, col]) => !fixed[row][col]);
+}
+
 function setValue(value) {
-  if (!selected) {
+  const editableCells = getEditableSelectedCells();
+
+  if (selectedCells.size === 0) {
     setStatus(t("selectCell"), "error");
     return;
   }
 
-  const [row, col] = selected;
-
-  if (fixed[row][col]) {
+  if (editableCells.length === 0) {
     setStatus(t("fixedCell"), "error");
     return;
   }
@@ -1102,49 +1154,58 @@ function setValue(value) {
   saveHistory();
 
   if (noteMode) {
-    if (current[row][col] !== 0) {
-      current[row][col] = 0;
-    }
+    const allHaveNote = editableCells.every(
+      ([row, col]) => notes[row][col].has(value)
+    );
 
-    const cellNotes = notes[row][col];
+    for (const [row, col] of editableCells) {
+      if (current[row][col] !== 0) {
+        current[row][col] = 0;
+      }
 
-    if (cellNotes.has(value)) {
-      cellNotes.delete(value);
-    } else {
-      cellNotes.add(value);
+      if (allHaveNote) {
+        notes[row][col].delete(value);
+      } else {
+        notes[row][col].add(value);
+      }
     }
   } else {
-    current[row][col] = value;
-    notes[row][col].clear();
+    for (const [row, col] of editableCells) {
+      current[row][col] = value;
+      notes[row][col].clear();
+    }
   }
 
   render();
 }
 
 function erase() {
-  if (!selected) {
+  const editableCells = getEditableSelectedCells();
+
+  if (selectedCells.size === 0) {
     setStatus(t("selectCell"), "error");
     return;
   }
 
-  const [row, col] = selected;
-
-  if (fixed[row][col]) {
+  if (editableCells.length === 0) {
     setStatus(t("fixedCell"), "error");
     return;
   }
 
-  if (
-    current[row][col] === 0 &&
-    notes[row][col].size === 0
-  ) {
-    return;
-  }
+  const hasContent = editableCells.some(
+    ([row, col]) =>
+      current[row][col] !== 0 ||
+      notes[row][col].size > 0
+  );
+
+  if (!hasContent) return;
 
   saveHistory();
 
-  current[row][col] = 0;
-  notes[row][col].clear();
+  for (const [row, col] of editableCells) {
+    current[row][col] = 0;
+    notes[row][col].clear();
+  }
 
   render();
 }
@@ -1193,9 +1254,10 @@ function giveHint() {
 
   current[row][col] = solution[row][col];
   notes[row][col].clear();
-  selected = [row, col];
 
+  setSingleSelection(row, col);
   render();
+
   setStatus(t("hintPlaced"), "good");
 }
 
@@ -1227,10 +1289,7 @@ function checkPuzzle() {
         ? t("incorrectEntry")
         : t("incorrectEntries");
 
-      setStatus(
-        `${mistakes} ${label}.`,
-        "error"
-      );
+      setStatus(`${mistakes} ${label}.`, "error");
     }
 
     return;
@@ -1263,9 +1322,7 @@ function getCellMarkup(row, col, value) {
 
   const cellNotes = notes[row][col];
 
-  if (cellNotes.size === 0) {
-    return "";
-  }
+  if (cellNotes.size === 0) return "";
 
   return `
     <div class="notes">
@@ -1281,26 +1338,30 @@ function getCellMarkup(row, col, value) {
 function getCellAriaLabel(row, col, value) {
   if (currentLanguage === "zh") {
     return `第 ${row + 1} 行，第 ${col + 1} 列，${
-      value === 0
-        ? t("empty")
-        : `${t("value")} ${value}`
+      value === 0 ? t("empty") : `${t("value")} ${value}`
     }`;
   }
 
   return `${t("row")} ${row + 1}, ${t("column")} ${
     col + 1
   }, ${
-    value === 0
-      ? t("empty")
-      : `${t("value")} ${value}`
+    value === 0 ? t("empty") : `${t("value")} ${value}`
   }`;
 }
 
 function render() {
   updateMode();
 
-  const selectedValue = selected
-    ? current[selected[0]][selected[1]]
+  const primaryKey = selectionAnchor
+    ? cellKey(selectionAnchor[0], selectionAnchor[1])
+    : [...selectedCells][0];
+
+  const primaryCell = primaryKey
+    ? parseCellKey(primaryKey)
+    : null;
+
+  const primaryValue = primaryCell
+    ? current[primaryCell[0]][primaryCell[1]]
     : 0;
 
   [...boardEl.children].forEach((cell, index) => {
@@ -1310,33 +1371,26 @@ function render() {
 
     cell.className = "cell";
 
-    const isSelected =
-      selected &&
-      row === selected[0] &&
-      col === selected[1];
+    if (selectedCells.has(cellKey(row, col))) {
+      cell.classList.add("selected");
+    }
 
     const hasSameValue =
-      selectedValue !== 0 &&
-      value === selectedValue &&
-      !isSelected;
+      primaryValue !== 0 &&
+      value === primaryValue &&
+      !selectedCells.has(cellKey(row, col));
 
     const isIncorrect =
       !fixed[row][col] &&
       hasContradiction(current, row, col);
 
-    if (hasSameValue) {
-      cell.classList.add("same");
-    }
-
-    if (isIncorrect) {
-      cell.classList.add("error");
-    }
+    if (hasSameValue) cell.classList.add("same");
+    if (isIncorrect) cell.classList.add("error");
 
     cell.innerHTML = getCellMarkup(row, col, value);
 
     if (value !== 0) {
       cell.dataset.value = String(value);
-
       cell.classList.add(
         fixed[row][col] ? "fixed" : "user"
       );
@@ -1350,14 +1404,12 @@ function render() {
     );
   });
 
-  updateHighlight();
-
-  if (isSolved()) {
-    setStatus(t("solved"), "good");
+  if (selectedCells.size > 1) {
+    setStatus(
+      `${selectedCells.size} ${t("selectedCount")}.`
+    );
   }
 }
-
-/* Keyboard controls */
 
 function handleKeyboard(event) {
   const target = event.target;
@@ -1370,25 +1422,27 @@ function handleKeyboard(event) {
     return;
   }
 
+  const extend = event.shiftKey && noteMode;
+
   switch (event.key) {
     case "ArrowUp":
       event.preventDefault();
-      moveSelection(-1, 0);
+      moveSelection(-1, 0, extend);
       break;
 
     case "ArrowDown":
       event.preventDefault();
-      moveSelection(1, 0);
+      moveSelection(1, 0, extend);
       break;
 
     case "ArrowLeft":
       event.preventDefault();
-      moveSelection(0, -1);
+      moveSelection(0, -1, extend);
       break;
 
     case "ArrowRight":
       event.preventDefault();
-      moveSelection(0, 1);
+      moveSelection(0, 1, extend);
       break;
 
     case "Backspace":
@@ -1412,7 +1466,76 @@ function handleKeyboard(event) {
   }
 }
 
-/* Event listeners */
+function handlePointerDown(event) {
+  const cell = getCellFromPoint(
+    event.clientX,
+    event.clientY
+  );
+
+  if (!cell) return;
+
+  event.preventDefault();
+  boardEl.setPointerCapture(event.pointerId);
+
+  const [row, col] = cell;
+
+  if (noteMode && event.shiftKey && selectionAnchor) {
+    selectionHead = [row, col];
+    setRectangularSelection(selectionAnchor, selectionHead);
+    pointerSelecting = true;
+    lastPointerCell = [row, col];
+  } else {
+    beginPointerSelection(row, col);
+  }
+
+  render();
+  boardEl.focus({ preventScroll: true });
+}
+
+function handlePointerMove(event) {
+  if (!pointerSelecting || !noteMode) return;
+
+  const cell = getCellFromPoint(
+    event.clientX,
+    event.clientY
+  );
+
+  if (!cell) return;
+
+  const [row, col] = cell;
+
+  if (
+    lastPointerCell &&
+    lastPointerCell[0] === row &&
+    lastPointerCell[1] === col
+  ) {
+    return;
+  }
+
+  extendPointerSelection(row, col);
+}
+
+function handlePointerUp(event) {
+  if (!pointerSelecting) return;
+
+  endPointerSelection();
+
+  if (boardEl.hasPointerCapture(event.pointerId)) {
+    boardEl.releasePointerCapture(event.pointerId);
+  }
+
+  render();
+}
+
+function handlePointerCancel(event) {
+  endPointerSelection();
+
+  if (boardEl.hasPointerCapture(event.pointerId)) {
+    boardEl.releasePointerCapture(event.pointerId);
+  }
+
+  render();
+}
 
 document
   .querySelectorAll(".numbers button")
@@ -1421,6 +1544,26 @@ document
       setValue(Number(button.dataset.value));
     });
   });
+
+boardEl.addEventListener(
+  "pointerdown",
+  handlePointerDown
+);
+
+boardEl.addEventListener(
+  "pointermove",
+  handlePointerMove
+);
+
+boardEl.addEventListener(
+  "pointerup",
+  handlePointerUp
+);
+
+boardEl.addEventListener(
+  "pointercancel",
+  handlePointerCancel
+);
 
 document.getElementById("new").addEventListener("click", () => {
   generatePuzzle(difficultyEl.value);
@@ -1438,12 +1581,9 @@ languageEl.addEventListener("change", () => {
   currentLanguage = languageEl.value;
 
   try {
-    localStorage.setItem(
-      LANGUAGE_STORAGE_KEY,
-      currentLanguage
-    );
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
   } catch {
-    /* Storage may be unavailable in private or restricted contexts. */
+    /* Storage may be unavailable. */
   }
 
   applyTranslations();
@@ -1451,9 +1591,6 @@ languageEl.addEventListener("change", () => {
 });
 
 document.addEventListener("keydown", handleKeyboard);
-window.addEventListener("resize", updateHighlight);
-
-/* Startup */
 
 buildBoard();
 languageEl.value = currentLanguage;

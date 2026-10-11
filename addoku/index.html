@@ -35,9 +35,8 @@ button:hover, select:hover { border-color: #64748b; background: var(--control-bg
 button:focus-visible, select:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 button:disabled { opacity: .55; cursor: wait; }
 .board-wrap { position: relative; width: 100%; aspect-ratio: 1; }
-#board { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: repeat(9, minmax(0, 1fr)); border: 3px solid var(--box-border); background: var(--cell-border); }
-#selection-highlight { position: absolute; z-index: 20; display: none; pointer-events: none; border: 3px solid var(--input-highlight); }
-.board-wrap.notes-mode #selection-highlight { border-color: var(--notes-highlight); }
+#board { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: repeat(9, minmax(0, 1fr)); border: 3px solid var(--box-border); background: var(--cell-border); touch-action: none; }
+#selection-sum { position: absolute; z-index: 30; display: none; transform: translateX(-50%); padding: 2px 8px; border: 1px solid var(--good); border-radius: 999px; background: rgba(13, 35, 28, .94); color: var(--good); font-size: 12px; font-weight: 800; line-height: 1.4; pointer-events: none; white-space: nowrap; }
 .cell { position: relative; display: grid; min-width: 0; min-height: 0; place-items: center; overflow: hidden; border: 1px solid var(--cell-border); background: var(--cell); cursor: pointer; }
 .cell:nth-child(3n) { border-right: 3px solid var(--box-border); }
 .cell:nth-child(n+19):nth-child(-n+27),
@@ -52,6 +51,8 @@ button:disabled { opacity: .55; cursor: wait; }
 .cell[data-value="8"] { background: #4b3c65; }
 .cell[data-value="9"] { background: #5d374f; }
 .cell.same { box-shadow: inset 0 0 0 999px rgba(255,255,255,.09); }
+.cell.selected::after { content: ""; position: absolute; inset: 0; z-index: 6; border: 3px solid var(--input-highlight); pointer-events: none; }
+.board-wrap.notes-mode .cell.selected::after { border-color: var(--notes-highlight); }
 .value { position: relative; z-index: 2; font-size: clamp(18px, 5.5vw, 30px); font-weight: 700; color: #7dd3fc; }
 .cell.error .value { color: var(--wrong); }
 .notes { position: absolute; inset: 2px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); color: rgba(226,232,240,.72); font-size: clamp(7px, 1.7vw, 10px); }
@@ -90,7 +91,7 @@ button:disabled { opacity: .55; cursor: wait; }
 
   <div class="board-wrap" id="boardWrap">
     <div id="board" role="grid" aria-label="Killer Sudoku board"></div>
-    <div id="selection-highlight" aria-hidden="true"></div>
+    <div id="selection-sum" aria-hidden="true"></div>
   </div>
 
   <div id="status" aria-live="polite"></div>
@@ -141,7 +142,7 @@ const LANGUAGE_KEY = "killer-sudoku-language";
 
 const boardEl = document.getElementById("board");
 const boardWrap = document.getElementById("boardWrap");
-const highlightEl = document.getElementById("selection-highlight");
+const selectionSumEl = document.getElementById("selection-sum");
 const statusEl = document.getElementById("status");
 const difficultyEl = document.getElementById("difficulty");
 const notesButton = document.getElementById("notes");
@@ -168,7 +169,7 @@ const translations = {
     notesOn: "Notes: ON",
     erase: "Erase",
     language: "Language",
-    help: "Fill every row, column and 3×3 box with 1–9.<br>Each dashed <b>cage</b> has at least two cells, must total its corner number, and cannot repeat a digit. Red numbers conflict with another number in their row, column or box; red cage borders indicate a wrong cage sum.",
+    help: "Fill every row, column and 3×3 box with 1–9.<br>Each dashed <b>cage</b> has at least two cells, must total its corner number, and cannot repeat a digit. Red numbers conflict with another number in their row, column or box; red cage borders indicate a wrong cage sum.<br>In Notes mode, drag across cells or use <b>Shift + Arrow</b> to select multiple individual cells. If the selection is exactly one or more complete cages, their answer sum appears above it in green.",
     selectCell: "Select a cell first.",
     newPuzzle: "New unique Killer Sudoku generated.",
     notesOnMsg: "Notes mode on.",
@@ -178,9 +179,9 @@ const translations = {
     noHints: "No hints needed.",
     hintPlaced: "Hint placed.",
     solved: "Solved! Well done.",
-    mistakes: "conflicting cells",
-    invalidCages: "invalid cages",
-    noMistakes: "No apparent contradictions so far.",
+    incorrectEntry: "incorrect entry",
+    incorrectEntries: "incorrect entries",
+    noIncorrectEntries: "No incorrect entries so far.",
     row: "Row",
     column: "column",
     empty: "empty",
@@ -205,7 +206,7 @@ const translations = {
     notesOn: "Notas: ACTIVADAS",
     erase: "Borrar",
     language: "Idioma",
-    help: "Completa cada fila, columna y caja de 3×3 con los números del 1 al 9.<br>Cada <b>jaula</b> discontinua tiene al menos dos celdas, debe sumar el número de su esquina y no puede repetir dígitos. Los números rojos entran en conflicto con otro número de su fila, columna o caja; los bordes rojos de jaula indican una suma incorrecta.",
+    help: "Completa cada fila, columna y caja de 3×3 con los números del 1 al 9.<br>Cada <b>jaula</b> discontinua tiene al menos dos celdas, debe sumar el número de su esquina y no puede repetir dígitos. Los números rojos entran en conflicto con otro número de su fila, columna o caja; los bordes rojos de jaula indican una suma incorrecta.<br>En el modo de notas, arrastra sobre las celdas o usa <b>Mayús + flechas</b> para seleccionar varias celdas individuales. Si la selección es exactamente una o más jaulas completas, la suma de sus respuestas aparece encima en verde.",
     selectCell: "Selecciona primero una celda.",
     newPuzzle: "Nuevo Addoku único generado.",
     notesOnMsg: "Modo de notas activado.",
@@ -215,9 +216,9 @@ const translations = {
     noHints: "No hacen falta pistas.",
     hintPlaced: "Pista colocada.",
     solved: "¡Resuelto! Muy bien.",
-    mistakes: "celdas en conflicto",
-    invalidCages: "jaulas no válidas",
-    noMistakes: "No hay contradicciones aparentes por ahora.",
+    incorrectEntry: "entrada incorrecta",
+    incorrectEntries: "entradas incorrectas",
+    noIncorrectEntries: "No hay entradas incorrectas por ahora.",
     row: "Fila",
     column: "columna",
     empty: "vacía",
@@ -242,7 +243,7 @@ const translations = {
     notesOn: "筆記：開啟",
     erase: "清除",
     language: "語言",
-    help: "在每行、每欄及每個 3×3 宮內填入 1 至 9。<br>每個虛線<b>籠</b>至少有兩格，其數字總和須等於角落數字，且籠內數字不可重複。紅色數字表示與同行、同欄或同一宮中的另一數字衝突；紅色籠框表示籠內總和錯誤。",
+    help: "在每行、每欄及每個 3×3 宮內填入 1 至 9。<br>每個虛線<b>籠</b>至少有兩格，其數字總和須等於角落數字，且籠內數字不可重複。紅色數字表示與同行、同欄或同一宮中的另一數字衝突；紅色籠框表示籠內總和錯誤。<br>在筆記模式下，可拖曳選取多個獨立格子，或使用 <b>Shift + 方向鍵</b>。若選取範圍恰好是一個或多個完整籠，則會以綠色在上方顯示其答案總和。",
     selectCell: "請先選擇一格。",
     newPuzzle: "已產生新的唯一解殺手數獨。",
     notesOnMsg: "筆記模式已開啟。",
@@ -252,9 +253,9 @@ const translations = {
     noHints: "不需要提示。",
     hintPlaced: "已放置提示。",
     solved: "完成！做得好！",
-    mistakes: "個衝突格子",
-    invalidCages: "個無效籠",
-    noMistakes: "目前沒有明顯矛盾。",
+    incorrectEntry: "個錯誤答案",
+    incorrectEntries: "個錯誤答案",
+    noIncorrectEntries: "目前沒有錯誤答案。",
     row: "第",
     column: "欄",
     empty: "空白",
@@ -295,8 +296,10 @@ let current = emptyGrid();
 let notes = emptyNotes();
 let history = [];
 let selected = null;
+let selectedCells = new Set();
 let noteMode = false;
 let generating = false;
+let isDraggingSelection = false;
 
 function normalizeLanguage(value) {
   if (!value) return null;
@@ -439,13 +442,6 @@ function generateSolution(grid) {
   return true;
 }
 
-/*
-  Fixed cage partitioner.
-
-  Every cage is grown from a seed and is orthogonally connected. Any leftover
-  one-cell cage is merged into an adjacent cage immediately, with the size map
-  updated at the same time. This prevents the former infinite cleanup loop.
-*/
 function partitionIntoCages(minSize, maxSize) {
   const cageId = Array.from({ length: SIZE }, () => Array(SIZE).fill(-1));
   const sizes = new Map();
@@ -500,7 +496,6 @@ function partitionIntoCages(minSize, maxSize) {
     }
   }
 
-  // Merge every remaining singleton into an adjacent cage.
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
       if (sizes.get(cageId[r][c]) !== 1) continue;
@@ -518,7 +513,6 @@ function partitionIntoCages(minSize, maxSize) {
     }
   }
 
-  // Compact IDs after merging.
   const usedIds = [...new Set(cageId.flat())];
   const remap = new Map(usedIds.map((oldId, newId) => [oldId, newId]));
 
@@ -714,8 +708,6 @@ async function generatePuzzle() {
 
   const strategies = [
     ...settings.attempts,
-    // Reliable fallback: smaller cages are more constraining and more likely
-    // to produce a unique puzzle.
     { minSize: 2, maxSize: 3 },
     { minSize: 2, maxSize: 2 }
   ];
@@ -772,6 +764,8 @@ async function newGame() {
   notes = emptyNotes();
   history = [];
   selected = null;
+  selectedCells = new Set();
+  isDraggingSelection = false;
 
   render();
 
@@ -792,6 +786,7 @@ async function newGame() {
   notes = emptyNotes();
   history = [];
   selected = null;
+  selectedCells = new Set();
 
   render();
   setStatus(t("newPuzzle"), "good");
@@ -807,7 +802,6 @@ function buildBoard() {
       cell.tabIndex = 0;
       cell.setAttribute("role", "gridcell");
 
-      cell.addEventListener("click", () => selectCell(r, c));
       cell.addEventListener("keydown", event => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -820,41 +814,126 @@ function buildBoard() {
   }
 }
 
-function selectCell(r, c) {
-  selected = [r, c];
+function selectCell(r, c, extend = false) {
+  if (generating) return;
+
+  if (!noteMode || !extend) {
+    selected = [r, c];
+    selectedCells = new Set([key(r, c)]);
+  } else {
+    selected = [r, c];
+    selectedCells.add(key(r, c));
+  }
+
   render();
   boardEl.children[key(r, c)]?.focus({ preventScroll: true });
 }
 
-function move(dr, dc) {
+function move(dr, dc, addToSelection = false) {
   if (!selected) {
     selectCell(0, 0);
     return;
   }
 
-  selectCell(
-    (selected[0] + dr + SIZE) % SIZE,
-    (selected[1] + dc + SIZE) % SIZE
-  );
+  const nextRow = (selected[0] + dr + SIZE) % SIZE;
+  const nextColumn = (selected[1] + dc + SIZE) % SIZE;
+
+  selectCell(nextRow, nextColumn, addToSelection);
 }
 
-function updateHighlight() {
-  if (!selected || !boardEl.children.length) {
-    highlightEl.style.display = "none";
+function cellFromPoint(clientX, clientY, clamp = false) {
+  const rect = boardEl.getBoundingClientRect();
+  const cellWidth = rect.width / SIZE;
+  const cellHeight = rect.height / SIZE;
+
+  let column = Math.floor((clientX - rect.left) / cellWidth);
+  let row = Math.floor((clientY - rect.top) / cellHeight);
+
+  if (clamp) {
+    row = Math.min(Math.max(row, 0), SIZE - 1);
+    column = Math.min(Math.max(column, 0), SIZE - 1);
+  } else if (
+    row < 0 || row >= SIZE ||
+    column < 0 || column >= SIZE
+  ) {
+    return null;
+  }
+
+  return [row, column];
+}
+
+function getCageUnionSum(cells) {
+  if (!cages.length || cells.size < 2) return null;
+
+  const selectedCageIndexes = new Set();
+
+  for (const cellKey of cells) {
+    const r = Math.floor(cellKey / SIZE);
+    const c = cellKey % SIZE;
+    const cageIndex = cellCage?.[r]?.[c] ?? -1;
+
+    if (cageIndex < 0) return null;
+
+    selectedCageIndexes.add(cageIndex);
+  }
+
+  let total = 0;
+
+  for (const cageIndex of selectedCageIndexes) {
+    const cage = cages[cageIndex];
+
+    const cageIsCompletelySelected = cage.cells.every(([r, c]) =>
+      cells.has(key(r, c))
+    );
+
+    if (!cageIsCompletelySelected) return null;
+
+    total += cage.sum;
+  }
+
+  return total;
+}
+
+function updateSelectionSum() {
+  if (!selectedCells.size || !boardEl.children.length) {
+    selectionSumEl.style.display = "none";
     return;
   }
 
-  const cell = boardEl.children[key(...selected)];
-  const boardRect = boardWrap.getBoundingClientRect();
-  const cellRect = cell.getBoundingClientRect();
+  const answerSum = getCageUnionSum(selectedCells);
 
-  Object.assign(highlightEl.style, {
-    display: "block",
-    left: `${cellRect.left - boardRect.left}px`,
-    top: `${cellRect.top - boardRect.top}px`,
-    width: `${cellRect.width}px`,
-    height: `${cellRect.height}px`
-  });
+  if (!noteMode || selectedCells.size < 2 || answerSum === null) {
+    selectionSumEl.style.display = "none";
+    return;
+  }
+
+  let minRow = SIZE;
+  let maxRow = 0;
+  let minColumn = SIZE;
+  let maxColumn = 0;
+
+  for (const cellKey of selectedCells) {
+    const r = Math.floor(cellKey / SIZE);
+    const c = cellKey % SIZE;
+
+    minRow = Math.min(minRow, r);
+    maxRow = Math.max(maxRow, r);
+    minColumn = Math.min(minColumn, c);
+    maxColumn = Math.max(maxColumn, c);
+  }
+
+  const boardRect = boardWrap.getBoundingClientRect();
+  const firstCellRect = boardEl.children[key(minRow, minColumn)].getBoundingClientRect();
+  const lastCellRect = boardEl.children[key(maxRow, maxColumn)].getBoundingClientRect();
+
+  const left = firstCellRect.left - boardRect.left;
+  const top = firstCellRect.top - boardRect.top;
+  const width = lastCellRect.right - firstCellRect.left;
+
+  selectionSumEl.textContent = String(answerSum);
+  selectionSumEl.style.display = "block";
+  selectionSumEl.style.left = `${left + width / 2}px`;
+  selectionSumEl.style.top = `${Math.max(2, top - 25)}px`;
 }
 
 function saveHistory() {
@@ -880,31 +959,41 @@ function updateMode() {
 
 function toggleNotes() {
   noteMode = !noteMode;
+
+  // When leaving Notes mode, keep only the active cell selected.
+  if (!noteMode && selected) {
+    selectedCells = new Set([key(selected[0], selected[1])]);
+  }
+
   updateMode();
-  updateHighlight();
+  updateSelectionSum();
   setStatus(noteMode ? t("notesOnMsg") : t("notesOffMsg"));
+  render();
 }
 
 function setValue(value) {
   if (generating) return;
 
-  if (!selected) {
+  if (!selectedCells.size) {
     setStatus(t("selectCell"), "error");
     return;
   }
 
-  const [r, c] = selected;
-
   saveHistory();
 
-  if (noteMode) {
-    if (current[r][c]) current[r][c] = 0;
+  for (const cellKey of selectedCells) {
+    const r = Math.floor(cellKey / SIZE);
+    const c = cellKey % SIZE;
 
-    if (notes[r][c].has(value)) notes[r][c].delete(value);
-    else notes[r][c].add(value);
-  } else {
-    current[r][c] = value;
-    notes[r][c].clear();
+    if (noteMode) {
+      if (current[r][c]) current[r][c] = 0;
+
+      if (notes[r][c].has(value)) notes[r][c].delete(value);
+      else notes[r][c].add(value);
+    } else {
+      current[r][c] = value;
+      notes[r][c].clear();
+    }
   }
 
   render();
@@ -913,18 +1002,29 @@ function setValue(value) {
 function erase() {
   if (generating) return;
 
-  if (!selected) {
+  if (!selectedCells.size) {
     setStatus(t("selectCell"), "error");
     return;
   }
 
-  const [r, c] = selected;
+  const hasContent = [...selectedCells].some(cellKey => {
+    const r = Math.floor(cellKey / SIZE);
+    const c = cellKey % SIZE;
+    return current[r][c] || notes[r][c].size;
+  });
 
-  if (!current[r][c] && !notes[r][c].size) return;
+  if (!hasContent) return;
 
   saveHistory();
-  current[r][c] = 0;
-  notes[r][c].clear();
+
+  for (const cellKey of selectedCells) {
+    const r = Math.floor(cellKey / SIZE);
+    const c = cellKey % SIZE;
+
+    current[r][c] = 0;
+    notes[r][c].clear();
+  }
+
   render();
 }
 
@@ -963,17 +1063,14 @@ function hint() {
   saveHistory();
   current[r][c] = solution[r][c];
   notes[r][c].clear();
+
   selected = [r, c];
+  selectedCells = new Set([key(r, c)]);
 
   render();
   setStatus(t("hintPlaced"), "good");
 }
 
-/*
-  Finds only *apparent* Sudoku contradictions: a filled digit that repeats in
-  its row, column, or 3×3 box. It does not compare entries with the hidden
-  solution.
-*/
 function getConflictingCells() {
   const conflicts = new Set();
 
@@ -1030,11 +1127,6 @@ function getConflictingCells() {
   return conflicts;
 }
 
-/*
-  A cage is apparently wrong only when:
-  - its filled total already exceeds the cage target, or
-  - every cage cell is filled and the total does not equal the target.
-*/
 function getInvalidCageIndexes() {
   const invalid = new Set();
 
@@ -1064,17 +1156,32 @@ function getInvalidCageIndexes() {
   return invalid;
 }
 
+function countErrorsAgainstSolution() {
+  if (!solution) return 0;
+
+  let errors = 0;
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (current[r][c] && current[r][c] !== solution[r][c]) {
+        errors++;
+      }
+    }
+  }
+
+  return errors;
+}
+
 function check() {
   if (generating || !solution || !cages.length) return;
 
-  const conflicts = getConflictingCells();
-  const invalidCages = getInvalidCageIndexes();
+  const errors = countErrorsAgainstSolution();
 
-  if (conflicts.size || invalidCages.size) {
-    setStatus(
-      `${conflicts.size} ${t("mistakes")}; ${invalidCages.size} ${t("invalidCages")}.`,
-      "error"
-    );
+  if (errors > 0) {
+    if (errors >1){
+    setStatus(`${errors} ${t("incorrectEntries")}.`, "error");
+    }else{
+    setStatus(`${errors} ${t("incorrectEntry")}.`, "error");}
     return;
   }
 
@@ -1083,7 +1190,7 @@ function check() {
     return;
   }
 
-  setStatus(t("noMistakes"), "good");
+  setStatus(t("noIncorrectEntries"), "good");
 }
 
 function isSolved() {
@@ -1128,11 +1235,11 @@ function render() {
     delete cell.dataset.value;
     cell.style.boxShadow = "";
 
+    if (selectedCells.has(index)) cell.classList.add("selected");
+
     if (value) {
       cell.dataset.value = value;
 
-      // Highlight only an apparent Sudoku contradiction, never a mere
-      // difference from the hidden solution.
       if (conflictingCells.has(index)) cell.classList.add("error");
 
       cell.innerHTML = `<div class="value">${value}</div>`;
@@ -1150,7 +1257,7 @@ function render() {
       selectedValue &&
       value === selectedValue &&
       selected &&
-      !(selected[0] === r && selected[1] === c)
+      !selectedCells.has(index)
     ) {
       cell.classList.add("same");
     }
@@ -1200,7 +1307,7 @@ function render() {
     );
   });
 
-  updateHighlight();
+  updateSelectionSum();
 
   if (isSolved()) setStatus(t("solved"), "good");
 }
@@ -1217,7 +1324,7 @@ document.addEventListener("keydown", event => {
 
   if (moves[event.key]) {
     event.preventDefault();
-    move(...moves[event.key]);
+    move(...moves[event.key], event.shiftKey && noteMode);
   } else if (["Backspace", "Delete", "0"].includes(event.key)) {
     event.preventDefault();
     erase();
@@ -1229,6 +1336,53 @@ document.addEventListener("keydown", event => {
     setValue(Number(event.key));
   }
 });
+
+boardEl.addEventListener("pointerdown", event => {
+  if (generating) return;
+
+  const cellPosition = cellFromPoint(event.clientX, event.clientY);
+  if (!cellPosition) return;
+
+  event.preventDefault();
+
+  const [r, c] = cellPosition;
+
+  if (noteMode) {
+    isDraggingSelection = true;
+    selectCell(r, c, false);
+    boardEl.setPointerCapture(event.pointerId);
+  } else {
+    selectCell(r, c, false);
+  }
+});
+
+boardEl.addEventListener("pointermove", event => {
+  if (!isDraggingSelection || generating) return;
+
+  const cellPosition = cellFromPoint(event.clientX, event.clientY, true);
+  if (!cellPosition) return;
+
+  const [r, c] = cellPosition;
+  const cellKey = key(r, c);
+
+  if (!selectedCells.has(cellKey)) {
+    selectCell(r, c, true);
+  }
+});
+
+function endSelectionDrag(event) {
+  if (!isDraggingSelection) return;
+
+  isDraggingSelection = false;
+
+  if (boardEl.hasPointerCapture(event.pointerId)) {
+    boardEl.releasePointerCapture(event.pointerId);
+  }
+}
+
+boardEl.addEventListener("pointerup", endSelectionDrag);
+boardEl.addEventListener("pointercancel", endSelectionDrag);
+boardEl.addEventListener("contextmenu", event => event.preventDefault());
 
 document.querySelectorAll(".numbers button").forEach(button => {
   button.addEventListener("click", () =>
@@ -1255,7 +1409,7 @@ languageEl.addEventListener("change", () => {
   applyTranslations();
 });
 
-window.addEventListener("resize", updateHighlight);
+window.addEventListener("resize", updateSelectionSum);
 
 buildBoard();
 languageEl.value = currentLanguage;
