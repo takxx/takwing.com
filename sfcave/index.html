@@ -127,7 +127,9 @@ canvas {
   let score = 0;
   let best = Number(localStorage.getItem("sfcave_gray_best") || 0);
 
-  const scrollSpeedStart = 0.55;
+  // Faster starting pace and a more noticeable difficulty ramp.
+  const scrollSpeedStart = 0.72;
+  const scrollSpeedMax = 1.55;
   let scrollSpeed = scrollSpeedStart;
 
   const ribbon = {
@@ -142,10 +144,12 @@ canvas {
   const ceiling = [];
   const floor = [];
 
+  let caveOffset = 0;
+
   let caveCenter = GAME_H / 2;
-  let caveGap = 78;
+  let caveGap = 74;
   let targetCenter = GAME_H / 2;
-  let targetGap = 78;
+  let targetGap = 74;
 
   let frame = 0;
 
@@ -177,6 +181,7 @@ canvas {
     score = 0;
     scrollSpeed = scrollSpeedStart;
     frame = 0;
+    caveOffset = 0;
 
     ribbon.x = 34;
     ribbon.y = GAME_H / 2;
@@ -187,11 +192,11 @@ canvas {
     floor.length = 0;
 
     caveCenter = GAME_H / 2;
-    caveGap = 78;
+    caveGap = 74;
     targetCenter = GAME_H / 2;
-    targetGap = 78;
+    targetGap = 74;
 
-    const columns = Math.ceil(GAME_W / step) + 2;
+    const columns = Math.ceil(GAME_W / step) + 3;
 
     for (let i = 0; i < columns; i++) {
       ceiling.push(caveCenter - caveGap / 2);
@@ -254,32 +259,91 @@ canvas {
   function updateCave() {
     frame++;
 
-    if (frame % 42 === 0) {
-      targetCenter = 32 + Math.random() * (GAME_H - 64);
+    // A shorter calm opening; difficulty begins much sooner.
+    if (frame < 130) {
+      targetCenter = GAME_H / 2;
+      targetGap = 76;
+    } else {
+      // The cave changes direction roughly twice as often.
+      if (frame % 55 === 0) {
+        const difficulty = Math.min(1, score / 450);
+        const maxShift = 22 + 12 * difficulty;
+
+        const minCenter = 46;
+        const maxCenter = GAME_H - 46;
+
+        targetCenter = Math.max(
+          minCenter,
+          Math.min(
+            maxCenter,
+            caveCenter + (Math.random() * 2 - 1) * maxShift
+          )
+        );
+      }
+
+      // Narrow steadily and reach a genuinely tight cave earlier.
+      if (frame % 45 === 0 && caveGap > 42) {
+        targetGap = Math.max(42, caveGap - 3);
+      }
     }
 
-    if (frame % 55 === 0 && caveGap > 42) {
-      targetGap = Math.max(42, caveGap - 2 - Math.floor(Math.random() * 4));
+    // More responsive bends, closer to the original's sharper navigation.
+    caveCenter += (targetCenter - caveCenter) * 0.022;
+    caveGap += (targetGap - caveGap) * 0.018;
+
+    caveOffset += scrollSpeed;
+
+    while (caveOffset >= step) {
+      caveOffset -= step;
+
+      const top = caveCenter - caveGap / 2;
+      const bottom = caveCenter + caveGap / 2;
+
+      ceiling.push(top);
+      floor.push(bottom);
+
+      ceiling.shift();
+      floor.shift();
+    }
+  }
+
+  function caveBoundaryAt(array, x) {
+    const position = (x + caveOffset) / step;
+    const index = Math.floor(position);
+    const fraction = position - index;
+
+    const a = array[index] ?? array[array.length - 1] ?? GAME_H / 2;
+    const b = array[index + 1] ?? a;
+
+    return a + (b - a) * fraction;
+  }
+
+  function updateTrail() {
+    for (const point of ribbon.trail) {
+      point.x -= scrollSpeed;
     }
 
-    caveCenter += (targetCenter - caveCenter) * 0.025;
-    caveGap += (targetGap - caveGap) * 0.02;
+    ribbon.trail.push({
+      x: ribbon.x,
+      y: ribbon.y
+    });
 
-    const top = Math.round(caveCenter - caveGap / 2);
-    const bottom = Math.round(caveCenter + caveGap / 2);
-
-    ceiling.push(top);
-    floor.push(bottom);
-
-    ceiling.shift();
-    floor.shift();
+    while (ribbon.trail.length && ribbon.trail[0].x < -2) {
+      ribbon.trail.shift();
+    }
   }
 
   function update() {
     if (!running || gameOver) return;
 
     score += scrollSpeed * 0.12;
-    scrollSpeed = scrollSpeedStart + Math.floor(score / 80) * 0.03;
+
+    // Reaches higher speeds substantially sooner, but remains capped.
+    const speedLevel = Math.floor(score / 45);
+    scrollSpeed = Math.min(
+      scrollSpeedMax,
+      scrollSpeedStart + speedLevel * 0.05
+    );
 
     if (holding()) {
       ribbon.vy -= 0.09;
@@ -292,20 +356,11 @@ canvas {
 
     ribbon.y += ribbon.vy;
 
-    ribbon.trail.push({
-      x: ribbon.x,
-      y: Math.round(ribbon.y)
-    });
-
-    if (ribbon.trail.length > 14) {
-      ribbon.trail.shift();
-    }
-
+    updateTrail();
     updateCave();
 
-    const index = Math.floor(ribbon.x / step);
-    const ceilY = ceiling[index] ?? 0;
-    const floorY = floor[index] ?? GAME_H;
+    const ceilY = caveBoundaryAt(ceiling, ribbon.x);
+    const floorY = caveBoundaryAt(floor, ribbon.x);
 
     if (
       ribbon.y - ribbon.radius < ceilY ||
@@ -332,9 +387,11 @@ canvas {
     ctx.fillRect(0, 0, GAME_W, GAME_H);
 
     for (let i = 0; i < ceiling.length; i++) {
-      const x = i * step;
+      const x = i * step - caveOffset;
       const top = Math.round(ceiling[i]);
       const bottom = Math.round(floor[i]);
+
+      if (x + step < 0 || x > GAME_W) continue;
 
       ctx.fillStyle = COLORS.lightGray;
       ctx.fillRect(x, 0, step, top);
@@ -352,10 +409,15 @@ canvas {
     ctx.beginPath();
 
     for (let i = 0; i < ribbon.trail.length; i++) {
-      const p = ribbon.trail[i];
+      const point = ribbon.trail[i];
+      const x = Math.round(point.x);
+      const y = Math.round(point.y);
 
-      if (i === 0) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
     }
 
     ctx.stroke();
