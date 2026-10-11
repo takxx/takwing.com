@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find the Cow</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #9ad06b;
+    font-family: system-ui, sans-serif;
+    user-select: none;
+  }
+
+  .game {
+    background: #fff;
+    padding: 22px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, .18);
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0 0 4px;
+    color: #333;
+  }
+
+  p {
+    margin: 0 0 16px;
+    color: #666;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(10, 42px);
+    gap: 5px;
+  }
+
+  @media (max-width: 520px) {
+    #grid {
+      grid-template-columns: repeat(10, minmax(28px, 1fr));
+    }
+  }
+
+  .tile {
+    width: 100%;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    background: #fdf6d8;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: 800;
+    color: #444;
+    cursor: pointer;
+    transition: background .12s, transform .1s;
+  }
+
+  .tile:hover {
+    background: #ffe9a8;
+  }
+
+  .tile.selected {
+    background: #ffe9a8;
+  }
+
+  .tile.correct {
+    background: #ffcf3f;
+    color: #6b4a00;
+    transform: scale(1.05);
+  }
+
+  .tile.wrong {
+    background: #ff8a80;
+    color: white;
+    animation: shake .25s;
+  }
+
+  @keyframes shake {
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+
+  #status {
+    margin-top: 16px;
+    font-weight: 700;
+    min-height: 24px;
+    color: #2f6b1f;
+  }
+
+  button {
+    margin-top: 12px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 999px;
+    background: #4b8c2f;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  #cow {
+    font-size: 48px;
+    margin-top: 10px;
+    opacity: 0;
+    transform: scale(.4);
+    transition: all .3s;
+  }
+
+  #cow.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+</style>
+</head>
+<body>
+<main class="game">
+  <h1>Find the Cow</h1>
+  <p>Find the one hidden word: <strong>COW</strong></p>
+
+  <div id="grid"></div>
+  <div id="status"></div>
+  <div id="cow">🐄</div>
+  <button id="restart">New puzzle</button>
+</main>
+
+<script>
+const SIZE = 10;
+const TARGET = "COW";
+const LETTERS = ["C", "O", "W"];
+
+// Directions used to place the intended COW.
+const TARGET_DIRECTIONS = [
+  [0, 1],   // left to right
+  [1, 0],   // top to bottom
+  [1, 1],   // top-left to bottom-right
+  [1, -1]   // top-right to bottom-left
+];
+
+// All directions used to detect accidental COWs.
+const ALL_DIRECTIONS = [
+  [0, 1],
+  [0, -1],
+  [1, 0],
+  [-1, 0],
+  [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1]
+];
+
+const gridEl = document.getElementById("grid");
+const statusEl = document.getElementById("status");
+const cowEl = document.getElementById("cow");
+const restartBtn = document.getElementById("restart");
+
+let tiles = [];
+let letterGrid = [];
+let targetCells = [];
+let found = false;
+
+let selection = [];
+let isDragging = false;
+let startTile = null;
+
+function createEmptyGrid() {
+  return Array.from({ length: SIZE }, () =>
+    Array.from({ length: SIZE }, () => null)
+  );
+}
+
+function createGrid() {
+  gridEl.innerHTML = "";
+  tiles = [];
+  targetCells = [];
+  found = false;
+
+  selection = [];
+  isDragging = false;
+  startTile = null;
+
+  statusEl.textContent = "";
+  cowEl.classList.remove("show");
+
+  letterGrid = createEmptyGrid();
+
+  placeTarget();
+  fillRemainingLetters();
+  renderGrid();
+}
+
+function placeTarget() {
+  let placed = false;
+
+  while (!placed) {
+    const row = Math.floor(Math.random() * SIZE);
+    const col = Math.floor(Math.random() * SIZE);
+    const [rowChange, colChange] =
+      TARGET_DIRECTIONS[Math.floor(Math.random() * TARGET_DIRECTIONS.length)];
+
+    const endRow = row + rowChange * (TARGET.length - 1);
+    const endCol = col + colChange * (TARGET.length - 1);
+
+    const fitsInGrid =
+      endRow >= 0 &&
+      endRow < SIZE &&
+      endCol >= 0 &&
+      endCol < SIZE;
+
+    if (!fitsInGrid) continue;
+
+    targetCells = [];
+
+    for (let i = 0; i < TARGET.length; i++) {
+      const targetRow = row + rowChange * i;
+      const targetCol = col + colChange * i;
+
+      letterGrid[targetRow][targetCol] = TARGET[i];
+      targetCells.push([targetRow, targetCol]);
+    }
+
+    placed = true;
+  }
+}
+
+function isTargetCell(row, col) {
+  return targetCells.some(([targetRow, targetCol]) =>
+    targetRow === row && targetCol === col
+  );
+}
+
+function wouldCreateExtraCow(row, col, letter) {
+  const originalLetter = letterGrid[row][col];
+
+  letterGrid[row][col] = letter;
+
+  let createsExtraCow = false;
+
+  for (const [rowChange, colChange] of ALL_DIRECTIONS) {
+    for (let letterPosition = 0; letterPosition < TARGET.length; letterPosition++) {
+      const startRow = row - rowChange * letterPosition;
+      const startCol = col - colChange * letterPosition;
+
+      const endRow = startRow + rowChange * (TARGET.length - 1);
+      const endCol = startCol + colChange * (TARGET.length - 1);
+
+      const fitsInGrid =
+        startRow >= 0 &&
+        startRow < SIZE &&
+        startCol >= 0 &&
+        startCol < SIZE &&
+        endRow >= 0 &&
+        endRow < SIZE &&
+        endCol >= 0 &&
+        endCol < SIZE;
+
+      if (!fitsInGrid) continue;
+
+      let matchesTarget = true;
+
+      for (let i = 0; i < TARGET.length; i++) {
+        const checkRow = startRow + rowChange * i;
+        const checkCol = startCol + colChange * i;
+
+        if (letterGrid[checkRow][checkCol] !== TARGET[i]) {
+          matchesTarget = false;
+          break;
+        }
+      }
+
+      if (matchesTarget) {
+        createsExtraCow = true;
+        break;
+      }
+    }
+
+    if (createsExtraCow) break;
+  }
+
+  letterGrid[row][col] = originalLetter;
+
+  return createsExtraCow;
+}
+
+function fillRemainingLetters() {
+  for (let row = 0; row < SIZE; row++) {
+    for (let col = 0; col < SIZE; col++) {
+      if (isTargetCell(row, col)) continue;
+
+      const safeLetters = LETTERS.filter(
+        (letter) => !wouldCreateExtraCow(row, col, letter)
+      );
+
+      const availableLetters =
+        safeLetters.length > 0 ? safeLetters : LETTERS;
+
+      letterGrid[row][col] =
+        availableLetters[Math.floor(Math.random() * availableLetters.length)];
+    }
+  }
+}
+
+function renderGrid() {
+  for (let row = 0; row < SIZE; row++) {
+    tiles[row] = [];
+
+    for (let col = 0; col < SIZE; col++) {
+      const tile = document.createElement("div");
+
+      tile.className = "tile";
+      tile.textContent = letterGrid[row][col];
+      tile.dataset.row = row;
+      tile.dataset.col = col;
+
+      gridEl.appendChild(tile);
+      tiles[row][col] = tile;
+    }
+  }
+}
+
+function getTileFromEvent(event) {
+  const element = document.elementFromPoint(event.clientX, event.clientY);
+  return element?.classList.contains("tile") ? element : null;
+}
+
+function selectTile(tile) {
+  if (found || !tile) return;
+
+  const alreadySelected = selection.includes(tile);
+
+  if (!alreadySelected && selection.length < TARGET.length) {
+    selection.push(tile);
+    tile.classList.add("selected");
+  }
+
+  if (!isDragging && selection.length === TARGET.length) {
+    validateSelection();
+  }
+}
+
+function selectLineBetween(fromTile, toTile) {
+  const fromRow = Number(fromTile.dataset.row);
+  const fromCol = Number(fromTile.dataset.col);
+  const toRow = Number(toTile.dataset.row);
+  const toCol = Number(toTile.dataset.col);
+
+  const rowDiff = toRow - fromRow;
+  const colDiff = toCol - fromCol;
+
+  const steps = Math.max(Math.abs(rowDiff), Math.abs(colDiff));
+
+  for (let i = 1; i <= steps; i++) {
+    const row = fromRow + Math.round((rowDiff * i) / steps);
+    const col = fromCol + Math.round((colDiff * i) / steps);
+
+    selectTile(tiles[row][col]);
+  }
+}
+
+function handlePointerDown(event) {
+  if (found) return;
+
+  const tile = getTileFromEvent(event);
+  if (!tile) return;
+
+  event.preventDefault();
+
+  if (selection.length === 1 || selection.length === 2) {
+    selectTile(tile);
+  } else {
+    clearSelection();
+    selectTile(tile);
+  }
+
+  isDragging = true;
+  startTile = tile;
+
+  gridEl.setPointerCapture(event.pointerId);
+}
+
+function handlePointerMove(event) {
+  if (!isDragging || found) return;
+
+  const tile = getTileFromEvent(event);
+  if (!tile || tile === startTile) return;
+
+  if (selection[0] !== startTile) {
+    clearSelection();
+    selectTile(startTile);
+  }
+
+  selectLineBetween(selection[selection.length - 1], tile);
+}
+
+function handlePointerUp() {
+  if (!isDragging) return;
+
+  isDragging = false;
+  startTile = null;
+
+  if (selection.length === 1) return;
+
+  validateSelection();
+}
+
+function validateSelection() {
+  const selectedWord = selection.map((tile) => tile.textContent).join("");
+
+  const selectedPositions = selection.map((tile) => [
+    Number(tile.dataset.row),
+    Number(tile.dataset.col)
+  ]);
+
+  const isExactMatch =
+    selectedWord === TARGET &&
+    selectedPositions.every(
+      ([row, col], index) =>
+        targetCells[index][0] === row &&
+        targetCells[index][1] === col
+    );
+
+  if (isExactMatch) {
+    revealCow();
+  } else {
+    markWrongSelection();
+  }
+
+  if (!found) {
+    setTimeout(clearSelection, 450);
+  }
+}
+
+function markWrongSelection() {
+  selection.forEach((tile) => tile.classList.add("wrong"));
+  statusEl.textContent = "Select the whole word: COW.";
+
+  setTimeout(() => {
+    selection.forEach((tile) => tile.classList.remove("wrong"));
+  }, 450);
+}
+
+function clearSelection() {
+  selection.forEach((tile) => tile.classList.remove("selected"));
+  selection = [];
+}
+
+function revealCow() {
+  found = true;
+
+  targetCells.forEach(([row, col]) => {
+    tiles[row][col].classList.add("correct");
+    tiles[row][col].classList.remove("selected");
+  });
+
+  selection = [];
+  statusEl.textContent = "You found the cow!";
+  cowEl.classList.add("show");
+}
+
+gridEl.addEventListener("pointerdown", handlePointerDown);
+gridEl.addEventListener("pointermove", handlePointerMove);
+gridEl.addEventListener("pointerup", handlePointerUp);
+gridEl.addEventListener("pointercancel", handlePointerUp);
+
+restartBtn.addEventListener("click", createGrid);
+
+createGrid();
+</script>
+</body>
+</html>
