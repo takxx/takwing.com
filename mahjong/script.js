@@ -53,6 +53,7 @@ DOM elements
 ----------------------------- */
 
 const board = document.getElementById("gameBoard");
+const boardScaler = document.getElementById("boardScaler");
 const message = document.getElementById("message");
 const remainingCount = document.getElementById("remainingCount");
 
@@ -68,6 +69,7 @@ const languageSelect = document.getElementById("languageSelect");
 
 const requiredElements = [
   board,
+  boardScaler,
   message,
   remainingCount,
   newGameButton,
@@ -94,7 +96,16 @@ const UNIT_X = 57;
 const UNIT_Y = 77;
 const TILE_IMAGE_FOLDER = "";
 
+const WIDE_BOARD_WIDTH = 850;
+const WIDE_BOARD_HEIGHT = 650;
+
+const NARROW_BOARD_WIDTH = 500;
+const NARROW_BOARD_HEIGHT = 990;
+
+const NARROW_LAYOUT_BREAKPOINT = 700;
+
 let currentLanguage = "en";
+let currentBoardMode = "wide";
 let tiles = [];
 let startingTiles = [];
 let undoStack = [];
@@ -112,15 +123,6 @@ function normalizeLanguage(language) {
 
   const normalized = language.trim().toLowerCase();
 
-  /*
-   * Supported query examples:
-   * ?lang=en
-   * ?lang=es
-   * ?lang=zh
-   *
-   * The available Chinese translation is Traditional Chinese,
-   * represented internally by the "zh-Hant" translation key.
-   */
   if (
     normalized === "zh" ||
     normalized === "zh-hant" ||
@@ -197,13 +199,6 @@ function getSavedLanguage() {
 }
 
 function getInitialLanguage() {
-  /*
-   * Priority:
-   * 1. ?lang=...
-   * 2. Saved localStorage language
-   * 3. Browser language
-   * 4. English fallback
-   */
   const queryLanguage = getQueryLanguage();
 
   if (queryLanguage) {
@@ -367,42 +362,93 @@ function showMessage(text = "", state = "") {
 }
 
 /* -----------------------------
-Layout
+Layouts
 ----------------------------- */
 
-function createLayout() {
-  const layout = [];
-  let id = 0;
-
-  function addLayer(
-    width,
-    height,
+function createLayoutPosition(
+  id,
+  x,
+  y,
+  z
+) {
+  return {
+    id,
+    x,
+    y,
     z,
-    offsetX,
-    offsetY
-  ) {
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        layout.push({
-          id: id++,
-          x: offsetX + x,
-          y: offsetY + y,
-          z,
-          group: "",
-          symbol: "",
-          matchKey: "",
-          removed: false
-        });
-      }
+    group: "",
+    symbol: "",
+    matchKey: "",
+    removed: false
+  };
+}
+
+function addLayoutLayer(
+  layout,
+  idStart,
+  width,
+  height,
+  z,
+  offsetX,
+  offsetY
+) {
+  let id = idStart;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      layout.push(
+        createLayoutPosition(
+          id++,
+          offsetX + x,
+          offsetY + y,
+          z
+        )
+      );
     }
   }
 
-  addLayer(12, 6, 0, 1, 1);
-  addLayer(9, 4, 1, 2.5, 2);
-  addLayer(6, 4, 2, 4, 2);
-  addLayer(3, 4, 3, 5.5, 2);
+  return id;
+}
+
+/* Original wide-screen arrangement: unchanged. */
+function createWideLayout() {
+  const layout = [];
+  let id = 0;
+
+  id = addLayoutLayer(layout, id, 12, 6, 0, 1, 1);
+  id = addLayoutLayer(layout, id, 9, 4, 1, 2.5, 2);
+  id = addLayoutLayer(layout, id, 6, 4, 2, 4, 2);
+  id = addLayoutLayer(layout, id, 3, 4, 3, 5.5, 2);
 
   return layout;
+}
+
+/*
+  Narrow-screen arrangement: 144 tiles.
+
+  Lower level:  8 x 11 = 88
+  Middle level: 8 x 5  = 40
+  Upper level:  4 x 4  = 16
+  Total:               144
+
+  More tiles are stacked onto the middle and upper levels,
+  making the board shorter and better suited to narrow screens.
+*/
+function createNarrowLayout() {
+  const layout = [];
+  let id = 0;
+
+  id = addLayoutLayer(layout, id, 8, 11, 0, 0, 0);
+  id = addLayoutLayer(layout, id, 8, 5, 1, 0, 3);
+  id = addLayoutLayer(layout, id, 4, 4, 2, 2, 4);
+
+  return layout;
+}
+
+function createLayoutForMode(mode) {
+  return mode === "narrow"
+    ? createNarrowLayout()
+    : createWideLayout();
 }
 
 /* -----------------------------
@@ -540,9 +586,9 @@ function isFree(tile, tileList) {
 Solvable deal generation
 ----------------------------- */
 
-function createSolvableDeal() {
+function createSolvableDeal(mode) {
   for (let attempt = 0; attempt < 200; attempt++) {
-    const layout = createLayout();
+    const layout = createLayoutForMode(mode);
     const pairs = createPairPool();
 
     const activeIds = new Set(
@@ -600,7 +646,7 @@ function createSolvableDeal() {
     }
   }
 
-  const fallback = createLayout();
+  const fallback = createLayoutForMode(mode);
   const randomTiles = shuffle(createPhysicalTiles());
 
   fallback.forEach((tile, index) => {
@@ -608,6 +654,81 @@ function createSolvableDeal() {
   });
 
   return fallback;
+}
+
+/* -----------------------------
+Responsive board fitting
+----------------------------- */
+
+function getBoardDimensions() {
+  return currentBoardMode === "narrow"
+    ? {
+        width: NARROW_BOARD_WIDTH,
+        height: NARROW_BOARD_HEIGHT
+      }
+    : {
+        width: WIDE_BOARD_WIDTH,
+        height: WIDE_BOARD_HEIGHT
+      };
+}
+
+function updateBoardMode() {
+  const shouldUseNarrow =
+    window.innerWidth < NARROW_LAYOUT_BREAKPOINT;
+
+  const nextMode = shouldUseNarrow
+    ? "narrow"
+    : "wide";
+
+  /*
+    Do not disrupt a game already in progress when resizing.
+    The arrangement is chosen when a new game starts.
+  */
+  if (nextMode !== currentBoardMode) {
+    currentBoardMode = nextMode;
+
+    board.classList.toggle(
+      "narrow-board",
+      nextMode === "narrow"
+    );
+
+    board.classList.toggle(
+      "wide-board",
+      nextMode === "wide"
+    );
+  }
+
+  updateBoardScale();
+}
+
+function updateBoardScale() {
+  const dimensions = getBoardDimensions();
+
+  const availableWidth = Math.max(
+    0,
+    document.documentElement.clientWidth - 40
+  );
+
+  /*
+    Wide screens retain a scale of exactly 1,
+    preserving the original board size and layout.
+  */
+  const scale = Math.min(
+    1,
+    availableWidth / dimensions.width
+  );
+
+  if (scale < 1) {
+    board.style.transform = `scale(${scale})`;
+  } else {
+    board.style.transform = "";
+  }
+
+  boardScaler.style.width =
+    `${Math.ceil(dimensions.width * scale)}px`;
+
+  boardScaler.style.height =
+    `${Math.ceil(dimensions.height * scale)}px`;
 }
 
 /* -----------------------------
@@ -876,12 +997,28 @@ Game controls
 ----------------------------- */
 
 function newGame() {
-  tiles = createSolvableDeal();
+  currentBoardMode =
+    window.innerWidth < NARROW_LAYOUT_BREAKPOINT
+      ? "narrow"
+      : "wide";
+
+  board.classList.toggle(
+    "narrow-board",
+    currentBoardMode === "narrow"
+  );
+
+  board.classList.toggle(
+    "wide-board",
+    currentBoardMode === "wide"
+  );
+
+  tiles = createSolvableDeal(currentBoardMode);
   startingTiles = cloneTiles(tiles);
   undoStack = [];
   selectedTileId = null;
   hintedTileIds.clear();
 
+  updateBoardScale();
   showMessage();
   render();
 }
@@ -922,6 +1059,14 @@ newGameButton.addEventListener("click", newGame);
 restartButton.addEventListener("click", restartGame);
 undoButton.addEventListener("click", undoMove);
 hintButton.addEventListener("click", showHint);
+
+window.addEventListener("resize", () => {
+  updateBoardMode();
+});
+
+window.addEventListener("orientationchange", () => {
+  window.setTimeout(updateBoardMode, 100);
+});
 
 /* -----------------------------
 Start game

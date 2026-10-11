@@ -30,7 +30,7 @@ body {
 
 body {
   min-height: 100vh;
-  overflow: auto;
+  overflow-x: hidden;
 
   color: white;
 
@@ -58,8 +58,8 @@ body {
 }
 
 main {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-height: 100vh;
   padding: 20px;
   text-align: center;
 }
@@ -127,13 +127,23 @@ select {
    Game board
 ----------------------------- */
 
-#gameBoard {
+.board-scaler {
   position: relative;
-  isolation: isolate;
 
   width: 850px;
   height: 650px;
+
   margin: 0 auto;
+}
+
+#gameBoard {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  transform-origin: top left;
+
+  isolation: isolate;
 
   overflow: hidden;
 
@@ -161,6 +171,27 @@ select {
     0 12px 28px rgba(0, 0, 0, 0.4);
 
   perspective: 1600px;
+}
+
+/* Original wide-screen board: unchanged dimensions and decoration. */
+#gameBoard.wide-board {
+  width: 850px;
+  height: 650px;
+}
+
+/*
+  Narrow-screen board:
+  no wooden border, rounded corners, or board shadow.
+  Only the green playing surface remains.
+*/
+#gameBoard.narrow-board {
+  width: 500px;
+  height: 990px;
+
+  border: 0;
+  border-radius: 0;
+
+  box-shadow: none;
 }
 
 /* -----------------------------
@@ -475,28 +506,4 @@ select {
 
 .tile.flowers {
   color: #e17820;
-}
-
-/* -----------------------------
-   Responsive board
------------------------------ */
-
-@media (max-width: 900px) {
-  #gameBoard {
-    transform: scale(0.8);
-    transform-origin: top left;
-
-    margin-right: -170px;
-    margin-bottom: -130px;
-  }
-}
-
-@media (max-width: 700px) {
-  #gameBoard {
-    transform: scale(0.6);
-    transform-origin: top left;
-
-    margin-right: -340px;
-    margin-bottom: -260px;
-  }
 }
