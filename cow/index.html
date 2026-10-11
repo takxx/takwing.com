@@ -1,475 +1,563 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Find the Cow</title>
-<style>
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #9ad06b;
-    font-family: system-ui, sans-serif;
-    user-select: none;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Find the Cow</title>
 
-  .game {
-    background: #fff;
-    padding: 22px;
-    border-radius: 20px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, .18);
-    text-align: center;
-  }
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
 
-  h1 {
-    margin: 0 0 4px;
-    color: #333;
-  }
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
 
-  p {
-    margin: 0 0 16px;
-    color: #666;
-  }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: #9ad06b;
+      font-family: system-ui, sans-serif;
+    }
 
-  #grid {
-    display: grid;
-    grid-template-columns: repeat(10, 42px);
-    gap: 5px;
-  }
+    .game {
+      width: min(100%, 490px);
+      padding: 22px;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, .18);
+      text-align: center;
+    }
 
-  @media (max-width: 520px) {
+    h1 {
+      margin: 0 0 4px;
+      color: #333;
+    }
+
+    #prompt {
+      margin: 0 0 16px;
+      color: #666;
+    }
+
     #grid {
-      grid-template-columns: repeat(10, minmax(28px, 1fr));
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 5px;
+      touch-action: none;
     }
-  }
 
-  .tile {
-    width: 100%;
-    aspect-ratio: 1;
-    display: grid;
-    place-items: center;
-    background: #fdf6d8;
-    border-radius: 8px;
-    font-size: 20px;
-    font-weight: 800;
-    color: #444;
-    cursor: pointer;
-    transition: background .12s, transform .1s;
-  }
+    .tile {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: #fdf6d8;
+      color: #444;
+      font-size: clamp(14px, 4.5vw, 20px);
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: none;
+      transition: background .12s, transform .1s;
+    }
 
-  .tile:hover {
-    background: #ffe9a8;
-  }
+    .tile:hover,
+    .tile.selected {
+      background: #ffe9a8;
+    }
 
-  .tile.selected {
-    background: #ffe9a8;
-  }
+    .tile.correct {
+      transform: scale(1.05);
+      background: #ffcf3f;
+      color: #6b4a00;
+    }
 
-  .tile.correct {
-    background: #ffcf3f;
-    color: #6b4a00;
-    transform: scale(1.05);
-  }
+    .tile.wrong {
+      background: #ff8a80;
+      color: #fff;
+      animation: shake .25s;
+    }
 
-  .tile.wrong {
-    background: #ff8a80;
-    color: white;
-    animation: shake .25s;
-  }
+    @keyframes shake {
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
 
-  @keyframes shake {
-    25% { transform: translateX(-3px); }
-    75% { transform: translateX(3px); }
-  }
+    #status {
+      min-height: 24px;
+      margin-top: 16px;
+      color: #2f6b1f;
+      font-weight: 700;
+    }
 
-  #status {
-    margin-top: 16px;
-    font-weight: 700;
-    min-height: 24px;
-    color: #2f6b1f;
-  }
+    #restart {
+      margin-top: 12px;
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 999px;
+      background: #4b8c2f;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-  button {
-    margin-top: 12px;
-    padding: 10px 18px;
-    border: 0;
-    border-radius: 999px;
-    background: #4b8c2f;
-    color: white;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-  }
+    #cow {
+      margin-top: 10px;
+      font-size: 48px;
+      opacity: 0;
+      transform: scale(.4);
+      transition: all .3s;
+    }
 
-  #cow {
-    font-size: 48px;
-    margin-top: 10px;
-    opacity: 0;
-    transform: scale(.4);
-    transition: all .3s;
-  }
+    #cow.show {
+      opacity: 1;
+      transform: scale(1);
+    }
 
-  #cow.show {
-    opacity: 1;
-    transform: scale(1);
-  }
-</style>
+    .game-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 22px;
+      margin-top: 6px;
+    }
+
+    .language-selector {
+      display: flex;
+      gap: 7px;
+    }
+
+    .language-button {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .language-button[aria-pressed="true"] {
+      outline: 1px solid #aaa;
+      outline-offset: 2px;
+    }
+
+    #counter {
+      margin: 0;
+      color: #888;
+      font-size: 11px;
+      text-align: right;
+    }
+  </style>
 </head>
+
 <body>
-<main class="game">
-  <h1>Find the Cow</h1>
-  <p>Find the one hidden word: <strong>COW</strong></p>
+  <main class="game">
+    <h1 id="heading"></h1>
+    <p id="prompt"></p>
 
-  <div id="grid"></div>
-  <div id="status"></div>
-  <div id="cow">🐄</div>
-  <button id="restart">New puzzle</button>
-</main>
+    <div id="grid" aria-label="Letter puzzle"></div>
+    <div id="status" aria-live="polite"></div>
+    <div id="cow" aria-hidden="true">🐄</div>
 
-<script>
-const SIZE = 10;
-const TARGET = "COW";
-const LETTERS = ["C", "O", "W"];
+    <button id="restart" type="button"></button>
 
-// Directions used to place the intended COW.
-const TARGET_DIRECTIONS = [
-  [0, 1],   // left to right
-  [1, 0],   // top to bottom
-  [1, 1],   // top-left to bottom-right
-  [1, -1]   // top-right to bottom-left
-];
+    <div class="game-footer">
+      <div class="language-selector" aria-label="Choose language">
+        <button class="language-button" type="button" data-lang="en" aria-label="English">🇬🇧</button>
+        <button class="language-button" type="button" data-lang="es" aria-label="Español">🇪🇸</button>
+      </div>
+      <div id="counter" aria-live="polite" hidden></div>
+    </div>
+  </main>
 
-// All directions used to detect accidental COWs.
-const ALL_DIRECTIONS = [
-  [0, 1],
-  [0, -1],
-  [1, 0],
-  [-1, 0],
-  [1, 1],
-  [1, -1],
-  [-1, 1],
-  [-1, -1]
-];
+  <script>
+    const translations = {
+      en: {
+        title: "Find the Cow",
+        prompt: 'Find the one hidden word: <strong>COW</strong>',
+        restart: "New puzzle",
+        wrong: "Select the whole word: COW.",
+        found: "You found the cow!",
+        count: (n) => `${n} ${n === 1 ? "cow" : "cows"} found`
+      },
+      es: {
+        title: "Encuentra la vaca",
+        prompt: 'Encuentra la palabra escondida: <strong>VACA</strong>',
+        restart: "Nuevo rompecabezas",
+        wrong: "Selecciona la palabra completa: VACA.",
+        found: "¡Encontraste la vaca!",
+        count: (n) => `${n} ${n === 1 ? "vaca encontrada" : "vacas encontradas"}`
+      }
+    };
 
-const gridEl = document.getElementById("grid");
-const statusEl = document.getElementById("status");
-const cowEl = document.getElementById("cow");
-const restartBtn = document.getElementById("restart");
+    function getLanguage() {
+      const requested = new URLSearchParams(location.search)
+        .get("lang")
+        ?.toLowerCase();
 
-let tiles = [];
-let letterGrid = [];
-let targetCells = [];
-let found = false;
+      if (requested === "en" || requested === "es") return requested;
 
-let selection = [];
-let isDragging = false;
-let startTile = null;
+      try {
+        const saved = localStorage.getItem("cowGameLanguage");
+        if (saved === "en" || saved === "es") return saved;
+      } catch {}
 
-function createEmptyGrid() {
-  return Array.from({ length: SIZE }, () =>
-    Array.from({ length: SIZE }, () => null)
-  );
-}
-
-function createGrid() {
-  gridEl.innerHTML = "";
-  tiles = [];
-  targetCells = [];
-  found = false;
-
-  selection = [];
-  isDragging = false;
-  startTile = null;
-
-  statusEl.textContent = "";
-  cowEl.classList.remove("show");
-
-  letterGrid = createEmptyGrid();
-
-  placeTarget();
-  fillRemainingLetters();
-  renderGrid();
-}
-
-function placeTarget() {
-  let placed = false;
-
-  while (!placed) {
-    const row = Math.floor(Math.random() * SIZE);
-    const col = Math.floor(Math.random() * SIZE);
-    const [rowChange, colChange] =
-      TARGET_DIRECTIONS[Math.floor(Math.random() * TARGET_DIRECTIONS.length)];
-
-    const endRow = row + rowChange * (TARGET.length - 1);
-    const endCol = col + colChange * (TARGET.length - 1);
-
-    const fitsInGrid =
-      endRow >= 0 &&
-      endRow < SIZE &&
-      endCol >= 0 &&
-      endCol < SIZE;
-
-    if (!fitsInGrid) continue;
-
-    targetCells = [];
-
-    for (let i = 0; i < TARGET.length; i++) {
-      const targetRow = row + rowChange * i;
-      const targetCol = col + colChange * i;
-
-      letterGrid[targetRow][targetCol] = TARGET[i];
-      targetCells.push([targetRow, targetCol]);
+      const browserLanguages = navigator.languages || [navigator.language || "en"];
+      return browserLanguages.some((lang) => lang.toLowerCase().startsWith("es"))
+        ? "es"
+        : "en";
     }
 
-    placed = true;
-  }
-}
+    const language = getLanguage();
+    const text = translations[language];
+    const TARGET = language === "es" ? "VACA" : "COW";
+    const LETTERS = [...new Set(TARGET)];
+    const SIZE = 10;
+    const COUNTER_KEY = `cowGameFound_${language}`;
 
-function isTargetCell(row, col) {
-  return targetCells.some(([targetRow, targetCol]) =>
-    targetRow === row && targetCol === col
-  );
-}
+    document.documentElement.lang = language;
+    document.title = text.title;
+    document.getElementById("heading").textContent = text.title;
+    document.getElementById("prompt").innerHTML = text.prompt;
+    document.getElementById("restart").textContent = text.restart;
 
-function wouldCreateExtraCow(row, col, letter) {
-  const originalLetter = letterGrid[row][col];
+    try {
+      localStorage.setItem("cowGameLanguage", language);
+    } catch {}
 
-  letterGrid[row][col] = letter;
+    document.querySelectorAll(".language-button").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.lang === language));
 
-  let createsExtraCow = false;
+      button.addEventListener("click", () => {
+        const url = new URL(location.href);
+        url.searchParams.set("lang", button.dataset.lang);
+        location.href = url.toString();
+      });
+    });
 
-  for (const [rowChange, colChange] of ALL_DIRECTIONS) {
-    for (let letterPosition = 0; letterPosition < TARGET.length; letterPosition++) {
-      const startRow = row - rowChange * letterPosition;
-      const startCol = col - colChange * letterPosition;
+    const TARGET_DIRECTIONS = [
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [1, -1]
+    ];
 
-      const endRow = startRow + rowChange * (TARGET.length - 1);
-      const endCol = startCol + colChange * (TARGET.length - 1);
+    const ALL_DIRECTIONS = [
+      [0, 1], [0, -1], [1, 0], [-1, 0],
+      [1, 1], [1, -1], [-1, 1], [-1, -1]
+    ];
 
-      const fitsInGrid =
-        startRow >= 0 &&
-        startRow < SIZE &&
-        startCol >= 0 &&
-        startCol < SIZE &&
-        endRow >= 0 &&
-        endRow < SIZE &&
-        endCol >= 0 &&
-        endCol < SIZE;
+    const gridEl = document.getElementById("grid");
+    const statusEl = document.getElementById("status");
+    const cowEl = document.getElementById("cow");
+    const restartBtn = document.getElementById("restart");
+    const counterEl = document.getElementById("counter");
 
-      if (!fitsInGrid) continue;
+    let foundCount = 0;
+    try {
+      foundCount = Math.max(0, Number(localStorage.getItem(COUNTER_KEY)) || 0);
+    } catch {}
 
-      let matchesTarget = true;
+    let tiles = [];
+    let letterGrid = [];
+    let targetCells = [];
+    let selection = [];
+    let found = false;
+    let pointerStartTile = null;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let isDragging = false;
+    let wrongSelectionTimer = null;
 
-      for (let i = 0; i < TARGET.length; i++) {
-        const checkRow = startRow + rowChange * i;
-        const checkCol = startCol + colChange * i;
+    function updateCounter() {
+      counterEl.hidden = foundCount === 0;
+      counterEl.textContent = foundCount ? text.count(foundCount) : "";
+    }
 
-        if (letterGrid[checkRow][checkCol] !== TARGET[i]) {
-          matchesTarget = false;
-          break;
+    function createEmptyGrid() {
+      return Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+    }
+
+    function createGrid() {
+      gridEl.innerHTML = "";
+      tiles = [];
+      targetCells = [];
+      selection = [];
+      found = false;
+      pointerStartTile = null;
+      isDragging = false;
+
+      clearTimeout(wrongSelectionTimer);
+      statusEl.textContent = "";
+      cowEl.classList.remove("show");
+
+      letterGrid = createEmptyGrid();
+      placeTarget();
+      fillRemainingLetters();
+      renderGrid();
+    }
+
+    function placeTarget() {
+      while (true) {
+        const row = Math.floor(Math.random() * SIZE);
+        const col = Math.floor(Math.random() * SIZE);
+        const [dr, dc] = TARGET_DIRECTIONS[
+          Math.floor(Math.random() * TARGET_DIRECTIONS.length)
+        ];
+        const endRow = row + dr * (TARGET.length - 1);
+        const endCol = col + dc * (TARGET.length - 1);
+
+        if (
+          endRow < 0 || endRow >= SIZE ||
+          endCol < 0 || endCol >= SIZE
+        ) continue;
+
+        targetCells = [];
+        for (let i = 0; i < TARGET.length; i++) {
+          const r = row + dr * i;
+          const c = col + dc * i;
+          letterGrid[r][c] = TARGET[i];
+          targetCells.push([r, c]);
+        }
+        return;
+      }
+    }
+
+    function isTargetCell(row, col) {
+      return targetCells.some(([r, c]) => r === row && c === col);
+    }
+
+    function createsExtraTarget(row, col, letter) {
+      const original = letterGrid[row][col];
+      letterGrid[row][col] = letter;
+      let extra = false;
+
+      for (const [dr, dc] of ALL_DIRECTIONS) {
+        for (let position = 0; position < TARGET.length; position++) {
+          const startRow = row - dr * position;
+          const startCol = col - dc * position;
+          const endRow = startRow + dr * (TARGET.length - 1);
+          const endCol = startCol + dc * (TARGET.length - 1);
+
+          if (
+            startRow < 0 || startRow >= SIZE ||
+            startCol < 0 || startCol >= SIZE ||
+            endRow < 0 || endRow >= SIZE ||
+            endCol < 0 || endCol >= SIZE
+          ) continue;
+
+          const matches = TARGET.split("").every((char, i) =>
+            letterGrid[startRow + dr * i][startCol + dc * i] === char
+          );
+
+          if (matches) {
+            extra = true;
+            break;
+          }
+        }
+        if (extra) break;
+      }
+
+      letterGrid[row][col] = original;
+      return extra;
+    }
+
+    function fillRemainingLetters() {
+      for (let row = 0; row < SIZE; row++) {
+        for (let col = 0; col < SIZE; col++) {
+          if (isTargetCell(row, col)) continue;
+
+          const safeLetters = LETTERS.filter(
+            (letter) => !createsExtraTarget(row, col, letter)
+          );
+          const choices = safeLetters.length ? safeLetters : LETTERS;
+
+          letterGrid[row][col] =
+            choices[Math.floor(Math.random() * choices.length)];
+        }
+      }
+    }
+
+    function renderGrid() {
+      for (let row = 0; row < SIZE; row++) {
+        tiles[row] = [];
+
+        for (let col = 0; col < SIZE; col++) {
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.textContent = letterGrid[row][col];
+          tile.dataset.row = row;
+          tile.dataset.col = col;
+          gridEl.appendChild(tile);
+          tiles[row][col] = tile;
+        }
+      }
+    }
+
+    function getTileFromEvent(event) {
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      return element?.classList.contains("tile") ? element : null;
+    }
+
+    function clearSelection() {
+      selection.forEach((tile) => {
+        tile.classList.remove("selected", "wrong");
+      });
+      selection = [];
+    }
+
+    function addTileToSelection(tile) {
+      if (found || !tile || selection.includes(tile)) return;
+
+      if (selection.length >= TARGET.length) clearSelection();
+
+      selection.push(tile);
+      tile.classList.add("selected");
+
+      if (selection.length === TARGET.length) validateSelection();
+    }
+
+    function selectLineBetween(fromTile, toTile) {
+      const fromRow = Number(fromTile.dataset.row);
+      const fromCol = Number(fromTile.dataset.col);
+      const toRow = Number(toTile.dataset.row);
+      const toCol = Number(toTile.dataset.col);
+      const rowDiff = toRow - fromRow;
+      const colDiff = toCol - fromCol;
+      const steps = Math.max(Math.abs(rowDiff), Math.abs(colDiff));
+
+      if (steps === 0) return;
+
+      // A drag must follow a horizontal, vertical, or diagonal line.
+      if (
+        rowDiff !== 0 &&
+        colDiff !== 0 &&
+        Math.abs(rowDiff) !== Math.abs(colDiff)
+      ) return;
+
+      clearSelection();
+
+      for (let i = 0; i <= steps && i < TARGET.length; i++) {
+        const row = fromRow + Math.sign(rowDiff) * i;
+        const col = fromCol + Math.sign(colDiff) * i;
+        addTileToSelection(tiles[row][col]);
+        if (found) break;
+      }
+    }
+
+    function handlePointerDown(event) {
+      if (found) return;
+
+      const tile = getTileFromEvent(event);
+      if (!tile) return;
+
+      event.preventDefault();
+      pointerStartTile = tile;
+      pointerStartX = event.clientX;
+      pointerStartY = event.clientY;
+      isDragging = false;
+
+      gridEl.setPointerCapture(event.pointerId);
+    }
+
+    function handlePointerMove(event) {
+      if (!pointerStartTile || found) return;
+
+      const distance = Math.hypot(
+        event.clientX - pointerStartX,
+        event.clientY - pointerStartY
+      );
+
+      if (!isDragging && distance > 8) isDragging = true;
+      if (!isDragging) return;
+
+      const tile = getTileFromEvent(event);
+      if (tile) selectLineBetween(pointerStartTile, tile);
+    }
+
+    function handlePointerUp(event) {
+      if (!pointerStartTile) return;
+
+      if (!isDragging && !found) {
+        const tile = getTileFromEvent(event) || pointerStartTile;
+
+        // Tapping again on the last selected letter removes it.
+        if (selection[selection.length - 1] === tile) {
+          tile.classList.remove("selected");
+          selection.pop();
+        } else {
+          addTileToSelection(tile);
         }
       }
 
-      if (matchesTarget) {
-        createsExtraCow = true;
-        break;
+      pointerStartTile = null;
+      isDragging = false;
+    }
+
+    function validateSelection() {
+      const word = selection.map((tile) => tile.textContent).join("");
+      const reversedTarget = [...TARGET].reverse().join("");
+
+      if (word === TARGET || word === reversedTarget) {
+        found = true;
+
+        targetCells.forEach(([row, col]) => {
+          tiles[row][col].classList.add("correct");
+          tiles[row][col].classList.remove("selected");
+        });
+
+        selection = [];
+        statusEl.textContent = text.found;
+        cowEl.classList.add("show");
+
+        foundCount++;
+        try {
+          localStorage.setItem(COUNTER_KEY, String(foundCount));
+        } catch {}
+        updateCounter();
+        return;
       }
+
+      selection.forEach((tile) => tile.classList.add("wrong"));
+      statusEl.textContent = text.wrong;
+
+      wrongSelectionTimer = setTimeout(() => {
+        clearSelection();
+        statusEl.textContent = "";
+      }, 450);
     }
 
-    if (createsExtraCow) break;
-  }
+    gridEl.addEventListener("pointerdown", handlePointerDown);
+    gridEl.addEventListener("pointermove", handlePointerMove);
+    gridEl.addEventListener("pointerup", handlePointerUp);
+    gridEl.addEventListener("pointercancel", handlePointerUp);
+    restartBtn.addEventListener("click", createGrid);
 
-  letterGrid[row][col] = originalLetter;
+    // Block common browser pinch, double-click, and Ctrl/Command + wheel zoom gestures.
+    document.addEventListener("gesturestart", (event) => event.preventDefault(), { passive: false });
+    document.addEventListener("gesturechange", (event) => event.preventDefault(), { passive: false });
+    document.addEventListener("gestureend", (event) => event.preventDefault(), { passive: false });
+    document.addEventListener("dblclick", (event) => event.preventDefault());
+    document.addEventListener("wheel", (event) => {
+      if (event.ctrlKey || event.metaKey) event.preventDefault();
+    }, { passive: false });
 
-  return createsExtraCow;
-}
-
-function fillRemainingLetters() {
-  for (let row = 0; row < SIZE; row++) {
-    for (let col = 0; col < SIZE; col++) {
-      if (isTargetCell(row, col)) continue;
-
-      const safeLetters = LETTERS.filter(
-        (letter) => !wouldCreateExtraCow(row, col, letter)
-      );
-
-      const availableLetters =
-        safeLetters.length > 0 ? safeLetters : LETTERS;
-
-      letterGrid[row][col] =
-        availableLetters[Math.floor(Math.random() * availableLetters.length)];
-    }
-  }
-}
-
-function renderGrid() {
-  for (let row = 0; row < SIZE; row++) {
-    tiles[row] = [];
-
-    for (let col = 0; col < SIZE; col++) {
-      const tile = document.createElement("div");
-
-      tile.className = "tile";
-      tile.textContent = letterGrid[row][col];
-      tile.dataset.row = row;
-      tile.dataset.col = col;
-
-      gridEl.appendChild(tile);
-      tiles[row][col] = tile;
-    }
-  }
-}
-
-function getTileFromEvent(event) {
-  const element = document.elementFromPoint(event.clientX, event.clientY);
-  return element?.classList.contains("tile") ? element : null;
-}
-
-function selectTile(tile) {
-  if (found || !tile) return;
-
-  const alreadySelected = selection.includes(tile);
-
-  if (!alreadySelected && selection.length < TARGET.length) {
-    selection.push(tile);
-    tile.classList.add("selected");
-  }
-
-  if (!isDragging && selection.length === TARGET.length) {
-    validateSelection();
-  }
-}
-
-function selectLineBetween(fromTile, toTile) {
-  const fromRow = Number(fromTile.dataset.row);
-  const fromCol = Number(fromTile.dataset.col);
-  const toRow = Number(toTile.dataset.row);
-  const toCol = Number(toTile.dataset.col);
-
-  const rowDiff = toRow - fromRow;
-  const colDiff = toCol - fromCol;
-
-  const steps = Math.max(Math.abs(rowDiff), Math.abs(colDiff));
-
-  for (let i = 1; i <= steps; i++) {
-    const row = fromRow + Math.round((rowDiff * i) / steps);
-    const col = fromCol + Math.round((colDiff * i) / steps);
-
-    selectTile(tiles[row][col]);
-  }
-}
-
-function handlePointerDown(event) {
-  if (found) return;
-
-  const tile = getTileFromEvent(event);
-  if (!tile) return;
-
-  event.preventDefault();
-
-  if (selection.length === 1 || selection.length === 2) {
-    selectTile(tile);
-  } else {
-    clearSelection();
-    selectTile(tile);
-  }
-
-  isDragging = true;
-  startTile = tile;
-
-  gridEl.setPointerCapture(event.pointerId);
-}
-
-function handlePointerMove(event) {
-  if (!isDragging || found) return;
-
-  const tile = getTileFromEvent(event);
-  if (!tile || tile === startTile) return;
-
-  if (selection[0] !== startTile) {
-    clearSelection();
-    selectTile(startTile);
-  }
-
-  selectLineBetween(selection[selection.length - 1], tile);
-}
-
-function handlePointerUp() {
-  if (!isDragging) return;
-
-  isDragging = false;
-  startTile = null;
-
-  if (selection.length === 1) return;
-
-  validateSelection();
-}
-
-function validateSelection() {
-  const selectedWord = selection.map((tile) => tile.textContent).join("");
-
-  const selectedPositions = selection.map((tile) => [
-    Number(tile.dataset.row),
-    Number(tile.dataset.col)
-  ]);
-
-  const isExactMatch =
-    selectedWord === TARGET &&
-    selectedPositions.every(
-      ([row, col], index) =>
-        targetCells[index][0] === row &&
-        targetCells[index][1] === col
-    );
-
-  if (isExactMatch) {
-    revealCow();
-  } else {
-    markWrongSelection();
-  }
-
-  if (!found) {
-    setTimeout(clearSelection, 450);
-  }
-}
-
-function markWrongSelection() {
-  selection.forEach((tile) => tile.classList.add("wrong"));
-  statusEl.textContent = "Select the whole word: COW.";
-
-  setTimeout(() => {
-    selection.forEach((tile) => tile.classList.remove("wrong"));
-  }, 450);
-}
-
-function clearSelection() {
-  selection.forEach((tile) => tile.classList.remove("selected"));
-  selection = [];
-}
-
-function revealCow() {
-  found = true;
-
-  targetCells.forEach(([row, col]) => {
-    tiles[row][col].classList.add("correct");
-    tiles[row][col].classList.remove("selected");
-  });
-
-  selection = [];
-  statusEl.textContent = "You found the cow!";
-  cowEl.classList.add("show");
-}
-
-gridEl.addEventListener("pointerdown", handlePointerDown);
-gridEl.addEventListener("pointermove", handlePointerMove);
-gridEl.addEventListener("pointerup", handlePointerUp);
-gridEl.addEventListener("pointercancel", handlePointerUp);
-
-restartBtn.addEventListener("click", createGrid);
-
-createGrid();
-</script>
+    updateCounter();
+    createGrid();
+  </script>
 </body>
 </html>
