@@ -509,7 +509,6 @@ const translations = {
     erase: "Erase",
     language: "Language",
     helpFirst: "Tap a cell to select it.",
-    helpSecond: "In Notes mode, drag across cells or hold Shift with arrow keys to select multiple cells, including irregular shapes. A number is added to every selected editable cell in Notes mode.",
     selectCell: "Select at least one cell first.",
     fixedCell: "One or more selected cells are fixed clues.",
     notesModeOn: "Notes mode on. You can select multiple cells.",
@@ -548,7 +547,6 @@ const translations = {
     erase: "Borrar",
     language: "Idioma",
     helpFirst: "Toca una celda para seleccionarla.",
-    helpSecond: "En modo de notas, arrastra sobre varias celdas o mantén Shift con las flechas para seleccionar varias, incluidas formas irregulares. El número se añade a cada celda editable seleccionada en modo de notas.",
     selectCell: "Selecciona al menos una celda.",
     fixedCell: "Una o más celdas seleccionadas son pistas fijas.",
     notesModeOn: "Modo de notas activado. Puedes seleccionar varias celdas.",
@@ -587,7 +585,6 @@ const translations = {
     erase: "清除",
     language: "語言",
     helpFirst: "點擊一格以選取。",
-    helpSecond: "筆記模式下，可拖曳選取多格，或按住 Shift 並使用方向鍵選取多格，包括不規則形狀。筆記模式下，數字會加入所有已選取的可編輯格子。",
     selectCell: "請先選擇至少一格。",
     fixedCell: "部分已選取的格子是固定提示。",
     notesModeOn: "筆記模式已開啟。可以選取多格。",
@@ -701,8 +698,7 @@ function applyTranslations() {
   languageEl.setAttribute("aria-label", t("language"));
 
   helpEl.innerHTML = `
-    ${t("helpFirst")}<br>
-    ${t("helpSecond")}
+    ${t("helpFirst")}
   `;
 
   updateMode();
@@ -1177,6 +1173,9 @@ function setValue(value) {
   }
 
   render();
+		if (!noteMode && isSolved()) {
+		setStatus(t("solved"), "good");
+	}
 }
 
 function erase() {

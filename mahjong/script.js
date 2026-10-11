@@ -92,8 +92,8 @@ if (requiredElements.some(element => !element)) {
 Configuration and state
 ----------------------------- */
 
-const UNIT_X = 57;
-const UNIT_Y = 77;
+const UNIT_X = 58;
+const UNIT_Y = 78;
 const TILE_IMAGE_FOLDER = "";
 
 const WIDE_BOARD_WIDTH = 850;
@@ -427,20 +427,21 @@ function createWideLayout() {
   Narrow-screen arrangement: 144 tiles.
 
   Lower level:  8 x 11 = 88
-  Middle level: 8 x 5  = 40
-  Upper level:  4 x 4  = 16
+  Middle level: 6 x 6  = 36
+  Upper level:  4 x 5  = 20
   Total:               144
 
-  More tiles are stacked onto the middle and upper levels,
-  making the board shorter and better suited to narrow screens.
+  Each layer is inset horizontally from the layer below it,
+  so the outer edge tiles of every layer are selectable at
+  the start of the game.
 */
 function createNarrowLayout() {
   const layout = [];
   let id = 0;
 
   id = addLayoutLayer(layout, id, 8, 11, 0, 0, 0);
-  id = addLayoutLayer(layout, id, 8, 5, 1, 0, 3);
-  id = addLayoutLayer(layout, id, 4, 4, 2, 2, 4);
+  id = addLayoutLayer(layout, id, 6, 6, 1, 1, 2);
+  id = addLayoutLayer(layout, id, 4, 5, 2, 2, 3);
 
   return layout;
 }
@@ -813,10 +814,10 @@ function render() {
     );
 
     element.style.left =
-      `${tile.x * UNIT_X + tile.z * 4}px`;
+      `${tile.x * UNIT_X + tile.z * 10}px`;
 
     element.style.top =
-      `${tile.y * UNIT_Y - tile.z * 4}px`;
+      `${tile.y * UNIT_Y - tile.z * 10}px`;
 
     element.style.zIndex =
       tile.z * 100000 +
