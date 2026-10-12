@@ -35,6 +35,7 @@
     }
 
     main {
+      position: relative;
       width: min(100%, 420px);
       height: 100%;
       max-height: 800px;
@@ -114,19 +115,42 @@
 
     #restart:active { transform: scale(.96); }
 
+    #language {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 10;
+      min-height: 40px;
+      padding: 6px 10px;
+      border: 1px solid #d5e4b5;
+      border-radius: 8px;
+      background: #17231e;
+      color: #fff;
+      font: inherit;
+    }
+
     @media (max-height: 500px) {
       main { gap: 3px; padding: 4px 10px; }
+
       #board {
         width: min(75vw, calc((100dvh - 105px) * 9 / 11));
         max-height: calc(100dvh - 105px);
       }
+
       #message { min-height: 16px; font-size: 12px; }
       #restart { min-height: 36px; padding: 5px 16px; }
+      #language { min-height: 36px; }
     }
   </style>
 </head>
 <body>
   <main>
+    <select id="language" aria-label="Language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh">繁體中文</option>
+    </select>
+
     <h1 id="title">🐸 Froggy Hop</h1>
 
     <div id="hud">
@@ -153,6 +177,7 @@
       const bestEl = document.querySelector("#best");
       const message = document.querySelector("#message");
       const restartButton = document.querySelector("#restart");
+      const languageSelect = document.querySelector("#language");
 
       const text = {
         en: {
@@ -226,15 +251,8 @@
         return browserLanguage();
       }
 
-      const language = chooseLanguage();
-      const words = text[language];
-      document.documentElement.lang = words.htmlLang;
-      document.title = words.title;
-      document.querySelector("#title").textContent = words.title;
-      document.querySelector("#score-label").textContent = words.score;
-      document.querySelector("#best-label").textContent = words.best;
-      board.setAttribute("aria-label", words.boardLabel);
-      restartButton.textContent = words.restart;
+      let language = chooseLanguage();
+      let words = text[language];
 
       let lanes;
       let frog;
@@ -244,6 +262,32 @@
       let outcome = "playing";
       let timer;
       let swipeStart = null;
+
+      function applyLanguage() {
+        words = text[language];
+        document.documentElement.lang = words.htmlLang;
+        document.title = words.title;
+        document.querySelector("#title").textContent = words.title;
+        document.querySelector("#score-label").textContent = words.score;
+        document.querySelector("#best-label").textContent = words.best;
+        board.setAttribute("aria-label", words.boardLabel);
+        languageSelect.value = language;
+        restartButton.textContent = words.restart;
+
+        if (outcome === "won") {
+          message.textContent = words.won;
+        } else if (outcome === "lost") {
+          message.textContent = words.lost;
+        } else {
+          message.textContent = words.instructions;
+        }
+      }
+
+      languageSelect.addEventListener("change", () => {
+        language = languageSelect.value;
+        try { localStorage.setItem(LANG_KEY, language); } catch {}
+        applyLanguage();
+      });
 
       try {
         best = Number(localStorage.getItem(BEST_KEY) || 0);
@@ -268,20 +312,20 @@
 
         lanes = [
           null,
-          { type: "water", dir: 1,  speed: 500, elapsed: 0, items: itemsAt([0, 3, 6], "water") },
+          { type: "water", dir: 1, speed: 500, elapsed: 0, items: itemsAt([0, 3, 6], "water") },
           { type: "water", dir: -1, speed: 650, elapsed: 0, items: itemsAt([1, 4, 7], "water") },
-          { type: "water", dir: 1,  speed: 560, elapsed: 0, items: itemsAt([0, 4, 7], "water") },
+          { type: "water", dir: 1, speed: 560, elapsed: 0, items: itemsAt([0, 4, 7], "water") },
           null,
           { type: "road", dir: -1, speed: 430, elapsed: 0, items: itemsAt([0, 3, 6], "road") },
-          { type: "road", dir: 1,  speed: 350, elapsed: 0, items: itemsAt([1, 5, 8], "road") },
+          { type: "road", dir: 1, speed: 350, elapsed: 0, items: itemsAt([1, 5, 8], "road") },
           { type: "road", dir: -1, speed: 490, elapsed: 0, items: itemsAt([0, 4, 7], "road") },
-          { type: "road", dir: 1,  speed: 390, elapsed: 0, items: itemsAt([2, 6], "road") },
+          { type: "road", dir: 1, speed: 390, elapsed: 0, items: itemsAt([2, 6], "road") },
           null,
           null
         ];
 
         scoreEl.textContent = score;
-        message.textContent = words.instructions;
+        applyLanguage();
         draw();
         timer = setInterval(tick, STEP_MS);
       }
@@ -304,7 +348,7 @@
                 const car = document.createElement("span");
                 car.textContent = item.emoji;
                 car.style.display = "inline-block";
-                car.style.transform = lane.dir < 0 ? "none":"scaleX(-1)";
+                car.style.transform = lane.dir < 0 ? "none" : "scaleX(-1)";
                 cell.appendChild(car);
               } else {
                 cell.textContent = item.emoji;
@@ -323,7 +367,7 @@
         running = false;
         outcome = result;
         clearInterval(timer);
-        message.textContent = result === "won" ? words.won : words.lost;
+        applyLanguage();
         draw();
       }
 
@@ -386,7 +430,6 @@
             if (y === frog.y && lane.type === "water") {
               frog.x += lane.dir;
 
-              // Finish draws the warning icon at the frog last on-screen position.
               if (frog.x < 0 || frog.x >= W) {
                 frog.x = Math.max(0, Math.min(W - 1, frog.x));
                 finish("lost");
@@ -453,6 +496,7 @@
       document.addEventListener("gesturestart", event => event.preventDefault());
       document.addEventListener("gesturechange", event => event.preventDefault());
 
+      applyLanguage();
       setup();
     })();
   </script>
