@@ -158,6 +158,7 @@ let bestScoreTimed = 0;
 
 let resizeTimeout = null;
 let reshuffleCheckInterval = null;
+let wasPortrait = null;
 
 let pointsSinceLastDynamite = 0;
 let pendingDynamites = [];
@@ -179,7 +180,7 @@ function writeStorage(key, value) {
   try {
     localStorage.setItem(key, String(value));
   } catch {
-    /* Storage may be unavailable; game continues normally. */
+    /* Storage may be unavailable; the game can continue normally. */
   }
 }
 
@@ -194,11 +195,15 @@ function readScore(key) {
    Orientation / board size
 ------------------------------------------------------------------ */
 
-function updateBoardSize() {
-  const isPortrait = window.innerHeight > window.innerWidth;
+function isPortraitOrientation() {
+  return window.innerHeight > window.innerWidth;
+}
 
-  ROWS = isPortrait ? 10 : 7;
-  COLS = isPortrait ? 7 : 10;
+function updateBoardSize() {
+  const portrait = isPortraitOrientation();
+
+  ROWS = portrait ? 10 : 7;
+  COLS = portrait ? 7 : 10;
 
   document.documentElement.style.setProperty("--rows", String(ROWS));
   document.documentElement.style.setProperty("--cols", String(COLS));
@@ -999,14 +1004,8 @@ async function resolveExplosion(cleared, message) {
   render();
   await wait(180);
 
-  /*
-    This is the important fix:
-    refilled animals may create new groups of 3 or more.
-    Resolve those matches before checking for game over.
-  */
   await resolveMatches();
-
-  await checkAfterExplosion();
+  await checkAfterMove();
 }
 
 /* ------------------------------------------------------------------
@@ -1091,10 +1090,10 @@ async function attemptSwap(first, second) {
   }
 
   await resolveMatches();
-  await checkAfterExplosion();
+  await checkAfterMove();
 }
 
-async function checkAfterExplosion() {
+async function checkAfterMove() {
   if (gameOverShown) {
     busy = false;
     return;
@@ -1534,6 +1533,18 @@ window.addEventListener("resize", () => {
   clearTimeout(resizeTimeout);
 
   resizeTimeout = setTimeout(() => {
+    const portrait = isPortraitOrientation();
+
+    /*
+      Mobile browsers fire resize when their address bar or toolbar
+      appears/disappears. Only restart when the actual orientation
+      has changed.
+    */
+    if (portrait === wasPortrait) {
+      return;
+    }
+
+    wasPortrait = portrait;
     updateBoardSize();
     startNewGame();
   }, 150);
@@ -1544,6 +1555,8 @@ window.addEventListener("resize", () => {
 ------------------------------------------------------------------ */
 
 loadBestScores();
+
+wasPortrait = isPortraitOrientation();
 updateBoardSize();
 
 currentLanguage = getInitialLanguage();
