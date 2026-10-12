@@ -236,15 +236,16 @@ let audioContext = null;
 
 // Ordered around the hue wheel.
 const baseColors = [
-  "#80ff00",
-  "#00ff80",
-  "#00ffff",
-  "#0080ff",
-  "#8000ff",
-  "#ff00bf",
-  "#ff0000",
-  "#ff8000"
+  "#9e3f32", // faded brick red
+  "#c1843e", // ochre
+  "#d1ad67", // antique gold
+  "#65734a", // olive
+  "#3e6657", // vintage teal
+  "#4b5d78", // dusty blue
+  "#786071", // muted plum
+  "#ad7653"  // worn copper
 ];
+
 
 // ---------- Drag state ----------
 
@@ -404,10 +405,14 @@ function drawWheel() {
     ctx.fillStyle = segmentGradient;
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.strokeStyle = "rgba(245, 224, 185, 0.8)";
     ctx.lineWidth = 2;
     ctx.stroke();
-
+    
+    ctx.fillStyle = "#fff1d5";
+    ctx.shadowColor = "rgba(35, 20, 10, 0.7)";
+    ctx.shadowBlur = 4;
+    
     // Segment label.
     ctx.save();
 
@@ -439,13 +444,22 @@ function drawWheel() {
       textWidth = ctx.measureText(options[i]).width;
     }
 
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = "#0009";
-    ctx.shadowBlur = 4;
+ctx.textAlign = "center";
+ctx.textBaseline = "middle";
+ctx.font = `900 ${fontSize}px Georgia, "Times New Roman", serif`;
+ctx.lineJoin = "round";
 
-    ctx.fillText(options[i], 0, 0);
+// Gold outline
+ctx.lineWidth = Math.max(2, fontSize * 0.09);
+ctx.strokeStyle = "#f2cb72";
+ctx.shadowColor = "rgba(35, 15, 5, 0.7)";
+ctx.shadowBlur = 4;
+ctx.strokeText(options[i], 0, 0);
+
+// Carnival-red lettering
+ctx.fillStyle = "#9f2528";
+ctx.fillText(options[i], 0, 0);
+
 
     ctx.restore();
   }
@@ -453,10 +467,10 @@ function drawWheel() {
   // Rim base.
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
-
-  ctx.lineWidth = 10;
-  ctx.strokeStyle = "#68737e";
-  ctx.shadowColor = "#0009";
+  
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = "#9b7135";
+  ctx.shadowColor = "rgba(24, 14, 6, 0.65)";
   ctx.shadowBlur = 8;
   ctx.stroke();
 
@@ -473,43 +487,22 @@ function drawFixedRimReflection(center, radius) {
   ctx.save();
   ctx.translate(center, center);
 
-  const rimHighlight = ctx.createLinearGradient(
-    -radius,
-    -radius,
-    radius,
-    radius
+  const rimGradient = ctx.createLinearGradient(
+    -radius, -radius,
+    radius, radius
   );
 
-  rimHighlight.addColorStop(
-    0,
-    "rgba(255, 255, 255, 0.95)"
-  );
-
-  rimHighlight.addColorStop(
-    0.25,
-    "rgba(255, 255, 255, 0.35)"
-  );
-
-  rimHighlight.addColorStop(
-    0.5,
-    "rgba(255, 255, 255, 0.05)"
-  );
-
-  rimHighlight.addColorStop(
-    0.75,
-    "rgba(0, 0, 0, 0.2)"
-  );
-
-  rimHighlight.addColorStop(
-    1,
-    "rgba(0, 0, 0, 0.55)"
-  );
+  rimGradient.addColorStop(0, "#f4d99a");
+  rimGradient.addColorStop(0.18, "#c79b50");
+  rimGradient.addColorStop(0.42, "#8c642c");
+  rimGradient.addColorStop(0.62, "#e1bd72");
+  rimGradient.addColorStop(0.82, "#765023");
+  rimGradient.addColorStop(1, "#d2aa60");
 
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
-
   ctx.lineWidth = 10;
-  ctx.strokeStyle = rimHighlight;
+  ctx.strokeStyle = rimGradient;
   ctx.stroke();
 
   ctx.restore();
@@ -520,35 +513,32 @@ function drawFixedCenterHub(center, radius) {
   ctx.translate(center, center);
 
   const hubRadius = radius * 0.13;
-
   const hubGradient = ctx.createRadialGradient(
+    -hubRadius * 0.4,
     -hubRadius * 0.45,
-    -hubRadius * 0.5,
     1,
     0,
     0,
     hubRadius
   );
 
-  hubGradient.addColorStop(0, "#ffffff");
-  hubGradient.addColorStop(0.22, "#dce5ec");
-  hubGradient.addColorStop(0.5, "#7f8c98");
-  hubGradient.addColorStop(0.8, "#3d4752");
-  hubGradient.addColorStop(1, "#151a21");
+  hubGradient.addColorStop(0, "#fff0c7");
+  hubGradient.addColorStop(0.22, "#d9b76f");
+  hubGradient.addColorStop(0.52, "#a77938");
+  hubGradient.addColorStop(0.82, "#68461f");
+  hubGradient.addColorStop(1, "#382511");
 
   ctx.beginPath();
   ctx.arc(0, 0, hubRadius, 0, Math.PI * 2);
-
   ctx.fillStyle = hubGradient;
-  ctx.shadowColor = "#000a";
+  ctx.shadowColor = "rgba(24, 14, 6, 0.65)";
   ctx.shadowBlur = 7;
   ctx.fill();
 
   ctx.shadowColor = "transparent";
   ctx.shadowBlur = 0;
-
   ctx.lineWidth = 3;
-  ctx.strokeStyle = "#ffffffaa";
+  ctx.strokeStyle = "#f0d89e";
   ctx.stroke();
 
   ctx.restore();

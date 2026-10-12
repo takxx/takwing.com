@@ -1,10 +1,9 @@
 :root {
-  /* Keep your original palette for text / accents */
-  --background: #0b1a12;        /* darker, more “casino room” */
-  --panel: #0f2419;             /* deep green panel */
-  --text: #eaf6ef;              /* soft off‑white */
-  --muted: #b8d4c3;             /* muted green‑gray */
-  --accent: #7fd99f;            /* lighter casino‑green accent */
+  --background: #21170f;
+  --panel: #302116;
+  --text: #f3e7d2;
+  --muted: #c5ad8a;
+  --accent: #c99a58;
 }
 
 * {
@@ -18,9 +17,9 @@ body {
   background:
     radial-gradient(
       ellipse at center,
-      #0d261a 0%,
-      #071810 55%,
-      #030d08 100%
+      #3a2a1b 0%,
+      #21170f 58%,
+      #120d09 100%
     );
   color: var(--text);
   font-family: system-ui, sans-serif;
@@ -35,53 +34,58 @@ body {
   padding: 24px;
 }
 
-/* ---------- Casino green wheel area ---------- */
+/* ---------- Vintage wood wheel area ---------- */
 
 .wheel-area {
+  position: relative;
   min-width: 0;
   height: calc(100vh - 48px);
   display: grid;
   place-items: center;
-
+  border: 1px solid rgba(240, 213, 173, 0.12);
   border-radius: 18px;
   background:
     radial-gradient(
       ellipse at 30% 20%,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0) 40%
+      rgba(255, 235, 200, 0.08) 0%,
+      rgba(255, 235, 200, 0) 42%
     ),
     linear-gradient(
-      160deg,
-      #0f6b42 0%,
-      #0b5233 45%,
-      #073a24 100%
+      145deg,
+      #68462d 0%,
+      #4b321f 48%,
+      #302014 100%
     );
   box-shadow:
-    inset 0 0 50px rgba(0, 0, 0, 0.55),
-    0 10px 30px rgba(0, 0, 0, 0.5);
+    inset 0 0 50px rgba(0, 0, 0, 0.5),
+    0 10px 30px rgba(0, 0, 0, 0.55);
   overflow: hidden;
 }
 
-/* Optional: if you later add a felt texture image, use this pattern:
+/* Optional wood-grain overlay:
 .wheel-area::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("felt-texture.png") repeat;
-  mix-blend-mode: overlay;
-  opacity: 0.12;
+  background:
+    repeating-linear-gradient(
+      8deg,
+      transparent 0 18px,
+      rgba(255, 220, 170, 0.025) 19px,
+      transparent 21px 38px
+    );
   pointer-events: none;
 }
 */
 
 .wheel-wrap {
   position: relative;
+  z-index: 1;
   width: min(78vh, 78vw, 720px);
   aspect-ratio: 1;
   cursor: pointer;
   touch-action: none;
   user-select: none;
-  z-index: 1; /* keep above background */
 }
 
 canvas {
@@ -91,7 +95,8 @@ canvas {
   filter: drop-shadow(0 18px 25px rgba(0, 0, 0, 0.55));
 }
 
-/* Three-dimensional flexible pointer */
+/* ---------- Brass pointer ---------- */
+
 .pointer {
   position: absolute;
   z-index: 2;
@@ -99,20 +104,16 @@ canvas {
   left: 50%;
   width: 34px;
   height: 52px;
-
   transform: translateX(-50%) rotate(0deg);
   transform-origin: 50% 0;
-
   background: linear-gradient(
     135deg,
-    #fff4a3 0%,
-    #ffdb5c 35%,
-    #d69d20 70%,
-    #8c6411 100%
+    #fff1c2 0%,
+    #e8c77c 35%,
+    #b77d32 70%,
+    #704718 100%
   );
-
   clip-path: polygon(50% 100%, 0 0, 100% 0);
-
   filter:
     drop-shadow(3px 4px 2px #0009)
     drop-shadow(-1px -1px 1px #fff8);
@@ -130,7 +131,6 @@ canvas {
   background: rgba(255, 255, 255, 0.55);
 }
 
-/* The pointer bends in the direction of wheel movement */
 .pointer.hit-left {
   animation: hit-left 115ms cubic-bezier(.2, .8, .3, 1);
 }
@@ -167,27 +167,26 @@ canvas {
   }
 }
 
-/* ---------- Options panel (casino style) ---------- */
+/* ---------- Vintage options panel ---------- */
 
 .options-panel {
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(240, 213, 173, 0.12);
   border-radius: 18px;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(15, 36, 25, 0.95) 0%,
-      rgba(9, 24, 17, 0.95) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    rgba(56, 39, 25, 0.97) 0%,
+    rgba(38, 26, 17, 0.97) 100%
+  );
   box-shadow:
     0 15px 40px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    inset 0 0 0 1px rgba(240, 213, 173, 0.05);
 }
 
 h1 {
   margin: 0 0 6px;
+  color: #f3e7d2;
   font-size: 1.35rem;
-  color: #e6f4ea;
   letter-spacing: 0.2px;
 }
 
@@ -198,13 +197,14 @@ p {
 }
 
 /* Language row */
+
 .language-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
-  color: #a9cfb7;
   margin-bottom: 4px;
+  color: #cdb38e;
+  font-size: 0.85rem;
 }
 
 .language-row label {
@@ -213,13 +213,13 @@ p {
 
 #lang {
   appearance: none;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(8, 28, 18, 0.8);
-  color: #e6f3eb;
   padding: 6px 8px;
-  font-size: 0.85rem;
+  border: 1px solid rgba(240, 213, 173, 0.15);
+  border-radius: 8px;
   outline: none;
+  background: rgba(24, 16, 10, 0.8);
+  color: var(--text);
+  font-size: 0.85rem;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
@@ -228,10 +228,10 @@ textarea {
   min-height: 180px;
   padding: 12px;
   resize: vertical;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(240, 213, 173, 0.15);
   border-radius: 10px;
   outline: none;
-  background: rgba(6, 22, 14, 0.75);
+  background: rgba(24, 16, 10, 0.8);
   color: var(--text);
   font: inherit;
   line-height: 1.6;
@@ -241,7 +241,7 @@ textarea {
 textarea:focus {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 3px rgba(127, 217, 159, 0.22),
+    0 0 0 3px rgba(201, 154, 88, 0.2),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
@@ -251,23 +251,19 @@ button {
   padding: 12px;
   border: 0;
   border-radius: 10px;
-  background: linear-gradient(
-    180deg,
-    #95e5b3 0%,
-    #7fd99f 100%
-  );
-  color: #062214;
+  background: linear-gradient(180deg, #e2bd7e 0%, #c99a58 100%);
+  color: #2b1b0d;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow:
-    0 6px 16px rgba(30, 120, 60, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 6px 16px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
   transition: transform 120ms ease, filter 120ms ease;
 }
 
 button:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.06);
 }
 
 button:active {
@@ -277,17 +273,18 @@ button:active {
 .result {
   min-height: 28px;
   margin-top: 16px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(240, 213, 173, 0.07);
+  color: #f3e7d2;
   text-align: center;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #dff6e7;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(240, 213, 173, 0.06);
 }
 
-/* Visually hidden helper (for accessibility labels) */
+/* Visually hidden helper for accessibility labels */
+
 .visually-hidden {
   position: absolute;
   width: 1px;
