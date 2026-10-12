@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Froggy Hop</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: #17231e;
+      color: #fff;
+      font: 16px system-ui, sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding:
+        env(safe-area-inset-top)
+        env(safe-area-inset-right)
+        env(safe-area-inset-bottom)
+        env(safe-area-inset-left);
+    }
+
+    main {
+      width: min(100%, 420px);
+      height: 100%;
+      max-height: 800px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    h1 {
+      flex: 0 0 auto;
+      margin: 0;
+      font-size: clamp(20px, 5vw, 28px);
+    }
+
+    #hud {
+      width: min(100%, 420px);
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+    }
+
+    #board {
+      width: min(100%, 420px, calc((100dvh - 150px) * 9 / 11));
+      max-height: calc(100dvh - 150px);
+      aspect-ratio: 9 / 11;
+      flex: 0 1 auto;
+      display: grid;
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      grid-template-rows: repeat(11, minmax(0, 1fr));
+      overflow: hidden;
+      border: 4px solid #d5e4b5;
+      border-radius: 10px;
+      background: #315a35;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .cell {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      font-size: clamp(14px, 6.5vw, 27px);
+      line-height: 1;
+    }
+
+    .bank { background: #5a9c43; }
+    .road { background: #484b4d; }
+    .water { background: #287c9a; }
+
+    #message {
+      min-height: 20px;
+      flex: 0 0 auto;
+      margin: 0;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    #restart {
+      flex: 0 0 auto;
+      min-height: 44px;
+      padding: 9px 20px;
+      border: 0;
+      border-radius: 10px;
+      background: #f3c84b;
+      color: #232323;
+      font: inherit;
+      font-weight: 700;
+      touch-action: manipulation;
+    }
+
+    #restart:active { transform: scale(.96); }
+
+    @media (max-height: 500px) {
+      main { gap: 3px; padding: 4px 10px; }
+      #board {
+        width: min(75vw, calc((100dvh - 105px) * 9 / 11));
+        max-height: calc(100dvh - 105px);
+      }
+      #message { min-height: 16px; font-size: 12px; }
+      #restart { min-height: 36px; padding: 5px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">🐸 Froggy Hop</h1>
+
+    <div id="hud">
+      <span><span id="score-label">Score</span>: <span id="score">0</span></span>
+      <span><span id="best-label">Best</span>: <span id="best">0</span></span>
+    </div>
+
+    <div id="board" role="application" aria-label="Froggy Hop game board"></div>
+
+    <p id="message" aria-live="polite"></p>
+    <button id="restart" type="button"></button>
+  </main>
+
+  <script>
+    (() => {
+      const W = 9;
+      const H = 11;
+      const STEP_MS = 50;
+      const BEST_KEY = "froggyHopBest";
+      const LANG_KEY = "froggyHopLanguage";
+
+      const board = document.querySelector("#board");
+      const scoreEl = document.querySelector("#score");
+      const bestEl = document.querySelector("#best");
+      const message = document.querySelector("#message");
+      const restartButton = document.querySelector("#restart");
+
+      const text = {
+        en: {
+          htmlLang: "en-GB",
+          title: "🐸 Froggy Hop",
+          score: "Score",
+          best: "Best",
+          instructions: "Swipe to hop. Avoid cars and ride the logs!",
+          restart: "Restart",
+          won: "You made it! 🎉 Tap Restart to play again.",
+          lost: "Oh no! Tap Restart to try again.",
+          boardLabel: "Froggy Hop game board. Swipe to move."
+        },
+        es: {
+          htmlLang: "es-ES",
+          title: "🐸 Salto de Ranita",
+          score: "Puntos",
+          best: "Récord",
+          instructions: "Desliza para saltar. ¡Esquiva los coches y súbete a los troncos!",
+          restart: "Reiniciar",
+          won: "¡Lo has conseguido! 🎉 Pulsa Reiniciar para volver a jugar.",
+          lost: "¡Vaya! Pulsa Reiniciar para intentarlo de nuevo.",
+          boardLabel: "Tablero de Salto de Ranita. Desliza para moverte."
+        },
+        zh: {
+          htmlLang: "zh-Hant-HK",
+          title: "🐸 青蛙跳",
+          score: "分數",
+          best: "最高分",
+          instructions: "喺棋盤上滑動嚟跳。避開車輛，踩住浮木過河！",
+          restart: "重新開始",
+          won: "成功到達！🎉 撳「重新開始」再玩。",
+          lost: "哎呀！撳「重新開始」再試一次。",
+          boardLabel: "青蛙跳遊戲棋盤。滑動即可移動。"
+        }
+      };
+
+      function validLanguage(value) {
+        return ["en", "es", "zh"].includes(value) ? value : null;
+      }
+
+      function browserLanguage() {
+        const preferences = navigator.languages?.length
+          ? navigator.languages
+          : [navigator.language || ""];
+
+        for (const preference of preferences) {
+          const code = preference.toLowerCase();
+          if (code.startsWith("zh")) return "zh";
+          if (code.startsWith("es")) return "es";
+          if (code.startsWith("en")) return "en";
+        }
+        return "en";
+      }
+
+      function chooseLanguage() {
+        const requested = validLanguage(
+          new URLSearchParams(location.search).get("lang")?.toLowerCase()
+        );
+
+        if (requested) {
+          try { localStorage.setItem(LANG_KEY, requested); } catch {}
+          return requested;
+        }
+
+        try {
+          const saved = validLanguage(localStorage.getItem(LANG_KEY));
+          if (saved) return saved;
+        } catch {}
+
+        return browserLanguage();
+      }
+
+      const language = chooseLanguage();
+      const words = text[language];
+      document.documentElement.lang = words.htmlLang;
+      document.title = words.title;
+      document.querySelector("#title").textContent = words.title;
+      document.querySelector("#score-label").textContent = words.score;
+      document.querySelector("#best-label").textContent = words.best;
+      board.setAttribute("aria-label", words.boardLabel);
+      restartButton.textContent = words.restart;
+
+      let lanes;
+      let frog;
+      let score = 0;
+      let best = 0;
+      let running = false;
+      let outcome = "playing";
+      let timer;
+      let swipeStart = null;
+
+      try {
+        best = Number(localStorage.getItem(BEST_KEY) || 0);
+      } catch {}
+      bestEl.textContent = best;
+
+      const carEmojis = ["🚗", "🚙", "🚕", "🏎️", "🚓", "🚐", "🚚"];
+
+      function itemsAt(positions, type) {
+        return positions.map((x, i) => ({
+          x,
+          emoji: type === "road" ? carEmojis[i % carEmojis.length] : "🪵"
+        }));
+      }
+
+      function setup() {
+        clearInterval(timer);
+        score = 0;
+        frog = { x: 4, y: 10 };
+        running = true;
+        outcome = "playing";
+
+        lanes = [
+          null,
+          { type: "water", dir: 1,  speed: 500, elapsed: 0, items: itemsAt([0, 3, 6], "water") },
+          { type: "water", dir: -1, speed: 650, elapsed: 0, items: itemsAt([1, 4, 7], "water") },
+          { type: "water", dir: 1,  speed: 560, elapsed: 0, items: itemsAt([0, 4, 7], "water") },
+          null,
+          { type: "road", dir: -1, speed: 430, elapsed: 0, items: itemsAt([0, 3, 6], "road") },
+          { type: "road", dir: 1,  speed: 350, elapsed: 0, items: itemsAt([1, 5, 8], "road") },
+          { type: "road", dir: -1, speed: 490, elapsed: 0, items: itemsAt([0, 4, 7], "road") },
+          { type: "road", dir: 1,  speed: 390, elapsed: 0, items: itemsAt([2, 6], "road") },
+          null,
+          null
+        ];
+
+        scoreEl.textContent = score;
+        message.textContent = words.instructions;
+        draw();
+        timer = setInterval(tick, STEP_MS);
+      }
+
+      function draw() {
+        board.innerHTML = "";
+
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            const cell = document.createElement("div");
+            const lane = lanes[y];
+            cell.className = "cell " + (lane ? lane.type : "bank");
+
+            const item = lane?.items.find(entry => entry.x === x);
+
+            if (frog.x === x && frog.y === y) {
+              cell.textContent = outcome === "lost" ? "⚠️" : "🐸";
+            } else if (item) {
+              if (lane.type === "road") {
+                const car = document.createElement("span");
+                car.textContent = item.emoji;
+                car.style.display = "inline-block";
+                car.style.transform = lane.dir < 0 ? "none":"scaleX(-1)";
+                cell.appendChild(car);
+              } else {
+                cell.textContent = item.emoji;
+              }
+            } else if (y === 0) {
+              cell.textContent = "🌿";
+            }
+
+            board.appendChild(cell);
+          }
+        }
+      }
+
+      function finish(result) {
+        if (!running) return;
+        running = false;
+        outcome = result;
+        clearInterval(timer);
+        message.textContent = result === "won" ? words.won : words.lost;
+        draw();
+      }
+
+      function checkDanger() {
+        const lane = lanes[frog.y];
+        if (!lane) return;
+
+        const onItem = lane.items.some(item => item.x === frog.x);
+
+        if (lane.type === "road" && onItem) finish("lost");
+        if (lane.type === "water" && !onItem) finish("lost");
+      }
+
+      function move(dx, dy) {
+        if (!running) return;
+
+        const nextX = frog.x + dx;
+        const nextY = frog.y + dy;
+        if (nextX < 0 || nextX >= W || nextY < 0 || nextY >= H) return;
+
+        frog.x = nextX;
+        frog.y = nextY;
+
+        if (dy < 0) {
+          score++;
+          scoreEl.textContent = score;
+
+          if (score > best) {
+            best = score;
+            bestEl.textContent = best;
+            try { localStorage.setItem(BEST_KEY, String(best)); } catch {}
+          }
+        }
+
+        if (frog.y === 0) {
+          finish("won");
+          return;
+        }
+
+        checkDanger();
+        draw();
+      }
+
+      function tick() {
+        if (!running) return;
+
+        for (let y = 0; y < H; y++) {
+          const lane = lanes[y];
+          if (!lane) continue;
+
+          lane.elapsed += STEP_MS;
+
+          while (lane.elapsed >= lane.speed) {
+            lane.elapsed -= lane.speed;
+
+            for (const item of lane.items) {
+              item.x = (item.x + lane.dir + W) % W;
+            }
+
+            if (y === frog.y && lane.type === "water") {
+              frog.x += lane.dir;
+
+              // Finish draws the warning icon at the frog last on-screen position.
+              if (frog.x < 0 || frog.x >= W) {
+                frog.x = Math.max(0, Math.min(W - 1, frog.x));
+                finish("lost");
+                return;
+              }
+            }
+          }
+        }
+
+        checkDanger();
+        if (running) draw();
+      }
+
+      function finishSwipe(event) {
+        if (!swipeStart) return;
+
+        const dx = event.clientX - swipeStart.x;
+        const dy = event.clientY - swipeStart.y;
+        swipeStart = null;
+
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+          move(dx > 0 ? 1 : -1, 0);
+        } else {
+          move(0, dy > 0 ? 1 : -1);
+        }
+      }
+
+      board.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        swipeStart = { x: event.clientX, y: event.clientY };
+        board.setPointerCapture(event.pointerId);
+      });
+
+      board.addEventListener("pointerup", event => {
+        event.preventDefault();
+        finishSwipe(event);
+      });
+
+      board.addEventListener("pointercancel", () => {
+        swipeStart = null;
+      });
+
+      document.addEventListener("keydown", event => {
+        const keys = {
+          ArrowUp: [0, -1], w: [0, -1], W: [0, -1],
+          ArrowDown: [0, 1], s: [0, 1], S: [0, 1],
+          ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0],
+          ArrowRight: [1, 0], d: [1, 0], D: [1, 0]
+        };
+
+        if (keys[event.key]) {
+          event.preventDefault();
+          move(...keys[event.key]);
+        }
+      });
+
+      restartButton.addEventListener("click", setup);
+
+      document.addEventListener("touchmove", event => event.preventDefault(), {
+        passive: false
+      });
+      document.addEventListener("gesturestart", event => event.preventDefault());
+      document.addEventListener("gesturechange", event => event.preventDefault());
+
+      setup();
+    })();
+  </script>
+</body>
+</html>
