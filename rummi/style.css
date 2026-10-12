@@ -1,0 +1,394 @@
+:root {
+  color-scheme: dark;
+  font: 15px/1.4 system-ui, sans-serif;
+  color: #f2f4f5;
+  background: #111418;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 18px;
+  background: #111418;
+}
+
+.game {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-areas:
+    "header"
+    "board"
+    "side";
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  direction: ltr;
+}
+
+.game-header {
+  grid-area: header;
+}
+
+.game-header h1 {
+  margin: 0 0 6px;
+}
+
+.game-header p {
+  margin: 0;
+}
+
+.board-column {
+  grid-area: board;
+  min-width: 0;
+}
+
+.side-panel {
+  grid-area: side;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hand-section,
+.board-section {
+  min-width: 0;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 1.08rem;
+}
+
+/* Square board, with space for the opponents around the table. */
+.board-layout {
+  display: grid;
+  width: min(100%, 720px);
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 0;
+  grid-template:
+    ". top ." minmax(42px, 1fr)
+    "left center right" minmax(0, 5fr)
+    ". bottom ." minmax(42px, 1fr)
+    / minmax(42px, 1fr) minmax(0, 5fr) minmax(42px, 1fr);
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid #424b54;
+  border-radius: 12px;
+  background: #20262c;
+  box-shadow: 0 4px 14px #0006;
+}
+
+.board-center {
+  grid-area: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #4b565f;
+  border-radius: 8px;
+  background: #171c20;
+}
+
+.table {
+  display: flex;
+  min-width: 0;
+  min-height: 100%;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.opponent {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #f2f4f5;
+  text-align: center;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.opponent-top {
+  grid-area: top;
+  flex-direction: row;
+}
+
+.opponent-bottom {
+  grid-area: bottom;
+  flex-direction: row;
+}
+
+.opponent-left {
+  grid-area: left;
+  flex-direction: column;
+}
+
+.opponent-right {
+  grid-area: right;
+  flex-direction: column;
+}
+
+.opponent-name,
+.opponent-count {
+  flex: 0 0 auto;
+  font-weight: 400;
+}
+
+.mini-rack {
+  display: flex;
+  flex: 0 0 auto;
+  flex-flow: row nowrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+.opponent-left .mini-rack,
+.opponent-right .mini-rack {
+  flex-direction: column;
+}
+
+.mini-tile {
+  display: block;
+  flex: 0 0 auto;
+  width: 9px;
+  height: 13px;
+  border: 1px solid #aeb5bb;
+  border-radius: 2px;
+  background: #e5e8eb;
+  box-shadow: 1px 1px 2px #0008;
+}
+
+.opponent-left .mini-tile,
+.opponent-right .mini-tile {
+  width: 13px;
+  height: 9px;
+}
+
+.hand {
+  display: flex;
+  min-height: 68px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #3e474e;
+  border-radius: 10px;
+  background: #1b2126;
+}
+
+.loose-area {
+  margin-top: 8px;
+  border-style: dashed;
+}
+
+.set {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 58px;
+  flex-wrap: nowrap;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid #49545d;
+  border-radius: 8px;
+  background: #252c32;
+}
+
+.tile {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 52px;
+  place-items: center;
+  padding: 0;
+  border: 2px solid #68737c;
+  border-radius: 7px;
+  background: #111519;
+  color: var(--tile-color, #fff);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--tile-color) 45%, transparent);
+  font-size: 1.2rem;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tile.selected {
+  transform: translateY(-7px);
+  outline: 3px solid #fff08a;
+}
+
+.tile:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.controls button {
+  padding: 9px 12px;
+  border: 1px solid #58636c;
+  border-radius: 7px;
+  background: #303941;
+  color: #f2f4f5;
+  font: inherit;
+  cursor: pointer;
+}
+
+.controls button:hover {
+  background: #414c55;
+}
+
+.controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 16px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #3a4249;
+  border-radius: 10px;
+  background: #1a2025;
+}
+
+.status > p {
+  margin: 0;
+}
+
+#message {
+  flex-basis: 100%;
+  min-width: 0;
+  max-height: 180px;
+  margin: 0;
+  overflow-y: auto;
+}
+
+.message-entry {
+  margin: 0;
+  padding: 4px 0;
+  border-bottom: 1px solid #3a4249;
+}
+
+.message-entry:last-child {
+  border-bottom: 0;
+}
+
+/* Wide screens: board left, title/hand/status right. */
+@media (min-width: 801px) {
+  .game-layout {
+    grid-template-areas:
+      "board header"
+      "board side";
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+    gap: 16px 22px;
+    align-items: start;
+  }
+
+  .board-column {
+    grid-area: board;
+  }
+
+  .game-header {
+    grid-area: header;
+    margin: 0;
+  }
+
+  .side-panel {
+    grid-area: side;
+  }
+}
+
+/* Smaller screens: stack everything and let the board use available width. */
+@media (max-width: 800px) {
+  body {
+    padding: 12px;
+  }
+
+  .board-layout {
+    width: min(100%, 600px);
+    grid-template:
+      ". top ." minmax(36px, 1fr)
+      "left center right" minmax(0, 5fr)
+      ". bottom ." minmax(36px, 1fr)
+      / minmax(34px, 1fr) minmax(0, 5fr) minmax(34px, 1fr);
+    gap: 3px;
+  }
+
+  .opponent {
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .mini-tile {
+    width: 7px;
+    height: 10px;
+  }
+
+  .opponent-left .mini-tile,
+  .opponent-right .mini-tile {
+    width: 10px;
+    height: 7px;
+  }
+
+  .tile {
+    width: 34px;
+    height: 45px;
+  }
+}
+
+@media (max-width: 420px) {
+  body {
+    padding: 8px;
+  }
+
+  .board-layout {
+    width: 100%;
+    padding: 3px;
+    grid-template:
+      ". top ." minmax(32px, 1fr)
+      "left center right" minmax(0, 5fr)
+      ". bottom ." minmax(32px, 1fr)
+      / minmax(28px, 1fr) minmax(0, 5fr) minmax(28px, 1fr);
+    gap: 2px;
+  }
+
+  .opponent {
+    gap: 2px;
+    font-size: 8px;
+  }
+
+  .tile {
+    width: 30px;
+    height: 41px;
+  }
+
+  .hand {
+    gap: 5px;
+    padding: 7px;
+  }
+}
+
+#turn {
+  display: none;
+}

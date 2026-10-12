@@ -1,9 +1,5 @@
 "use strict";
 
-/* -----------------------------
-Translations
------------------------------ */
-
 const translations = {
   en: {
     title: "Mahjong Solitaire",
@@ -18,7 +14,6 @@ const translations = {
     noHint: "No matching moves available.",
     won: "You won!"
   },
-
   es: {
     title: "Solitario de Mahjong",
     newGame: "Nueva partida",
@@ -32,7 +27,6 @@ const translations = {
     noHint: "No hay movimientos coincidentes.",
     won: "¡Has ganado!"
   },
-
   "zh-Hant": {
     title: "四川省",
     newGame: "新遊戲",
@@ -48,20 +42,14 @@ const translations = {
   }
 };
 
-/* -----------------------------
-DOM elements
------------------------------ */
-
 const board = document.getElementById("gameBoard");
 const boardScaler = document.getElementById("boardScaler");
 const message = document.getElementById("message");
 const remainingCount = document.getElementById("remainingCount");
-
 const newGameButton = document.getElementById("newGameBtn");
 const restartButton = document.getElementById("restartBtn");
 const undoButton = document.getElementById("undoBtn");
 const hintButton = document.getElementById("hintBtn");
-
 const titleElement = document.getElementById("gameTitle");
 const languageLabel = document.getElementById("languageLabel");
 const remainingLabel = document.getElementById("remainingLabel");
@@ -88,20 +76,13 @@ if (requiredElements.some(element => !element)) {
   );
 }
 
-/* -----------------------------
-Configuration and state
------------------------------ */
-
 const UNIT_X = 58;
 const UNIT_Y = 78;
 const TILE_IMAGE_FOLDER = "";
-
 const WIDE_BOARD_WIDTH = 850;
 const WIDE_BOARD_HEIGHT = 650;
-
 const NARROW_BOARD_WIDTH = 500;
 const NARROW_BOARD_HEIGHT = 990;
-
 const NARROW_LAYOUT_BREAKPOINT = 700;
 
 let currentLanguage = "en";
@@ -111,15 +92,14 @@ let startingTiles = [];
 let undoStack = [];
 let selectedTileId = null;
 let hintedTileIds = new Set();
+let hintTimeout = null;
 
-/* -----------------------------
-Language
------------------------------ */
+// Tile DOM elements are kept between renders to avoid rebuilding the board
+// and reloading every tile image after each move.
+const tileElements = new Map();
 
 function normalizeLanguage(language) {
-  if (!language) {
-    return null;
-  }
+  if (!language) return null;
 
   const normalized = language.trim().toLowerCase();
 
@@ -133,44 +113,26 @@ function normalizeLanguage(language) {
     return "zh-Hant";
   }
 
-  if (
-    normalized === "es" ||
-    normalized.startsWith("es-")
-  ) {
-    return "es";
-  }
-
-  if (
-    normalized === "en" ||
-    normalized.startsWith("en-")
-  ) {
-    return "en";
-  }
+  if (normalized === "es" || normalized.startsWith("es-")) return "es";
+  if (normalized === "en" || normalized.startsWith("en-")) return "en";
 
   return null;
 }
 
 function getQueryLanguage() {
-  const queryLanguage = new URLSearchParams(
-    window.location.search
-  ).get("lang");
-
+  const queryLanguage = new URLSearchParams(window.location.search).get("lang");
   return normalizeLanguage(queryLanguage);
 }
 
 function getBrowserLanguage() {
   const browserLanguages =
-    Array.isArray(navigator.languages) &&
-    navigator.languages.length > 0
+    Array.isArray(navigator.languages) && navigator.languages.length > 0
       ? navigator.languages
       : [navigator.language];
 
   for (const language of browserLanguages) {
     const normalizedLanguage = normalizeLanguage(language);
-
-    if (normalizedLanguage) {
-      return normalizedLanguage;
-    }
+    if (normalizedLanguage) return normalizedLanguage;
   }
 
   return "en";
@@ -178,66 +140,40 @@ function getBrowserLanguage() {
 
 function getSavedLanguage() {
   try {
-    const savedLanguage = localStorage.getItem(
-      "mahjong-language"
-    );
+    const savedLanguage = localStorage.getItem("mahjong-language");
 
     if (
       savedLanguage &&
-      Object.prototype.hasOwnProperty.call(
-        translations,
-        savedLanguage
-      )
+      Object.prototype.hasOwnProperty.call(translations, savedLanguage)
     ) {
       return savedLanguage;
     }
   } catch {
-    // Continue with browser-language detection.
+    // Storage may be unavailable; fall back to the browser language.
   }
 
   return getBrowserLanguage();
 }
 
 function getInitialLanguage() {
-  const queryLanguage = getQueryLanguage();
-
-  if (queryLanguage) {
-    return queryLanguage;
-  }
-
-  return getSavedLanguage();
+  return getQueryLanguage() || getSavedLanguage();
 }
 
 function translate(key) {
-  const selectedTranslations =
-    translations[currentLanguage];
+  const selectedTranslations = translations[currentLanguage];
 
   if (
     selectedTranslations &&
-    Object.prototype.hasOwnProperty.call(
-      selectedTranslations,
-      key
-    )
+    Object.prototype.hasOwnProperty.call(selectedTranslations, key)
   ) {
     return selectedTranslations[key];
   }
 
-  if (
-    translations.en &&
-    Object.prototype.hasOwnProperty.call(
-      translations.en,
-      key
-    )
-  ) {
-    return translations.en[key];
-  }
-
-  return key;
+  return translations.en[key] || key;
 }
 
 function updateLanguage() {
   document.documentElement.lang = currentLanguage;
-
   titleElement.textContent = translate("title");
   newGameButton.textContent = translate("newGame");
   restartButton.textContent = translate("restart");
@@ -259,26 +195,16 @@ function updateLanguage() {
 }
 
 languageSelect.addEventListener("change", event => {
-  const selectedLanguage =
-    normalizeLanguage(event.target.value) || "en";
-
-  currentLanguage = selectedLanguage;
+  currentLanguage = normalizeLanguage(event.target.value) || "en";
 
   try {
-    localStorage.setItem(
-      "mahjong-language",
-      currentLanguage
-    );
+    localStorage.setItem("mahjong-language", currentLanguage);
   } catch {
-    // Continue if localStorage is unavailable.
+    // The selected language still applies for this page session.
   }
 
   updateLanguage();
 });
-
-/* -----------------------------
-Tile definitions
------------------------------ */
 
 const tileDefinitions = [
   ["characters", "🀇", "character-1"],
@@ -290,7 +216,6 @@ const tileDefinitions = [
   ["characters", "🀍", "character-7"],
   ["characters", "🀎", "character-8"],
   ["characters", "🀏", "character-9"],
-
   ["bamboo", "🀐", "bamboo-1"],
   ["bamboo", "🀑", "bamboo-2"],
   ["bamboo", "🀒", "bamboo-3"],
@@ -300,7 +225,6 @@ const tileDefinitions = [
   ["bamboo", "🀖", "bamboo-7"],
   ["bamboo", "🀗", "bamboo-8"],
   ["bamboo", "🀘", "bamboo-9"],
-
   ["balls", "🀙", "ball-1"],
   ["balls", "🀚", "ball-2"],
   ["balls", "🀛", "ball-3"],
@@ -310,39 +234,28 @@ const tileDefinitions = [
   ["balls", "🀟", "ball-7"],
   ["balls", "🀠", "ball-8"],
   ["balls", "🀡", "ball-9"],
-
   ["winds", "🀀", "east"],
   ["winds", "🀁", "south"],
   ["winds", "🀂", "west"],
   ["winds", "🀃", "north"],
-
   ["dragons", "🀄", "red-dragon"],
   ["dragons", "🀅", "green-dragon"],
   ["dragons", "🀆", "white-dragon"],
-
   ["seasons", "🀢", "spring"],
   ["seasons", "🀣", "summer"],
   ["seasons", "🀤", "autumn"],
   ["seasons", "🀥", "winter"],
-
   ["flowers", "🀦", "plum"],
   ["flowers", "🀧", "orchid"],
   ["flowers", "🀨", "chrysanthemum"],
   ["flowers", "🀩", "bamboo-flower"]
 ];
 
-/* -----------------------------
-Utility functions
------------------------------ */
-
 function shuffle(array) {
   const result = [...array];
 
-  for (let index = result.length - 1; index > 0; index--) {
-    const randomIndex = Math.floor(
-      Math.random() * (index + 1)
-    );
-
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
     [result[index], result[randomIndex]] = [
       result[randomIndex],
       result[index]
@@ -361,16 +274,7 @@ function showMessage(text = "", state = "") {
   message.dataset.state = state;
 }
 
-/* -----------------------------
-Layouts
------------------------------ */
-
-function createLayoutPosition(
-  id,
-  x,
-  y,
-  z
-) {
+function createLayoutPosition(id, x, y, z) {
   return {
     id,
     x,
@@ -383,26 +287,13 @@ function createLayoutPosition(
   };
 }
 
-function addLayoutLayer(
-  layout,
-  idStart,
-  width,
-  height,
-  z,
-  offsetX,
-  offsetY
-) {
+function addLayoutLayer(layout, idStart, width, height, z, offsetX, offsetY) {
   let id = idStart;
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
       layout.push(
-        createLayoutPosition(
-          id++,
-          offsetX + x,
-          offsetY + y,
-          z
-        )
+        createLayoutPosition(id++, offsetX + x, offsetY + y, z)
       );
     }
   }
@@ -410,7 +301,6 @@ function addLayoutLayer(
   return id;
 }
 
-/* Original wide-screen arrangement: unchanged. */
 function createWideLayout() {
   const layout = [];
   let id = 0;
@@ -418,97 +308,45 @@ function createWideLayout() {
   id = addLayoutLayer(layout, id, 12, 6, 0, 1, 1);
   id = addLayoutLayer(layout, id, 9, 4, 1, 2.5, 2);
   id = addLayoutLayer(layout, id, 6, 4, 2, 4, 2);
-  id = addLayoutLayer(layout, id, 3, 4, 3, 5.5, 2);
+  addLayoutLayer(layout, id, 3, 4, 3, 5.5, 2);
 
   return layout;
 }
 
-/*
-  Narrow-screen arrangement: 144 tiles.
-
-  Lower level:  8 x 11 = 88
-  Middle level: 6 x 6  = 36
-  Upper level:  4 x 5  = 20
-  Total:               144
-
-  Each layer is inset horizontally from the layer below it,
-  so the outer edge tiles of every layer are selectable at
-  the start of the game.
-*/
 function createNarrowLayout() {
   const layout = [];
   let id = 0;
 
   id = addLayoutLayer(layout, id, 8, 11, 0, 0, 0);
   id = addLayoutLayer(layout, id, 6, 6, 1, 1, 2);
-  id = addLayoutLayer(layout, id, 4, 5, 2, 2, 3);
+  addLayoutLayer(layout, id, 4, 5, 2, 2, 3);
 
   return layout;
 }
 
 function createLayoutForMode(mode) {
-  return mode === "narrow"
-    ? createNarrowLayout()
-    : createWideLayout();
-}
-
-/* -----------------------------
-Tile generation
------------------------------ */
-
-function createPhysicalTiles() {
-  const result = [];
-
-  for (const [group, symbol, matchKey] of tileDefinitions) {
-    const copies =
-      group === "seasons" || group === "flowers"
-        ? 1
-        : 4;
-
-    for (let index = 0; index < copies; index++) {
-      result.push({
-        group,
-        symbol,
-        matchKey
-      });
-    }
-  }
-
-  return result;
+  return mode === "narrow" ? createNarrowLayout() : createWideLayout();
 }
 
 function createPairPool() {
   const pairs = [];
 
   for (const [group, symbol, matchKey] of tileDefinitions) {
-    if (
-      group !== "seasons" &&
-      group !== "flowers"
-    ) {
-      for (let index = 0; index < 2; index++) {
-        pairs.push([
-          { group, symbol, matchKey },
-          { group, symbol, matchKey }
-        ]);
+    if (group !== "seasons" && group !== "flowers") {
+      for (let index = 0; index < 2; index += 1) {
+        const tile = { group, symbol, matchKey };
+        pairs.push([{ ...tile }, { ...tile }]);
       }
     }
   }
 
   const seasons = tileDefinitions
     .filter(tile => tile[0] === "seasons")
-    .map(([group, symbol, matchKey]) => ({
-      group,
-      symbol,
-      matchKey
-    }));
+    .map(([group, symbol, matchKey]) => ({ group, symbol, matchKey }));
 
   const flowers = tileDefinitions
     .filter(tile => tile[0] === "flowers")
-    .map(([group, symbol, matchKey]) => ({
-      group,
-      symbol,
-      matchKey
-    }));
+    .map(([group, symbol, matchKey]) => ({ group, symbol, matchKey }));
 
   pairs.push(
     [seasons[0], seasons[1]],
@@ -520,10 +358,6 @@ function createPairPool() {
   return shuffle(pairs);
 }
 
-/* -----------------------------
-Tile blocking rules
------------------------------ */
-
 function overlaps(first, second) {
   return (
     first.x < second.x + 1 &&
@@ -534,207 +368,122 @@ function overlaps(first, second) {
 }
 
 function overlapsVertically(first, second) {
-  return (
-    first.y < second.y + 1 &&
-    first.y + 1 > second.y
-  );
+  return first.y < second.y + 1 && first.y + 1 > second.y;
 }
 
 function isFree(tile, tileList) {
-  if (!tile || tile.removed) {
-    return false;
-  }
+  if (!tile || tile.removed) return false;
 
-  const covered = tileList.some(other => {
-    return (
-      !other.removed &&
-      other.id !== tile.id &&
-      other.z > tile.z &&
-      overlaps(tile, other)
-    );
-  });
+  const covered = tileList.some(other =>
+    !other.removed &&
+    other.id !== tile.id &&
+    other.z > tile.z &&
+    overlaps(tile, other)
+  );
 
-  if (covered) {
-    return false;
-  }
+  if (covered) return false;
 
-  const leftBlocked = tileList.some(other => {
-    return (
-      !other.removed &&
-      other.id !== tile.id &&
-      other.z === tile.z &&
-      overlapsVertically(tile, other) &&
-      other.x + 1 <= tile.x &&
-      other.x + 1 > tile.x - 2
-    );
-  });
+  const leftBlocked = tileList.some(other =>
+    !other.removed &&
+    other.id !== tile.id &&
+    other.z === tile.z &&
+    overlapsVertically(tile, other) &&
+    other.x + 1 <= tile.x &&
+    other.x + 1 > tile.x - 2
+  );
 
-  const rightBlocked = tileList.some(other => {
-    return (
-      !other.removed &&
-      other.id !== tile.id &&
-      other.z === tile.z &&
-      overlapsVertically(tile, other) &&
-      other.x >= tile.x + 1 &&
-      other.x < tile.x + 3
-    );
-  });
+  const rightBlocked = tileList.some(other =>
+    !other.removed &&
+    other.id !== tile.id &&
+    other.z === tile.z &&
+    overlapsVertically(tile, other) &&
+    other.x >= tile.x + 1 &&
+    other.x < tile.x + 3
+  );
 
   return !leftBlocked || !rightBlocked;
 }
 
-/* -----------------------------
-Solvable deal generation
------------------------------ */
-
 function createSolvableDeal(mode) {
-  for (let attempt = 0; attempt < 200; attempt++) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
     const layout = createLayoutForMode(mode);
     const pairs = createPairPool();
-
-    const activeIds = new Set(
-      layout.map(tile => tile.id)
-    );
-
+    const activeIds = new Set(layout.map(tile => tile.id));
     let failed = false;
 
     while (activeIds.size > 0) {
-      const activeTiles = layout.filter(tile =>
-        activeIds.has(tile.id)
-      );
+      const activeTiles = layout.filter(tile => activeIds.has(tile.id));
+      const freeTiles = activeTiles.filter(tile => isFree(tile, activeTiles));
 
-      const freeTiles = activeTiles.filter(tile =>
-        isFree(tile, activeTiles)
-      );
-
-      if (
-        freeTiles.length < 2 ||
-        pairs.length === 0
-      ) {
+      if (freeTiles.length < 2 || pairs.length === 0) {
         failed = true;
         break;
       }
 
-      const first =
-        freeTiles[
-          Math.floor(
-            Math.random() * freeTiles.length
-          )
-        ];
-
-      const alternatives = freeTiles.filter(tile =>
-        tile.id !== first.id
-      );
-
+      const first = freeTiles[Math.floor(Math.random() * freeTiles.length)];
+      const alternatives = freeTiles.filter(tile => tile.id !== first.id);
       const second =
-        alternatives[
-          Math.floor(
-            Math.random() * alternatives.length
-          )
-        ];
-
+        alternatives[Math.floor(Math.random() * alternatives.length)];
       const pair = pairs.pop();
 
       Object.assign(first, pair[0]);
       Object.assign(second, pair[1]);
-
       activeIds.delete(first.id);
       activeIds.delete(second.id);
     }
 
-    if (!failed) {
-      return layout;
+    if (!failed) return layout;
+  }
+
+  // Fallback deal if a solvable deal is not found after the attempts above.
+  const fallback = createLayoutForMode(mode);
+  const physicalTiles = [];
+
+  for (const [group, symbol, matchKey] of tileDefinitions) {
+    const copies = group === "seasons" || group === "flowers" ? 1 : 4;
+
+    for (let index = 0; index < copies; index += 1) {
+      physicalTiles.push({ group, symbol, matchKey });
     }
   }
 
-  const fallback = createLayoutForMode(mode);
-  const randomTiles = shuffle(createPhysicalTiles());
-
-  fallback.forEach((tile, index) => {
-    Object.assign(tile, randomTiles[index]);
+  shuffle(physicalTiles).forEach((tile, index) => {
+    Object.assign(fallback[index], tile);
   });
 
   return fallback;
 }
 
-/* -----------------------------
-Responsive board fitting
------------------------------ */
-
 function getBoardDimensions() {
   return currentBoardMode === "narrow"
-    ? {
-        width: NARROW_BOARD_WIDTH,
-        height: NARROW_BOARD_HEIGHT
-      }
-    : {
-        width: WIDE_BOARD_WIDTH,
-        height: WIDE_BOARD_HEIGHT
-      };
-}
-
-function updateBoardMode() {
-  const shouldUseNarrow =
-    window.innerWidth < NARROW_LAYOUT_BREAKPOINT;
-
-  const nextMode = shouldUseNarrow
-    ? "narrow"
-    : "wide";
-
-  /*
-    Do not disrupt a game already in progress when resizing.
-    The arrangement is chosen when a new game starts.
-  */
-  if (nextMode !== currentBoardMode) {
-    currentBoardMode = nextMode;
-
-    board.classList.toggle(
-      "narrow-board",
-      nextMode === "narrow"
-    );
-
-    board.classList.toggle(
-      "wide-board",
-      nextMode === "wide"
-    );
-  }
-
-  updateBoardScale();
+    ? { width: NARROW_BOARD_WIDTH, height: NARROW_BOARD_HEIGHT }
+    : { width: WIDE_BOARD_WIDTH, height: WIDE_BOARD_HEIGHT };
 }
 
 function updateBoardScale() {
   const dimensions = getBoardDimensions();
+  const availableWidth = Math.max(0, document.documentElement.clientWidth - 40);
+  const scale = Math.min(1, availableWidth / dimensions.width);
 
-  const availableWidth = Math.max(
-    0,
-    document.documentElement.clientWidth - 40
-  );
-
-  /*
-    Wide screens retain a scale of exactly 1,
-    preserving the original board size and layout.
-  */
-  const scale = Math.min(
-    1,
-    availableWidth / dimensions.width
-  );
-
-  if (scale < 1) {
-    board.style.transform = `scale(${scale})`;
-  } else {
-    board.style.transform = "";
-  }
-
-  boardScaler.style.width =
-    `${Math.ceil(dimensions.width * scale)}px`;
-
-  boardScaler.style.height =
-    `${Math.ceil(dimensions.height * scale)}px`;
+  board.style.transform = scale < 1 ? `scale(${scale})` : "";
+  boardScaler.style.width = `${Math.ceil(dimensions.width * scale)}px`;
+  boardScaler.style.height = `${Math.ceil(dimensions.height * scale)}px`;
 }
 
-/* -----------------------------
-Rendering
------------------------------ */
+function updateBoardMode() {
+  const nextMode =
+    window.innerWidth < NARROW_LAYOUT_BREAKPOINT ? "narrow" : "wide";
+
+  if (nextMode !== currentBoardMode) {
+    currentBoardMode = nextMode;
+    board.classList.toggle("narrow-board", nextMode === "narrow");
+    board.classList.toggle("wide-board", nextMode === "wide");
+    newGame();
+    return;
+  }
+
+  updateBoardScale();
+}
 
 function createTileContent(tile) {
   const content = document.createElement("span");
@@ -750,11 +499,7 @@ function createTileContent(tile) {
   image.alt = "";
   image.hidden = true;
   image.setAttribute("aria-hidden", "true");
-
-  image.src =
-    `${TILE_IMAGE_FOLDER}${encodeURIComponent(
-      tile.symbol
-    )}.webp`;
+  image.src = `${TILE_IMAGE_FOLDER}${encodeURIComponent(tile.symbol)}.webp`;
 
   image.addEventListener("load", () => {
     fallback.hidden = true;
@@ -767,130 +512,83 @@ function createTileContent(tile) {
   });
 
   content.append(fallback, image);
-
   return content;
 }
 
+function createTileElement(tile) {
+  const element = document.createElement("button");
+  element.type = "button";
+  element.className = `tile ${tile.group} ${tile.matchKey}`;
+  element.appendChild(createTileContent(tile));
+  element.setAttribute("aria-label", `${tile.group} ${tile.matchKey}`);
+  element.style.left = `${tile.x * UNIT_X + tile.z * 10}px`;
+  element.style.top = `${tile.y * UNIT_Y - tile.z * 10}px`;
+  element.style.zIndex =
+    tile.z * 100000 + Math.round(tile.y * 1000) + Math.round(tile.x);
+
+  element.addEventListener("click", () => selectTile(tile.id));
+
+  tileElements.set(tile.id, element);
+  return element;
+}
+
 function render() {
-  board.replaceChildren();
+  const visibleTiles = tiles.filter(tile => !tile.removed);
+  const visibleIds = new Set(visibleTiles.map(tile => tile.id));
 
-  const visibleTiles = tiles
-    .filter(tile => !tile.removed)
-    .sort((first, second) => {
-      if (first.z !== second.z) {
-        return first.z - second.z;
-      }
-
-      if (first.y !== second.y) {
-        return first.y - second.y;
-      }
-
-      return first.x - second.x;
-    });
-
-  for (const tile of visibleTiles) {
-    const element = document.createElement("button");
-
-    element.type = "button";
-    element.className = [
-      "tile",
-      tile.group,
-      tile.matchKey,
-      tile.id === selectedTileId
-        ? "selected"
-        : "",
-      hintedTileIds.has(tile.id)
-        ? "hinted"
-        : ""
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    element.appendChild(createTileContent(tile));
-
-    element.setAttribute(
-      "aria-label",
-      `${tile.group} ${tile.matchKey}`
-    );
-
-    element.style.left =
-      `${tile.x * UNIT_X + tile.z * 10}px`;
-
-    element.style.top =
-      `${tile.y * UNIT_Y - tile.z * 10}px`;
-
-    element.style.zIndex =
-      tile.z * 100000 +
-      Math.round(tile.y * 1000) +
-      Math.round(tile.x);
-
-    element.addEventListener("click", () => {
-      selectTile(tile.id);
-    });
-
-    board.appendChild(element);
+  // Remove only tiles that are no longer on the board.
+  for (const [id, element] of tileElements) {
+    if (!visibleIds.has(id)) {
+      element.remove();
+      tileElements.delete(id);
+    }
   }
 
-  remainingCount.textContent = tiles.filter(
-    tile => !tile.removed
-  ).length;
+  // Reuse existing buttons; create and append only missing ones.
+  for (const tile of visibleTiles) {
+    const element =
+      tileElements.get(tile.id) || createTileElement(tile);
 
+    element.classList.toggle("selected", tile.id === selectedTileId);
+    element.classList.toggle("hinted", hintedTileIds.has(tile.id));
+
+    if (!element.isConnected) {
+      board.appendChild(element);
+    }
+  }
+
+  remainingCount.textContent = String(visibleTiles.length);
   undoButton.disabled = undoStack.length === 0;
 }
 
-/* -----------------------------
-Matching
------------------------------ */
-
 function tilesMatch(first, second) {
-  if (!first || !second) {
-    return false;
-  }
+  if (!first || !second) return false;
 
-  if (
-    first.group === "seasons" &&
-    second.group === "seasons"
-  ) {
-    return true;
-  }
-
-  if (
-    first.group === "flowers" &&
-    second.group === "flowers"
-  ) {
-    return true;
-  }
+  if (first.group === "seasons" && second.group === "seasons") return true;
+  if (first.group === "flowers" && second.group === "flowers") return true;
 
   return first.matchKey === second.matchKey;
 }
 
-/* -----------------------------
-Game interaction
------------------------------ */
+function clearHintTimer() {
+  if (hintTimeout !== null) {
+    window.clearTimeout(hintTimeout);
+    hintTimeout = null;
+  }
+}
 
 function selectTile(id) {
+  clearHintTimer();
   hintedTileIds.clear();
 
   const tile = tiles.find(item => item.id === id);
 
-  if (
-    !tile ||
-    tile.removed ||
-    !isFree(tile, tiles)
-  ) {
-    return;
-  }
+  if (!tile || tile.removed || !isFree(tile, tiles)) return;
 
   if (selectedTileId !== null) {
-    const oldTile = tiles.find(
-      item => item.id === selectedTileId
-    );
+    const oldTile = tiles.find(item => item.id === selectedTileId);
 
-    if (
-      !oldTile ||
-      oldTile.removed ||
-      !isFree(oldTile, tiles)
-    ) {
+    if (!oldTile || oldTile.removed || !isFree(oldTile, tiles)) {
       selectedTileId = null;
     }
   }
@@ -909,9 +607,7 @@ function selectTile(id) {
     return;
   }
 
-  const first = tiles.find(
-    item => item.id === selectedTileId
-  );
+  const first = tiles.find(item => item.id === selectedTileId);
 
   if (!first) {
     selectedTileId = null;
@@ -922,10 +618,8 @@ function selectTile(id) {
 
   if (tilesMatch(first, tile)) {
     undoStack.push(cloneTiles(tiles));
-
     first.removed = true;
     tile.removed = true;
-
     selectedTileId = null;
     showMessage();
     render();
@@ -943,27 +637,20 @@ function selectTile(id) {
 }
 
 function findHint() {
-  const freeTiles = tiles.filter(tile =>
-    !tile.removed &&
-    isFree(tile, tiles)
+  const freeTiles = tiles.filter(
+    tile => !tile.removed && isFree(tile, tiles)
   );
 
-  for (
-    let firstIndex = 0;
-    firstIndex < freeTiles.length;
-    firstIndex++
-  ) {
+  for (let firstIndex = 0; firstIndex < freeTiles.length; firstIndex += 1) {
     for (
       let secondIndex = firstIndex + 1;
       secondIndex < freeTiles.length;
-      secondIndex++
+      secondIndex += 1
     ) {
       const first = freeTiles[firstIndex];
       const second = freeTiles[secondIndex];
 
-      if (tilesMatch(first, second)) {
-        return [first, second];
-      }
+      if (tilesMatch(first, second)) return [first, second];
     }
   }
 
@@ -971,6 +658,7 @@ function findHint() {
 }
 
 function showHint() {
+  clearHintTimer();
   hintedTileIds.clear();
 
   const hint = findHint();
@@ -983,41 +671,33 @@ function showHint() {
 
   hintedTileIds.add(hint[0].id);
   hintedTileIds.add(hint[1].id);
-
   showMessage();
   render();
 
-  window.setTimeout(() => {
+  hintTimeout = window.setTimeout(() => {
     hintedTileIds.clear();
+    hintTimeout = null;
     render();
   }, 2000);
 }
 
-/* -----------------------------
-Game controls
------------------------------ */
-
 function newGame() {
+  clearHintTimer();
+
   currentBoardMode =
-    window.innerWidth < NARROW_LAYOUT_BREAKPOINT
-      ? "narrow"
-      : "wide";
-
-  board.classList.toggle(
-    "narrow-board",
-    currentBoardMode === "narrow"
-  );
-
-  board.classList.toggle(
-    "wide-board",
-    currentBoardMode === "wide"
-  );
+    window.innerWidth < NARROW_LAYOUT_BREAKPOINT ? "narrow" : "wide";
+  board.classList.toggle("narrow-board", currentBoardMode === "narrow");
+  board.classList.toggle("wide-board", currentBoardMode === "wide");
 
   tiles = createSolvableDeal(currentBoardMode);
   startingTiles = cloneTiles(tiles);
   undoStack = [];
   selectedTileId = null;
   hintedTileIds.clear();
+
+  // A new deal changes tile faces and positions, so discard the old elements.
+  tileElements.clear();
+  board.replaceChildren();
 
   updateBoardScale();
   showMessage();
@@ -1030,48 +710,35 @@ function restartGame() {
     return;
   }
 
+  clearHintTimer();
   tiles = cloneTiles(startingTiles);
   undoStack = [];
   selectedTileId = null;
   hintedTileIds.clear();
-
   showMessage();
   render();
 }
 
 function undoMove() {
-  if (undoStack.length === 0) {
-    return;
-  }
+  if (undoStack.length === 0) return;
 
+  clearHintTimer();
   tiles = undoStack.pop();
   selectedTileId = null;
   hintedTileIds.clear();
-
   showMessage();
   render();
 }
-
-/* -----------------------------
-Event listeners
------------------------------ */
 
 newGameButton.addEventListener("click", newGame);
 restartButton.addEventListener("click", restartGame);
 undoButton.addEventListener("click", undoMove);
 hintButton.addEventListener("click", showHint);
 
-window.addEventListener("resize", () => {
-  updateBoardMode();
-});
-
+window.addEventListener("resize", updateBoardMode);
 window.addEventListener("orientationchange", () => {
   window.setTimeout(updateBoardMode, 100);
 });
-
-/* -----------------------------
-Start game
------------------------------ */
 
 currentLanguage = getInitialLanguage();
 updateLanguage();

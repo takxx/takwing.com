@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tile Rummy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game">
+    <div id="game-layout" class="game-layout">
+      <header class="game-header">
+        <h1 data-i18n="title">Tile Rummy</h1>
+        <p data-i18n="subtitle">
+          Make groups of the same number or runs of consecutive numbers.
+        </p>
+      </header>
+
+      <section class="board-column" aria-label="Game board">
+        <div id="board-layout" class="board-layout">
+          <div id="opponent-top" class="opponent opponent-top"></div>
+          <div id="opponent-left" class="opponent opponent-left"></div>
+
+          <div class="board-center">
+            <div id="table" class="table" aria-label="Played sets"></div>
+          </div>
+
+          <div id="opponent-right" class="opponent opponent-right"></div>
+          <div id="opponent-bottom" class="opponent opponent-bottom"></div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="hand-section">
+          <h2 data-i18n="yourTiles">Your tiles</h2>
+          <div id="hand" class="hand" aria-label="Your tiles"></div>
+          <div id="loose" class="hand loose-area" aria-label="Loose tiles"></div>
+
+          <div class="controls">
+            <button id="play" type="button" data-i18n="play">
+              Play selected tiles
+            </button>
+            <button id="draw" type="button" data-i18n="draw">
+              Draw a tile
+            </button>
+            <button id="new-game" type="button" data-i18n="newGame">
+              New game
+            </button>
+          </div>
+        </section>
+
+        <section class="status" aria-label="Game status">
+          <p id="turn"></p>
+          <p id="stock"></p>
+          <div id="message" class="message-log" aria-live="polite"></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
