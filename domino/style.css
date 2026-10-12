@@ -106,7 +106,7 @@ button:disabled {
   grid-template-rows: repeat(17, 1fr);
   width: min(100%, var(--board-size));
   aspect-ratio: 1;
-  overflow: hidden;
+  overflow: visible;
   background: var(--board-background);
 }
 

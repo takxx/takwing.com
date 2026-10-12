@@ -69,10 +69,6 @@ function setSidePickerVisible(visible) {
 
   elements.sidePicker.classList.toggle("is-hidden", !visible);
 
-  /*
-    Give keyboard users an immediate way to make their choice after
-    selecting a domino that fits both non-matching open ends.
-  */
   if (visible && wasHidden) {
     window.requestAnimationFrame(() => {
       elements.playLeft.focus();
@@ -81,14 +77,11 @@ function setSidePickerVisible(visible) {
 }
 
 function rememberTileButton(tile) {
-  const tileButtons = elements.playerHand.querySelectorAll(".hand-domino");
+  const buttons = elements.playerHand.querySelectorAll(".hand-domino");
+  const targetLabel = `${tile.a}-${tile.b}`;
 
-  pendingTileButton = Array.from(tileButtons).find((button) => {
-    return button.getAttribute("aria-label")?.includes(
-      `${tile.a}`
-    ) && button.getAttribute("aria-label")?.includes(
-      `${tile.b}`
-    );
+  pendingTileButton = Array.from(buttons).find((button) => {
+    return button.getAttribute("aria-label") === targetLabel;
   }) || null;
 }
 
@@ -113,10 +106,9 @@ function clearPendingTile({ restoreFocus = false } = {}) {
 
   if (restoreFocus) {
     restoreTileFocus();
-    return;
+  } else {
+    pendingTileButton = null;
   }
-
-  pendingTileButton = null;
 }
 
 function resultMessage(snapshot) {
@@ -144,12 +136,8 @@ function resultMessage(snapshot) {
 
   if (event?.type === "opening") {
     return event.player === PLAYER.HUMAN
-      ? t("youOpen", {
-        tile: tileText(event.tile)
-      })
-      : t("computerOpens", {
-        tile: tileText(event.tile)
-      });
+      ? t("youOpen", { tile: tileText(event.tile) })
+      : t("computerOpens", { tile: tileText(event.tile) });
   }
 
   if (event?.type === "place") {
@@ -166,12 +154,14 @@ function resultMessage(snapshot) {
 
   if (event?.type === "draw") {
     return event.player === PLAYER.HUMAN
-      ? t("youDrew", {
-        count: event.count
-      })
-      : t("computerDrew", {
-        count: event.count
-      });
+      ? t("youDrew", { count: event.count })
+      : t("computerDrew", { count: event.count });
+  }
+
+  if (event?.type === "pass") {
+    return event.player === PLAYER.HUMAN
+      ? t("yourTurn")
+      : t("computerTurn");
   }
 
   return snapshot.turn === PLAYER.HUMAN
@@ -199,9 +189,7 @@ function renderApplication() {
     }
   });
 
-  renderer.renderComputerHand(
-    snapshot.hands[PLAYER.COMPUTER].length
-  );
+  renderer.renderComputerHand(snapshot.hands[PLAYER.COMPUTER].length);
 
   renderer.renderStats({
     playerTiles: snapshot.hands[PLAYER.HUMAN].length,
@@ -220,30 +208,57 @@ function renderApplication() {
   );
 }
 
-function beginHumanTurn() {
-  const snapshot = game.snapshot();
+function scheduleComputerTurn(delay = 350) {
+  window.setTimeout(beginComputerTurn, delay);
+}
 
-  if (
-    snapshot.gameOver
-    || snapshot.turn !== PLAYER.HUMAN
-  ) {
+function scheduleHumanTurn(delay = 350) {
+  window.setTimeout(beginHumanTurn, delay);
+}
+
+function beginHumanTurn() {
+  const beforeDraw = game.snapshot();
+
+  if (beforeDraw.gameOver) {
     renderApplication();
+    return;
+  }
+
+  // If the turn has already passed to the computer, hand control over.
+  if (beforeDraw.turn !== PLAYER.HUMAN) {
+    renderApplication();
+
+    if (beforeDraw.turn === PLAYER.COMPUTER) {
+      scheduleComputerTurn();
+    }
+
     return;
   }
 
   statusOverride = "";
 
   const drawResult = game.drawUntilPlayable(PLAYER.HUMAN);
+  const afterDraw = game.snapshot();
 
-  if (drawResult.gameOver) {
+  if (drawResult.gameOver || afterDraw.gameOver) {
     renderApplication();
     return;
   }
 
+  // Drawing may have failed to find a playable tile, causing a pass.
+  if (afterDraw.turn !== PLAYER.HUMAN) {
+    statusOverride = t("computerTurn");
+    renderApplication();
+
+    if (afterDraw.turn === PLAYER.COMPUTER) {
+      scheduleComputerTurn();
+    }
+
+    return;
+  }
+
   statusOverride = drawResult.drawn.length > 0
-    ? t("youDrew", {
-      count: drawResult.drawn.length
-    })
+    ? t("youDrew", { count: drawResult.drawn.length })
     : t("yourTurn");
 
   renderApplication();
@@ -267,28 +282,18 @@ function onHumanTileClick(tile) {
     return;
   }
 
-  /*
-    The bone can fit on exactly one end, so play it there.
-  */
   if (sides.length === 1) {
     playHumanTile(tile, sides[0]);
     return;
   }
 
-  /*
-    Both legal ends have the same exposed number, so choosing a side
-    makes no gameplay difference. Pick either legal end automatically.
-  */
+  // If both ends show the same number, the choice has no gameplay effect.
   if (snapshot.ends.left === snapshot.ends.right) {
-    const randomSide = sides[Math.floor(Math.random() * sides.length)];
-
-    playHumanTile(tile, randomSide);
+    const side = sides[Math.floor(Math.random() * sides.length)];
+    playHumanTile(tile, side);
     return;
   }
 
-  /*
-    The tile fits both different open ends. Ask the player where to play it.
-  */
   pendingTile = tile;
   rememberTileButton(tile);
   statusOverride = t("chooseSide");
@@ -299,37 +304,39 @@ function playHumanTile(tile, side) {
   clearPendingTile();
   statusOverride = "";
 
-  const result = game.play(
-    PLAYER.HUMAN,
-    tile.id,
-    side
-  );
+  const result = game.play(PLAYER.HUMAN, tile.id, side);
 
   if (!result.ok) {
     renderApplication();
     return;
   }
 
-  /*
-    Game emits a logical left/right placement. The renderer chooses
-    its own A01–Q17 board location and display geometry.
-  */
   renderer.place(result.placement);
   renderApplication();
 
   if (!game.snapshot().gameOver) {
-    window.setTimeout(beginComputerTurn, 420);
+    scheduleComputerTurn(420);
   }
 }
 
 function beginComputerTurn() {
-  const snapshot = game.snapshot();
+  const beforeTurn = game.snapshot();
 
-  if (
-    snapshot.gameOver
-    || snapshot.turn !== PLAYER.COMPUTER
-  ) {
+  if (beforeTurn.gameOver) {
+    computerThinking = false;
     renderApplication();
+    return;
+  }
+
+  // A delayed callback may run after the turn has already changed.
+  if (beforeTurn.turn !== PLAYER.COMPUTER) {
+    computerThinking = false;
+    renderApplication();
+
+    if (beforeTurn.turn === PLAYER.HUMAN) {
+      scheduleHumanTurn(0);
+    }
+
     return;
   }
 
@@ -339,18 +346,40 @@ function beginComputerTurn() {
 
   window.setTimeout(() => {
     const drawResult = game.drawUntilPlayable(PLAYER.COMPUTER);
+    const afterDraw = game.snapshot();
 
-    if (drawResult.gameOver) {
+    if (drawResult.gameOver || afterDraw.gameOver) {
       computerThinking = false;
       renderApplication();
       return;
     }
 
+    // The computer may have passed during the draw attempt.
+    if (afterDraw.turn !== PLAYER.COMPUTER) {
+      computerThinking = false;
+      statusOverride = t("yourTurn");
+      renderApplication();
+
+      if (afterDraw.turn === PLAYER.HUMAN) {
+        scheduleHumanTurn();
+      }
+
+      return;
+    }
+
     const move = game.chooseComputerMove();
 
+    // Defensive fallback: do not leave the game waiting on the computer.
     if (!move) {
       computerThinking = false;
+
+      const current = game.snapshot();
       renderApplication();
+
+      if (!current.gameOver && current.turn === PLAYER.HUMAN) {
+        scheduleHumanTurn();
+      }
+
       return;
     }
 
@@ -362,25 +391,35 @@ function beginComputerTurn() {
 
     computerThinking = false;
 
-    if (result.ok) {
-      renderer.place(result.placement);
+    if (!result.ok) {
+      renderApplication();
 
-      const drawText = drawResult.drawn.length > 0
-        ? `${t("computerDrew", {
-          count: drawResult.drawn.length
-        })} `
-        : "";
+      const current = game.snapshot();
 
-      statusOverride = `${drawText}${t("computerPlayed", {
-        tile: tileText(move.tile),
-        side: sideText(move.side)
-      })}`;
+      if (!current.gameOver && current.turn === PLAYER.HUMAN) {
+        scheduleHumanTurn();
+      }
+
+      return;
     }
+
+    renderer.place(result.placement);
+
+    const drawText = drawResult.drawn.length > 0
+      ? `${t("computerDrew", {
+        count: drawResult.drawn.length
+      })} `
+      : "";
+
+    statusOverride = `${drawText}${t("computerPlayed", {
+      tile: tileText(move.tile),
+      side: sideText(move.side)
+    })}`;
 
     renderApplication();
 
     if (!game.snapshot().gameOver) {
-      window.setTimeout(beginHumanTurn, 350);
+      scheduleHumanTurn(350);
     }
   }, 550);
 }
@@ -392,19 +431,14 @@ function startRound() {
 
   const opening = game.startRound();
 
-  /*
-    Renderer receives the opener's value/tile/owner data and places
-    the centered opening double independently.
-  */
   renderer.reset(opening);
   renderApplication();
 
   if (game.snapshot().turn === PLAYER.COMPUTER) {
-    window.setTimeout(beginComputerTurn, 450);
-    return;
+    scheduleComputerTurn(450);
+  } else {
+    scheduleHumanTurn(120);
   }
-
-  window.setTimeout(beginHumanTurn, 120);
 }
 
 function bindEvents() {
@@ -428,10 +462,7 @@ function bindEvents() {
   });
 
   elements.cancelPlay.addEventListener("click", () => {
-    clearPendingTile({
-      restoreFocus: true
-    });
-
+    clearPendingTile({ restoreFocus: true });
     statusOverride = t("yourTurn");
     renderApplication();
   });
