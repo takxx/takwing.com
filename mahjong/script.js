@@ -93,118 +93,10 @@ let undoStack = [];
 let selectedTileId = null;
 let hintedTileIds = new Set();
 let hintTimeout = null;
+let resizeTimeout = null;
 
-// Tile DOM elements are kept between renders to avoid rebuilding the board
-// and reloading every tile image after each move.
 const tileElements = new Map();
-
-function normalizeLanguage(language) {
-  if (!language) return null;
-
-  const normalized = language.trim().toLowerCase();
-
-  if (
-    normalized === "zh" ||
-    normalized === "zh-hant" ||
-    normalized.startsWith("zh-tw") ||
-    normalized.startsWith("zh-hk") ||
-    normalized.startsWith("zh-mo")
-  ) {
-    return "zh-Hant";
-  }
-
-  if (normalized === "es" || normalized.startsWith("es-")) return "es";
-  if (normalized === "en" || normalized.startsWith("en-")) return "en";
-
-  return null;
-}
-
-function getQueryLanguage() {
-  const queryLanguage = new URLSearchParams(window.location.search).get("lang");
-  return normalizeLanguage(queryLanguage);
-}
-
-function getBrowserLanguage() {
-  const browserLanguages =
-    Array.isArray(navigator.languages) && navigator.languages.length > 0
-      ? navigator.languages
-      : [navigator.language];
-
-  for (const language of browserLanguages) {
-    const normalizedLanguage = normalizeLanguage(language);
-    if (normalizedLanguage) return normalizedLanguage;
-  }
-
-  return "en";
-}
-
-function getSavedLanguage() {
-  try {
-    const savedLanguage = localStorage.getItem("mahjong-language");
-
-    if (
-      savedLanguage &&
-      Object.prototype.hasOwnProperty.call(translations, savedLanguage)
-    ) {
-      return savedLanguage;
-    }
-  } catch {
-    // Storage may be unavailable; fall back to the browser language.
-  }
-
-  return getBrowserLanguage();
-}
-
-function getInitialLanguage() {
-  return getQueryLanguage() || getSavedLanguage();
-}
-
-function translate(key) {
-  const selectedTranslations = translations[currentLanguage];
-
-  if (
-    selectedTranslations &&
-    Object.prototype.hasOwnProperty.call(selectedTranslations, key)
-  ) {
-    return selectedTranslations[key];
-  }
-
-  return translations.en[key] || key;
-}
-
-function updateLanguage() {
-  document.documentElement.lang = currentLanguage;
-  titleElement.textContent = translate("title");
-  newGameButton.textContent = translate("newGame");
-  restartButton.textContent = translate("restart");
-  undoButton.textContent = translate("undo");
-  languageLabel.textContent = translate("language");
-  remainingLabel.textContent = translate("remaining");
-  hintButton.textContent = translate("hint");
-  languageSelect.value = currentLanguage;
-
-  const state = message.dataset.state;
-
-  if (state === "select") {
-    message.textContent = translate("selectMatch");
-  } else if (state === "wrong") {
-    message.textContent = translate("notMatch");
-  } else if (state === "won") {
-    message.textContent = translate("won");
-  }
-}
-
-languageSelect.addEventListener("change", event => {
-  currentLanguage = normalizeLanguage(event.target.value) || "en";
-
-  try {
-    localStorage.setItem("mahjong-language", currentLanguage);
-  } catch {
-    // The selected language still applies for this page session.
-  }
-
-  updateLanguage();
-});
+const tileImageCache = new Map();
 
 const tileDefinitions = [
   ["characters", "🀇", "character-1"],
@@ -251,6 +143,146 @@ const tileDefinitions = [
   ["flowers", "🀩", "bamboo-flower"]
 ];
 
+function normalizeLanguage(language) {
+  if (!language) return null;
+
+  const normalized = language.trim().toLowerCase();
+
+  if (
+    normalized === "zh" ||
+    normalized === "zh-hant" ||
+    normalized.startsWith("zh-tw") ||
+    normalized.startsWith("zh-hk") ||
+    normalized.startsWith("zh-mo")
+  ) {
+    return "zh-Hant";
+  }
+
+  if (normalized === "es" || normalized.startsWith("es-")) return "es";
+  if (normalized === "en" || normalized.startsWith("en-")) return "en";
+
+  return null;
+}
+
+function getQueryLanguage() {
+  const queryLanguage = new URLSearchParams(window.location.search).get("lang");
+  return normalizeLanguage(queryLanguage);
+}
+
+function getBrowserLanguage() {
+  const browserLanguages =
+    Array.isArray(navigator.languages) && navigator.languages.length > 0
+      ? navigator.languages
+      : [navigator.language];
+
+  for (const language of browserLanguages) {
+    const normalizedLanguage = normalizeLanguage(language);
+    if (normalizedLanguage) return normalizedLanguage;
+  }
+
+  return "en";
+}
+
+function getSavedLanguage() {
+  try {
+    const savedLanguage = localStorage.getItem("mahjong-language");
+    if (savedLanguage && Object.hasOwn(translations, savedLanguage)) {
+      return savedLanguage;
+    }
+  } catch {
+    // Storage can be unavailable; use the browser language instead.
+  }
+
+  return getBrowserLanguage();
+}
+
+function getInitialLanguage() {
+  return getQueryLanguage() || getSavedLanguage();
+}
+
+function translate(key) {
+  const selectedTranslations = translations[currentLanguage];
+
+  if (selectedTranslations && Object.hasOwn(selectedTranslations, key)) {
+    return selectedTranslations[key];
+  }
+
+  return translations.en[key] || key;
+}
+
+function updateLanguage() {
+  document.documentElement.lang = currentLanguage;
+  titleElement.textContent = translate("title");
+  newGameButton.textContent = translate("newGame");
+  restartButton.textContent = translate("restart");
+  undoButton.textContent = translate("undo");
+  languageLabel.textContent = translate("language");
+  remainingLabel.textContent = translate("remaining");
+  hintButton.textContent = translate("hint");
+  languageSelect.value = currentLanguage;
+
+  if (message.dataset.state === "select") {
+    message.textContent = translate("selectMatch");
+  } else if (message.dataset.state === "wrong") {
+    message.textContent =
+      message.dataset.messageKey === "noHint"
+        ? translate("noHint")
+        : translate("notMatch");
+  } else if (message.dataset.state === "won") {
+    message.textContent = translate("won");
+  }
+}
+
+languageSelect.addEventListener("change", event => {
+  currentLanguage = normalizeLanguage(event.target.value) || "en";
+
+  try {
+    localStorage.setItem("mahjong-language", currentLanguage);
+  } catch {
+    // Language selection still works for this page session.
+  }
+
+  updateLanguage();
+});
+
+function imageUrlForSymbol(symbol) {
+  return `${TILE_IMAGE_FOLDER}${encodeURIComponent(symbol)}.webp`;
+}
+
+/*
+ * Preload each distinct tile image once. Failed requests are cached as null,
+ * so missing files use the Unicode fallback without repeated requests.
+ */
+function preloadTileImages() {
+  const symbols = [...new Set(tileDefinitions.map(([, symbol]) => symbol))];
+
+  return Promise.all(
+    symbols.map(symbol => {
+      const url = imageUrlForSymbol(symbol);
+
+      const imagePromise = new Promise(resolve => {
+        const image = new Image();
+
+        image.onload = async () => {
+          try {
+            if (image.decode) await image.decode();
+          } catch {
+            // The image loaded; decode failure should not prevent gameplay.
+          }
+
+          resolve(image);
+        };
+
+        image.onerror = () => resolve(null);
+        image.src = url;
+      });
+
+      tileImageCache.set(symbol, imagePromise);
+      return imagePromise;
+    })
+  );
+}
+
 function shuffle(array) {
   const result = [...array];
 
@@ -269,9 +301,10 @@ function cloneTiles(source) {
   return source.map(tile => ({ ...tile }));
 }
 
-function showMessage(text = "", state = "") {
+function showMessage(text = "", state = "", messageKey = "") {
   message.textContent = text;
   message.dataset.state = state;
+  message.dataset.messageKey = messageKey;
 }
 
 function createLayoutPosition(id, x, y, z) {
@@ -333,19 +366,18 @@ function createPairPool() {
 
   for (const [group, symbol, matchKey] of tileDefinitions) {
     if (group !== "seasons" && group !== "flowers") {
-      for (let index = 0; index < 2; index += 1) {
-        const tile = { group, symbol, matchKey };
-        pairs.push([{ ...tile }, { ...tile }]);
-      }
+      const tile = { group, symbol, matchKey };
+      pairs.push([{ ...tile }, { ...tile }]);
+      pairs.push([{ ...tile }, { ...tile }]);
     }
   }
 
   const seasons = tileDefinitions
-    .filter(tile => tile[0] === "seasons")
+    .filter(([group]) => group === "seasons")
     .map(([group, symbol, matchKey]) => ({ group, symbol, matchKey }));
 
   const flowers = tileDefinitions
-    .filter(tile => tile[0] === "flowers")
+    .filter(([group]) => group === "flowers")
     .map(([group, symbol, matchKey]) => ({ group, symbol, matchKey }));
 
   pairs.push(
@@ -374,31 +406,34 @@ function overlapsVertically(first, second) {
 function isFree(tile, tileList) {
   if (!tile || tile.removed) return false;
 
-  const covered = tileList.some(other =>
-    !other.removed &&
-    other.id !== tile.id &&
-    other.z > tile.z &&
-    overlaps(tile, other)
+  const covered = tileList.some(
+    other =>
+      !other.removed &&
+      other.id !== tile.id &&
+      other.z > tile.z &&
+      overlaps(tile, other)
   );
 
   if (covered) return false;
 
-  const leftBlocked = tileList.some(other =>
-    !other.removed &&
-    other.id !== tile.id &&
-    other.z === tile.z &&
-    overlapsVertically(tile, other) &&
-    other.x + 1 <= tile.x &&
-    other.x + 1 > tile.x - 2
+  const leftBlocked = tileList.some(
+    other =>
+      !other.removed &&
+      other.id !== tile.id &&
+      other.z === tile.z &&
+      overlapsVertically(tile, other) &&
+      other.x + 1 <= tile.x &&
+      other.x + 1 > tile.x - 2
   );
 
-  const rightBlocked = tileList.some(other =>
-    !other.removed &&
-    other.id !== tile.id &&
-    other.z === tile.z &&
-    overlapsVertically(tile, other) &&
-    other.x >= tile.x + 1 &&
-    other.x < tile.x + 3
+  const rightBlocked = tileList.some(
+    other =>
+      !other.removed &&
+      other.id !== tile.id &&
+      other.z === tile.z &&
+      overlapsVertically(tile, other) &&
+      other.x >= tile.x + 1 &&
+      other.x < tile.x + 3
   );
 
   return !leftBlocked || !rightBlocked;
@@ -428,6 +463,7 @@ function createSolvableDeal(mode) {
 
       Object.assign(first, pair[0]);
       Object.assign(second, pair[1]);
+
       activeIds.delete(first.id);
       activeIds.delete(second.id);
     }
@@ -435,7 +471,6 @@ function createSolvableDeal(mode) {
     if (!failed) return layout;
   }
 
-  // Fallback deal if a solvable deal is not found after the attempts above.
   const fallback = createLayoutForMode(mode);
   const physicalTiles = [];
 
@@ -470,20 +505,17 @@ function updateBoardScale() {
   boardScaler.style.height = `${Math.ceil(dimensions.height * scale)}px`;
 }
 
-function updateBoardMode() {
-  const nextMode =
-    window.innerWidth < NARROW_LAYOUT_BREAKPOINT ? "narrow" : "wide";
-
-  if (nextMode !== currentBoardMode) {
-    currentBoardMode = nextMode;
-    board.classList.toggle("narrow-board", nextMode === "narrow");
-    board.classList.toggle("wide-board", nextMode === "wide");
-    newGame();
-    return;
-  }
-
-  updateBoardScale();
+/*
+ * Resizing never changes the layout or replaces the game. The layout is
+ * selected only when newGame() is explicitly called.
+ */
+function scheduleScaleUpdate() {
+  window.clearTimeout(resizeTimeout);
+  resizeTimeout = window.setTimeout(updateBoardScale, 100);
 }
+
+window.addEventListener("resize", scheduleScaleUpdate);
+window.addEventListener("orientationchange", scheduleScaleUpdate);
 
 function createTileContent(tile) {
   const content = document.createElement("span");
@@ -493,25 +525,25 @@ function createTileContent(tile) {
   fallback.className = "tile-fallback";
   fallback.textContent = tile.symbol;
   fallback.setAttribute("aria-hidden", "true");
+  content.appendChild(fallback);
 
-  const image = document.createElement("img");
-  image.className = "tile-image";
-  image.alt = "";
-  image.hidden = true;
-  image.setAttribute("aria-hidden", "true");
-  image.src = `${TILE_IMAGE_FOLDER}${encodeURIComponent(tile.symbol)}.webp`;
+  const cachedImage = tileImageCache.get(tile.symbol);
 
-  image.addEventListener("load", () => {
-    fallback.hidden = true;
-    image.hidden = false;
-  });
+  if (cachedImage) {
+    cachedImage.then(image => {
+      if (!image || !content.isConnected) return;
 
-  image.addEventListener("error", () => {
-    image.hidden = true;
-    fallback.hidden = false;
-  });
+      const tileImage = document.createElement("img");
+      tileImage.className = "tile-image";
+      tileImage.alt = "";
+      tileImage.setAttribute("aria-hidden", "true");
+      tileImage.src = image.src;
 
-  content.append(fallback, image);
+      fallback.hidden = true;
+      content.appendChild(tileImage);
+    });
+  }
+
   return content;
 }
 
@@ -525,7 +557,6 @@ function createTileElement(tile) {
   element.style.top = `${tile.y * UNIT_Y - tile.z * 10}px`;
   element.style.zIndex =
     tile.z * 100000 + Math.round(tile.y * 1000) + Math.round(tile.x);
-
   element.addEventListener("click", () => selectTile(tile.id));
 
   tileElements.set(tile.id, element);
@@ -536,7 +567,6 @@ function render() {
   const visibleTiles = tiles.filter(tile => !tile.removed);
   const visibleIds = new Set(visibleTiles.map(tile => tile.id));
 
-  // Remove only tiles that are no longer on the board.
   for (const [id, element] of tileElements) {
     if (!visibleIds.has(id)) {
       element.remove();
@@ -544,17 +574,13 @@ function render() {
     }
   }
 
-  // Reuse existing buttons; create and append only missing ones.
   for (const tile of visibleTiles) {
-    const element =
-      tileElements.get(tile.id) || createTileElement(tile);
+    const element = tileElements.get(tile.id) || createTileElement(tile);
 
     element.classList.toggle("selected", tile.id === selectedTileId);
     element.classList.toggle("hinted", hintedTileIds.has(tile.id));
 
-    if (!element.isConnected) {
-      board.appendChild(element);
-    }
+    if (!element.isConnected) board.appendChild(element);
   }
 
   remainingCount.textContent = String(visibleTiles.length);
@@ -582,7 +608,6 @@ function selectTile(id) {
   hintedTileIds.clear();
 
   const tile = tiles.find(item => item.id === id);
-
   if (!tile || tile.removed || !isFree(tile, tiles)) return;
 
   if (selectedTileId !== null) {
@@ -664,7 +689,7 @@ function showHint() {
   const hint = findHint();
 
   if (!hint) {
-    showMessage(translate("noHint"), "wrong");
+    showMessage(translate("noHint"), "wrong", "noHint");
     render();
     return;
   }
@@ -684,8 +709,10 @@ function showHint() {
 function newGame() {
   clearHintTimer();
 
+  // Choose the layout once, when a new game is explicitly started.
   currentBoardMode =
     window.innerWidth < NARROW_LAYOUT_BREAKPOINT ? "narrow" : "wide";
+
   board.classList.toggle("narrow-board", currentBoardMode === "narrow");
   board.classList.toggle("wide-board", currentBoardMode === "wide");
 
@@ -694,11 +721,9 @@ function newGame() {
   undoStack = [];
   selectedTileId = null;
   hintedTileIds.clear();
-
-  // A new deal changes tile faces and positions, so discard the old elements.
   tileElements.clear();
-  board.replaceChildren();
 
+  board.replaceChildren();
   updateBoardScale();
   showMessage();
   render();
@@ -735,11 +760,16 @@ restartButton.addEventListener("click", restartGame);
 undoButton.addEventListener("click", undoMove);
 hintButton.addEventListener("click", showHint);
 
-window.addEventListener("resize", updateBoardMode);
-window.addEventListener("orientationchange", () => {
-  window.setTimeout(updateBoardMode, 100);
-});
-
 currentLanguage = getInitialLanguage();
 updateLanguage();
-newGame();
+
+/*
+ * Wait for the image preload pass before dealing the first game. Missing or
+ * failed images are handled by the Unicode fallback.
+ */
+preloadTileImages().then(() => {
+  newGameButton.disabled = false;
+  newGame();
+});
+
+newGameButton.disabled = true;
