@@ -4,10 +4,7 @@
    Constants
 ------------------------------------------------------------------ */
 
-let ROWS = 8;
-let COLS = 8;
-
-const animals = [
+const ANIMALS = [
   "🐙",
   "🪼",
   "🦪",
@@ -29,6 +26,13 @@ const DYNAMITE_POINTS_TIMED = 100;
 const DYNAMITE_CASCADE_LEVEL = 5;
 const MAX_PENDING_DYNAMITES = 2;
 
+const MATCH_ANIMATION_MS = 300;
+const REFILL_ANIMATION_MS = 180;
+const EXPLOSION_ANIMATION_MS = 250;
+const INVALID_SWAP_ANIMATION_MS = 250;
+const HINT_DURATION_MS = 2200;
+const RESHUFFLE_MESSAGE_MS = 1200;
+
 const LANGUAGE_STORAGE_KEY = "sea-matches-language";
 const BEST_RELAXED_STORAGE_KEY = "seaMatchesBestRelaxed";
 const BEST_TIMED_STORAGE_KEY = "seaMatchesBestTimed";
@@ -49,15 +53,12 @@ const translations = {
   en: {
     title: "Sea Matches",
     language: "Language",
-    mode: "Mode",
     modeRelaxed: "Relaxed",
     modeTimed: "Timed",
     score: "Score",
     moves: "Moves",
     time: "Time",
     bestScore: "Best",
-    hint: "Hint",
-    newGame: "New Game",
     instructions: "Click or swipe neighboring animals to match them.",
     match: count => `Great! ${count} animals matched!`,
     invalidSwap: "That swap did not make a match.",
@@ -72,15 +73,12 @@ const translations = {
   es: {
     title: "Parejas del Mar",
     language: "Idioma",
-    mode: "Modo",
     modeRelaxed: "Relajado",
     modeTimed: "Contrarreloj",
     score: "Puntos",
     moves: "Movimientos",
     time: "Tiempo",
     bestScore: "Récord",
-    hint: "Pista",
-    newGame: "Nuevo Juego",
     instructions: "Haz clic o desliza animales vecinos para combinarlos.",
     match: count => `¡Bien! ¡Has combinado ${count} animales!`,
     invalidSwap: "Ese movimiento no creó una combinación.",
@@ -95,15 +93,12 @@ const translations = {
   "zh-TW": {
     title: "深海群組",
     language: "語言",
-    mode: "模式",
     modeRelaxed: "休閒",
     modeTimed: "計時",
     score: "分數",
     moves: "步數",
     time: "時間",
     bestScore: "最佳",
-    hint: "提示",
-    newGame: "重新開始",
     instructions: "點擊或滑動相鄰動物以作配對",
     match: count => `成功配對 ${count} 隻動物！`,
     invalidSwap: "未能配對",
@@ -133,38 +128,46 @@ const timerElement = document.getElementById("timer");
 const bestScoreElement = document.getElementById("bestScore");
 
 /* ------------------------------------------------------------------
-   State
+   Game state
 ------------------------------------------------------------------ */
 
-let board = [];
-let selected = null;
-let score = 0;
-let moves = 0;
-let busy = false;
-let gameOverShown = false;
+const game = {
+  board: [],
+  rows: 8,
+  cols: 8,
 
-let currentLanguage = "en";
-let pointerStart = null;
-let audioContext = null;
-let hintCells = [];
+  selected: null,
+  score: 0,
+  moves: 0,
 
-let gameMode = "relaxed";
-let timeLeft = TIMED_START_SECONDS;
-let timerEndTime = null;
-let timerTimeout = null;
+  busy: false,
+  gameOver: false,
+  generation: 0,
 
-let bestScoreRelaxed = 0;
-let bestScoreTimed = 0;
+  mode: "relaxed",
+  timeLeft: TIMED_START_SECONDS,
+  timerEndTime: null,
 
-let resizeTimeout = null;
-let reshuffleCheckInterval = null;
-let wasPortrait = null;
+  language: "en",
+  pointerStart: null,
+  hintCells: [],
 
-let pointsSinceLastDynamite = 0;
-let pendingDynamites = [];
+  bestRelaxed: 0,
+  bestTimed: 0,
+
+  pointsSinceDynamite: 0,
+  pendingDynamites: []
+};
+
+const timers = {
+  hint: null,
+  message: null,
+  timer: null,
+  resize: null
+};
 
 /* ------------------------------------------------------------------
-   Safe storage helpers
+   Storage
 ------------------------------------------------------------------ */
 
 function readStorage(key, fallback = null) {
@@ -180,42 +183,51 @@ function writeStorage(key, value) {
   try {
     localStorage.setItem(key, String(value));
   } catch {
-    /* Storage may be unavailable; the game can continue normally. */
+    /* Storage may be unavailable. */
   }
 }
 
 function readScore(key) {
   const value = Number(readStorage(key, "0"));
-  return Number.isFinite(value) && value >= 0
-    ? Math.floor(value)
-    : 0;
+  return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
 }
 
 /* ------------------------------------------------------------------
-   Orientation / board size
+   Timers
 ------------------------------------------------------------------ */
 
-function isPortraitOrientation() {
-  return window.innerHeight > window.innerWidth;
+function clearTimer(timerName) {
+  if (timers[timerName] !== null) {
+    clearTimeout(timers[timerName]);
+    timers[timerName] = null;
+  }
 }
 
-function updateBoardSize() {
-  const portrait = isPortraitOrientation();
+function clearAllTimers() {
+  clearTimer("hint");
+  clearTimer("message");
+  clearTimer("timer");
+  clearTimer("resize");
+}
 
-  ROWS = portrait ? 10 : 7;
-  COLS = portrait ? 7 : 10;
-
-  document.documentElement.style.setProperty("--rows", String(ROWS));
-  document.documentElement.style.setProperty("--cols", String(COLS));
+function wait(milliseconds, generation = game.generation) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(generation === game.generation);
+    }, milliseconds);
+  });
 }
 
 /* ------------------------------------------------------------------
-   Language support
+   Language
 ------------------------------------------------------------------ */
 
 function getQueryLanguage() {
-  const params = new URLSearchParams(window.location.search);
-  const requested = params.get("lang")?.trim().toLowerCase();
+  const requested = new URLSearchParams(window.location.search)
+    .get("lang")
+    ?.trim()
+    .toLowerCase();
+
   return URL_LANGUAGE_MAP[requested] || null;
 }
 
@@ -225,29 +237,14 @@ function getSavedLanguage() {
 }
 
 function getBrowserLanguage() {
-  const browserLanguages = navigator.languages?.length
+  const languages = navigator.languages?.length
     ? navigator.languages
     : [navigator.language];
 
-  for (const language of browserLanguages) {
-    const normalized = String(language)
-      .toLowerCase()
-      .replace("_", "-");
+  for (const language of languages) {
+    const normalized = String(language).toLowerCase().replace("_", "-");
 
-    if (
-      normalized === "zh-tw" ||
-      normalized === "zh-hk" ||
-      normalized === "zh-mo" ||
-      normalized === "zh-hant" ||
-      normalized.startsWith("zh-tw-") ||
-      normalized.startsWith("zh-hk-") ||
-      normalized.startsWith("zh-mo-") ||
-      normalized.startsWith("zh-hant-") ||
-      normalized === "zh-cn" ||
-      normalized === "zh-hans" ||
-      normalized.startsWith("zh-cn-") ||
-      normalized.startsWith("zh-hans-")
-    ) {
+    if (normalized.startsWith("zh")) {
       return "zh-TW";
     }
 
@@ -263,34 +260,28 @@ function getBrowserLanguage() {
   return "en";
 }
 
-function getInitialLanguage() {
-  return getQueryLanguage() || getSavedLanguage() || getBrowserLanguage();
-}
-
 function translate(key, ...args) {
-  const language = translations[currentLanguage] || translations.en;
+  const language = translations[game.language] || translations.en;
   const value = language[key];
 
-  if (typeof value === "function") {
-    return value(...args);
-  }
-
-  return value ?? translations.en[key] ?? key;
+  return typeof value === "function"
+    ? value(...args)
+    : value ?? translations.en[key] ?? key;
 }
 
 function setLanguage(language) {
-  currentLanguage = SUPPORTED_LANGUAGES.includes(language)
+  game.language = SUPPORTED_LANGUAGES.includes(language)
     ? language
     : "en";
 
-  writeStorage(LANGUAGE_STORAGE_KEY, currentLanguage);
+  writeStorage(LANGUAGE_STORAGE_KEY, game.language);
 
   if (languageSelect) {
-    languageSelect.value = currentLanguage;
+    languageSelect.value = game.language;
   }
 
   document.documentElement.lang =
-    currentLanguage === "zh-TW" ? "zh-Hant" : currentLanguage;
+    game.language === "zh-TW" ? "zh-Hant" : game.language;
 
   document.documentElement.classList.remove(
     "lang-en",
@@ -299,25 +290,46 @@ function setLanguage(language) {
   );
 
   document.documentElement.classList.add(
-    `lang-${currentLanguage.toLowerCase()}`
+    `lang-${game.language.toLowerCase()}`
   );
 
   document.querySelectorAll("[data-i18n]").forEach(element => {
-    const key = element.dataset.i18n;
-    const translation = translations[currentLanguage][key];
+    const value = translations[game.language][element.dataset.i18n];
 
-    if (typeof translation === "string") {
-      element.textContent = translation;
+    if (typeof value === "string") {
+      element.textContent = value;
     }
   });
 
-  if (modeSelect && modeSelect.options.length >= 2) {
+  if (modeSelect?.options.length >= 2) {
     modeSelect.options[0].textContent = translate("modeRelaxed");
     modeSelect.options[1].textContent = translate("modeTimed");
   }
 
-  if (!busy && !gameOverShown && messageElement) {
-    messageElement.textContent = translate("instructions");
+  if (!game.busy && !game.gameOver) {
+    showMessage(translate("instructions"));
+  }
+}
+
+/* ------------------------------------------------------------------
+   Messages
+------------------------------------------------------------------ */
+
+function showMessage(text, autoClearMs = null) {
+  clearTimer("message");
+
+  if (messageElement) {
+    messageElement.textContent = text;
+  }
+
+  if (autoClearMs !== null) {
+    timers.message = setTimeout(() => {
+      timers.message = null;
+
+      if (!game.busy && !game.gameOver) {
+        showMessage(translate("instructions"));
+      }
+    }, autoClearMs);
   }
 }
 
@@ -325,19 +337,27 @@ function setLanguage(language) {
    Audio
 ------------------------------------------------------------------ */
 
+let audioContext = null;
+
 function getAudioContext() {
-  if (!audioContext) {
-    const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
-
-    if (!AudioContextClass) {
-      return null;
-    }
-
-    audioContext = new AudioContextClass();
+  if (audioContext) {
+    return audioContext;
   }
 
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextClass) {
+    return null;
+  }
+
+  audioContext = new AudioContextClass();
   return audioContext;
+}
+
+function resumeAudio(context) {
+  if (context.state === "suspended") {
+    context.resume().catch(() => {});
+  }
 }
 
 function playMatchSound(index = 0) {
@@ -347,9 +367,7 @@ function playMatchSound(index = 0) {
     return;
   }
 
-  if (context.state === "suspended") {
-    context.resume().catch(() => {});
-  }
+  resumeAudio(context);
 
   const oscillator = context.createOscillator();
   const gain = context.createGain();
@@ -374,8 +392,8 @@ function playMatchSound(index = 0) {
   oscillator.stop(startTime + 0.16);
 }
 
-function playMatchSounds(numberOfMatchedAnimals) {
-  const soundCount = Math.max(1, numberOfMatchedAnimals - 2);
+function playMatchSounds(matchCount) {
+  const soundCount = Math.max(1, matchCount - 2);
 
   for (let index = 0; index < soundCount; index++) {
     playMatchSound(index);
@@ -389,9 +407,7 @@ function playDynamiteSound() {
     return;
   }
 
-  if (context.state === "suspended") {
-    context.resume().catch(() => {});
-  }
+  resumeAudio(context);
 
   const time = context.currentTime;
 
@@ -412,7 +428,7 @@ function playDynamiteSound() {
   oscillator.start(time);
   oscillator.stop(time + 0.36);
 
-  const bufferSize = context.sampleRate * 0.4;
+  const bufferSize = Math.floor(context.sampleRate * 0.4);
   const buffer = context.createBuffer(1, bufferSize, context.sampleRate);
   const data = buffer.getChannelData(0);
 
@@ -440,342 +456,224 @@ function playDynamiteSound() {
   noise.start(time);
   noise.stop(time + 0.4);
 
-  if (navigator.vibrate) {
-    navigator.vibrate(200);
-  }
+  navigator.vibrate?.(200);
 }
 
 /* ------------------------------------------------------------------
-   Utility functions
+   Board size
+------------------------------------------------------------------ */
+
+function isPortrait() {
+  return window.innerHeight > window.innerWidth;
+}
+
+function updateBoardSize() {
+  const portrait = isPortrait();
+
+  game.rows = portrait ? 10 : 7;
+  game.cols = portrait ? 7 : 10;
+
+  document.documentElement.style.setProperty("--rows", String(game.rows));
+  document.documentElement.style.setProperty("--cols", String(game.cols));
+}
+
+/* ------------------------------------------------------------------
+   Board helpers
 ------------------------------------------------------------------ */
 
 function randomAnimal() {
-  return animals[Math.floor(Math.random() * animals.length)];
+  return ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
 }
 
-function wait(milliseconds) {
-  return new Promise(resolve => {
-    setTimeout(resolve, milliseconds);
-  });
+function createEmptyBoard() {
+  return Array.from(
+    { length: game.rows },
+    () => Array.from({ length: game.cols }, () => null)
+  );
 }
 
-function getBestScore() {
-  return gameMode === "relaxed"
-    ? bestScoreRelaxed
-    : bestScoreTimed;
+function createRandomBoard() {
+  return Array.from(
+    { length: game.rows },
+    () => Array.from({ length: game.cols }, randomAnimal)
+  );
 }
 
-function updateBestScore() {
-  if (score <= getBestScore()) {
-    return;
-  }
+function swapCells(first, second) {
+  const firstValue = game.board[first.row][first.col];
+  const secondValue = game.board[second.row][second.col];
 
-  if (gameMode === "relaxed") {
-    bestScoreRelaxed = score;
-    writeStorage(BEST_RELAXED_STORAGE_KEY, bestScoreRelaxed);
-  } else {
-    bestScoreTimed = score;
-    writeStorage(BEST_TIMED_STORAGE_KEY, bestScoreTimed);
-  }
+  game.board[first.row][first.col] = secondValue;
+  game.board[second.row][first.col === second.col ? first.col : second.col] =
+    firstValue;
 }
 
-function formatTime(seconds) {
-  return String(Math.max(0, Math.ceil(seconds))).padStart(2, "0");
+function areNeighbors(first, second) {
+  return (
+    Math.abs(first.row - second.row) +
+      Math.abs(first.col - second.col) ===
+    1
+  );
 }
 
-function updateTimerDisplay() {
-  if (!timerWrap || !timerElement) {
-    return;
-  }
-
-  if (gameMode === "timed") {
-    timerWrap.hidden = false;
-    timerElement.textContent = formatTime(timeLeft);
-  } else {
-    timerWrap.hidden = true;
-  }
+function isInsideBoard(row, col) {
+  return row >= 0 && row < game.rows && col >= 0 && col < game.cols;
 }
 
-function addTime(seconds) {
-  if (gameMode !== "timed" || gameOverShown || seconds <= 0) {
-    return;
-  }
-
-  timeLeft = Math.min(TIMED_MAX_SECONDS, timeLeft + seconds);
-
-  if (timerEndTime !== null) {
-    timerEndTime += seconds * 1000;
-  }
-
-  updateTimerDisplay();
-}
-
-function scheduleTimerTick() {
-  if (gameMode !== "timed" || gameOverShown || timerEndTime === null) {
-    return;
-  }
-
-  const millisecondsRemaining = timerEndTime - Date.now();
-
-  if (millisecondsRemaining <= 0) {
-    timeLeft = 0;
-    updateTimerDisplay();
-    showTimeUp();
-    return;
-  }
-
-  timeLeft = millisecondsRemaining / 1000;
-  updateTimerDisplay();
-
-  const nextUpdate = millisecondsRemaining % 1000 || 1000;
-  timerTimeout = setTimeout(scheduleTimerTick, nextUpdate);
-}
-
-function startTimer() {
-  stopTimer();
-
-  if (gameMode !== "timed") {
-    return;
-  }
-
-  timeLeft = TIMED_START_SECONDS;
-  timerEndTime = Date.now() + TIMED_START_SECONDS * 1000;
-
-  updateTimerDisplay();
-  scheduleTimerTick();
-}
-
-function stopTimer() {
-  if (timerTimeout !== null) {
-    clearTimeout(timerTimeout);
-    timerTimeout = null;
-  }
-
-  timerEndTime = null;
-  updateTimerDisplay();
+function cellKey(row, col) {
+  return `${row},${col}`;
 }
 
 /* ------------------------------------------------------------------
-   Board setup and rendering
+   Matching
 ------------------------------------------------------------------ */
-
-function createBoard() {
-  gameOverShown = false;
-  selected = null;
-  busy = false;
-  pointerStart = null;
-  hintCells = [];
-  pointsSinceLastDynamite = 0;
-  pendingDynamites = [];
-
-  do {
-    board = Array.from(
-      { length: ROWS },
-      () => Array.from({ length: COLS }, randomAnimal)
-    );
-  } while (findMatches().size > 0);
-
-  render();
-}
-
-function render() {
-  if (!boardElement) {
-    return;
-  }
-
-  boardElement.innerHTML = "";
-
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      const cell = document.createElement("button");
-
-      cell.type = "button";
-      cell.className = "cell";
-      cell.dataset.row = row;
-      cell.dataset.col = col;
-
-      const value = board[row][col];
-      cell.textContent = value || "";
-
-      cell.setAttribute(
-        "aria-label",
-        value
-          ? value === DYNAMITE
-            ? "Dynamite"
-            : `Animal ${value}`
-          : "Empty"
-      );
-
-      if (!value) {
-        cell.classList.add("empty");
-      }
-
-      if (value === DYNAMITE) {
-        cell.classList.add("dynamite");
-      }
-
-      if (
-        selected &&
-        selected.row === row &&
-        selected.col === col
-      ) {
-        cell.classList.add("selected");
-      }
-
-      if (
-        hintCells.some(
-          hint => hint.row === row && hint.col === col
-        )
-      ) {
-        cell.classList.add("hint");
-      }
-
-      boardElement.appendChild(cell);
-    }
-  }
-
-  if (scoreElement) {
-    scoreElement.textContent = score;
-  }
-
-  if (movesElement) {
-    movesElement.textContent = moves;
-  }
-
-  if (bestScoreElement) {
-    bestScoreElement.textContent = getBestScore();
-  }
-
-  updateTimerDisplay();
-}
-
-/* ------------------------------------------------------------------
-   Matching logic
------------------------------------------------------------------- */
-
-function swap(first, second) {
-  [
-    board[first.row][first.col],
-    board[second.row][second.col]
-  ] = [
-    board[second.row][second.col],
-    board[first.row][first.col]
-  ];
-}
 
 function findMatches() {
   const matches = new Set();
 
-  for (let row = 0; row < ROWS; row++) {
-    let start = 0;
+  for (let row = 0; row < game.rows; row++) {
+    let runStart = 0;
 
-    for (let col = 1; col <= COLS; col++) {
-      const same =
-        col < COLS &&
-        board[row][col] &&
-        board[row][col] === board[row][start];
+    for (let col = 1; col <= game.cols; col++) {
+      const current = game.board[row][col];
+      const previous = game.board[row][runStart];
 
-      if (!same) {
-        if (col - start >= 3 && board[row][start]) {
-          for (let x = start; x < col; x++) {
-            matches.add(`${row},${x}`);
-          }
-        }
-
-        start = col;
+      if (col < game.cols && current && current === previous) {
+        continue;
       }
+
+      if (col - runStart >= 3 && previous) {
+        for (let matchCol = runStart; matchCol < col; matchCol++) {
+          matches.add(cellKey(row, matchCol));
+        }
+      }
+
+      runStart = col;
     }
   }
 
-  for (let col = 0; col < COLS; col++) {
-    let start = 0;
+  for (let col = 0; col < game.cols; col++) {
+    let runStart = 0;
 
-    for (let row = 1; row <= ROWS; row++) {
-      const same =
-        row < ROWS &&
-        board[row][col] &&
-        board[row][col] === board[start][col];
+    for (let row = 1; row <= game.rows; row++) {
+      const current = game.board[row]?.[col];
+      const previous = game.board[runStart][col];
 
-      if (!same) {
-        if (row - start >= 3 && board[start][col]) {
-          for (let y = start; y < row; y++) {
-            matches.add(`${y},${col}`);
-          }
-        }
-
-        start = row;
+      if (row < game.rows && current && current === previous) {
+        continue;
       }
+
+      if (row - runStart >= 3 && previous) {
+        for (let matchRow = runStart; matchRow < row; matchRow++) {
+          matches.add(cellKey(matchRow, col));
+        }
+      }
+
+      runStart = row;
     }
   }
 
   return matches;
 }
 
-/* ------------------------------------------------------------------
-   Dynamite queue and refilling
------------------------------------------------------------------- */
+function findPossibleMove() {
+  for (let row = 0; row < game.rows; row++) {
+    for (let col = 0; col < game.cols; col++) {
+      const first = { row, col };
 
-function queueDynamite() {
-  if (pendingDynamites.length >= MAX_PENDING_DYNAMITES) {
-    return;
-  }
+      for (const direction of [
+        { row: 0, col: 1 },
+        { row: 1, col: 0 }
+      ]) {
+        const second = {
+          row: row + direction.row,
+          col: col + direction.col
+        };
 
-  pendingDynamites.push(DYNAMITE);
-}
+        if (
+          !isInsideBoard(second.row, second.col) ||
+          !game.board[first.row][first.col] ||
+          !game.board[second.row][second.col]
+        ) {
+          continue;
+        }
 
-function getEmptyCells() {
-  const emptyCells = [];
+        swapCells(first, second);
+        const createsMatch = findMatches().size > 0;
+        swapCells(first, second);
 
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (board[row][col] === null) {
-        emptyCells.push({ row, col });
+        if (createsMatch) {
+          return { first, second };
+        }
       }
     }
   }
 
-  return emptyCells;
+  return null;
+}
+
+/* ------------------------------------------------------------------
+   Refilling
+------------------------------------------------------------------ */
+
+function getEmptyCells() {
+  const cells = [];
+
+  for (let row = 0; row < game.rows; row++) {
+    for (let col = 0; col < game.cols; col++) {
+      if (game.board[row][col] === null) {
+        cells.push({ row, col });
+      }
+    }
+  }
+
+  return cells;
+}
+
+function queueDynamite() {
+  if (game.pendingDynamites.length < MAX_PENDING_DYNAMITES) {
+    game.pendingDynamites.push(DYNAMITE);
+  }
 }
 
 function placePendingDynamites() {
-  while (pendingDynamites.length > 0) {
+  while (game.pendingDynamites.length > 0) {
     const emptyCells = getEmptyCells();
 
     if (emptyCells.length === 0) {
       return;
     }
 
-    const cell =
-      emptyCells[
-        Math.floor(Math.random() * emptyCells.length)
-      ];
+    const cell = emptyCells[
+      Math.floor(Math.random() * emptyCells.length)
+    ];
 
-    board[cell.row][cell.col] = pendingDynamites.shift();
+    game.board[cell.row][cell.col] = game.pendingDynamites.shift();
   }
 }
 
 function collapseColumns() {
-  for (let col = 0; col < COLS; col++) {
+  for (let col = 0; col < game.cols; col++) {
     const remaining = [];
 
-    for (let row = ROWS - 1; row >= 0; row--) {
-      if (board[row][col] !== null) {
-        remaining.push(board[row][col]);
+    for (let row = game.rows - 1; row >= 0; row--) {
+      if (game.board[row][col] !== null) {
+        remaining.push(game.board[row][col]);
       }
     }
 
-    for (let row = ROWS - 1; row >= 0; row--) {
-      const indexFromBottom = ROWS - 1 - row;
-      board[row][col] = remaining[indexFromBottom] ?? null;
+    for (let row = game.rows - 1; row >= 0; row--) {
+      const remainingIndex = game.rows - 1 - row;
+      game.board[row][col] = remaining[remainingIndex] ?? null;
     }
   }
 }
 
 function fillEmptyCells() {
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (board[row][col] === null) {
-        board[row][col] = randomAnimal();
+  for (let row = 0; row < game.rows; row++) {
+    for (let col = 0; col < game.cols; col++) {
+      if (game.board[row][col] === null) {
+        game.board[row][col] = randomAnimal();
       }
     }
   }
@@ -788,12 +686,105 @@ function refillBoard() {
 }
 
 /* ------------------------------------------------------------------
-   Scoring
+   Rendering
 ------------------------------------------------------------------ */
 
-function scoreForMatch(count, cascadeLevel) {
-  const basePoints = Math.max(1, count - 2);
-  return basePoints * cascadeLevel;
+function render() {
+  if (!boardElement) {
+    return;
+  }
+
+  boardElement.innerHTML = "";
+
+  for (let row = 0; row < game.rows; row++) {
+    for (let col = 0; col < game.cols; col++) {
+      const value = game.board[row][col];
+      const cell = document.createElement("button");
+
+      cell.type = "button";
+      cell.className = "cell";
+      cell.dataset.row = String(row);
+      cell.dataset.col = String(col);
+      cell.textContent = value ?? "";
+
+      cell.setAttribute(
+        "aria-label",
+        value === DYNAMITE
+          ? "Dynamite"
+          : value
+            ? `Animal ${value}`
+            : "Empty"
+      );
+
+      if (!value) {
+        cell.classList.add("empty");
+      }
+
+      if (value === DYNAMITE) {
+        cell.classList.add("dynamite");
+      }
+
+      if (
+        game.selected &&
+        game.selected.row === row &&
+        game.selected.col === col
+      ) {
+        cell.classList.add("selected");
+      }
+
+      if (
+        game.hintCells.some(
+          hintCell => hintCell.row === row && hintCell.col === col
+        )
+      ) {
+        cell.classList.add("hint");
+      }
+
+      boardElement.appendChild(cell);
+    }
+  }
+
+  if (scoreElement) {
+    scoreElement.textContent = game.score;
+  }
+
+  if (movesElement) {
+    movesElement.textContent = game.moves;
+  }
+
+  if (bestScoreElement) {
+    bestScoreElement.textContent = getBestScore();
+  }
+
+  updateTimerDisplay();
+}
+
+/* ------------------------------------------------------------------
+   Scoring and best scores
+------------------------------------------------------------------ */
+
+function getBestScore() {
+  return game.mode === "relaxed"
+    ? game.bestRelaxed
+    : game.bestTimed;
+}
+
+function updateBestScore() {
+  if (game.score <= getBestScore()) {
+    return;
+  }
+
+  if (game.mode === "relaxed") {
+    game.bestRelaxed = game.score;
+    writeStorage(BEST_RELAXED_STORAGE_KEY, game.bestRelaxed);
+  } else {
+    game.bestTimed = game.score;
+    writeStorage(BEST_TIMED_STORAGE_KEY, game.bestTimed);
+  }
+}
+
+function scoreForMatch(matchCount, cascadeLevel) {
+  return Math.max(1, matchCount - 2) * cascadeLevel;
 }
 
 function addScore(points) {
@@ -801,21 +792,21 @@ function addScore(points) {
     return;
   }
 
-  score += points;
+  game.score += points;
 
-  if (gameMode === "timed") {
+  if (game.mode === "timed") {
     addTime(points * TIME_PER_POINT);
   }
 
-  pointsSinceLastDynamite += points;
+  game.pointsSinceDynamite += points;
 
   const threshold =
-    gameMode === "timed"
+    game.mode === "timed"
       ? DYNAMITE_POINTS_TIMED
       : DYNAMITE_POINTS_RELAXED;
 
-  while (pointsSinceLastDynamite >= threshold) {
-    pointsSinceLastDynamite -= threshold;
+  while (game.pointsSinceDynamite >= threshold) {
+    game.pointsSinceDynamite -= threshold;
     queueDynamite();
   }
 
@@ -823,14 +814,106 @@ function addScore(points) {
 }
 
 /* ------------------------------------------------------------------
-   Game flow
+   Timer
 ------------------------------------------------------------------ */
 
-async function resolveMatches() {
+function formatTime(seconds) {
+  return String(Math.max(0, Math.ceil(seconds))).padStart(2, "0");
+}
+
+function updateTimerDisplay() {
+  if (!timerWrap || !timerElement) {
+    return;
+  }
+
+  if (game.mode !== "timed") {
+    timerWrap.hidden = true;
+    return;
+  }
+
+  timerWrap.hidden = false;
+  timerElement.textContent = formatTime(game.timeLeft);
+}
+
+function addTime(seconds) {
+  if (
+    game.mode !== "timed" ||
+    game.gameOver ||
+    seconds <= 0
+  ) {
+    return;
+  }
+
+  game.timeLeft = Math.min(
+    TIMED_MAX_SECONDS,
+    game.timeLeft + seconds
+  );
+
+  if (game.timerEndTime !== null) {
+    game.timerEndTime += seconds * 1000;
+  }
+
+  updateTimerDisplay();
+}
+
+function stopTimer() {
+  clearTimer("timer");
+  game.timerEndTime = null;
+  updateTimerDisplay();
+}
+
+function scheduleTimerTick() {
+  if (
+    game.mode !== "timed" ||
+    game.gameOver ||
+    game.timerEndTime === null
+  ) {
+    return;
+  }
+
+  const millisecondsRemaining = game.timerEndTime - Date.now();
+
+  if (millisecondsRemaining <= 0) {
+    game.timeLeft = 0;
+    updateTimerDisplay();
+    finishGame("timeUp");
+    return;
+  }
+
+  game.timeLeft = millisecondsRemaining / 1000;
+  updateTimerDisplay();
+
+  const nextTick = millisecondsRemaining % 1000 || 1000;
+
+  timers.timer = setTimeout(() => {
+    timers.timer = null;
+    scheduleTimerTick();
+  }, nextTick);
+}
+
+function startTimer() {
+  stopTimer();
+
+  if (game.mode !== "timed") {
+    return;
+  }
+
+  game.timeLeft = TIMED_START_SECONDS;
+  game.timerEndTime = Date.now() + TIMED_START_SECONDS * 1000;
+
+  updateTimerDisplay();
+  scheduleTimerTick();
+}
+
+/* ------------------------------------------------------------------
+   Match resolution
+------------------------------------------------------------------ */
+
+async function resolveMatches(generation) {
   let cascadeLevel = 1;
   let pointsThisMove = 0;
 
-  while (true) {
+  while (generation === game.generation) {
     const matches = findMatches();
 
     if (matches.size === 0) {
@@ -839,97 +922,90 @@ async function resolveMatches() {
 
     playMatchSounds(matches.size);
 
-    const cells = [...document.querySelectorAll(".cell")];
+    const cells = [...boardElement.querySelectorAll(".cell")];
 
     for (const match of matches) {
       const [row, col] = match.split(",").map(Number);
-      cells[row * COLS + col]?.classList.add("matched");
+      cells[row * game.cols + col]?.classList.add("matched");
     }
 
     pointsThisMove += scoreForMatch(matches.size, cascadeLevel);
+    showMessage(translate("match", matches.size));
 
-    if (messageElement) {
-      messageElement.textContent =
-        translate("match", matches.size);
+    const stillCurrent = await wait(MATCH_ANIMATION_MS, generation);
+
+    if (!stillCurrent) {
+      return;
     }
-
-    await wait(300);
 
     for (const match of matches) {
       const [row, col] = match.split(",").map(Number);
-      board[row][col] = null;
+      game.board[row][col] = null;
     }
 
     refillBoard();
     render();
 
-    await wait(180);
+    const continueCascade = await wait(REFILL_ANIMATION_MS, generation);
+
+    if (!continueCascade) {
+      return;
+    }
 
     cascadeLevel++;
   }
 
-  if (pointsThisMove > 0) {
-    addScore(pointsThisMove);
-
-    if (cascadeLevel >= DYNAMITE_CASCADE_LEVEL) {
-      queueDynamite();
-    }
-
-    refillBoard();
-    render();
+  if (generation !== game.generation || pointsThisMove <= 0) {
+    return;
   }
+
+  addScore(pointsThisMove);
+
+  if (cascadeLevel >= DYNAMITE_CASCADE_LEVEL) {
+    queueDynamite();
+  }
+
+  refillBoard();
+  render();
 }
 
 /* ------------------------------------------------------------------
-   Dynamite logic
+   Dynamite
 ------------------------------------------------------------------ */
 
 function boardHasDynamite() {
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (board[row][col] === DYNAMITE) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return game.board.some(row => row.includes(DYNAMITE));
 }
 
-function clearCell(row, col, explodedSet) {
-  const key = `${row},${col}`;
-
+function clearCell(row, col, clearedCells) {
   if (
-    explodedSet.has(key) ||
-    row < 0 ||
-    row >= ROWS ||
-    col < 0 ||
-    col >= COLS ||
-    !board[row][col]
+    !isInsideBoard(row, col) ||
+    clearedCells.has(cellKey(row, col)) ||
+    !game.board[row][col]
   ) {
     return false;
   }
 
-  explodedSet.add(key);
-  board[row][col] = null;
+  clearedCells.add(cellKey(row, col));
+  game.board[row][col] = null;
 
   return true;
 }
 
-function triggerDynamiteExplosion(row, col, explodedSet) {
-  const toExplode = [{ row, col }];
-  let totalCleared = 0;
+function triggerDynamiteExplosion(row, col) {
+  const clearedCells = new Set();
+  const cellsToProcess = [{ row, col }];
+  let clearedCount = 0;
 
-  while (toExplode.length > 0) {
-    const current = toExplode.pop();
-    const currentKey = `${current.row},${current.col}`;
+  while (cellsToProcess.length > 0) {
+    const current = cellsToProcess.pop();
 
-    if (explodedSet.has(currentKey)) {
+    if (clearedCells.has(cellKey(current.row, current.col))) {
       continue;
     }
 
-    if (clearCell(current.row, current.col, explodedSet)) {
-      totalCleared++;
+    if (clearCell(current.row, current.col, clearedCells)) {
+      clearedCount++;
     }
 
     for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
@@ -937,29 +1013,18 @@ function triggerDynamiteExplosion(row, col, explodedSet) {
         const neighborRow = current.row + rowOffset;
         const neighborCol = current.col + colOffset;
 
-        if (
-          neighborRow < 0 ||
-          neighborRow >= ROWS ||
-          neighborCol < 0 ||
-          neighborCol >= COLS
-        ) {
+        if (!isInsideBoard(neighborRow, neighborCol)) {
           continue;
         }
 
-        const neighborKey = `${neighborRow},${neighborCol}`;
+        const neighborValue = game.board[neighborRow][neighborCol];
 
-        if (explodedSet.has(neighborKey)) {
-          continue;
-        }
-
-        const neighborValue = board[neighborRow][neighborCol];
-
-        if (clearCell(neighborRow, neighborCol, explodedSet)) {
-          totalCleared++;
+        if (clearCell(neighborRow, neighborCol, clearedCells)) {
+          clearedCount++;
         }
 
         if (neighborValue === DYNAMITE) {
-          toExplode.push({
+          cellsToProcess.push({
             row: neighborRow,
             col: neighborCol
           });
@@ -968,229 +1033,220 @@ function triggerDynamiteExplosion(row, col, explodedSet) {
     }
   }
 
-  return totalCleared;
+  return { clearedCells, clearedCount };
 }
 
 function clearEntireBoard() {
-  let count = 0;
+  let clearedCount = 0;
 
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (board[row][col]) {
-        board[row][col] = null;
-        count++;
+  for (let row = 0; row < game.rows; row++) {
+    for (let col = 0; col < game.cols; col++) {
+      if (game.board[row][col]) {
+        game.board[row][col] = null;
+        clearedCount++;
       }
     }
   }
 
-  return count;
+  return clearedCount;
 }
 
-/* ------------------------------------------------------------------
-   Explosion resolution
------------------------------------------------------------------- */
+async function resolveExplosion(clearedCount, generation) {
+  addScore(clearedCount);
 
-async function resolveExplosion(cleared, message) {
-  addScore(cleared);
-
-  if (messageElement) {
-    messageElement.textContent = message;
-  }
-
+  showMessage(translate("dynamiteCleared", clearedCount));
   render();
-  await wait(250);
+
+  if (!await wait(EXPLOSION_ANIMATION_MS, generation)) {
+    return;
+  }
 
   refillBoard();
   render();
-  await wait(180);
 
-  await resolveMatches();
-  await checkAfterMove();
+  if (!await wait(REFILL_ANIMATION_MS, generation)) {
+    return;
+  }
+
+  await resolveMatches(generation);
+  await checkAfterMove(generation);
 }
 
 /* ------------------------------------------------------------------
-   Swaps and interactions
+   Moves
 ------------------------------------------------------------------ */
 
-async function attemptSwap(first, second) {
-  const firstValue = board[first.row][first.col];
-  const secondValue = board[second.row][second.col];
+async function attemptSwap(first, second, generation) {
+  const firstValue = game.board[first.row][first.col];
+  const secondValue = game.board[second.row][second.col];
 
   if (firstValue === DYNAMITE && secondValue === DYNAMITE) {
-    swap(first, second);
+    swapCells(first, second);
     render();
 
-    await wait(150);
+    if (!await wait(150, generation)) {
+      return;
+    }
+
     playDynamiteSound();
-
-    const cleared = clearEntireBoard();
-
-    await resolveExplosion(
-      cleared,
-      translate("dynamiteCleared", cleared)
-    );
+    await resolveExplosion(clearEntireBoard(), generation);
 
     return;
   }
 
   if (firstValue === DYNAMITE || secondValue === DYNAMITE) {
     const dynamiteCell = firstValue === DYNAMITE ? first : second;
-    const animalCell = firstValue === DYNAMITE ? second : first;
     const animalValue =
       firstValue === DYNAMITE ? secondValue : firstValue;
 
-    swap(first, second);
+    swapCells(first, second);
     render();
 
-    await wait(150);
+    if (!await wait(150, generation)) {
+      return;
+    }
+
     playDynamiteSound();
 
-    const explodedSet = new Set();
+    const { clearedCells, clearedCount } =
+      triggerDynamiteExplosion(dynamiteCell.row, dynamiteCell.col);
 
-    triggerDynamiteExplosion(
-      dynamiteCell.row,
-      dynamiteCell.col,
-      explodedSet
-    );
-
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        if (board[row][col] === animalValue) {
-          clearCell(row, col, explodedSet);
+    for (let row = 0; row < game.rows; row++) {
+      for (let col = 0; col < game.cols; col++) {
+        if (game.board[row][col] === animalValue) {
+          clearCell(row, col, clearedCells);
         }
       }
     }
 
-    const cleared = explodedSet.size;
-
-    await resolveExplosion(
-      cleared,
-      translate("dynamiteCleared", cleared)
-    );
+    await resolveExplosion(clearedCount, generation);
 
     return;
   }
 
-  swap(first, second);
+  swapCells(first, second);
   render();
 
   if (findMatches().size === 0) {
-    await wait(250);
-
-    swap(first, second);
-    moves--;
-
-    if (messageElement) {
-      messageElement.textContent = translate("invalidSwap");
+    if (!await wait(INVALID_SWAP_ANIMATION_MS, generation)) {
+      return;
     }
 
+    swapCells(first, second);
+    game.moves--;
+    showMessage(translate("invalidSwap"));
     render();
-    busy = false;
+
+    endMove();
     return;
   }
 
-  await resolveMatches();
-  await checkAfterMove();
+  await resolveMatches(generation);
+  await checkAfterMove(generation);
 }
 
-async function checkAfterMove() {
-  if (gameOverShown) {
-    busy = false;
+async function checkAfterMove(generation) {
+  if (generation !== game.generation) {
+    return;
+  }
+
+  if (game.gameOver) {
+    endMove();
     return;
   }
 
   if (!findPossibleMove()) {
-    if (gameMode === "relaxed" && !boardHasDynamite()) {
-      showGameOver();
-      busy = false;
+    if (game.mode === "relaxed" && !boardHasDynamite()) {
+      finishGame("noMoves");
       return;
     }
 
     reshuffleBoard();
-    busy = false;
+    endMove();
     return;
   }
 
-  busy = false;
+  endMove();
+}
 
-  if (messageElement) {
-    messageElement.textContent = translate("instructions");
+function endMove() {
+  game.busy = false;
+
+  if (!game.gameOver) {
+    showMessage(translate("instructions"));
   }
 }
 
 /* ------------------------------------------------------------------
-   Input handling
+   Input
 ------------------------------------------------------------------ */
 
-function areNeighbors(first, second) {
-  return (
-    Math.abs(first.row - second.row) +
-      Math.abs(first.col - second.col) ===
-    1
-  );
-}
-
-async function handleDynamiteClick(row, col) {
-  if (busy || gameOverShown) {
+function handleDynamiteClick(row, col) {
+  if (game.busy || game.gameOver) {
     return;
   }
 
-  busy = true;
+  const generation = ++game.generation;
+
+  game.busy = true;
+  clearHint();
+
   playDynamiteSound();
 
-  const explodedSet = new Set();
-  const cleared = triggerDynamiteExplosion(row, col, explodedSet);
+  const { clearedCount } = triggerDynamiteExplosion(row, col);
 
-  await resolveExplosion(
-    cleared,
-    translate("dynamiteCleared", cleared)
-  );
+  resolveExplosion(clearedCount, generation);
 }
 
 function handleTap(row, col) {
-  if (gameOverShown || busy) {
+  if (game.gameOver || game.busy) {
     return;
   }
 
-  const cellValue = board[row][col];
+  const value = game.board[row][col];
 
-  if (!cellValue) {
+  if (!value) {
     return;
   }
 
-  if (cellValue === DYNAMITE) {
-    moves++;
+  if (value === DYNAMITE) {
+    game.moves++;
+    render();
     handleDynamiteClick(row, col);
     return;
   }
 
-  if (!selected) {
-    selected = { row, col };
+  if (!game.selected) {
+    game.selected = { row, col };
     render();
     return;
   }
 
-  if (selected.row === row && selected.col === col) {
-    selected = null;
+  if (game.selected.row === row && game.selected.col === col) {
+    game.selected = null;
     render();
     return;
   }
 
   const second = { row, col };
 
-  if (!areNeighbors(selected, second)) {
-    selected = second;
+  if (!areNeighbors(game.selected, second)) {
+    game.selected = second;
     render();
     return;
   }
 
-  const first = selected;
+  const first = game.selected;
 
-  selected = null;
-  moves++;
-  busy = true;
+  game.selected = null;
+  game.moves++;
+  game.busy = true;
+  clearHint();
 
-  attemptSwap(first, second);
+  render();
+
+  const generation = ++game.generation;
+  attemptSwap(first, second, generation);
 }
 
 function handleSwipe(start, endX, endY) {
@@ -1213,33 +1269,27 @@ function handleSwipe(start, endX, endY) {
   }
 
   const validTarget =
-    targetRow >= 0 &&
-    targetRow < ROWS &&
-    targetCol >= 0 &&
-    targetCol < COLS &&
-    board[targetRow][targetCol];
+    isInsideBoard(targetRow, targetCol) &&
+    game.board[targetRow][targetCol];
 
-  if (!validTarget || busy || gameOverShown) {
-    selected = null;
+  if (!validTarget || game.busy || game.gameOver) {
+    game.selected = null;
     render();
     return;
   }
 
-  const first = {
-    row: start.row,
-    col: start.col
-  };
+  const first = { row: start.row, col: start.col };
+  const second = { row: targetRow, col: targetCol };
 
-  const second = {
-    row: targetRow,
-    col: targetCol
-  };
+  game.selected = null;
+  game.moves++;
+  game.busy = true;
+  clearHint();
 
-  selected = null;
-  moves++;
-  busy = true;
+  render();
 
-  attemptSwap(first, second);
+  const generation = ++game.generation;
+  attemptSwap(first, second, generation);
 }
 
 /* ------------------------------------------------------------------
@@ -1250,18 +1300,18 @@ if (boardElement) {
   boardElement.addEventListener("pointerdown", event => {
     const cell = event.target.closest(".cell");
 
-    if (!cell || busy || gameOverShown) {
+    if (!cell || game.busy || game.gameOver) {
       return;
     }
 
     const row = Number(cell.dataset.row);
     const col = Number(cell.dataset.col);
 
-    if (!board[row][col]) {
+    if (!game.board[row][col]) {
       return;
     }
 
-    pointerStart = {
+    game.pointerStart = {
       row,
       col,
       x: event.clientX,
@@ -1272,126 +1322,46 @@ if (boardElement) {
   });
 
   boardElement.addEventListener("pointerup", event => {
-    if (!pointerStart) {
+    if (!game.pointerStart) {
       return;
     }
 
-    const start = { ...pointerStart };
-    pointerStart = null;
+    const start = { ...game.pointerStart };
+    game.pointerStart = null;
 
     handleSwipe(start, event.clientX, event.clientY);
   });
 
   boardElement.addEventListener("pointercancel", () => {
-    pointerStart = null;
+    game.pointerStart = null;
   });
-}
-
-/* ------------------------------------------------------------------
-   Possible moves / reshuffling
------------------------------------------------------------------- */
-
-function findPossibleMove() {
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      const first = { row, col };
-
-      for (const direction of [
-        { row: 0, col: 1 },
-        { row: 1, col: 0 }
-      ]) {
-        const second = {
-          row: row + direction.row,
-          col: col + direction.col
-        };
-
-        if (
-          second.row >= ROWS ||
-          second.col >= COLS ||
-          !board[first.row][first.col] ||
-          !board[second.row][second.col]
-        ) {
-          continue;
-        }
-
-        swap(first, second);
-        const createsMatch = findMatches().size > 0;
-        swap(first, second);
-
-        if (createsMatch) {
-          return { first, second };
-        }
-      }
-    }
-  }
-
-  return null;
-}
-
-function createPlayableBoard() {
-  do {
-    board = Array.from(
-      { length: ROWS },
-      () => Array.from({ length: COLS }, randomAnimal)
-    );
-  } while (
-    findMatches().size > 0 ||
-    !findPossibleMove()
-  );
-}
-
-function reshuffleBoard() {
-  createPlayableBoard();
-
-  selected = null;
-  hintCells = [];
-
-  if (gameMode === "timed") {
-    addTime(RESHUFFLE_BONUS_SECONDS);
-  }
-
-  render();
-
-  if (messageElement) {
-    messageElement.textContent = translate("reshuffled");
-
-    setTimeout(() => {
-      if (!busy && !gameOverShown) {
-        messageElement.textContent = translate("instructions");
-      }
-    }, 1200);
-  }
 }
 
 /* ------------------------------------------------------------------
    Hint
 ------------------------------------------------------------------ */
 
+function clearHint() {
+  clearTimer("hint");
+  game.hintCells = [];
+}
+
 function showHint() {
-  if (busy || gameOverShown) {
+  if (game.busy || game.gameOver) {
     return;
   }
 
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (board[row][col] === DYNAMITE) {
-        hintCells = [{ row, col }];
+  // Important: cancel any previous hint before showing another one.
+  clearHint();
 
-        if (messageElement) {
-          messageElement.textContent = translate("dynamiteHint");
-        }
+  for (let row = 0; row < game.rows; row++) {
+    for (let col = 0; col < game.cols; col++) {
+      if (game.board[row][col] === DYNAMITE) {
+        game.hintCells = [{ row, col }];
+        showMessage(translate("dynamiteHint"));
 
         render();
-
-        setTimeout(() => {
-          hintCells = [];
-
-          if (!busy && !gameOverShown) {
-            messageElement.textContent = translate("instructions");
-          }
-
-          render();
-        }, 2200);
+        scheduleHintClear();
 
         return;
       }
@@ -1405,104 +1375,119 @@ function showHint() {
     return;
   }
 
-  hintCells = [hint.first, hint.second];
-
-  if (messageElement) {
-    messageElement.textContent = translate("hintMessage");
-  }
+  game.hintCells = [hint.first, hint.second];
+  showMessage(translate("hintMessage"));
 
   render();
+  scheduleHintClear();
+}
 
-  setTimeout(() => {
-    hintCells = [];
+function scheduleHintClear() {
+  clearTimer("hint");
 
-    if (!busy && !gameOverShown) {
-      messageElement.textContent = translate("instructions");
+  timers.hint = setTimeout(() => {
+    timers.hint = null;
+    game.hintCells = [];
+
+    if (!game.busy && !game.gameOver) {
+      showMessage(translate("instructions"));
     }
 
     render();
-  }, 2200);
+  }, HINT_DURATION_MS);
 }
 
 /* ------------------------------------------------------------------
-   Game over and persistent high scores
+   Game lifecycle
 ------------------------------------------------------------------ */
 
-function finishGame(messageKey) {
-  if (gameOverShown) {
-    return;
+function createPlayableBoard() {
+  do {
+    game.board = createRandomBoard();
+  } while (
+    findMatches().size > 0 ||
+    !findPossibleMove()
+  );
+}
+
+function reshuffleBoard() {
+  createPlayableBoard();
+
+  game.selected = null;
+  clearHint();
+
+  if (game.mode === "timed") {
+    addTime(RESHUFFLE_BONUS_SECONDS);
   }
 
-  gameOverShown = true;
-  busy = true;
-
-  stopTimer();
-  updateBestScore();
   render();
-
-  const finalMessage = translate(messageKey);
-
-  if (messageElement) {
-    messageElement.textContent = finalMessage;
-  }
-
-  setTimeout(() => {
-    alert(finalMessage);
-  }, 100);
+  showMessage(translate("reshuffled"), RESHUFFLE_MESSAGE_MS);
 }
-
-function showTimeUp() {
-  finishGame("timeUp");
-}
-
-function showGameOver() {
-  finishGame("noMoves");
-}
-
-/* ------------------------------------------------------------------
-   New game / mode changes
------------------------------------------------------------------- */
 
 function resetGameState() {
-  score = 0;
-  moves = 0;
-  selected = null;
-  busy = false;
-  gameOverShown = false;
-  pointerStart = null;
-  hintCells = [];
-  pointsSinceLastDynamite = 0;
-  pendingDynamites = [];
+  game.generation++;
+  game.score = 0;
+  game.moves = 0;
+  game.selected = null;
+  game.busy = false;
+  game.gameOver = false;
+  game.pointerStart = null;
+  game.pointsSinceDynamite = 0;
+  game.pendingDynamites = [];
+
+  clearHint();
+  clearTimer("message");
 }
 
 function startNewGame() {
   stopTimer();
   resetGameState();
 
-  if (gameMode === "timed") {
+  game.board = createRandomBoard();
+
+  while (findMatches().size > 0 || !findPossibleMove()) {
+    game.board = createRandomBoard();
+  }
+
+  if (game.mode === "timed") {
     startTimer();
   }
 
-  createBoard();
-
-  if (messageElement) {
-    messageElement.textContent = translate("instructions");
-  }
+  render();
+  showMessage(translate("instructions"));
 }
 
 function setGameMode(mode) {
-  gameMode = mode === "timed" ? "timed" : "relaxed";
+  game.mode = mode === "timed" ? "timed" : "relaxed";
 
   if (modeSelect) {
-    modeSelect.value = gameMode;
+    modeSelect.value = game.mode;
   }
 
   startNewGame();
 }
 
-function loadBestScores() {
-  bestScoreRelaxed = readScore(BEST_RELAXED_STORAGE_KEY);
-  bestScoreTimed = readScore(BEST_TIMED_STORAGE_KEY);
+function finishGame(messageKey) {
+  if (game.gameOver) {
+    return;
+  }
+
+  game.gameOver = true;
+  game.busy = true;
+  game.generation++;
+
+  clearHint();
+  clearTimer("message");
+  stopTimer();
+  updateBestScore();
+  render();
+
+  const finalMessage = translate(messageKey);
+  showMessage(finalMessage);
+
+  setTimeout(() => {
+    alert(finalMessage);
+  }, 100);
 }
 
 /* ------------------------------------------------------------------
@@ -1530,21 +1515,19 @@ if (newGameButton) {
 }
 
 window.addEventListener("resize", () => {
-  clearTimeout(resizeTimeout);
+  clearTimer("resize");
 
-  resizeTimeout = setTimeout(() => {
-    const portrait = isPortraitOrientation();
+  const previousPortrait = isPortrait();
 
-    /*
-      Mobile browsers fire resize when their address bar or toolbar
-      appears/disappears. Only restart when the actual orientation
-      has changed.
-    */
-    if (portrait === wasPortrait) {
+  timers.resize = setTimeout(() => {
+    timers.resize = null;
+
+    const portrait = isPortrait();
+
+    if (portrait === previousPortrait) {
       return;
     }
 
-    wasPortrait = portrait;
     updateBoardSize();
     startNewGame();
   }, 150);
@@ -1554,32 +1537,14 @@ window.addEventListener("resize", () => {
    Startup
 ------------------------------------------------------------------ */
 
-loadBestScores();
+game.bestRelaxed = readScore(BEST_RELAXED_STORAGE_KEY);
+game.bestTimed = readScore(BEST_TIMED_STORAGE_KEY);
 
-wasPortrait = isPortraitOrientation();
 updateBoardSize();
 
-currentLanguage = getInitialLanguage();
-setLanguage(currentLanguage);
+game.language = getQueryLanguage() || getSavedLanguage() || getBrowserLanguage();
+setLanguage(game.language);
 
-gameMode = modeSelect?.value || "relaxed";
+game.mode = modeSelect?.value === "timed" ? "timed" : "relaxed";
 
-createBoard();
-
-if (gameMode === "timed") {
-  startTimer();
-}
-
-reshuffleCheckInterval = setInterval(() => {
-  if (
-    !busy &&
-    !gameOverShown &&
-    !findPossibleMove()
-  ) {
-    if (gameMode === "relaxed" && !boardHasDynamite()) {
-      showGameOver();
-    } else {
-      reshuffleBoard();
-    }
-  }
-}, 800);
+startNewGame();
