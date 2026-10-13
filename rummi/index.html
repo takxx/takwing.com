@@ -11,9 +11,14 @@
     <div id="game-layout" class="game-layout">
       <header class="game-header">
         <h1 data-i18n="title">Tile Rummy</h1>
-        <p data-i18n="subtitle">
-          Make groups of the same number or runs of consecutive numbers.
-        </p>
+<button
+  id="instructions-button"
+  class="instructions-link"
+  type="button"
+  data-i18n="instructionsLink"
+  aria-haspopup="dialog"
+  aria-controls="instructions-dialog"
+></button>
       </header>
 
       <section class="board-column" aria-label="Game board">
@@ -34,7 +39,14 @@
         <section class="hand-section">
           <h2 data-i18n="yourTiles">Your tiles</h2>
           <div id="hand" class="hand" aria-label="Your tiles"></div>
-          <div id="loose" class="hand loose-area" aria-label="Loose tiles"></div>
+
+          <h2 class="draft-heading" data-i18n="draftArea">Draft</h2>
+          <div
+            id="loose"
+            class="hand loose-area"
+            aria-label="Draft area"
+            aria-dropeffect="move"
+          ></div>
 
           <div class="controls">
             <button id="play" type="button" data-i18n="play">

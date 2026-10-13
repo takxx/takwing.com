@@ -1,13 +1,17 @@
+import { findComputerPlay } from "./ai.js";
+import { playerName as getPlayerName } from "./lang.js";
+
 const COLORS = ["pink", "orange", "green", "azure"];
-const PLAYER_NAMES = ["You", "AI1", "AI2"];
+const PLAYER_COUNT = 3;
 const JOKER_POINTS = 30;
-const PASSES_TO_END = PLAYER_NAMES.length * 2;
+const PASSES_TO_END = PLAYER_COUNT * 2;
 
 function shuffle(items) {
   for (let i = items.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [items[i], items[j]] = [items[j], items[i]];
   }
+
   return items;
 }
 
@@ -30,7 +34,12 @@ function makeDeck() {
 }
 
 function isConcreteSet(tiles) {
-  if (tiles.length < 3 || tiles.length > 13 || tiles.some(tile => tile.joker)) {
+  if (
+    !Array.isArray(tiles) ||
+    tiles.length < 3 ||
+    tiles.length > 13 ||
+    tiles.some(tile => tile.joker)
+  ) {
     return false;
   }
 
@@ -52,7 +61,9 @@ function isConcreteSet(tiles) {
 }
 
 export function isValidSet(tiles) {
-  if (tiles.length < 3 || tiles.length > 13) return false;
+  if (!Array.isArray(tiles) || tiles.length < 3 || tiles.length > 13) {
+    return false;
+  }
 
   const jokers = tiles.filter(tile => tile.joker);
   const natural = tiles.filter(tile => !tile.joker);
@@ -92,6 +103,8 @@ function bestSetPoints(tiles) {
       : -1;
   }
 
+  if (jokers.length > 2 || natural.length === 0) return -1;
+
   let best = -1;
 
   function assign(index, completed, score) {
@@ -111,12 +124,7 @@ function bestSetPoints(tiles) {
     }
   }
 
-  assign(
-    0,
-    natural,
-    natural.reduce((sum, tile) => sum + tile.value, 0)
-  );
-
+  assign(0, natural, natural.reduce((sum, tile) => sum + tile.value, 0));
   return best;
 }
 
@@ -131,6 +139,15 @@ function handPoints(hand) {
   );
 }
 
+function getScores(players) {
+  return players.map((player, playerIndex) => ({
+    playerIndex,
+    name: getPlayerName(playerIndex),
+    points: handPoints(player.hand),
+    tileCount: player.hand.length
+  }));
+}
+
 export class Game {
   constructor() {
     this.newGame();
@@ -138,7 +155,10 @@ export class Game {
 
   newGame() {
     this.stock = makeDeck();
-    this.players = PLAYER_NAMES.map(name => ({ name, hand: [] }));
+    this.players = Array.from({ length: PLAYER_COUNT }, (_, index) => ({
+      id: index,
+      hand: []
+    }));
 
     for (let i = 0; i < 14; i++) {
       for (const player of this.players) {
@@ -152,7 +172,7 @@ export class Game {
     this.hasOpened = this.players.map(() => false);
     this.draft = null;
     this.consecutiveNoDrawTurns = 0;
-    this.message = "New game started.";
+    this.message = { key: "newGameMessage" };
   }
 
   get isHumanTurn() {
@@ -275,9 +295,12 @@ export class Game {
 
     if (this.players[0].hand.length === 0) {
       this.over = true;
-      this.message = "You win!";
+      this.message = {
+        key: "youWin",
+        values: { scores: getScores(this.players) }
+      };
     } else {
-      this.message = "Turn played.";
+      this.message = { key: "played" };
       this.advanceTurn();
     }
 
@@ -293,10 +316,10 @@ export class Game {
     if (tile) {
       this.players[0].hand.push(tile);
       this.consecutiveNoDrawTurns = 0;
-      this.message = "You drew a tile.";
+      this.message = null;
       this.advanceTurn();
     } else {
-      this.message = "No tiles left to draw. Turn passed.";
+      this.message = { key: "drawEmpty" };
       this.recordNoDrawTurn();
 
       if (!this.over) this.advanceTurn();
@@ -314,11 +337,7 @@ export class Game {
   }
 
   endByLowestHandPoints() {
-    const scores = this.players.map(player => ({
-      name: player.name,
-      points: handPoints(player.hand)
-    }));
-
+    const scores = getScores(this.players);
     const lowest = Math.min(...scores.map(score => score.points));
     const winners = scores.filter(score => score.points === lowest);
 
@@ -326,13 +345,25 @@ export class Game {
     this.draft = null;
 
     if (winners.length === 1) {
-      this.message =
-        `${winners[0].name} wins with ${lowest} hand points ` +
-        `(${winners[0].name} has the lowest score).`;
+      const winner = winners[0];
+
+      this.message = {
+        key: winner.playerIndex === 0 ? "youWinLowest" : "opponentWinsLowest",
+        values: {
+          name: winner.name,
+          points: lowest,
+          scores
+        }
+      };
     } else {
-      this.message =
-        `Tie: ${winners.map(winner => winner.name).join(" and ")} ` +
-        `share the lowest score at ${lowest} points.`;
+      this.message = {
+        key: "tieLowest",
+        values: {
+          names: winners.map(winner => winner.name).join(", "),
+          points: lowest,
+          scores
+        }
+      };
     }
   }
 
@@ -347,23 +378,43 @@ export class Game {
 
     const playerIndex = this.current;
     const player = this.players[playerIndex];
-    const set = findComputerSet(player.hand, this.hasOpened[playerIndex]);
+    const play = findComputerPlay(
+      player.hand,
+      this.table,
+      this.hasOpened[playerIndex]
+    );
 
-    if (set) {
-      const ids = new Set(set.map(tile => tile.id));
-      player.hand = player.hand.filter(tile => !ids.has(tile.id));
-      this.table.push(set);
-      this.hasOpened[playerIndex] = true;
-      this.consecutiveNoDrawTurns = 0;
+    if (play && Array.isArray(play.table) && play.playedIds instanceof Set) {
+      const handIds = new Set(player.hand.map(tile => tile.id));
+      const tableIds = new Set(play.table.flat().map(tile => tile.id));
 
-      if (player.hand.length === 0) {
-        this.over = true;
-        this.message = `${player.name} wins!`;
+      const validPlay =
+        play.playedIds.size > 0 &&
+        [...play.playedIds].every(id => handIds.has(id)) &&
+        [...play.playedIds].every(id => tableIds.has(id)) &&
+        play.table.every(isValidSet);
+
+      if (validPlay) {
+        player.hand = player.hand.filter(tile => !play.playedIds.has(tile.id));
+        this.table = cloneSets(play.table);
+        this.hasOpened[playerIndex] = true;
+        this.consecutiveNoDrawTurns = 0;
+
+        if (player.hand.length === 0) {
+          this.over = true;
+          this.message = {
+            key: "opponentWins",
+            values: {
+              name: getPlayerName(playerIndex),
+              scores: getScores(this.players)
+            }
+          };
+          return;
+        }
+
+        this.advanceTurn();
         return;
       }
-
-      this.advanceTurn();
-      return;
     }
 
     const tile = this.stock.pop();
@@ -377,38 +428,4 @@ export class Game {
 
     if (!this.over) this.advanceTurn();
   }
-}
-
-function findComputerSet(hand, hasOpened) {
-  for (let size = 3; size <= 4; size++) {
-    const selected = [];
-
-    function search(start) {
-      if (selected.length === size) {
-        if (!isValidSet(selected)) return null;
-
-        if (!hasOpened && bestSetPoints(selected) < 30) {
-          return null;
-        }
-
-        return [...selected];
-      }
-
-      for (let i = start; i < hand.length; i++) {
-        selected.push(hand[i]);
-
-        const result = search(i + 1);
-        if (result) return result;
-
-        selected.pop();
-      }
-
-      return null;
-    }
-
-    const result = search(0);
-    if (result) return result;
-  }
-
-  return null;
 }

@@ -1,8 +1,16 @@
 :root {
   color-scheme: dark;
-  font: 15px/1.4 system-ui, sans-serif;
+  font: 15px/1.4 serif;
   color: #f2f4f5;
-  background: #111418;
+
+  --maroon: #4b2028;
+  --felt: #1f5b3a;
+  --felt-dark: #194a30;
+  --walnut: #6b4226;
+  --walnut-light: #805331;
+  --ebony: #171717;
+
+  background: var(--maroon);
 }
 
 * {
@@ -12,7 +20,7 @@
 body {
   margin: 0;
   padding: 18px;
-  background: #111418;
+  background: var(--maroon);
 }
 
 .game {
@@ -67,7 +75,6 @@ h2 {
   font-size: 1.08rem;
 }
 
-/* Square board, with space for the opponents around the table. */
 .board-layout {
   display: grid;
   width: min(100%, 720px);
@@ -75,15 +82,15 @@ h2 {
   min-width: 0;
   min-height: 0;
   grid-template:
-    ". top ." minmax(42px, 1fr)
+    ". top ." 28px
     "left center right" minmax(0, 5fr)
-    ". bottom ." minmax(42px, 1fr)
-    / minmax(42px, 1fr) minmax(0, 5fr) minmax(42px, 1fr);
+    ". bottom ." 28px
+    / 28px minmax(0, 5fr) 28px;
   gap: 4px;
   padding: 5px;
-  border: 1px solid #424b54;
+  border: 1px solid var(--walnut);
   border-radius: 12px;
-  background: #20262c;
+  background: var(--walnut);
   box-shadow: 0 4px 14px #0006;
 }
 
@@ -93,9 +100,9 @@ h2 {
   min-height: 0;
   overflow: auto;
   padding: 8px;
-  border: 1px solid #4b565f;
+  border: 1px solid var(--walnut);
   border-radius: 8px;
-  background: #171c20;
+  background: var(--felt-dark);
 }
 
 .table {
@@ -120,14 +127,17 @@ h2 {
   white-space: nowrap;
 }
 
+.opponent-top,
+.opponent-bottom {
+  flex-direction: row;
+}
+
 .opponent-top {
   grid-area: top;
-  flex-direction: row;
 }
 
 .opponent-bottom {
   grid-area: bottom;
-  flex-direction: row;
 }
 
 .opponent-left {
@@ -164,9 +174,9 @@ h2 {
   flex: 0 0 auto;
   width: 9px;
   height: 13px;
-  border: 1px solid #aeb5bb;
+  border: 1px solid #403b36;
   border-radius: 2px;
-  background: #e5e8eb;
+  background: var(--ebony);;
   box-shadow: 1px 1px 2px #0008;
 }
 
@@ -183,14 +193,44 @@ h2 {
   align-items: center;
   gap: 7px;
   padding: 10px;
-  border: 1px solid #3e474e;
+  border: 1px solid var(--walnut);
   border-radius: 10px;
-  background: #1b2126;
+  background: var(--felt);
 }
 
 .loose-area {
+  position: relative;
+  min-height: 92px;
   margin-top: 8px;
   border-style: dashed;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.loose-area::before {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  color: #c5d4ca;
+  font-size: 0.82rem;
+  content: "Draft — drag rack or board tiles here";
+  pointer-events: none;
+}
+
+.loose-area:not(:empty)::before {
+  content: "Draft";
+}
+
+.loose-area.is-drop-ready {
+  border-color: #a1886f;
+}
+
+.loose-area.drag-over {
+  border-color: #71d99a;
+  background: #173126;
+  box-shadow: 0 0 0 2px #4ac87955;
 }
 
 .set {
@@ -201,9 +241,25 @@ h2 {
   flex-wrap: nowrap;
   gap: 3px;
   padding: 7px;
-  border: 1px solid #49545d;
+  border: 1px solid var(--walnut);
   border-radius: 8px;
-  background: #252c32;
+  background: #286847;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.set.drag-over {
+  border-color: #71d99a;
+  background: #1c382b;
+}
+
+/* Invalid table leftovers during the player's draft. */
+.set.set-invalid {
+  border: 2px solid #ff5252;
+  background: #3b2023;
+  box-shadow: 0 0 10px #ff303066;
 }
 
 .tile {
@@ -213,9 +269,9 @@ h2 {
   height: 52px;
   place-items: center;
   padding: 0;
-  border: 2px solid #68737c;
+  border: 2px solid #403b36;
   border-radius: 7px;
-  background: #111519;
+  background: var(--ebony);
   color: var(--tile-color, #fff);
   text-shadow: 0 0 8px color-mix(in srgb, var(--tile-color) 45%, transparent);
   font-size: 1.2rem;
@@ -224,14 +280,75 @@ h2 {
   user-select: none;
 }
 
-.tile.selected {
-  transform: translateY(-7px);
-  outline: 3px solid #fff08a;
+.tile[draggable="true"] {
+  cursor: grab;
+  touch-action: manipulation;
+}
+
+.tile.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
 }
 
 .tile:disabled {
   cursor: default;
   opacity: 1;
+}
+
+.draft-valid-tick {
+  right: 8px;
+  top: 8px;
+  z-index: 1;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #3da969;
+  border-radius: 50%;
+  background: #17613b;
+  color: #a8ffc7;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 12px #35c87555;
+}
+
+.draft-valid-tick:hover {
+  background: #207b4b;
+}
+
+.draft-valid-tick[hidden] {
+  display: none;
+}
+
+.draft-cancel-x {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #fff;
+  background: #c62828;
+}
+
+.draft-cancel-x:hover {
+  background: #a51f1f;
+}
+
+.draft-cancel-x:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
 }
 
 .controls {
@@ -242,17 +359,18 @@ h2 {
 }
 
 .controls button {
+  min-height: 40px;
   padding: 9px 12px;
-  border: 1px solid #58636c;
+  border: 1px solid var(--walnut);
   border-radius: 7px;
-  background: #303941;
+  background: var(--walnut);
   color: #f2f4f5;
   font: inherit;
   cursor: pointer;
 }
 
-.controls button:hover {
-  background: #414c55;
+.controls button:hover:not(:disabled) {
+  background: var(--walnut-light);
 }
 
 .controls button:disabled {
@@ -267,9 +385,9 @@ h2 {
   gap: 7px 16px;
   margin: 0;
   padding: 12px;
-  border: 1px solid #3a4249;
+  border: 1px solid var(--walnut);
   border-radius: 10px;
-  background: #1a2025;
+  background: var(--felt);
 }
 
 .status > p {
@@ -287,22 +405,41 @@ h2 {
 .message-entry {
   margin: 0;
   padding: 4px 0;
-  border-bottom: 1px solid #3a4249;
+  border-bottom: 1px solid #ffffff30;
 }
 
 .message-entry:last-child {
   border-bottom: 0;
 }
 
-/* Wide screens: board left, title/hand/status right. */
+.log-tile {
+  display: inline-grid;
+  min-width: 1.65em;
+  height: 1.8em;
+  margin: 0 2px;
+  padding: 0 3px;
+  place-items: center;
+  border: 1px solid #403b36;
+  border-radius: 4px;
+  background: var(--ebony);
+  color: var(--tile-color, #fff);
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+#turn {
+  display: none;
+}
+
 @media (min-width: 801px) {
   .game-layout {
     grid-template-areas:
       "board header"
       "board side";
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+    grid-template-columns: minmax(0, 720px) minmax(280px, 380px);
     gap: 16px 22px;
     align-items: start;
+    justify-content: center;
   }
 
   .board-column {
@@ -319,7 +456,6 @@ h2 {
   }
 }
 
-/* Smaller screens: stack everything and let the board use available width. */
 @media (max-width: 800px) {
   body {
     padding: 12px;
@@ -328,10 +464,10 @@ h2 {
   .board-layout {
     width: min(100%, 600px);
     grid-template:
-      ". top ." minmax(36px, 1fr)
+      ". top ." 24px
       "left center right" minmax(0, 5fr)
-      ". bottom ." minmax(36px, 1fr)
-      / minmax(34px, 1fr) minmax(0, 5fr) minmax(34px, 1fr);
+      ". bottom ." 24px
+      / 24px minmax(0, 5fr) 24px;
     gap: 3px;
   }
 
@@ -366,16 +502,22 @@ h2 {
     width: 100%;
     padding: 3px;
     grid-template:
-      ". top ." minmax(32px, 1fr)
+      ". top ." 20px
       "left center right" minmax(0, 5fr)
-      ". bottom ." minmax(32px, 1fr)
-      / minmax(28px, 1fr) minmax(0, 5fr) minmax(28px, 1fr);
+      ". bottom ." 20px
+      / 20px minmax(0, 5fr) 20px;
     gap: 2px;
   }
 
   .opponent {
     gap: 2px;
     font-size: 8px;
+  }
+
+  .opponent-left .mini-tile,
+  .opponent-right .mini-tile {
+    width: 8px;
+    height: 6px;
   }
 
   .tile {
@@ -387,8 +529,59 @@ h2 {
     gap: 5px;
     padding: 7px;
   }
+
+  .loose-area {
+    min-height: 84px;
+  }
 }
 
-#turn {
-  display: none;
+.instructions-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#instructions-dialog {
+  width: min(90vw, 38rem);
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid var(--walnut);
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: var(--felt-dark);
+  color: #f2f4f5;
+}
+
+#instructions-dialog::backdrop {
+  background: rgb(0 0 0 / 70%);
+}
+
+#instructions-dialog h2 {
+  margin-bottom: 1rem;
+}
+
+#instructions-dialog h3 {
+  margin: 1rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+#instructions-dialog p {
+  margin: 0;
+}
+
+#instructions-dialog button {
+  min-height: 40px;
+  margin-top: 1.25rem;
+  padding: 8px 12px;
+  border: 1px solid var(--walnut);
+  border-radius: 7px;
+  background: var(--walnut);
+  color: #f2f4f5;
+  font: inherit;
+  cursor: pointer;
 }

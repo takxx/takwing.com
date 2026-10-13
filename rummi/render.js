@@ -1,4 +1,5 @@
-import { t } from "./lang.js";
+import { isValidSet } from "./game.js";
+import { currentLanguage, playerName, setLanguage, t } from "./lang.js";
 
 const COLOR_ORDER = ["pink", "orange", "green", "azure"];
 
@@ -20,41 +21,7 @@ function compareTiles(a, b) {
 }
 
 function orderSet(tiles) {
-  const jokers = tiles.filter(tile => tile.joker);
-  const natural = tiles.filter(tile => !tile.joker);
-
-  if (jokers.length && natural.length >= 2) {
-    const sameColor = natural.every(tile => tile.color === natural[0].color);
-
-    if (sameColor) {
-      const values = natural.map(tile => tile.value).sort((a, b) => a - b);
-      const missing = [];
-
-      for (let value = values[0]; value <= values.at(-1); value++) {
-        if (!values.includes(value)) missing.push(value);
-      }
-
-      if (missing.length >= jokers.length) {
-        return [
-          ...natural,
-          ...jokers.map((tile, index) => ({
-            ...tile,
-            displayValue: missing[index]
-          }))
-        ].sort(
-          (a, b) =>
-            (a.displayValue ?? a.value) - (b.displayValue ?? b.value)
-        );
-      }
-    }
-  }
-
   return [...tiles].sort(compareTiles);
-}
-
-function setSortKey(tiles) {
-  const first = orderSet(tiles)[0];
-  return first ? (first.displayValue ?? first.value) : 0;
 }
 
 function requireElement(selector) {
@@ -67,50 +34,66 @@ function requireElement(selector) {
   return element;
 }
 
-function makeTile(tile, { selected = false, disabled = false } = {}) {
+function makeTile(
+  tile,
+  { disabled = false, draggable = false, loose = false } = {}
+) {
   const button = document.createElement("button");
 
   button.type = "button";
-  button.className = `tile${selected ? " selected" : ""}`;
+  button.className = "tile";
   button.style.setProperty(
     "--tile-color",
     TILE_COLORS[tile.color] ?? TILE_COLORS.joker
   );
-  button.textContent = tile.joker
-    ? "★"
-    : String(tile.displayValue ?? tile.value);
-  button.title = tile.joker ? "Joker" : `${tile.color} ${tile.value}`;
+  button.textContent = tile.joker ? "★" : String(tile.value);
+  button.title = tile.joker
+    ? t("joker")
+    : t("tileTitle", {
+        color: t(tile.color),
+        value: tile.value
+      });
   button.disabled = disabled;
+  button.draggable = draggable && !disabled;
   button.dataset.tileId = String(tile.id);
+
+  if (loose) button.dataset.looseTile = "true";
 
   return button;
 }
 
 function ensureDraftControls(handSection) {
-  let controls = document.querySelector("#draft-controls");
-  if (controls) return controls;
+  const mainControls = [...handSection.querySelectorAll(".controls")]
+    .find(element => element.id !== "draft-controls");
 
-  controls = document.createElement("div");
-  controls.id = "draft-controls";
-  controls.className = "controls draft-controls";
-
-  const actions = [
-    ["move-selected", "Move selected rack tiles to loose area"],
-    ["new-set", "Make a new set from loose tiles"],
-    ["commit", "Finish turn"],
-    ["cancel", "Cancel draft"]
-  ];
-
-  for (const [action, label] of actions) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.action = action;
-    button.textContent = label;
-    controls.append(button);
+  if (!mainControls) {
+    throw new Error("Game controls not found.");
   }
 
-  handSection.append(controls);
-  return controls;
+  const oldDraftControls = document.querySelector("#draft-controls");
+
+  let finishButton = mainControls.querySelector('[data-action="commit"]');
+
+  if (!finishButton) {
+    finishButton = oldDraftControls?.querySelector(
+      '[data-action="commit"]'
+    );
+  }
+
+  if (!finishButton) {
+    finishButton = document.createElement("button");
+    finishButton.type = "button";
+    finishButton.dataset.action = "commit";
+  }
+
+  finishButton.textContent = t("finishTurn");
+
+  const drawButton = mainControls.querySelector("#draw");
+  mainControls.insertBefore(finishButton, drawButton);
+
+  oldDraftControls?.remove();
+
+  return { controls: mainControls, finishButton };
 }
 
 function renderOpponent(position, player, index) {
@@ -129,11 +112,14 @@ function renderOpponent(position, player, index) {
 
   const name = document.createElement("span");
   name.className = "opponent-name";
-  name.textContent = `AI${index}`;
+  name.textContent = playerName(index);
 
   const rack = document.createElement("span");
   rack.className = "mini-rack";
-  rack.setAttribute("aria-label", `${player.hand.length} tiles`);
+  rack.setAttribute(
+    "aria-label",
+    t("opponentTiles", { count: player.hand.length })
+  );
 
   for (let i = 0; i < Math.min(player.hand.length, 14); i++) {
     const miniTile = document.createElement("span");
@@ -148,19 +134,116 @@ function renderOpponent(position, player, index) {
   seat.append(name, rack, count);
 }
 
-function renderMessageLog(messages) {
+function renderLogTile(tile) {
+  const element = document.createElement("span");
+  element.className = "log-tile";
+  element.style.setProperty(
+    "--tile-color",
+    TILE_COLORS[tile.color] ?? TILE_COLORS.joker
+  );
+  element.textContent = tile.joker ? "★" : String(tile.value);
+  element.title = tile.joker
+    ? t("joker")
+    : t("tileTitle", {
+        color: t(tile.color),
+        value: tile.value
+      });
+
+  return element;
+}
+
+function renderFinalScores(container, game) {
+  if (!game.over) return;
+
+  const scores = game.message?.values?.scores;
+  if (!Array.isArray(scores)) return;
+
+  const section = document.createElement("section");
+  section.className = "final-scores";
+  section.setAttribute("aria-label", t("scoresTitle"));
+
+  const heading = document.createElement("h2");
+  heading.textContent = t("scoresTitle");
+
+  const list = document.createElement("ul");
+  list.className = "final-scores-list";
+
+  for (const score of scores) {
+    const item = document.createElement("li");
+    item.className = "final-score";
+    item.textContent = t("scoreRow", {
+      name: score.name,
+      points: score.points,
+      tileCount: score.tileCount
+    });
+    list.append(item);
+  }
+
+  section.append(heading, list);
+  container.append(section);
+}
+
+function renderMessageLog(messages, game) {
   const element = requireElement("#message");
   element.replaceChildren();
 
   for (const message of messages) {
     const entry = document.createElement("p");
     entry.className = "message-entry";
-    entry.textContent = message;
+    entry.append(document.createTextNode(message.text));
+
+    if (message.tiles?.length) {
+      entry.append(document.createTextNode(" "));
+
+      for (const tile of message.tiles) {
+        entry.append(renderLogTile(tile));
+      }
+    }
+
     element.append(entry);
+  }
+
+  renderFinalScores(element, game);
+
+  let languageSelect = document.querySelector("#language-select");
+
+  if (!languageSelect) {
+    languageSelect = document.createElement("select");
+    languageSelect.id = "language-select";
+    languageSelect.setAttribute("aria-label", "Language");
+
+    for (const [value, label] of [
+      ["en", "English"],
+      ["es", "Español"],
+      ["zh", "中文"]
+    ]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      languageSelect.append(option);
+    }
+
+    languageSelect.addEventListener("change", () => {
+      if (!setLanguage(languageSelect.value)) return;
+
+      setEnglishLabels();
+      render(game, new Set(), messages);
+    });
+  }
+
+  languageSelect.value = currentLanguage;
+
+  if (element.nextElementSibling !== languageSelect) {
+    element.insertAdjacentElement("afterend", languageSelect);
   }
 }
 
-export function render(game, selectedIds = new Set(), messageLog = []) {
+
+function tableSignature(table) {
+  return JSON.stringify(table.map(set => set.map(tile => tile.id)));
+}
+
+export function render(game, _selectedIds = new Set(), messageLog = []) {
   const table = requireElement("#table");
   const hand = requireElement("#hand");
   const handSection = hand.closest(".hand-section");
@@ -172,34 +255,39 @@ export function render(game, selectedIds = new Set(), messageLog = []) {
   const draft = game.draft;
   const sets = draft ? draft.table : game.table;
   const rack = draft ? draft.hand : game.players[0].hand;
+  const canInteract = game.isHumanTurn && Boolean(draft);
 
   table.replaceChildren();
 
-  sets
-    .map((tiles, originalIndex) => ({ tiles, originalIndex }))
-    .sort((a, b) => setSortKey(a.tiles) - setSortKey(b.tiles))
-    .forEach(({ tiles, originalIndex }) => {
-      const group = document.createElement("div");
-      group.className = "set";
-      group.dataset.setIndex = String(originalIndex);
-      group.title =
-        "Pick up a tile, or click empty set space to place a loose tile.";
+  sets.forEach((tiles, originalIndex) => {
+    const group = document.createElement("div");
+    group.className = "set";
+    group.dataset.setIndex = String(originalIndex);
+    group.title = t("boardDropHint");
 
-      for (const tile of orderSet(tiles)) {
-        const button = makeTile(tile, { disabled: !game.isHumanTurn });
-        button.dataset.setIndex = String(originalIndex);
-        group.append(button);
-      }
+    if (canInteract && !isValidSet(tiles)) {
+      group.classList.add("set-invalid");
+    }
 
-      table.append(group);
-    });
+    for (const tile of orderSet(tiles)) {
+      const button = makeTile(tile, {
+        disabled: !game.isHumanTurn,
+        draggable: game.isHumanTurn
+      });
+
+      button.dataset.setIndex = String(originalIndex);
+      group.append(button);
+    }
+
+    table.append(group);
+  });
 
   hand.replaceChildren();
 
   for (const tile of [...rack].sort(compareTiles)) {
     const button = makeTile(tile, {
-      selected: selectedIds.has(tile.id),
-      disabled: !game.isHumanTurn
+      disabled: !game.isHumanTurn,
+      draggable: game.isHumanTurn
     });
 
     button.dataset.handTile = "true";
@@ -208,38 +296,82 @@ export function render(game, selectedIds = new Set(), messageLog = []) {
 
   const loose = requireElement("#loose");
   loose.replaceChildren();
+  loose.classList.toggle("is-drop-ready", canInteract);
+  loose.setAttribute("aria-label", t("draftArea"));
 
   if (draft) {
     for (const tile of [...draft.loose].sort(compareTiles)) {
-      loose.append(makeTile(tile, { disabled: true }));
+      loose.append(
+        makeTile(tile, {
+          disabled: !game.isHumanTurn,
+          draggable: game.isHumanTurn,
+          loose: true
+        })
+      );
     }
   }
 
+  const validDraft =
+    Boolean(draft) &&
+    draft.loose.length >= 3 &&
+    isValidSet(draft.loose);
+
+  const tick = document.createElement("button");
+  tick.type = "button";
+  tick.className = "draft-valid-tick";
+  tick.dataset.action = "validate-draft";
+  tick.textContent = "✓";
+  tick.setAttribute("aria-label", t("validDraft"));
+  tick.title = t("validDraftHint");
+  tick.hidden = !canInteract || !validDraft;
+  loose.append(tick);
+
+  const hasDraftChanges =
+    Boolean(draft) &&
+    (
+      draft.loose.length > 0 ||
+      draft.hand.length < game.players[0].hand.length ||
+      tableSignature(draft.table) !== tableSignature(game.table)
+    );
+
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "draft-valid-tick draft-cancel-x";
+  cancel.dataset.action = "cancel";
+  cancel.textContent = "×";
+  cancel.setAttribute("aria-label", t("cancelDraft"));
+  cancel.title = t("cancelDraft");
+  cancel.hidden = !canInteract || !hasDraftChanges;
+  loose.append(cancel);
+
+  const { finishButton } = ensureDraftControls(handSection);
+
+  const playedFromHand =
+    Boolean(draft) && draft.hand.length < game.players[0].hand.length;
+
+  finishButton.hidden = !canInteract || !playedFromHand;
+  finishButton.disabled = !canInteract || !playedFromHand;
+
   renderOpponent("top", game.players[1], 1);
   renderOpponent("left", game.players[2], 2);
-  renderOpponent("right", game.players[3], 3);
-  renderOpponent("bottom", game.players[4], 4);
 
-  const controls = ensureDraftControls(handSection);
+  const rightSeat = document.querySelector("#opponent-right");
+  if (rightSeat) rightSeat.hidden = true;
 
-  controls.querySelector('[data-action="move-selected"]').disabled =
-    !game.isHumanTurn || selectedIds.size === 0;
-  controls.querySelector('[data-action="new-set"]').disabled =
-    !game.isHumanTurn || !draft || draft.loose.length === 0;
-  controls.querySelector('[data-action="commit"]').disabled =
-    !game.isHumanTurn || !draft;
-  controls.querySelector('[data-action="cancel"]').disabled =
-    !game.isHumanTurn || !draft;
+  const bottomSeat = document.querySelector("#opponent-bottom");
+  if (bottomSeat) bottomSeat.hidden = true;
 
   requireElement("#turn").textContent = game.over
     ? ""
     : game.current === 0
       ? t("yourTurn")
-      : t("opponentTurn", { name: `AI ${game.current}` });
+      : t("opponentTurn", { name: playerName(game.current) });
 
-  requireElement("#stock").textContent = `Remaining: ${game.stock.length}`;
+  requireElement("#stock").textContent = t("stock", {
+    count: game.stock.length
+  });
 
-  renderMessageLog(messageLog);
+  renderMessageLog(messageLog, game);
 
   const playButton = document.querySelector("#play");
   if (playButton) playButton.hidden = true;
@@ -251,8 +383,62 @@ export function render(game, selectedIds = new Set(), messageLog = []) {
   if (newGameButton) newGameButton.disabled = false;
 }
 
+function ensureInstructionsDialog() {
+  if (document.querySelector("#instructions-dialog")) return;
+
+  const dialog = document.createElement("dialog");
+  dialog.id = "instructions-dialog";
+  dialog.setAttribute("aria-labelledby", "instructions-title");
+
+  const heading = document.createElement("h2");
+  heading.id = "instructions-title";
+  heading.dataset.i18n = "instructionsTitle";
+  dialog.append(heading);
+
+  const sections = [
+    ["instructionsGoalTitle", "instructionsGoal"],
+    ["instructionsSetsTitle", "instructionsSets"],
+    ["instructionsFirstTurnTitle", "instructionsFirstTurn"],
+    ["instructionsTurnsTitle", "instructionsTurns"],
+    ["instructionsControlsTitle", "instructionsControls"]
+  ];
+
+  for (const [headingKey, textKey] of sections) {
+    const sectionHeading = document.createElement("h3");
+    sectionHeading.dataset.i18n = headingKey;
+
+    const paragraph = document.createElement("p");
+    paragraph.dataset.i18n = textKey;
+
+    dialog.append(sectionHeading, paragraph);
+  }
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.dataset.i18n = "closeInstructions";
+  closeButton.addEventListener("click", () => dialog.close());
+
+  dialog.append(closeButton);
+  document.body.append(dialog);
+
+  document
+    .querySelector("#instructions-button")
+    ?.addEventListener("click", () => dialog.showModal());
+}
+
 export function setEnglishLabels() {
+  ensureInstructionsDialog();
+
   document.querySelectorAll("[data-i18n]").forEach(element => {
-    element.textContent = t(element.dataset.i18n);
+    const value = t(element.dataset.i18n);
+
+    if (element instanceof HTMLInputElement && element.type === "button") {
+      element.value = value;
+    } else {
+      element.textContent = value;
+    }
   });
+
+  const languageSelect = document.querySelector("#language-select");
+  if (languageSelect) languageSelect.value = currentLanguage;
 }
