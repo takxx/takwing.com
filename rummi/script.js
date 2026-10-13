@@ -291,11 +291,19 @@ document.addEventListener("click", event => {
   if (!tileButton) return;
 
   const tileId = Number(tileButton.dataset.tileId);
+  if (!Number.isInteger(tileId)) return;
+
+  // A tap on a hand tile or table tile moves it into the draft area.
+  if (!game.draft) game.beginHumanTurn();
+
+  if (tileButton.dataset.handTile) {
+    if (game.pickFromHand(tileId)) update();
+    return;
+  }
+
   const setIndex = tileButton.dataset.setIndex;
 
   if (setIndex !== undefined) {
-    if (!game.draft) game.beginHumanTurn();
-
     if (game.pickFromTable(Number(setIndex), tileId)) update();
   }
 });
