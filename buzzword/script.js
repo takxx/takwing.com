@@ -1,17 +1,116 @@
-// script.js v261029j
+// script.js — bilingual Buzzword, with Spanish Ñ support
 
 // ---------- Configuration ----------
 
-const LANGUAGE = "en";
 const GAME_NAME = "buzzword";
 const DISPLAY_NAME = "Buzzword";
-const LANGUAGE_ERROR_MESSAGE = "Unable to load Buzzword.";
+
+const SUPPORTED_LANGUAGES = ["en", "es"];
+const DEFAULT_LANGUAGE = "en";
+
+// For Spanish: preserve Ñ, but treat Á É Í Ó Ü as A E I O U.
+const NORMALIZE_ACCENTS = {
+  es: true,
+  en: false
+};
+
+const TRANSLATIONS = {
+  en: {
+    loadError: "Unable to load Buzzword.",
+    hexAria: index => `Hexagon ${index + 1}`,
+    greatJob: "Great job!",
+    foundSeven: score =>
+      `You found a 7-letter word. Score: ${score}.`,
+    nextRound: "Next round",
+    gameOver: "Game over",
+    noSeven: score =>
+      `No 7-letter word found. Final score: ${score}.`,
+    newGame: "New game",
+    roundComplete: "Round complete!",
+    allFound: (bonus, score) =>
+      `All words found! +${bonus} bonus. Score: ${score}.`,
+    alreadyFound: word => `${word} has already been found.`,
+    notAWord: "That path does not make a valid word.",
+    invalidPath: "Invalid path.",
+    wordPoints: (word, points, seconds) =>
+      `${word}: +${points} points, +${seconds} seconds`,
+    foundWord: word => `Found word: ${word}`,
+    unfoundWord: word => `Unfound word: ${word}`
+  },
+
+  es: {
+    loadError: "No se pudo cargar Buzzword.",
+    hexAria: index => `Hexágono ${index + 1}`,
+    greatJob: "¡Buen trabajo!",
+    foundSeven: score =>
+      `Encontraste una palabra de 7 letras. Puntuación: ${score}.`,
+    nextRound: "Siguiente ronda",
+    gameOver: "Fin del juego",
+    noSeven: score =>
+      `No se encontró una palabra de 7 letras. Puntuación final: ${score}.`,
+    newGame: "Nuevo juego",
+    roundComplete: "¡Ronda completada!",
+    allFound: (bonus, score) =>
+      `¡Encontraste todas las palabras! +${bonus} de bonificación. Puntuación: ${score}.`,
+    alreadyFound: word => `${word} ya se ha encontrado.`,
+    notAWord: "Ese recorrido no forma una palabra válida.",
+    invalidPath: "Recorrido no válido.",
+    wordPoints: (word, points, seconds) =>
+      `${word}: +${points} puntos, +${seconds} segundos`,
+    foundWord: word => `Palabra encontrada: ${word}`,
+    unfoundWord: word => `Palabra no encontrada: ${word}`
+  }
+};
+
+let currentLanguage = DEFAULT_LANGUAGE;
+let t = TRANSLATIONS[currentLanguage];
+
+// ---------- Language selection ----------
+
+function detectLanguage() {
+  const urlLanguage = new URLSearchParams(window.location.search)
+    .get("lang")
+    ?.toLowerCase();
+
+  if (urlLanguage && SUPPORTED_LANGUAGES.includes(urlLanguage)) {
+    return urlLanguage;
+  }
+
+  const storedLanguage = localStorage.getItem(`${GAME_NAME}Language`);
+  if (storedLanguage && SUPPORTED_LANGUAGES.includes(storedLanguage)) {
+    return storedLanguage;
+  }
+
+  const browserLanguage = navigator.language
+    ?.slice(0, 2)
+    .toLowerCase();
+
+  if (SUPPORTED_LANGUAGES.includes(browserLanguage)) {
+    return browserLanguage;
+  }
+
+  return DEFAULT_LANGUAGE;
+}
+
+function setLanguage(language) {
+  currentLanguage = SUPPORTED_LANGUAGES.includes(language)
+    ? language
+    : DEFAULT_LANGUAGE;
+
+  t = TRANSLATIONS[currentLanguage];
+
+  localStorage.setItem(`${GAME_NAME}Language`, currentLanguage);
+  document.documentElement.lang = currentLanguage;
+}
 
 // ---------- Data loading ----------
 
-async function loadWordData(language = LANGUAGE) {
+async function loadWordData(language = DEFAULT_LANGUAGE) {
   const res = await fetch(`/util/wordlist/${language}.json`);
-  if (!res.ok) throw new Error(`Failed to load ${language}.json`);
+
+  if (!res.ok) {
+    throw new Error(`Failed to load ${language}.json`);
+  }
 
   const rawWords = await res.json();
   return buildWordDataForHive(rawWords, 3, 7);
@@ -19,32 +118,58 @@ async function loadWordData(language = LANGUAGE) {
 
 async function loadPathData() {
   const res = await fetch("path.json");
-  if (!res.ok) throw new Error("Failed to load path.json");
+
+  if (!res.ok) {
+    throw new Error("Failed to load path.json");
+  }
+
   return res.json();
+}
+
+function normalizeWord(rawWord, language) {
+  let word = String(rawWord).trim();
+
+  // Uppercase using the active language's rules.
+  word = word.toLocaleUpperCase(language);
+
+  if (NORMALIZE_ACCENTS[language]) {
+    // Preserve Ñ, but remove accents from other letters.
+    word = word
+      .normalize("NFD")
+      .replace(/(?<![Nn])\u0303/g, "")
+      .normalize("NFC");
+  }
+
+  return word;
 }
 
 function buildWordDataForHive(rawWords, minLength = 3, maxLength = 7) {
   const setsByLength = new Map();
   const arraysByLength = new Map();
 
-  for (let len = minLength; len <= maxLength; len++) {
-    setsByLength.set(len, new Set());
-    arraysByLength.set(len, []);
+  for (let length = minLength; length <= maxLength; length++) {
+    setsByLength.set(length, new Set());
+    arraysByLength.set(length, []);
   }
 
-  for (const raw of rawWords) {
-    const word = String(raw).trim().toUpperCase();
+  // Accept English A-Z and Spanish A-Z plus Ñ.
+  const validWordPattern = /^[A-ZÑ]+$/;
 
-    if (!/^[A-Z]+$/.test(word)) continue;
+  for (const rawWord of rawWords) {
+    const word = normalizeWord(rawWord, currentLanguage);
 
-    const len = word.length;
-    if (len < minLength || len > maxLength) continue;
+    if (!validWordPattern.test(word)) continue;
 
-    const set = setsByLength.get(len);
+    const length = word.length;
+
+    if (length < minLength || length > maxLength) continue;
+
+    const set = setsByLength.get(length);
+
     if (set.has(word)) continue;
 
     set.add(word);
-    arraysByLength.get(len).push(word);
+    arraysByLength.get(length).push(word);
   }
 
   return { setsByLength, arraysByLength };
@@ -99,8 +224,12 @@ const AudioSFX = (() => {
 
   function ensureContext() {
     if (!ctx) {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (Ctx) ctx = new Ctx();
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (AudioContextClass) {
+        ctx = new AudioContextClass();
+      }
     }
 
     if (ctx && ctx.state === "suspended") {
@@ -125,6 +254,7 @@ const AudioSFX = (() => {
     if (!enabled) return;
 
     ensureContext();
+
     if (!ctx) return;
 
     const oscillator = ctx.createOscillator();
@@ -146,32 +276,45 @@ const AudioSFX = (() => {
     oscillator.stop(ctx.currentTime + duration);
   }
 
-  function playGood() {
+  function playChord(notes, noteGap, noteDuration, volume) {
     if (!enabled) return;
 
     ensureContext();
+
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5];
 
     notes.forEach((frequency, index) => {
-      const time = now + index * 0.06;
+      const time = now + index * noteGap;
+
       const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
 
       oscillator.type = "sine";
       oscillator.frequency.value = frequency;
 
-      gain.gain.setValueAtTime(0.05, time);
-      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.12);
+      gain.gain.setValueAtTime(volume, time);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        time + noteDuration
+      );
 
       oscillator.connect(gain);
       gain.connect(ctx.destination);
 
       oscillator.start(time);
-      oscillator.stop(time + 0.12);
+      oscillator.stop(time + noteDuration);
     });
+  }
+
+  function playGood() {
+    playChord(
+      [523.25, 659.25, 783.99, 1046.5],
+      0.06,
+      0.12,
+      0.05
+    );
   }
 
   function playBad() {
@@ -182,31 +325,12 @@ const AudioSFX = (() => {
   }
 
   function playRoundComplete() {
-    if (!enabled) return;
-
-    ensureContext();
-    if (!ctx) return;
-
-    const now = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
-
-    notes.forEach((frequency, index) => {
-      const time = now + index * 0.07;
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      oscillator.type = "sine";
-      oscillator.frequency.value = frequency;
-
-      gain.gain.setValueAtTime(0.06, time);
-      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.15);
-
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-
-      oscillator.start(time);
-      oscillator.stop(time + 0.15);
-    });
+    playChord(
+      [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5],
+      0.07,
+      0.15,
+      0.06
+    );
   }
 
   function playGameOver() {
@@ -219,11 +343,13 @@ const AudioSFX = (() => {
 
   function playClick() {
     if (!enabled) return;
+
     playTone(900, 0.04, "square", 0.03);
   }
 
   function playHexTone(index) {
     const frequency = HEX_NOTES[index];
+
     if (frequency == null) return;
 
     playTone(frequency, 0.07, "sine", 0.05);
@@ -249,16 +375,22 @@ const AudioSFX = (() => {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    setLanguage(detectLanguage());
+
     [wordData, pathData] = await Promise.all([
-      loadWordData(LANGUAGE),
+      loadWordData(currentLanguage),
       loadPathData()
     ]);
 
     gameState.boardSize = pathData.boardSize || 7;
 
-    const storedHigh = localStorage.getItem(`${GAME_NAME}HighScore`);
-    if (storedHigh) {
-      gameState.highScore = parseInt(storedHigh, 10) || 0;
+    const storedHighScore = localStorage.getItem(
+      `${GAME_NAME}HighScore`
+    );
+
+    if (storedHighScore) {
+      gameState.highScore =
+        parseInt(storedHighScore, 10) || 0;
     }
 
     updateHighScoreDisplay(gameState.highScore);
@@ -268,9 +400,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     attachInputHandlers();
     attachOverlayHandlers();
     attachMuteHandler();
+    attachLanguageHandler();
   } catch (error) {
     console.error(error);
-    showMessage(LANGUAGE_ERROR_MESSAGE);
+    showMessage(t.loadError);
   }
 });
 
@@ -281,29 +414,42 @@ function randomItem(items) {
 }
 
 function isUsablePath(path, expectedLength, boardSize) {
-  if (!Array.isArray(path) || path.length !== expectedLength) return false;
+  if (!Array.isArray(path) || path.length !== expectedLength) {
+    return false;
+  }
 
   const used = new Set(path);
+
   if (used.size !== expectedLength) return false;
 
   return path.every(
-    index => Number.isInteger(index) && index >= 0 && index < boardSize
+    index =>
+      Number.isInteger(index) &&
+      index >= 0 &&
+      index < boardSize
   );
 }
 
 function choosePuzzle(words, paths) {
   const boardSize = paths.boardSize || 7;
   const candidateWords = words.arraysByLength.get(boardSize);
-  const candidatePaths = (paths.paths[String(boardSize)] || []).filter(
-    path => isUsablePath(path, boardSize, boardSize)
+
+  const candidatePaths = (
+    paths.paths[String(boardSize)] || []
+  ).filter(path =>
+    isUsablePath(path, boardSize, boardSize)
   );
 
   if (!candidateWords || candidateWords.length === 0) {
-    throw new Error(`No ${boardSize}-letter words in dictionary.`);
+    throw new Error(
+      `No ${boardSize}-letter words in the ${currentLanguage} dictionary.`
+    );
   }
 
   if (candidatePaths.length === 0) {
-    throw new Error(`No valid ${boardSize}-hex paths in path.json.`);
+    throw new Error(
+      `No valid ${boardSize}-hex paths in path.json.`
+    );
   }
 
   return {
@@ -336,11 +482,13 @@ function scoreForLength(length) {
 
 function findAllValidAnswers(boardLetters, words, paths) {
   const boardSize = paths.boardSize || 7;
+
   const answersByWord = new Map();
   const wordByPathKey = new Map();
 
   for (let length = 3; length <= boardSize; length++) {
     const validWords = words.setsByLength.get(length);
+
     if (!validWords || validWords.size === 0) continue;
 
     const candidatePaths = paths.paths[String(length)] || [];
@@ -348,9 +496,19 @@ function findAllValidAnswers(boardLetters, words, paths) {
     for (const path of candidatePaths) {
       if (path.length !== length) continue;
       if (new Set(path).size !== length) continue;
-      if (!path.every(index => index >= 0 && index < boardSize)) continue;
 
-      const word = path.map(index => boardLetters[index]).join("");
+      if (
+        !path.every(
+          index => index >= 0 && index < boardSize
+        )
+      ) {
+        continue;
+      }
+
+      const word = path
+        .map(index => boardLetters[index])
+        .join("");
+
       if (!validWords.has(word)) continue;
 
       const key = pathKey(path);
@@ -382,8 +540,11 @@ function createHintSlots(answersByWord) {
     const lengthA = answersByWord.get(a).length;
     const lengthB = answersByWord.get(b).length;
 
-    if (lengthA !== lengthB) return lengthA - lengthB;
-    return a.localeCompare(b);
+    if (lengthA !== lengthB) {
+      return lengthA - lengthB;
+    }
+
+    return a.localeCompare(b, currentLanguage);
   });
 
   const slots = uniqueWords.map((word, index) => {
@@ -407,7 +568,10 @@ function createHintSlots(answersByWord) {
 }
 
 function buildRound() {
-  const { targetWord, targetPath } = choosePuzzle(wordData, pathData);
+  const { targetWord, targetPath } = choosePuzzle(
+    wordData,
+    pathData
+  );
 
   const boardLetters = createBoardLetters(
     targetWord,
@@ -415,14 +579,17 @@ function buildRound() {
     gameState.boardSize
   );
 
-  const { answersByWord, wordByPathKey } = findAllValidAnswers(
-    boardLetters,
-    wordData,
-    pathData
-  );
+  const { answersByWord, wordByPathKey } =
+    findAllValidAnswers(
+      boardLetters,
+      wordData,
+      pathData
+    );
 
   if (!answersByWord.has(targetWord)) {
-    throw new Error(`Target word "${targetWord}" not reachable.`);
+    throw new Error(
+      `Target word "${targetWord}" is not reachable.`
+    );
   }
 
   return {
@@ -473,9 +640,9 @@ function nextRound() {
   revealUnfoundWords();
 
   showRoundOverlay({
-    title: "Great job!",
-    message: `You found a 7-letter word. Score: ${gameState.score}.`,
-    buttonLabel: "Next round"
+    title: t.greatJob,
+    message: t.foundSeven(gameState.score),
+    buttonLabel: t.nextRound
   });
 }
 
@@ -483,22 +650,15 @@ function endGame() {
   gameState.active = false;
   clearInterval(gameState.timerId);
 
-  if (gameState.score > gameState.highScore) {
-    gameState.highScore = gameState.score;
-    localStorage.setItem(
-      `${GAME_NAME}HighScore`,
-      String(gameState.highScore)
-    );
-    updateHighScoreDisplay(gameState.highScore);
-  }
+  saveHighScoreIfNeeded();
 
   gameState.overlayMode = "gameOver";
   revealUnfoundWords();
 
   showRoundOverlay({
-    title: "Game over",
-    message: `No 7-letter word found. Final score: ${gameState.score}.`,
-    buttonLabel: "New game"
+    title: t.gameOver,
+    message: t.noSeven(gameState.score),
+    buttonLabel: t.newGame
   });
 }
 
@@ -510,24 +670,29 @@ function roundComplete() {
   gameState.score += bonus;
 
   updateScoreDisplay(gameState.score);
-
-  if (gameState.score > gameState.highScore) {
-    gameState.highScore = gameState.score;
-    localStorage.setItem(
-      `${GAME_NAME}HighScore`,
-      String(gameState.highScore)
-    );
-    updateHighScoreDisplay(gameState.highScore);
-  }
+  saveHighScoreIfNeeded();
 
   gameState.overlayMode = "roundComplete";
   revealUnfoundWords();
 
   showRoundOverlay({
-    title: "Round complete!",
-    message: `All words found! +${bonus} bonus. Score: ${gameState.score}.`,
-    buttonLabel: "Next round"
+    title: t.roundComplete,
+    message: t.allFound(bonus, gameState.score),
+    buttonLabel: t.nextRound
   });
+}
+
+function saveHighScoreIfNeeded() {
+  if (gameState.score <= gameState.highScore) return;
+
+  gameState.highScore = gameState.score;
+
+  localStorage.setItem(
+    `${GAME_NAME}HighScore`,
+    String(gameState.highScore)
+  );
+
+  updateHighScoreDisplay(gameState.highScore);
 }
 
 // ---------- Timer ----------
@@ -535,6 +700,7 @@ function roundComplete() {
 function clampTimer(value) {
   if (value < 0) return 0;
   if (value > 99) return 99;
+
   return value;
 }
 
@@ -549,7 +715,9 @@ function startTimer() {
     if (!gameState.active) return;
 
     gameState.timeRemaining -= 1;
-    gameState.timeRemaining = clampTimer(gameState.timeRemaining);
+    gameState.timeRemaining = clampTimer(
+      gameState.timeRemaining
+    );
 
     updateTimerDisplay(gameState.timeRemaining);
 
@@ -562,9 +730,9 @@ function startTimer() {
 function handleTimeUp() {
   clearInterval(gameState.timerId);
 
-  const hasSevenLetterWord = [...gameState.answersByWord.values()].some(
-    answer => answer.length === 7 && answer.found
-  );
+  const hasSevenLetterWord = [
+    ...gameState.answersByWord.values()
+  ].some(answer => answer.length === 7 && answer.found);
 
   if (hasSevenLetterWord) {
     AudioSFX.playRoundComplete();
@@ -576,7 +744,9 @@ function handleTimeUp() {
 }
 
 function checkRoundComplete() {
-  const allFound = gameState.hintSlots.every(slot => slot.found);
+  const allFound = gameState.hintSlots.every(
+    slot => slot.found
+  );
 
   if (allFound && gameState.active) {
     AudioSFX.playRoundComplete();
@@ -597,7 +767,7 @@ function renderBoard(boardLetters) {
     hex.className = `hex hex-${index}`;
     hex.dataset.index = index;
     hex.textContent = letter;
-    hex.setAttribute("aria-label", `Hexagon ${index + 1}`);
+    hex.setAttribute("aria-label", t.hexAria(index));
 
     boardElement.appendChild(hex);
   });
@@ -631,11 +801,13 @@ function updateHighScoreDisplay(score) {
 }
 
 function updateTimerDisplay(time) {
-  document.getElementById("timerDisplay").textContent = formatTimer(time);
+  document.getElementById("timerDisplay").textContent =
+    formatTimer(time);
 }
 
 function updateCurrentWordDisplay() {
-  const currentWordElement = document.getElementById("currentWord");
+  const currentWordElement =
+    document.getElementById("currentWord");
 
   if (
     !gameState.isSwiping ||
@@ -657,7 +829,8 @@ function showMessage(text) {
 }
 
 function showFeedback(isGood) {
-  const feedbackElement = document.getElementById("feedback");
+  const feedbackElement =
+    document.getElementById("feedback");
 
   feedbackElement.textContent = isGood ? "🐝" : "👎🏾";
   feedbackElement.classList.remove("show-good", "show-bad");
@@ -672,25 +845,36 @@ function showFeedback(isGood) {
 function revealUnfoundWords() {
   gameState.hintSlots.forEach(slot => {
     const element = document.getElementById(slot.id);
+
     if (!element || slot.found) return;
 
     element.textContent = slot.word;
     element.classList.add("word-hint--unfound");
-    element.setAttribute("aria-label", `Unfound word: ${slot.word}`);
+    element.setAttribute(
+      "aria-label",
+      t.unfoundWord(slot.word)
+    );
   });
 }
 
 // ---------- Overlays ----------
 
-function showRoundOverlay({ title, message, buttonLabel }) {
-  const overlay = document.getElementById("roundOverlay");
-  const titleElement = document.getElementById("roundOverlayTitle");
-  const messageElement = document.getElementById("roundOverlayMessage");
-  const buttonElement = document.getElementById("roundOverlayButton");
+function showRoundOverlay({
+  title,
+  message,
+  buttonLabel
+}) {
+  const overlay =
+    document.getElementById("roundOverlay");
 
-  titleElement.textContent = title;
-  messageElement.textContent = message;
-  buttonElement.textContent = buttonLabel;
+  document.getElementById("roundOverlayTitle").textContent =
+    title;
+
+  document.getElementById("roundOverlayMessage").textContent =
+    message;
+
+  document.getElementById("roundOverlayButton").textContent =
+    buttonLabel;
 
   overlay.hidden = false;
 }
@@ -700,7 +884,8 @@ function hideRoundOverlay() {
 }
 
 function attachOverlayHandlers() {
-  const startButton = document.getElementById("startButton");
+  const startButton =
+    document.getElementById("startButton");
 
   startButton.addEventListener("click", () => {
     AudioSFX.playClick();
@@ -709,44 +894,79 @@ function attachOverlayHandlers() {
     startRound();
   });
 
-  const roundButton = document.getElementById("roundOverlayButton");
+  const roundButton =
+    document.getElementById("roundOverlayButton");
 
   roundButton.addEventListener("click", () => {
     AudioSFX.playClick();
 
-    if (
-      gameState.overlayMode === "gameOver" ||
-      gameState.overlayMode === "nextRound" ||
-      gameState.overlayMode === "roundComplete"
-    ) {
-      if (gameState.overlayMode === "gameOver") {
-        gameState.score = 0;
-        updateScoreDisplay(0);
-      }
+    const restartModes = [
+      "gameOver",
+      "nextRound",
+      "roundComplete"
+    ];
 
-      startRound();
+    if (!restartModes.includes(gameState.overlayMode)) {
+      return;
     }
+
+    if (gameState.overlayMode === "gameOver") {
+      gameState.score = 0;
+      updateScoreDisplay(0);
+    }
+
+    startRound();
+  });
+}
+
+// ---------- Language handler ----------
+
+function attachLanguageHandler() {
+  const languageButton =
+    document.getElementById("languageButton");
+
+  if (!languageButton) return;
+
+  languageButton.textContent =
+    currentLanguage === "en" ? "ES" : "EN";
+
+  languageButton.addEventListener("click", () => {
+    AudioSFX.playClick();
+
+    const nextLanguage =
+      currentLanguage === "en" ? "es" : "en";
+
+    setLanguage(nextLanguage);
+    location.reload();
   });
 }
 
 // ---------- Mute handler ----------
 
 function attachMuteHandler() {
-  const muteButton = document.getElementById("muteButton");
+  const muteButton =
+    document.getElementById("muteButton");
+
   if (!muteButton) return;
 
-  const storedMuted = localStorage.getItem(`${GAME_NAME}Muted`);
+  const storedMuted = localStorage.getItem(
+    `${GAME_NAME}Muted`
+  );
+
   const initiallyMuted = storedMuted === "true";
 
   AudioSFX.setEnabled(!initiallyMuted);
   updateMuteButtonState(muteButton, initiallyMuted);
 
   muteButton.addEventListener("click", () => {
-    const currentlyMuted = !AudioSFX.isEnabled();
-    const newMuted = !currentlyMuted;
+    const newMuted = !AudioSFX.isEnabled();
 
     AudioSFX.setEnabled(!newMuted);
-    localStorage.setItem(`${GAME_NAME}Muted`, String(newMuted));
+
+    localStorage.setItem(
+      `${GAME_NAME}Muted`,
+      String(newMuted)
+    );
 
     updateMuteButtonState(muteButton, newMuted);
   });
@@ -763,14 +983,18 @@ function attachInputHandlers() {
   const board = document.getElementById("board");
 
   board.addEventListener("mousedown", handlePointerDown);
-  board.addEventListener("touchstart", handlePointerDown, {
-    passive: false
-  });
+  board.addEventListener(
+    "touchstart",
+    handlePointerDown,
+    { passive: false }
+  );
 
   window.addEventListener("mousemove", handlePointerMove);
-  window.addEventListener("touchmove", handlePointerMove, {
-    passive: false
-  });
+  window.addEventListener(
+    "touchmove",
+    handlePointerMove,
+    { passive: false }
+  );
 
   window.addEventListener("mouseup", handlePointerUp);
   window.addEventListener("touchend", handlePointerUp);
@@ -789,6 +1013,7 @@ function getHexIndexFromEvent(event) {
   }
 
   const index = parseInt(target.dataset.index, 10);
+
   return Number.isNaN(index) ? null : index;
 }
 
@@ -798,6 +1023,7 @@ function handlePointerDown(event) {
   event.preventDefault();
 
   const index = getHexIndexFromEvent(event);
+
   if (index === null) return;
 
   AudioSFX.playHexTone(index);
@@ -818,6 +1044,7 @@ function handlePointerMove(event) {
   }
 
   const index = getHexIndexFromEvent(event);
+
   if (index === null) return;
 
   const path = gameState.selectedPath;
@@ -825,9 +1052,8 @@ function handlePointerMove(event) {
 
   if (index === lastIndex) return;
 
-  const previousIndex = path.length > 1
-    ? path[path.length - 2]
-    : null;
+  const previousIndex =
+    path.length > 1 ? path[path.length - 2] : null;
 
   if (index === previousIndex) {
     path.pop();
@@ -839,37 +1065,38 @@ function handlePointerMove(event) {
   if (path.includes(index)) return;
 
   const candidate = [...path, index];
-  const maxLength = gameState.boardSize;
-  let hasExtension = false;
 
-  for (
-    let length = candidate.length;
-    length <= maxLength;
-    length++
-  ) {
-    const pathsOfLength = pathData.paths[String(length)] || [];
-
-    for (const possiblePath of pathsOfLength) {
-      if (
-        candidate.every(
-          (value, position) => value === possiblePath[position]
-        )
-      ) {
-        hasExtension = true;
-        break;
-      }
-    }
-
-    if (hasExtension) break;
-  }
-
-  if (!hasExtension) return;
+  if (!canPathBeExtended(candidate)) return;
 
   AudioSFX.playHexTone(index);
 
   path.push(index);
   highlightSelectedPath();
   updateCurrentWordDisplay();
+}
+
+function canPathBeExtended(candidate) {
+  const maxLength = gameState.boardSize;
+
+  for (
+    let length = candidate.length;
+    length <= maxLength;
+    length++
+  ) {
+    const pathsOfLength =
+      pathData.paths[String(length)] || [];
+
+    for (const possiblePath of pathsOfLength) {
+      const matches = candidate.every(
+        (value, position) =>
+          value === possiblePath[position]
+      );
+
+      if (matches) return true;
+    }
+  }
+
+  return false;
 }
 
 function handlePointerUp(event) {
@@ -895,11 +1122,11 @@ function handlePointerUp(event) {
     showFeedback(false);
 
     if (result.reason === "alreadyFound") {
-      showMessage(`${result.word} has already been found.`);
+      showMessage(t.alreadyFound(result.word));
     } else if (result.reason === "notAValidWord") {
-      showMessage("That path does not make a valid word.");
+      showMessage(t.notAWord);
     } else {
-      showMessage("Invalid path.");
+      showMessage(t.invalidPath);
     }
 
     return;
@@ -912,7 +1139,11 @@ function handlePointerUp(event) {
   updateTimerDisplay(gameState.timeRemaining);
 
   showMessage(
-    `${result.word}: +${result.points} points, +${result.bonusSeconds} seconds`
+    t.wordPoints(
+      result.word,
+      result.points,
+      result.bonusSeconds
+    )
   );
 
   checkRoundComplete();
@@ -925,14 +1156,19 @@ function highlightSelectedPath() {
 
   gameState.selectedPath.forEach(index => {
     const hex = hexes[index];
-    if (hex) hex.classList.add("is-highlighted");
+
+    if (hex) {
+      hex.classList.add("is-highlighted");
+    }
   });
 }
 
 function clearHexHighlights() {
   document
     .querySelectorAll(".hex.is-highlighted")
-    .forEach(hex => hex.classList.remove("is-highlighted"));
+    .forEach(hex =>
+      hex.classList.remove("is-highlighted")
+    );
 }
 
 // ---------- Path submission ----------
@@ -951,7 +1187,9 @@ function submitPath(selectedPath) {
     return { accepted: false, reason: "invalidLength" };
   }
 
-  if (new Set(selectedPath).size !== selectedPath.length) {
+  if (
+    new Set(selectedPath).size !== selectedPath.length
+  ) {
     return { accepted: false, reason: "reusedHex" };
   }
 
@@ -1000,9 +1238,11 @@ function submitPath(selectedPath) {
 
 function revealFirstHintForLength(hintSlots, word) {
   const slotIndex = gameState.wordToSlotIndex.get(word);
+
   if (slotIndex == null) return false;
 
   const slot = hintSlots[slotIndex];
+
   if (!slot) return false;
 
   slot.found = true;
@@ -1012,7 +1252,10 @@ function revealFirstHintForLength(hintSlots, word) {
   if (element) {
     element.textContent = word;
     element.classList.add("word-hint--found");
-    element.setAttribute("aria-label", `Found word: ${word}`);
+    element.setAttribute(
+      "aria-label",
+      t.foundWord(word)
+    );
   }
 
   return true;
