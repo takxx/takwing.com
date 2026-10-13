@@ -25,19 +25,22 @@ function addLogMessage(message, tiles = []) {
 
 function displayGameMessage(message) {
   if (!message) return "";
-
   if (typeof message === "string") return message;
 
+  const values = message.values ?? {};
+
   return t(message.key, {
-    ...(message.values ?? {}),
+    ...values,
     name:
-      message.values?.name === undefined
+      values.name === undefined
         ? undefined
-        : playerName(message.values.name),
+        : typeof values.name === "number"
+          ? playerName(values.name)
+          : values.name,
     names:
-      message.values?.names === undefined
+      values.names === undefined
         ? undefined
-        : message.values.names
+        : values.names
             .split(",")
             .map(index => playerName(Number(index)))
             .join(", ")
@@ -55,7 +58,13 @@ function tilesRemoved(before, after) {
 }
 
 function update() {
-  const gameMessage = displayGameMessage(game.message);
+  const pendingMessage = game.message;
+
+  if (game.over && Array.isArray(pendingMessage?.values?.scores)) {
+    game.finalScores = pendingMessage.values.scores;
+  }
+
+  const gameMessage = displayGameMessage(pendingMessage);
 
   if (gameMessage) {
     addLogMessage(gameMessage);
@@ -120,7 +129,6 @@ function runComputerTurns() {
     if (playedTiles.length > 0) {
       addLogMessage(t("aiPlayed", { name: aiName }), playedTiles);
     } else if (drewTiles.length > 0) {
-      // AI draw messages intentionally do not display the drawn tile.
       addLogMessage(t("aiDrew", { name: aiName }));
     }
 
@@ -293,7 +301,6 @@ document.addEventListener("click", event => {
   const tileId = Number(tileButton.dataset.tileId);
   if (!Number.isInteger(tileId)) return;
 
-  // A tap on a hand tile or table tile moves it into the draft area.
   if (!game.draft) game.beginHumanTurn();
 
   if (tileButton.dataset.handTile) {
@@ -312,7 +319,6 @@ document.querySelector("#draw")?.addEventListener("click", () => {
   if (!game.isHumanTurn) return;
 
   const handBefore = [...game.players[0].hand];
-
   game.drawForHuman();
 
   const drawnTiles = tilesAdded(handBefore, game.players[0].hand);
@@ -326,6 +332,8 @@ document.querySelector("#draw")?.addEventListener("click", () => {
 
 document.querySelector("#new-game")?.addEventListener("click", () => {
   game.newGame();
+  game.finalScores = null;
+
   messageLog.length = 0;
   lastLoggedKey = undefined;
   lastTurnState = undefined;

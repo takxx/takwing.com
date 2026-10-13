@@ -144,9 +144,11 @@ function getScores(players) {
     playerIndex,
     name: getPlayerName(playerIndex),
     points: handPoints(player.hand),
-    tileCount: player.hand.length
+    tileCount: player.hand.length,
+    tiles: [...player.hand]
   }));
 }
+
 
 export class Game {
   constructor() {
@@ -405,7 +407,7 @@ export class Game {
           this.message = {
             key: "opponentWins",
             values: {
-              name: getPlayerName(playerIndex),
+              name: playerIndex,
               scores: getScores(this.players)
             }
           };

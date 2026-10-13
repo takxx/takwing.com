@@ -21,6 +21,46 @@ function compareTiles(a, b) {
 }
 
 function orderSet(tiles) {
+  const natural = tiles.filter(tile => !tile.joker);
+  const jokers = tiles.filter(tile => tile.joker);
+
+  // In a run, display jokers at the values they can represent.
+  if (
+    jokers.length > 0 &&
+    natural.length > 0 &&
+    natural.every(tile => tile.color === natural[0].color)
+  ) {
+    const length = tiles.length;
+
+    for (let start = 1; start <= 14 - length; start++) {
+      const runValues = Array.from(
+        { length },
+        (_, index) => start + index
+      );
+
+      if (!natural.every(tile => runValues.includes(tile.value))) continue;
+
+      const missingValues = runValues.filter(
+        value => !natural.some(tile => tile.value === value)
+      );
+
+      if (missingValues.length !== jokers.length) continue;
+
+      const displayTiles = [
+        ...natural,
+        ...jokers.map((tile, index) => ({
+          ...tile,
+          displayValue: missingValues[index]
+        }))
+      ];
+
+      return displayTiles.sort(
+        (a, b) => (a.displayValue ?? a.value) - (b.displayValue ?? b.value)
+      );
+    }
+  }
+
+  // Groups: retain the existing color/value order, with jokers at the end.
   return [...tiles].sort(compareTiles);
 }
 
@@ -46,7 +86,7 @@ function makeTile(
     "--tile-color",
     TILE_COLORS[tile.color] ?? TILE_COLORS.joker
   );
-  button.textContent = tile.joker ? "★" : String(tile.value);
+  button.textContent = tile.joker ? "🌝" : String(tile.value);
   button.title = tile.joker
     ? t("joker")
     : t("tileTitle", {
@@ -141,7 +181,7 @@ function renderLogTile(tile) {
     "--tile-color",
     TILE_COLORS[tile.color] ?? TILE_COLORS.joker
   );
-  element.textContent = tile.joker ? "★" : String(tile.value);
+  element.textContent = tile.joker ? "🌝" : String(tile.value);
   element.title = tile.joker
     ? t("joker")
     : t("tileTitle", {
@@ -155,7 +195,7 @@ function renderLogTile(tile) {
 function renderFinalScores(container, game) {
   if (!game.over) return;
 
-  const scores = game.message?.values?.scores;
+  const scores = game.finalScores ?? game.message?.values?.scores;
   if (!Array.isArray(scores)) return;
 
   const section = document.createElement("section");
@@ -171,11 +211,26 @@ function renderFinalScores(container, game) {
   for (const score of scores) {
     const item = document.createElement("li");
     item.className = "final-score";
-    item.textContent = t("scoreRow", {
+
+    const summary = document.createElement("p");
+    summary.textContent = t("scoreRow", {
       name: score.name,
       points: score.points,
       tileCount: score.tileCount
     });
+    item.append(summary);
+
+    if (score.tiles?.length) {
+      const tiles = document.createElement("div");
+      tiles.className = "final-score-tiles";
+
+      for (const tile of score.tiles) {
+        tiles.append(renderLogTile(tile));
+      }
+
+      item.append(tiles);
+    }
+
     list.append(item);
   }
 
@@ -186,6 +241,9 @@ function renderFinalScores(container, game) {
 function renderMessageLog(messages, game) {
   const element = requireElement("#message");
   element.replaceChildren();
+
+  // Render scores first so they appear above the newest log entry.
+  renderFinalScores(element, game);
 
   for (const message of messages) {
     const entry = document.createElement("p");
@@ -202,8 +260,6 @@ function renderMessageLog(messages, game) {
 
     element.append(entry);
   }
-
-  renderFinalScores(element, game);
 
   let languageSelect = document.querySelector("#language-select");
 
@@ -237,7 +293,6 @@ function renderMessageLog(messages, game) {
     element.insertAdjacentElement("afterend", languageSelect);
   }
 }
-
 
 function tableSignature(table) {
   return JSON.stringify(table.map(set => set.map(tile => tile.id)));

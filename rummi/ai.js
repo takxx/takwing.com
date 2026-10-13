@@ -1,10 +1,10 @@
 const COLORS = ["pink", "orange", "green", "azure"];
 const JOKER_POINTS = 30;
 
-const MAX_REARRANGED_SETS = 2;
-const MAX_HAND_TILES_TO_CONSIDER = 5;
-const MAX_POOL_TILES = 18;
-const SEARCH_BUDGET_MS = 30;
+const MAX_REARRANGED_SETS = 3;
+const MAX_HAND_TILES_TO_CONSIDER = 8;
+const MAX_POOL_TILES = 24;
+const SEARCH_BUDGET_MS = 2500;
 
 function isConcreteSet(tiles) {
   if (tiles.length < 3 || tiles.length > 13) return false;
