@@ -11,6 +11,10 @@ body {
   font-family: system-ui, sans-serif;
 }
 
+body {
+  color: #222;
+}
+
 #game {
   position: relative;
   width: 100%;
@@ -18,17 +22,37 @@ body {
   overflow: hidden;
   cursor: crosshair;
   touch-action: manipulation;
-
-  /* Four light greys for a simple concrete-floor effect. */
   background-color: #d5d5d2;
 }
 
 #floor {
   position: absolute;
   inset: 0;
+  z-index: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+#roaches {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.roach {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  font-size: 36px;
+  line-height: 1;
+  user-select: none;
+  will-change: transform;
 }
 
 .hud {
@@ -54,32 +78,15 @@ body {
   z-index: 5;
   top: 68px;
   left: 50%;
-  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
   padding: 7px 12px;
+  transform: translateX(-50%);
   border-radius: 8px;
   background: #ffffffb8;
   color: #333;
   font-size: 14px;
   text-align: center;
   pointer-events: none;
-}
-
-#roaches {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.roach {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  font-size: 36px;
-  line-height: 1;
-  user-select: none;
-  will-change: transform;
 }
 
 #sandal {
@@ -94,26 +101,12 @@ body {
   animation: swat 180ms ease-out;
 }
 
-#floor {
+.impact {
   position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
+  z-index: 11;
+  transform: translate(-50%, -50%);
+  font-size: 38px;
   pointer-events: none;
-}
-
-.hud,
-.message {
-  z-index: 5;
-}
-
-#roaches {
-  z-index: 1;
-}
-
-#sandal {
-  z-index: 10;
 }
 
 .language-control {
@@ -135,12 +128,150 @@ body {
   font: inherit;
 }
 
+.game-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 65%);
+}
+
+.game-dialog {
+  width: min(100%, 440px);
+  padding: 24px;
+  border: 2px solid #333;
+  border-radius: 14px;
+  background: #fff;
+  color: #222;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 35%);
+  animation: dialog-appear 180ms ease-out;
+}
+
+.game-dialog-title {
+  margin: 0 0 12px;
+  font-size: 1.35rem;
+}
+
+.game-dialog-message {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.game-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.game-dialog button {
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid #555;
+  border-radius: 8px;
+  background: #eee;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.game-dialog button:hover {
+  background: #ddd;
+}
+
+.game-dialog button:focus-visible,
+.language-control select:focus-visible {
+  outline: 3px solid #2877d4;
+  outline-offset: 2px;
+}
+
+.game-dialog button.primary {
+  border-color: #333;
+  background: #333;
+  color: #fff;
+}
+
+.game-dialog button.primary:hover {
+  background: #111;
+}
+
+.music-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.music-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.music-slider {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  border-radius: 20px;
+  background: #999;
+  transition: background 0.2s;
+}
+
+.music-slider::before {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+  transition: transform 0.2s;
+}
+
+.music-toggle input:checked + .music-slider {
+  background: #27834a;
+}
+
+.music-toggle input:checked + .music-slider::before {
+  transform: translateX(22px);
+}
+
+.music-toggle input:focus-visible + .music-slider {
+  outline: 3px solid #2877d4;
+  outline-offset: 3px;
+}
+
 @keyframes swat {
   from {
     scale: 1.35;
   }
+
   to {
     scale: 1;
+  }
+}
+
+@keyframes dialog-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -153,5 +284,28 @@ body {
 
   .roach {
     font-size: 32px;
+  }
+
+  .game-dialog {
+    padding: 20px;
+  }
+
+  .game-dialog-buttons {
+    justify-content: stretch;
+  }
+
+  .game-dialog-buttons button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

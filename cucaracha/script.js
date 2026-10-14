@@ -1,3 +1,5 @@
+"use strict";
+
 const game = document.querySelector("#game");
 const floor = document.querySelector("#floor");
 const floorContext = floor.getContext("2d");
@@ -8,7 +10,7 @@ const stageDisplay = document.querySelector("#stage");
 const targetDisplay = document.querySelector("#target");
 const scoreDisplay = document.querySelector("#score");
 const timerDisplay = document.querySelector("#timer");
-const highScoreDisplay = document.querySelector("#high-score");
+const roachesKilledDisplay = document.querySelector("#high-score");
 const message = document.querySelector("#message");
 const languageSelect = document.querySelector("#language");
 
@@ -18,6 +20,10 @@ const ROACHES_PER_STAGE = 2;
 const INITIAL_SPEED = 95;
 const SPEED_PER_STAGE = 12;
 const HIT_RADIUS = 58;
+const ROACH_SIZE = 48;
+
+const LANGUAGE_STORAGE_KEY = "roachPatrolLanguage";
+const ROACHES_KILLED_STORAGE_KEY = "roachPatrolRoachesKilled";
 
 const translations = {
   en: {
@@ -26,12 +32,17 @@ const translations = {
     target: "Target",
     hit: "Hit",
     time: "Time",
-    best: "Death Toll",
+    best: "dead",
     instructions: "Click or tap to swat the roaches!",
     ready:
-      "Roach Patrol\n\nClear all the roaches before the 30-second timer runs out. Click or tap to swing the sandal. Ready?",
+      "Clear all the roaches before the 30-second timer runs out. Use the music switch if you want background music.",
+    start: "Start game",
+    music: "Background music",
     stageCleared: "Stage cleared! Ready for stage {stage}?",
-    timeUp: "Time's up! You hit {score} of {target}. Try again?",
+    continue: "Continue",
+    done: "Done",
+    timeUp: "Time's up! You hit {score} of {target}.",
+    tryAgain: "Try again?",
     refresh: "Refresh the page when you're ready to play."
   },
   es: {
@@ -40,12 +51,17 @@ const translations = {
     target: "Objetivo",
     hit: "Aciertos",
     time: "Tiempo",
-    best: "Eliminadas",
+    best: "eliminadas",
     instructions: "¡Haz clic o toca para aplastar las cucarachas!",
     ready:
-      "¡Cucarachas!\n\nElimina todas las cucarachas antes de que termine el límite de 30 segundos. Haz clic o toca para dar un zapatillazo. ¿Preparado?",
+      "Elimina todas las cucarachas antes de que termine el límite de 30 segundos. Usa el interruptor si quieres música de fondo.",
+    start: "Empezar",
+    music: "Música de fondo",
     stageCleared: "¡Fase superada! ¿Listo para la fase {stage}?",
-    timeUp: "¡Se acabó el tiempo! Has acertado {score} de {target}. ¿Lo intentas de nuevo?",
+    continue: "Continuar",
+    done: "Listo",
+    timeUp: "¡Se acabó el tiempo! Has acertado {score} de {target}.",
+    tryAgain: "¿Lo intentas de nuevo?",
     refresh: "Recarga la página cuando quieras jugar."
   },
   zh: {
@@ -54,32 +70,42 @@ const translations = {
     target: "目標",
     hit: "擊中",
     time: "時間",
-    best: "死亡數字",
+    best: "隻死曱甴",
     instructions: "撳一下或點一下，打曱甴！",
     ready:
-      "打曱甴\n\n喺30秒內清除所有曱甴。撳一下或點一下用拖鞋拍落去。準備好未？",
+      "喺30秒內清除所有曱甴。想播背景音樂就開啟音樂掣。",
+    start: "開始遊戲",
+    music: "背景音樂",
     stageCleared: "過關喇！準備好玩第 {stage} 關未？",
-    timeUp: "時間到！你打中咗 {score} 隻，目標係 {target} 隻。再玩一次？",
+    continue: "繼續",
+    done: "完成",
+    timeUp: "時間到！你打中咗 {target} 隻入面嘅 {score} 隻。",
+    tryAgain: "再玩一次？",
     refresh: "想玩嘅時候，重新載入呢頁。"
   }
 };
 
 const VALID_LANGUAGES = ["en", "es", "zh"];
-const LANGUAGE_STORAGE_KEY = "roachPatrolLanguage";
-const ROACHES_KILLED_STORAGE_KEY = "roachPatrolRoachesKilled";
 
+const music = new Audio("lacucaracha.mp3");
+music.loop = true;
+music.volume = 0.25;
+
+let language = getInitialLanguage();
 let stage = 1;
 let score = 0;
 let target = INITIAL_ROACHES;
 let timeLeft = STAGE_TIME;
 let roachSpeed = INITIAL_SPEED;
-let running = false;
-let lastFrame = 0;
-let clockTimer;
-let roaches = [];
 let roachesKilled =
   Number(localStorage.getItem(ROACHES_KILLED_STORAGE_KEY)) || 0;
-let audioContext;
+let roaches = [];
+let running = false;
+let lastFrame = 0;
+let clockTimer = null;
+let sandalTimeout = null;
+let audioContext = null;
+let overlayElement = null;
 
 function getInitialLanguage() {
   const queryLanguage = new URLSearchParams(window.location.search).get("lang");
@@ -97,6 +123,7 @@ function getInitialLanguage() {
   const browserLanguage = (navigator.language || "").toLowerCase();
 
   if (browserLanguage.startsWith("es")) return "es";
+
   if (
     browserLanguage.startsWith("zh-hk") ||
     browserLanguage.startsWith("zh-tw") ||
@@ -108,8 +135,6 @@ function getInitialLanguage() {
 
   return "en";
 }
-
-let language = getInitialLanguage();
 
 function text(key, values = {}) {
   let result = translations[language][key] ?? translations.en[key] ?? key;
@@ -123,12 +148,14 @@ function text(key, values = {}) {
 
 function updateLabels() {
   document.documentElement.lang = language === "zh" ? "zh-Hant-HK" : language;
+
   document.querySelector("#language-label").textContent = text("language");
   document.querySelector("#stage-label")?.replaceChildren(text("stage"));
   document.querySelector("#target-label")?.replaceChildren(text("target"));
   document.querySelector("#hit-label")?.replaceChildren(text("hit"));
   document.querySelector("#time-label")?.replaceChildren(text("time"));
   document.querySelector("#high-score-label").textContent = text("best");
+
   message.textContent = text("instructions");
 }
 
@@ -139,12 +166,15 @@ function setLanguage(nextLanguage) {
   localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   languageSelect.value = language;
   updateLabels();
+  updateDisplays();
+}
 
+function updateDisplays() {
   stageDisplay.textContent = stage;
   targetDisplay.textContent = target;
   scoreDisplay.textContent = score;
   timerDisplay.textContent = timeLeft;
-  highScoreDisplay.textContent = roachesKilled;
+  roachesKilledDisplay.textContent = roachesKilled;
 }
 
 function drawFloor() {
@@ -154,8 +184,8 @@ function drawFloor() {
   const height = game.clientHeight;
   const scale = window.devicePixelRatio || 1;
 
-  floor.width = width * scale;
-  floor.height = height * scale;
+  floor.width = Math.round(width * scale);
+  floor.height = Math.round(height * scale);
   floorContext.setTransform(scale, 0, 0, scale, 0, 0);
 
   for (let y = 0; y < height; y += pixelSize) {
@@ -225,23 +255,117 @@ function playHitSound() {
 }
 
 function showImpact(x, y) {
-  const bounds = game.getBoundingClientRect();
   const impact = document.createElement("span");
 
+  impact.className = "impact";
   impact.textContent = "💥";
   impact.setAttribute("aria-hidden", "true");
-  impact.style.cssText = `
-    position: absolute;
-    z-index: 11;
-    left: ${Math.max(12, Math.min(x - 34, bounds.width - 12))}px;
-    top: ${Math.max(12, Math.min(y, bounds.height - 12))}px;
-    transform: translate(-50%, -50%);
-    font-size: 38px;
-    pointer-events: none;
-  `;
+  impact.style.left = `${x}px`;
+  impact.style.top = `${y}px`;
 
   game.appendChild(impact);
   window.setTimeout(() => impact.remove(), 450);
+}
+
+function showOverlay({ title, body, buttons, musicToggle = false }) {
+  overlayElement?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = "game-dialog-overlay";
+
+  const dialog = document.createElement("section");
+  dialog.className = "game-dialog";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+
+  const heading = document.createElement("h2");
+  heading.className = "game-dialog-title";
+  heading.textContent = title;
+
+  const content = document.createElement("p");
+  content.className = "game-dialog-message";
+  content.textContent = body;
+
+  dialog.append(heading, content);
+
+  if (musicToggle) {
+    const toggleLabel = document.createElement("label");
+    toggleLabel.className = "music-toggle";
+
+    const toggleText = document.createElement("span");
+    toggleText.textContent = text("music");
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = !music.paused;
+    input.setAttribute("aria-label", text("music"));
+
+    const slider = document.createElement("span");
+    slider.className = "music-slider";
+    slider.setAttribute("aria-hidden", "true");
+
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        music.play().catch(() => {
+          input.checked = false;
+        });
+      } else {
+        music.pause();
+        music.currentTime = 0;
+      }
+    });
+
+    toggleLabel.append(toggleText, input, slider);
+    dialog.append(toggleLabel);
+  }
+
+  const buttonRow = document.createElement("div");
+  buttonRow.className = "game-dialog-buttons";
+
+  for (const button of buttons) {
+    const element = document.createElement("button");
+    element.type = "button";
+    element.textContent = button.label;
+
+    if (button.primary) {
+      element.classList.add("primary");
+    }
+
+    element.addEventListener("click", () => {
+      overlay.remove();
+      overlayElement = null;
+      button.onClick?.();
+    });
+
+    buttonRow.append(element);
+  }
+
+  dialog.append(buttonRow);
+  overlay.append(dialog);
+  document.body.append(overlay);
+  overlayElement = overlay;
+
+  dialog.querySelector("button")?.focus();
+}
+
+function showStart() {
+  showOverlay({
+    title: "Roach Patrol",
+    body: text("ready"),
+    musicToggle: true,
+    buttons: [
+      {
+        label: text("start"),
+        primary: true,
+        onClick: startNewGame
+      }
+    ]
+  });
+}
+
+function startNewGame() {
+  stage = 1;
+  startStage();
 }
 
 function startStage() {
@@ -251,14 +375,11 @@ function startStage() {
   score = 0;
   running = true;
 
-  stageDisplay.textContent = stage;
-  targetDisplay.textContent = target;
-  scoreDisplay.textContent = score;
-  timerDisplay.textContent = timeLeft;
-  message.textContent = text("instructions");
-
   clearInterval(clockTimer);
   removeAllRoaches();
+
+  updateDisplays();
+  message.textContent = text("instructions");
 
   for (let i = 0; i < target; i++) {
     spawnRoach();
@@ -266,7 +387,7 @@ function startStage() {
 
   lastFrame = performance.now();
   requestAnimationFrame(updateRoaches);
-  clockTimer = setInterval(tick, 1000);
+  clockTimer = window.setInterval(tick, 1000);
 }
 
 function tick() {
@@ -275,7 +396,9 @@ function tick() {
   timeLeft = Math.max(0, timeLeft - 1);
   timerDisplay.textContent = timeLeft;
 
-  if (timeLeft <= 0) endStage(false);
+  if (timeLeft === 0) {
+    endStage(false);
+  }
 }
 
 function endStage(won) {
@@ -287,41 +410,52 @@ function endStage(won) {
 
   if (won) {
     stage += 1;
-    window.setTimeout(() => {
-      if (window.confirm(text("stageCleared", { stage }))) {
-        startStage();
-      } else {
-        showStart();
-      }
-    }, 100);
-  } else {
-    window.setTimeout(() => {
-      if (window.confirm(text("timeUp", { score, target }))) {
-        stage = 1;
-        showStart();
-      } else {
-        showStart();
-      }
-    }, 100);
-  }
-}
 
-function showStart() {
-  window.setTimeout(() => {
-    if (window.confirm(text("ready"))) {
-      stage = 1;
-      startStage();
-    } else {
-      message.textContent = text("refresh");
-    }
-  }, 0);
+    showOverlay({
+      title: text("stageCleared", { stage }),
+      body: text("stageCleared", { stage }),
+      buttons: [
+        {
+          label: text("continue"),
+          primary: true,
+          onClick: startStage
+        },
+        {
+          label: text("done"),
+          onClick: showStart
+        }
+      ]
+    });
+
+    return;
+  }
+
+  showOverlay({
+    title: text("tryAgain"),
+    body: text("timeUp", { score, target }),
+    buttons: [
+      {
+        label: text("tryAgain"),
+        primary: true,
+        onClick: showStart
+      },
+      {
+        label: text("done"),
+        onClick: showStart
+      }
+    ]
+  });
 }
 
 function spawnRoach() {
   const bounds = game.getBoundingClientRect();
-  const margin = 35;
-  const x = margin + Math.random() * Math.max(0, bounds.width - margin * 2);
-  const y = margin + Math.random() * Math.max(0, bounds.height - margin * 2);
+  const halfSize = ROACH_SIZE / 2;
+  const minX = halfSize;
+  const maxX = Math.max(minX, bounds.width - halfSize);
+  const minY = halfSize;
+  const maxY = Math.max(minY, bounds.height - halfSize);
+  const x = minX + Math.random() * (maxX - minX);
+  const y = minY + Math.random() * (maxY - minY);
   const angle = Math.random() * Math.PI * 2;
 
   const element = document.createElement("div");
@@ -336,6 +470,15 @@ function spawnRoach() {
     vx: Math.cos(angle) * roachSpeed,
     vy: Math.sin(angle) * roachSpeed
   });
+
+  positionRoach(roaches[roaches.length - 1]);
+}
+
+function positionRoach(roach) {
+  const angle = Math.atan2(roach.vy, roach.vx) * (180 / Math.PI) + 90;
+
+  roach.element.style.transform =
+    `translate(${roach.x - ROACH_SIZE / 2}px, ${roach.y - ROACH_SIZE / 2}px) rotate(${angle}deg)`;
 }
 
 function updateRoaches(now) {
@@ -343,41 +486,43 @@ function updateRoaches(now) {
 
   const delta = Math.min((now - lastFrame) / 1000, 0.05);
   lastFrame = now;
+
   const bounds = game.getBoundingClientRect();
+  const halfSize = ROACH_SIZE / 2;
+  const maxX = Math.max(halfSize, bounds.width - halfSize);
+  const maxY = Math.max(halfSize, bounds.height - halfSize);
 
   for (const roach of roaches) {
     roach.x += roach.vx * delta;
     roach.y += roach.vy * delta;
 
-    const maxX = Math.max(0, bounds.width);
-    const maxY = Math.max(0, bounds.height);
-
-    if (roach.x < 0) {
-      roach.x = 0;
+    if (roach.x < halfSize) {
+      roach.x = halfSize;
       roach.vx = Math.abs(roach.vx);
     } else if (roach.x > maxX) {
       roach.x = maxX;
       roach.vx = -Math.abs(roach.vx);
     }
 
-    if (roach.y < 0) {
-      roach.y = 0;
+    if (roach.y < halfSize) {
+      roach.y = halfSize;
       roach.vy = Math.abs(roach.vy);
     } else if (roach.y > maxY) {
       roach.y = maxY;
       roach.vy = -Math.abs(roach.vy);
     }
 
-    const angle = Math.atan2(roach.vy, roach.vx) * (180 / Math.PI) + 90;
-    roach.element.style.transform =
-      `translate(${roach.x}px, ${roach.y}px) rotate(${angle}deg)`;
+    positionRoach(roach);
   }
 
   requestAnimationFrame(updateRoaches);
 }
 
 function removeAllRoaches() {
-  roaches.forEach((roach) => roach.element.remove());
+  for (const roach of roaches) {
+    roach.element.remove();
+  }
+
   roaches = [];
 }
 
@@ -390,7 +535,8 @@ function showSandal(x, y) {
   void sandal.offsetWidth;
   sandal.style.animation = "";
 
-  window.setTimeout(() => {
+  window.clearTimeout(sandalTimeout);
+  sandalTimeout = window.setTimeout(() => {
     sandal.style.display = "none";
   }, 220);
 }
@@ -413,20 +559,22 @@ game.addEventListener("pointerdown", (event) => {
   roaches.splice(hitIndex, 1);
 
   score += 1;
+  roachesKilled += 1;
+
   scoreDisplay.textContent = score;
+  roachesKilledDisplay.textContent = roachesKilled;
+
+  localStorage.setItem(
+    ROACHES_KILLED_STORAGE_KEY,
+    String(roachesKilled)
+  );
+
   showImpact(x, y);
   playHitSound();
 
   if ("vibrate" in navigator) {
     navigator.vibrate(45);
   }
-
-  roachesKilled += 1;
-  localStorage.setItem(
-    ROACHES_KILLED_STORAGE_KEY,
-    String(roachesKilled)
-  );
-  highScoreDisplay.textContent = roachesKilled;
 
   if (roaches.length === 0) {
     endStage(true);
@@ -438,8 +586,8 @@ languageSelect.addEventListener("change", () => {
   setLanguage(languageSelect.value);
 });
 
-highScoreDisplay.textContent = roachesKilled;
 updateLabels();
+updateDisplays();
 drawFloor();
 window.addEventListener("resize", drawFloor);
 showStart();
