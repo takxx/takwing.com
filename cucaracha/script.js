@@ -14,9 +14,9 @@ const languageSelect = document.querySelector("#language");
 
 const STAGE_TIME = 30;
 const INITIAL_ROACHES = 5;
+const ROACHES_PER_STAGE = 2;
 const INITIAL_SPEED = 95;
 const SPEED_PER_STAGE = 12;
-const ROACHES_PER_STAGE = 2;
 const HIT_RADIUS = 58;
 
 const translations = {
@@ -26,7 +26,7 @@ const translations = {
     target: "Target",
     hit: "Hit",
     time: "Time",
-    best: "Best",
+    best: "Death Toll",
     instructions: "Click or tap to swat the roaches!",
     ready:
       "Roach Patrol\n\nClear all the roaches before the 30-second timer runs out. Click or tap to swing the sandal. Ready?",
@@ -40,7 +40,7 @@ const translations = {
     target: "Objetivo",
     hit: "Aciertos",
     time: "Tiempo",
-    best: "Récord",
+    best: "Eliminadas",
     instructions: "¡Haz clic o toca para aplastar las cucarachas!",
     ready:
       "¡Cucarachas!\n\nElimina todas las cucarachas antes de que termine el límite de 30 segundos. Haz clic o toca para dar un zapatillazo. ¿Preparado?",
@@ -54,7 +54,7 @@ const translations = {
     target: "目標",
     hit: "擊中",
     time: "時間",
-    best: "最高紀錄",
+    best: "死亡數字",
     instructions: "撳一下或點一下，打曱甴！",
     ready:
       "打曱甴\n\n喺30秒內清除所有曱甴。撳一下或點一下用拖鞋拍落去。準備好未？",
@@ -66,7 +66,7 @@ const translations = {
 
 const VALID_LANGUAGES = ["en", "es", "zh"];
 const LANGUAGE_STORAGE_KEY = "roachPatrolLanguage";
-const HIGH_SCORE_STORAGE_KEY = "roachPatrolHighScore";
+const ROACHES_KILLED_STORAGE_KEY = "roachPatrolRoachesKilled";
 
 let stage = 1;
 let score = 0;
@@ -77,7 +77,8 @@ let running = false;
 let lastFrame = 0;
 let clockTimer;
 let roaches = [];
-let highScore = Number(localStorage.getItem(HIGH_SCORE_STORAGE_KEY)) || 0;
+let roachesKilled =
+  Number(localStorage.getItem(ROACHES_KILLED_STORAGE_KEY)) || 0;
 let audioContext;
 
 function getInitialLanguage() {
@@ -143,7 +144,7 @@ function setLanguage(nextLanguage) {
   targetDisplay.textContent = target;
   scoreDisplay.textContent = score;
   timerDisplay.textContent = timeLeft;
-  highScoreDisplay.textContent = highScore;
+  highScoreDisplay.textContent = roachesKilled;
 }
 
 function drawFloor() {
@@ -191,7 +192,11 @@ function playHitSound() {
     thump.stop(now + 0.15);
 
     const bufferSize = Math.floor(audioContext.sampleRate * 0.08);
-    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const buffer = audioContext.createBuffer(
+      1,
+      bufferSize,
+      audioContext.sampleRate
+    );
     const data = buffer.getChannelData(0);
 
     for (let i = 0; i < bufferSize; i++) {
@@ -344,22 +349,19 @@ function updateRoaches(now) {
     roach.x += roach.vx * delta;
     roach.y += roach.vy * delta;
 
-    // Keep roaches inside the play area and reflect their motion at each edge.
-    const minX = 0;
-    const minY = 0;
     const maxX = Math.max(0, bounds.width);
     const maxY = Math.max(0, bounds.height);
 
-    if (roach.x < minX) {
-      roach.x = minX;
+    if (roach.x < 0) {
+      roach.x = 0;
       roach.vx = Math.abs(roach.vx);
     } else if (roach.x > maxX) {
       roach.x = maxX;
       roach.vx = -Math.abs(roach.vx);
     }
 
-    if (roach.y < minY) {
-      roach.y = minY;
+    if (roach.y < 0) {
+      roach.y = 0;
       roach.vy = Math.abs(roach.vy);
     } else if (roach.y > maxY) {
       roach.y = maxY;
@@ -419,11 +421,12 @@ game.addEventListener("pointerdown", (event) => {
     navigator.vibrate(45);
   }
 
-  if (score > highScore) {
-    highScore = score;
-    localStorage.setItem(HIGH_SCORE_STORAGE_KEY, String(highScore));
-    highScoreDisplay.textContent = highScore;
-  }
+  roachesKilled += 1;
+  localStorage.setItem(
+    ROACHES_KILLED_STORAGE_KEY,
+    String(roachesKilled)
+  );
+  highScoreDisplay.textContent = roachesKilled;
 
   if (roaches.length === 0) {
     endStage(true);
@@ -435,7 +438,7 @@ languageSelect.addEventListener("change", () => {
   setLanguage(languageSelect.value);
 });
 
-highScoreDisplay.textContent = highScore;
+highScoreDisplay.textContent = roachesKilled;
 updateLabels();
 drawFloor();
 window.addEventListener("resize", drawFloor);
