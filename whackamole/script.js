@@ -31,12 +31,14 @@ const translations = {
     start: "Start game",
     next: "Start next round",
     playAgain: "Play again",
-    statusStart: (stage, target) => `Round ${stage}: hit ${target} moles before time runs out!`,
+    statusStart: (stage, target) =>
+      `Round ${stage}: hit ${target} moles before time runs out!`,
     remaining: (count, stage) => `${count} more to clear round ${stage}.`,
     cleared: (stage) => `Round ${stage} cleared!`,
     timesUp: "TIME'S UP!",
     tryAgain: "Have another go?",
-    lostCopy: (hits, target) => `You hit ${hits} of ${target} moles. Take a breath, then try again!`,
+    lostCopy: (hits, target) =>
+      `You hit ${hits} of ${target} moles. Take a breath, then try again!`,
     newRecord: "New high score!",
   },
 
@@ -66,18 +68,22 @@ const translations = {
     firstCopy: "El reto de la feria está a punto de empezar.",
     nextCopy: "¡El público está animándote! ¿Superarás el siguiente reto?",
     objective: "TU OBJETIVO",
-    objectiveText: (target, time) => `Golpea ${target} topos en ${time} segundos`,
+    objectiveText: (target, time) =>
+      `Golpea ${target} topos en ${time} segundos`,
     relaxed: "Modo relajado",
     relaxedDescription: "Topos más lentos y cuenta atrás más pausada",
     start: "Empezar",
     next: "Empezar siguiente ronda",
     playAgain: "Jugar otra vez",
-    statusStart: (stage, target) => `Ronda ${stage}: golpea ${target} topos antes de que se acabe el tiempo.`,
-    remaining: (count, stage) => `Te faltan ${count} para superar la ronda ${stage}.`,
+    statusStart: (stage, target) =>
+      `Ronda ${stage}: golpea ${target} topos antes de que se acabe el tiempo.`,
+    remaining: (count, stage) =>
+      `Te faltan ${count} para superar la ronda ${stage}.`,
     cleared: (stage) => `¡Ronda ${stage} superada!`,
     timesUp: "¡SE ACABÓ EL TIEMPO!",
     tryAgain: "¿Otra partida?",
-    lostCopy: (hits, target) => `Has golpeado ${hits} de ${target} topos. ¡Respira y vuelve a intentarlo!`,
+    lostCopy: (hits, target) =>
+      `Has golpeado ${hits} de ${target} topos. ¡Respira y vuelve a intentarlo!`,
     newRecord: "¡Nuevo récord!",
   },
 
@@ -113,18 +119,22 @@ const translations = {
     start: "開始遊戲",
     next: "開始下一關",
     playAgain: "再玩一次",
-    statusStart: (stage, target) => `第 ${stage} 關：時間完之前扑中 ${target} 次！`,
-    remaining: (count, stage) => `仲差 ${count} 次就過第 ${stage} 關。`,
+    statusStart: (stage, target) =>
+      `第 ${stage} 關：時間完之前扑中 ${target} 次！`,
+    remaining: (count, stage) =>
+      `仲差 ${count} 次就過第 ${stage} 關。`,
     cleared: (stage) => `過咗第 ${stage} 關！`,
     timesUp: "時間到！",
     tryAgain: "再試一次？",
-    lostCopy: (hits, target) => `你扑中咗 ${target} 次目標入面嘅 ${hits} 次。唞一唞再試啦！`,
+    lostCopy: (hits, target) =>
+      `你扑中咗 ${target} 次目標入面嘅 ${hits} 次。唞一唞再試啦！`,
     newRecord: "新紀錄！",
   },
 };
 
 const LANGUAGE_KEY = "whack-a-mole-language";
-const HIGH_SCORE_KEY = "whack-a-mole-high-score";
+const NORMAL_HIGH_SCORE_KEY = "whack-a-mole-high-score-normal";
+const RELAXED_HIGH_SCORE_KEY = "whack-a-mole-high-score-relaxed";
 
 const stageDisplay = document.querySelector("#stage");
 const targetDisplay = document.querySelector("#target");
@@ -159,34 +169,34 @@ let countdownTimer = null;
 let nextMoleTimer = null;
 let language = getInitialLanguage();
 
-  const board = document.querySelector(".playfield");
-  const canvas = document.createElement("canvas");
-  const size = 128;
-  const colors = [
-    [117, 67, 45],
-    [180, 119, 75],
-    [137, 80, 52],
-    [96, 53, 31]
-  ];
+// Add a subtle randomized texture to the playfield.
+const board = document.querySelector(".playfield");
+const canvas = document.createElement("canvas");
+const size = 128;
+const colors = [
+  [117, 67, 45],
+  [180, 119, 75],
+  [137, 80, 52],
+  [96, 53, 31],
+];
 
-  canvas.width = size;
-  canvas.height = size;
+canvas.width = size;
+canvas.height = size;
 
-  const context = canvas.getContext("2d");
-  const image = context.createImageData(size, size);
+const context = canvas.getContext("2d");
+const image = context.createImageData(size, size);
 
-  for (let i = 0; i < image.data.length; i += 4) {
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    image.data[i] = color[0];
-    image.data[i + 1] = color[1];
-    image.data[i + 2] = color[2];
-    image.data[i + 3] = 255;
-  }
+for (let i = 0; i < image.data.length; i += 4) {
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  image.data[i] = color[0];
+  image.data[i + 1] = color[1];
+  image.data[i + 2] = color[2];
+  image.data[i + 3] = 255;
+}
 
-  context.putImageData(image, 0, 0);
-  board.style.backgroundImage = `url(${canvas.toDataURL()})`;
-  board.style.backgroundSize = "100% 100%";
-
+context.putImageData(image, 0, 0);
+board.style.backgroundImage = `url(${canvas.toDataURL()})`;
+board.style.backgroundSize = "100% 100%";
 
 function normalizeLanguage(value) {
   if (!value) return null;
@@ -272,7 +282,7 @@ function applyTranslations() {
   updateDisplay();
 
   if (dialog.open) {
-    if (stage === 1 && score === 0) {
+    if (stage === 1 && score === 0 && timeLeft === 30) {
       showRoundDialog("first");
     } else if (!running && timeLeft <= 0) {
       showRoundDialog("gameOver");
@@ -289,8 +299,15 @@ function setLanguage(nextLanguage) {
   applyTranslations();
 }
 
-function readHighScore() {
-  const saved = Number.parseInt(localStorage.getItem(HIGH_SCORE_KEY), 10);
+function highScoreKey(mode = relaxedMode) {
+  return mode ? RELAXED_HIGH_SCORE_KEY : NORMAL_HIGH_SCORE_KEY;
+}
+
+function readHighScore(mode = relaxedMode) {
+  const saved = Number.parseInt(
+    localStorage.getItem(highScoreKey(mode)),
+    10
+  );
   return Number.isFinite(saved) && saved > 0 ? saved : 0;
 }
 
@@ -354,8 +371,11 @@ function showRoundDialog(kind) {
       ? t("start")
       : t("next");
 
-  // Offer the mode choice before the first round; keep its setting for later rounds.
-  relaxedControl.hidden = !initial;
+  // Mode can only be selected before the first round or after a game ends.
+  relaxedControl.hidden = !(initial || gameOver);
+  if (initial || gameOver) {
+    relaxedToggle.checked = relaxedMode;
+  }
 
   if (!dialog.open) dialog.showModal();
 }
@@ -374,7 +394,8 @@ function prepareStage() {
 }
 
 function startStage() {
-  if (relaxedControl.hidden === false) {
+  // Read the mode only at the start of a game, not between stages.
+  if (stage === 1) {
     relaxedMode = relaxedToggle.checked;
   }
 
@@ -389,7 +410,7 @@ function startStage() {
 function startCountdown() {
   clearInterval(countdownTimer);
 
-  // Relaxed Mode halves the countdown speed as well as slowing the moles.
+  // Relaxed Mode makes each countdown second take twice as long.
   const tickMilliseconds = relaxedMode ? 2000 : 1000;
 
   countdownTimer = setInterval(() => {
@@ -425,11 +446,13 @@ function showRandomMole() {
 }
 
 function saveHighScoreIfNeeded() {
-  const highScore = readHighScore();
+  const highScore = readHighScore(relaxedMode);
+
   if (score > highScore) {
-    localStorage.setItem(HIGH_SCORE_KEY, String(score));
+    localStorage.setItem(highScoreKey(relaxedMode), String(score));
     return true;
   }
+
   return false;
 }
 
@@ -519,6 +542,13 @@ restartButton.addEventListener("click", () => {
 
 languageSelect.addEventListener("change", (event) => {
   setLanguage(event.target.value);
+});
+
+relaxedToggle.addEventListener("change", () => {
+  // Keep the high-score display in sync with the mode selected for the next game.
+  if (!running && relaxedControl.hidden === false) {
+    highScoreDisplay.textContent = readHighScore(relaxedToggle.checked);
+  }
 });
 
 applyTranslations();

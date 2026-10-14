@@ -16,7 +16,7 @@
       <p class="subtitle" id="subtitle">Step right up and test your reflexes.</p>
     </header>
 
-    <section class="machine" aria-label="Whack-a-mole game" id="machine">
+    <section class="machine" id="machine" aria-label="Whack-a-mole game">
       <div class="marquee" aria-hidden="true">
         <span class="marquee-star">★</span>
         <span id="marqueeMole">MOLE</span>
@@ -41,35 +41,59 @@
           <span class="stat-label" id="timeLabel">TIME</span>
           <span class="stat-value" id="time">30</span>
         </div>
-      </div>
-
-      <div class="record" id="recordLine">
-        <span id="highScoreLabel">HIGH SCORE</span>
-        <strong id="highScore">0</strong>
+        <div class="stat stat-high-score">
+          <span class="stat-label" id="highScoreLabel">HIGH SCORE</span>
+          <span class="stat-value" id="highScore">0</span>
+        </div>
       </div>
 
       <p class="status" id="status" aria-live="polite"></p>
 
-<div class="playfield-frame">
-  <section class="playfield" id="playfield" aria-label="Mole holes">
-    <button class="hole" type="button" aria-label="Hole 1"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 2"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 3"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 4"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 5"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 6"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 7"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 8"><span class="mole"></span></button>
-    <button class="hole" type="button" aria-label="Hole 9"><span class="mole"></span></button>
-  </section>
+      <div class="playfield-frame">
+        <section class="playfield" id="playfield" aria-label="Mole holes">
+          <button class="hole" type="button" aria-label="Hole 1">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 2">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 3">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 4">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 5">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 6">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 7">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 8">
+            <span class="mole"></span>
+          </button>
+          <button class="hole" type="button" aria-label="Hole 9">
+            <span class="mole"></span>
+          </button>
+        </section>
 
-  <svg class="playfield-outline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-    <polygon points="9,2 91,2 98,98 2,98"></polygon>
-  </svg>
-</div>
+        <svg
+          class="playfield-outline"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <polygon points="9,2 91,2 98,98 2,98"></polygon>
+        </svg>
+      </div>
 
       <div class="controls">
-        <button class="action-button" id="restartButton" type="button">New game</button>
+        <button class="action-button" id="restartButton" type="button">
+          New game
+        </button>
       </div>
 
       <div class="cabinet-lights" aria-hidden="true">
@@ -103,7 +127,9 @@
     <label class="relaxed-control" id="relaxedControl">
       <span class="relaxed-copy">
         <strong id="relaxedLabel">Relaxed Mode</strong>
-        <small id="relaxedDescription">Slower moles and a slower countdown</small>
+        <small id="relaxedDescription">
+          Slower moles and a slower countdown
+        </small>
       </span>
       <input id="relaxedToggle" type="checkbox" role="switch">
       <span class="switch-track" aria-hidden="true"></span>
