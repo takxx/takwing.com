@@ -1,805 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
-  <title>Whack-a-Mole</title>
-
-  <style>
-    :root {
-      --accent: #ffd166;
-      --accent-dark: #e5a900;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-      touch-action: manipulation;
-    }
-
-    body {
-      min-height: 100vh;
-      padding: 12px;
-      font-family: Arial, "Microsoft JhengHei", "PingFang HK", sans-serif;
-      color: white;
-      background: radial-gradient(circle at top, #3ca55c, #176535 75%);
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      user-select: none;
-    }
-
-    .game {
-      width: min(680px, 100%);
-      text-align: center;
-    }
-
-    h1 {
-      margin: 2px 0 10px;
-      font-size: clamp(2rem, 5vw, 3rem);
-      text-shadow: 3px 3px 0 #14502a;
-    }
-
-    .language-row {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 7px;
-      margin: 0 0 10px;
-      font-size: 0.85rem;
-    }
-
-    .language-row select {
-      padding: 6px 9px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 7px;
-      color: white;
-      background: rgba(0, 0, 0, 0.25);
-      font: inherit;
-      cursor: pointer;
-    }
-
-    .language-row option {
-      color: #111;
-      background: white;
-    }
-
-    .hud {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 7px;
-      margin-bottom: 10px;
-    }
-
-    .stat {
-      padding: 7px 4px;
-      border-radius: 9px;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
-    }
-
-    .stat-label {
-      display: block;
-      font-size: 0.65rem;
-      opacity: 0.8;
-      text-transform: uppercase;
-    }
-
-    .stat-value {
-      display: block;
-      margin-top: 2px;
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-
-    .game-message {
-      min-height: 22px;
-      margin-bottom: 7px;
-      font-size: 0.95rem;
-      font-weight: bold;
-      color: var(--accent);
-    }
-
-    .board {
-      width: 100%;
-      max-width: 660px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: clamp(7px, 1.8vw, 14px);
-      padding: clamp(10px, 2.5vw, 18px);
-      background: #2c864b;
-      border: 5px solid #165d30;
-      border-radius: 18px;
-      box-shadow:
-        inset 0 0 0 3px rgba(255, 255, 255, 0.08),
-        0 8px 0 rgba(0, 0, 0, 0.18);
-      touch-action: none;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-    }
-
-    .hole {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 0.82;
-      overflow: hidden;
-      border-radius: 50%;
-      background:
-        radial-gradient(
-          ellipse at center,
-          #38200e 0 45%,
-          #583516 47% 66%,
-          #996233 68% 100%
-        );
-      box-shadow:
-        inset 0 6px 0 rgba(255, 255, 255, 0.08),
-        inset 0 -8px 0 rgba(0, 0, 0, 0.2);
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-
-    .mole {
-      position: absolute;
-      left: 50%;
-      bottom: -5%;
-      width: var(--mole-size, 82%);
-      aspect-ratio: 1 / 1;
-      transform: translate(-50%, 115%);
-      transition: transform 100ms ease-out;
-      cursor: pointer;
-      z-index: 2;
-      rotate: var(--mole-rotation, 0deg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-      font-size: clamp(3.5rem, 10vw, 6.25rem);
-      line-height: 1;
-      filter: drop-shadow(0 4px 1px rgba(0, 0, 0, 0.28));
-      will-change: transform;
-    }
-
-    .mole.up {
-      transform: translate(-50%, 4%);
-    }
-
-    .mole.whacked {
-      animation: whacked 180ms ease-out forwards;
-    }
-
-    @keyframes whacked {
-      0% {
-        transform: translate(-50%, 4%) scale(1);
-      }
-
-      50% {
-        transform: translate(-50%, 4%) scale(0.72) rotate(8deg);
-      }
-
-      100% {
-        transform: translate(-50%, 115%) scale(0.72);
-      }
-    }
-
-    button {
-      margin-top: 14px;
-      padding: 9px 20px;
-      border: 0;
-      border-bottom: 4px solid var(--accent-dark);
-      border-radius: 9px;
-      font-size: 1rem;
-      font-weight: bold;
-      color: #352400;
-      background: var(--accent);
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-
-    button:active {
-      transform: translateY(3px);
-      border-bottom-width: 2px;
-    }
-
-    .instructions {
-      max-width: 560px;
-      margin: 12px auto 0;
-      font-size: 0.85rem;
-      line-height: 1.35;
-      opacity: 0.9;
-    }
-
-    @media (max-width: 520px) {
-      body {
-        padding: 8px;
-      }
-
-      .hud {
-        gap: 5px;
-      }
-
-      .stat {
-        padding: 6px 3px;
-      }
-
-      .stat-value {
-        font-size: 1rem;
-      }
-
-      .board {
-        gap: 6px;
-        padding: 9px;
-        border-width: 4px;
-      }
-
-      .mole {
-        font-size: clamp(3.25rem, 18vw, 5.5rem);
-      }
-
-      .instructions {
-        font-size: 0.78rem;
-      }
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171027">
+  <title>Whack-a-Mole!</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
-
 <body>
-  <main class="game">
-    <h1 id="gameTitle">Whack-a-Mole!</h1>
+  <main class="arcade">
+    <header class="header">
+      <p class="eyebrow" id="eyebrow">THE MIDWAY ARCADE</p>
+      <h1 id="gameTitle">Whack-a-Mole!</h1>
+      <p class="subtitle" id="subtitle">Step right up and test your reflexes.</p>
+    </header>
 
-    <section class="hud" id="hud" aria-label="Game information">
-      <div class="stat">
-        <span class="stat-label" id="stageLabel">Stage</span>
-        <span class="stat-value" id="stage">1</span>
+    <section class="machine" aria-label="Whack-a-mole game" id="machine">
+      <div class="marquee" aria-hidden="true">
+        <span class="marquee-star">★</span>
+        <span id="marqueeMole">MOLE</span>
+        <span class="marquee-highlight" id="marqueeMadness">MADNESS</span>
+        <span class="marquee-star">★</span>
       </div>
 
-      <div class="stat">
-        <span class="stat-label" id="targetLabel">Target</span>
-        <span class="stat-value" id="target">5</span>
+      <div class="scoreboard" id="scoreboard">
+        <div class="stat">
+          <span class="stat-label" id="stageLabel">ROUND</span>
+          <span class="stat-value" id="stage">1</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label" id="targetLabel">TARGET</span>
+          <span class="stat-value" id="target">5</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label" id="scoreLabel">SCORE</span>
+          <span class="stat-value" id="score">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label" id="timeLabel">TIME</span>
+          <span class="stat-value" id="time">30</span>
+        </div>
       </div>
 
-      <div class="stat">
-        <span class="stat-label" id="scoreLabel">Score</span>
-        <span class="stat-value" id="score">0</span>
+      <div class="record" id="recordLine">
+        <span id="highScoreLabel">HIGH SCORE</span>
+        <strong id="highScore">0</strong>
       </div>
 
-      <div class="stat">
-        <span class="stat-label" id="timeLabel">Time</span>
-        <span class="stat-value" id="time">30</span>
+      <p class="status" id="status" aria-live="polite"></p>
+
+<div class="playfield-frame">
+  <section class="playfield" id="playfield" aria-label="Mole holes">
+    <button class="hole" type="button" aria-label="Hole 1"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 2"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 3"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 4"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 5"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 6"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 7"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 8"><span class="mole"></span></button>
+    <button class="hole" type="button" aria-label="Hole 9"><span class="mole"></span></button>
+  </section>
+
+  <svg class="playfield-outline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <polygon points="9,2 91,2 98,98 2,98"></polygon>
+  </svg>
+</div>
+
+      <div class="controls">
+        <button class="action-button" id="restartButton" type="button">New game</button>
+      </div>
+
+      <div class="cabinet-lights" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
       </div>
     </section>
 
-    <div class="game-message" id="message" aria-live="polite">
-      Whack the animals before time runs out!
-    </div>
+    <p class="help" id="helpText"></p>
 
-    <section class="board" id="board">
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-      <div class="hole"><div class="mole" aria-label="Animal"></div></div>
-    </section>
-
-    <button id="startButton" type="button">Start Game</button>
-
-    <p class="instructions" id="instructions">
-      Click or tap an animal to score points. Each stage has a higher target,
-      and the animals appear faster as you progress.
-    </p>
-    <br />
-    <div class="language-row">
-      <label for="languageSelect" id="languageLabel">Language:</label>
+    <div class="language-control">
+      <label for="languageSelect" id="languageLabel">Language</label>
       <select id="languageSelect">
         <option value="en">English</option>
         <option value="es">Español</option>
-        <option value="zh-Hant">中文（廣東話）</option>
+        <option value="zh">中文</option>
       </select>
     </div>
-
   </main>
 
-  <script>
-    const translations = {
-      en: {
-        title: "Whack-a-Mole!",
-        language: "Language:",
-        gameInfo: "Game information",
-        stage: "Stage",
-        target: "Target",
-        score: "Score",
-        time: "Time",
-        idle: "Whack the animals before time runs out!",
-        stageStart: (stage, target) => `Stage ${stage}: get ${target} hits!`,
-        remaining: (remaining, stage) =>
-          `${remaining} more ${remaining === 1 ? "hit" : "hits"} needed for Stage ${stage}!`,
-        stageCleared: (stage) => `Stage cleared! Stage ${stage} is faster.`,
-        gameOver: (target, hits) =>
-          `Game over! You needed ${target} hits but got ${hits}.`,
-        start: "Start Game",
-        restart: "Restart Game",
-        playAgain: "Play Again",
-        instructions:
-          "Click or tap an animal to score points. Each stage has a higher target, and the animals appear faster as you progress.",
-        animal: "Animal"
-      },
-
-      es: {
-        title: "¡Golpea al Animal!",
-        language: "Idioma:",
-        gameInfo: "Información del juego",
-        stage: "Nivel",
-        target: "Objetivo",
-        score: "Puntuación",
-        time: "Tiempo",
-        idle: "¡Golpea los animales antes de que se acabe el tiempo!",
-        stageStart: (stage, target) => `Nivel ${stage}: ¡consigue ${target} golpes!`,
-        remaining: (remaining, stage) =>
-          `¡Faltan ${remaining} ${remaining === 1 ? "golpe" : "golpes"} para el nivel ${stage}!`,
-        stageCleared: (stage) => `¡Nivel superado! El nivel ${stage} es más rápido.`,
-        gameOver: (target, hits) =>
-          `¡Juego terminado! Necesitabas ${target} golpes, pero conseguiste ${hits}.`,
-        start: "Comenzar",
-        restart: "Reiniciar",
-        playAgain: "Jugar de nuevo",
-        instructions:
-          "Haz clic o toca un animal para sumar puntos. Cada nivel tiene un objetivo más alto y los animales aparecen más rápido.",
-        animal: "Animal"
-      },
-
-      "zh-Hant": {
-        title: "扑傻瓜",
-        language: "語言：",
-        gameInfo: "遊戲資料",
-        stage: "關卡",
-        target: "目標",
-        score: "分數",
-        time: "時間",
-        idle: "喺時間完之前扑啲傻瓜！",
-        stageStart: (stage, target) => `第${stage}關：要扑${target}下`,
-        remaining: (remaining, stage) => `仲差${remaining}下就過關`,
-        stageCleared: (stage) => `過關啦！第${stage}關會更快。`,
-        gameOver: (target, hits) => `遊戲結束！你要扑${target}下，但只扑到${hits}下`,
-        start: "開始遊戲",
-        restart: "重新開始",
-        playAgain: "再玩一次",
-        instructions:
-          "扑中一個傻瓜得一分。每一關目標更高，而傻瓜出現得更快。",
-        animal: "傻瓜"
-      }
-    };
-
-    const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
-    const LANGUAGE_STORAGE_KEY = "whack-a-mole-language";
-
-    function getLangFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      const lang = params.get("lang");
-      if (!lang) return null;
-
-      const normalized = lang.toLowerCase();
-
-      if (normalized === "en") return "en";
-      if (normalized === "es") return "es";
-      if (
-        normalized === "zh" ||
-        normalized === "zh-tw" ||
-        normalized === "zh-hk" ||
-        normalized === "zh-hant"
-      ) {
-        return "zh-Hant";
-      }
-
-      if (normalized.startsWith("en")) return "en";
-      if (normalized.startsWith("es")) return "es";
-      if (normalized.startsWith("zh")) return "zh-Hant";
-
-      return null;
-    }
-
-    function getBrowserLanguage() {
-      // 1. Priority: ?lang=... in URL
-      const urlLang = getLangFromUrl();
-      if (urlLang && SUPPORTED_LANGUAGES.includes(urlLang)) {
-        localStorage.setItem(LANGUAGE_STORAGE_KEY, urlLang);
-        return urlLang;
-      }
-
-      // 2. Saved preference
-      const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (SUPPORTED_LANGUAGES.includes(savedLanguage)) {
-        return savedLanguage;
-      }
-
-      // 3. Browser languages
-      const browserLanguages =
-        navigator.languages || [navigator.language || "en"];
-
-      for (const language of browserLanguages) {
-        const normalized = language.toLowerCase();
-
-        if (
-          normalized.startsWith("zh-hant") ||
-          normalized.startsWith("zh-hk") ||
-          normalized.startsWith("zh-mo") ||
-          normalized.startsWith("zh-tw") ||
-          normalized === "zh"
-        ) {
-          return "zh-Hant";
-        }
-
-        if (normalized.startsWith("es")) {
-          return "es";
-        }
-
-        if (normalized.startsWith("en")) {
-          return "en";
-        }
-      }
-
-      return "en";
-    }
-
-    let currentLanguage = getBrowserLanguage();
-
-    const moles = [...document.querySelectorAll(".mole")];
-    const stageDisplay = document.getElementById("stage");
-    const targetDisplay = document.getElementById("target");
-    const scoreDisplay = document.getElementById("score");
-    const timeDisplay = document.getElementById("time");
-    const messageDisplay = document.getElementById("message");
-    const startButton = document.getElementById("startButton");
-    const languageSelect = document.getElementById("languageSelect");
-
-    let stage = 1;
-    let target = 5;
-    let score = 0;
-    let stageScore = 0;
-    let timeLeft = 30;
-    let gameRunning = false;
-
-    let moleTimer;
-    let nextMoleTimer;
-    let countdownTimer;
-    let currentMole = null;
-    let audioContext = null;
-
-    const emojis = ["🐭", "🐹", "🐰"];
-
-    function t(key, ...args) {
-      const value =
-        translations[currentLanguage][key] ?? translations.en[key];
-
-      return typeof value === "function" ? value(...args) : value;
-    }
-
-    function currentMessage() {
-      if (gameRunning) {
-        const remaining = target - stageScore;
-
-        if (remaining > 0) {
-          return t("remaining", remaining, stage);
-        }
-      }
-
-      return t("idle");
-    }
-
-    function applyTranslations() {
-      document.documentElement.lang = currentLanguage;
-      document.title = t("title");
-
-      document.getElementById("gameTitle").textContent = t("title");
-      document.getElementById("languageLabel").textContent = t("language");
-      document.getElementById("hud").setAttribute("aria-label", t("gameInfo"));
-      document.getElementById("stageLabel").textContent = t("stage");
-      document.getElementById("targetLabel").textContent = t("target");
-      document.getElementById("scoreLabel").textContent = t("score");
-      document.getElementById("timeLabel").textContent = t("time");
-      document.getElementById("instructions").textContent = t("instructions");
-
-      moles.forEach((mole) => {
-        mole.setAttribute("aria-label", t("animal"));
-      });
-
-      if (gameRunning) {
-        messageDisplay.textContent = currentMessage();
-        startButton.textContent = t("restart");
-      } else if (stageScore > 0 && timeLeft <= 0) {
-        startButton.textContent = t("playAgain");
-      } else {
-        messageDisplay.textContent = t("idle");
-        startButton.textContent = t("start");
-      }
-
-      languageSelect.value = currentLanguage;
-    }
-
-    function setLanguage(language) {
-      if (!SUPPORTED_LANGUAGES.includes(language)) return;
-
-      currentLanguage = language;
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-      applyTranslations();
-    }
-
-    function getAudioContext() {
-      if (!audioContext) {
-        audioContext = new (
-          window.AudioContext || window.webkitAudioContext
-        )();
-      }
-
-      if (audioContext.state === "suspended") {
-        audioContext.resume();
-      }
-
-      return audioContext;
-    }
-
-    function playTone(
-      frequency,
-      duration,
-      type = "sine",
-      volume = 0.12,
-      delay = 0
-    ) {
-      const audio = getAudioContext();
-      const oscillator = audio.createOscillator();
-      const gain = audio.createGain();
-      const startTime = audio.currentTime + delay;
-
-      oscillator.type = type;
-      oscillator.frequency.setValueAtTime(frequency, startTime);
-
-      gain.gain.setValueAtTime(0.001, startTime);
-      gain.gain.exponentialRampToValueAtTime(
-        volume,
-        startTime + 0.01
-      );
-      gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        startTime + duration
-      );
-
-      oscillator.connect(gain);
-      gain.connect(audio.destination);
-
-      oscillator.start(startTime);
-      oscillator.stop(startTime + duration + 0.03);
-    }
-
-    function playMoleAppearanceSound() {
-      playTone(220, 0.08, "sine", 0.08);
-      playTone(330, 0.1, "sine", 0.06, 0.04);
-    }
-
-    function playWhackSound() {
-      playTone(120, 0.08, "square", 0.14);
-      playTone(75, 0.12, "sawtooth", 0.08, 0.03);
-    }
-
-    function playStageClearedSound() {
-      playTone(523, 0.14, "sine", 0.12);
-      playTone(659, 0.14, "sine", 0.12, 0.12);
-      playTone(784, 0.22, "sine", 0.14, 0.24);
-    }
-
-    function playGameOverSound() {
-      playTone(392, 0.18, "sawtooth", 0.1);
-      playTone(330, 0.18, "sawtooth", 0.1, 0.18);
-      playTone(261, 0.35, "sawtooth", 0.12, 0.36);
-    }
-
-    function vibrateOnWhack() {
-      if ("vibrate" in navigator) {
-        navigator.vibrate(25);
-      }
-    }
-
-    function randomizeMoleAppearance(mole) {
-      const size = 78 + Math.random() * 12;
-      const rotation = -6 + Math.random() * 12;
-      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-
-      mole.style.setProperty("--mole-size", `${size}%`);
-      mole.style.setProperty("--mole-rotation", `${rotation}deg`);
-      mole.textContent = emoji;
-    }
-
-    function updateDisplay() {
-      stageDisplay.textContent = stage;
-      targetDisplay.textContent = target;
-      scoreDisplay.textContent = score;
-      timeDisplay.textContent = timeLeft;
-    }
-
-    function getStageSettings() {
-      return {
-        visibleTime: Math.max(350, 1100 - (stage - 1) * 85),
-        waitTime: Math.max(120, 650 - (stage - 1) * 45)
-      };
-    }
-
-    function hideMole(mole) {
-      mole.classList.remove("up", "whacked");
-    }
-
-    function hideAllMoles() {
-      moles.forEach(hideMole);
-      currentMole = null;
-    }
-
-    function clearGameTimers() {
-      clearTimeout(moleTimer);
-      clearTimeout(nextMoleTimer);
-      clearInterval(countdownTimer);
-    }
-
-    function showRandomMole() {
-      if (!gameRunning) return;
-
-      hideAllMoles();
-
-      const mole = moles[Math.floor(Math.random() * moles.length)];
-      const settings = getStageSettings();
-
-      currentMole = mole;
-      randomizeMoleAppearance(mole);
-      mole.classList.add("up");
-
-      playMoleAppearanceSound();
-
-      moleTimer = setTimeout(() => {
-        if (mole === currentMole) {
-          hideMole(mole);
-          currentMole = null;
-        }
-
-        if (gameRunning) {
-          nextMoleTimer = setTimeout(showRandomMole, settings.waitTime);
-        }
-      }, settings.visibleTime);
-    }
-
-    function startCountdown() {
-      clearInterval(countdownTimer);
-
-      countdownTimer = setInterval(() => {
-        timeLeft--;
-        updateDisplay();
-
-        if (timeLeft <= 0) {
-          endStage();
-        }
-      }, 1000);
-    }
-
-    function startStage() {
-      clearGameTimers();
-
-      stageScore = 0;
-      target = 4 + stage;
-      timeLeft = Math.max(12, 30 - (stage - 1) * 2);
-      gameRunning = true;
-
-      startButton.textContent = t("restart");
-      messageDisplay.textContent = t("stageStart", stage, target);
-
-      updateDisplay();
-      startCountdown();
-      showRandomMole();
-    }
-
-    function endStage() {
-      clearGameTimers();
-      hideAllMoles();
-
-      if (stageScore >= target) {
-        playStageClearedSound();
-
-        stage++;
-        messageDisplay.textContent = t("stageCleared", stage);
-
-        nextMoleTimer = setTimeout(() => {
-          if (gameRunning) {
-            startStage();
-          }
-        }, 1000);
-      } else {
-        gameRunning = false;
-        playGameOverSound();
-
-        messageDisplay.textContent = t(
-          "gameOver",
-          target,
-          stageScore
-        );
-        startButton.textContent = t("playAgain");
-      }
-    }
-
-    function whackMole(event) {
-      event.preventDefault();
-
-      if (!gameRunning) return;
-
-      const mole = event.currentTarget;
-
-      if (!mole.classList.contains("up")) return;
-
-      playWhackSound();
-      vibrateOnWhack();
-
-      mole.classList.remove("up");
-      mole.classList.add("whacked");
-
-      score++;
-      stageScore++;
-      updateDisplay();
-
-      if (stageScore >= target) {
-        endStage();
-        return;
-      }
-
-      /* Updated after every successful whack. */
-      messageDisplay.textContent = t(
-        "remaining",
-        target - stageScore,
-        stage
-      );
-
-      clearTimeout(moleTimer);
-      currentMole = null;
-
-      const settings = getStageSettings();
-
-      nextMoleTimer = setTimeout(() => {
-        if (gameRunning) {
-          showRandomMole();
-        }
-      }, settings.waitTime);
-    }
-
-    moles.forEach((mole) => {
-      mole.addEventListener("pointerdown", whackMole);
-    });
-
-    startButton.addEventListener("click", () => {
-      getAudioContext();
-      clearGameTimers();
-
-      stage = 1;
-      target = 5;
-      score = 0;
-      stageScore = 0;
-      timeLeft = 30;
-
-      hideAllMoles();
-      updateDisplay();
-      startStage();
-    });
-
-    languageSelect.addEventListener("change", (event) => {
-      setLanguage(event.target.value);
-    });
-
-    applyTranslations();
-    updateDisplay();
-  </script>
+  <dialog class="round-dialog" id="roundDialog" aria-labelledby="dialogTitle">
+    <div class="dialog-stars" aria-hidden="true">✦ &nbsp; ★ &nbsp; ✦</div>
+    <p class="eyebrow" id="dialogEyebrow">READY, PLAYER?</p>
+    <h2 id="dialogTitle">Step right up!</h2>
+    <p class="dialog-copy" id="dialogCopy"></p>
+
+    <div class="objective">
+      <span id="objectiveLabel">YOUR OBJECTIVE</span>
+      <strong id="dialogObjective"></strong>
+    </div>
+
+    <label class="relaxed-control" id="relaxedControl">
+      <span class="relaxed-copy">
+        <strong id="relaxedLabel">Relaxed Mode</strong>
+        <small id="relaxedDescription">Slower moles and a slower countdown</small>
+      </span>
+      <input id="relaxedToggle" type="checkbox" role="switch">
+      <span class="switch-track" aria-hidden="true"></span>
+    </label>
+
+    <button class="action-button dialog-button" id="confirmButton" type="button">
+      Start game
+    </button>
+  </dialog>
 </body>
 </html>
