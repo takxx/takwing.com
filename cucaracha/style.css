@@ -1,0 +1,157 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: system-ui, sans-serif;
+}
+
+#game {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: manipulation;
+
+  /* Four light greys for a simple concrete-floor effect. */
+  background-color: #d5d5d2;
+}
+
+#floor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hud {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  gap: 18px;
+  padding: 10px 16px;
+  transform: translateX(-50%);
+  border: 1px solid #ffffffa6;
+  border-radius: 12px;
+  background: #ffffffcf;
+  box-shadow: 0 2px 8px #0002;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.message {
+  position: absolute;
+  z-index: 5;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #ffffffb8;
+  color: #333;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+#roaches {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.roach {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  font-size: 36px;
+  line-height: 1;
+  user-select: none;
+  will-change: transform;
+}
+
+#sandal {
+  position: absolute;
+  z-index: 10;
+  display: none;
+  font-size: 58px;
+  line-height: 1;
+  transform: translate(-50%, -50%) rotate(180deg);
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px #0005);
+  animation: swat 180ms ease-out;
+}
+
+#floor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hud,
+.message {
+  z-index: 5;
+}
+
+#roaches {
+  z-index: 1;
+}
+
+#sandal {
+  z-index: 10;
+}
+
+.language-control {
+  position: absolute;
+  z-index: 6;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #ffffffcf;
+  font-size: 14px;
+}
+
+.language-control select {
+  max-width: 190px;
+  font: inherit;
+}
+
+@keyframes swat {
+  from {
+    scale: 1.35;
+  }
+  to {
+    scale: 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .hud {
+    gap: 10px;
+    padding: 9px 11px;
+    font-size: 14px;
+  }
+
+  .roach {
+    font-size: 32px;
+  }
+}
