@@ -15,10 +15,13 @@ const message = document.querySelector("#message");
 
 const STAGE_TIME = 30;
 const INITIAL_ROACHES = 5;
-const ROACHES_PER_STAGE = 2;
 const INITIAL_SPEED = 95;
 const SPEED_PER_STAGE = 12;
 const HIT_RADIUS = 58;
+const NEAR_MISS_RADIUS = 130;
+const NEAR_MISS_SPEED_MULTIPLIER = 2;
+const NEAR_MISS_DURATION = 1000;
+const ROACH_SPEED_VARIATION = 0.08; // ±8% speed variation
 const ROACH_SIZE = 48;
 
 const LANGUAGE_STORAGE_KEY = "roachPatrolLanguage";
@@ -26,7 +29,7 @@ const ROACHES_KILLED_STORAGE_KEY = "roachPatrolRoachesKilled";
 
 const translations = {
   en: {
-	  gameTitle: "Roach Patrol",
+    gameTitle: "Roach Patrol",
     language: "Language",
     stage: "Stage",
     target: "Target",
@@ -45,7 +48,7 @@ const translations = {
     tryAgain: "Try again?"
   },
   es: {
-	  gameTitle: "Putas cucarachas",
+    gameTitle: "Putas cucarachas",
     language: "Idioma",
     stage: "Fase",
     target: "Objetivo",
@@ -64,7 +67,7 @@ const translations = {
     tryAgain: "¿Lo intentas de nuevo?"
   },
   zh: {
-	  gameTitle: "打曱甴",
+    gameTitle: "打曱甴",
     language: "語言",
     stage: "關卡",
     target: "目標",
@@ -172,7 +175,6 @@ function setLanguage(nextLanguage) {
   updateLabels();
   updateDisplays();
 
-  // Refresh the translated text in the currently open dialog, if any.
   if (overlayElement) {
     const title = overlayElement.querySelector(".game-dialog-title");
     const body = overlayElement.querySelector(".game-dialog-message");
@@ -435,8 +437,22 @@ function startNewGame() {
   startStage();
 }
 
+function getAdditionalRoachCount() {
+  const roll = Math.random();
+
+  // 1 extra roach: 1/3 chance
+  // 2 extra roaches: 1/2 chance
+  // 3 extra roaches: 1/6 chance
+  if (roll < 1 / 3) return 1;
+  if (roll < 1 / 3 + 1 / 2) return 2;
+  return 3;
+}
+
 function startStage() {
-  target = INITIAL_ROACHES + (stage - 1) * ROACHES_PER_STAGE;
+  const additionalRoaches =
+    stage === 1 ? 0 : getAdditionalRoachCount();
+
+  target = INITIAL_ROACHES + additionalRoaches;
   timeLeft = STAGE_TIME;
   roachSpeed = INITIAL_SPEED + (stage - 1) * SPEED_PER_STAGE;
   score = 0;
@@ -524,6 +540,10 @@ function spawnRoach() {
   const y = minY + Math.random() * (maxY - minY);
   const angle = Math.random() * Math.PI * 2;
 
+  // Each roach gets a small, permanent speed variation.
+  const speedVariation = 1 + (Math.random() * 2 - 1) * ROACH_SPEED_VARIATION;
+  const speed = roachSpeed * speedVariation;
+
   const element = document.createElement("div");
   element.className = "roach";
   element.textContent = "🪳";
@@ -533,8 +553,10 @@ function spawnRoach() {
     element,
     x,
     y,
-    vx: Math.cos(angle) * roachSpeed,
-    vy: Math.sin(angle) * roachSpeed
+    baseSpeed: speed,
+    boostedUntil: 0,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed
   });
 
   positionRoach(roaches[roaches.length - 1]);
@@ -545,6 +567,18 @@ function positionRoach(roach) {
 
   roach.element.style.transform =
     `translate(${roach.x - ROACH_SIZE / 2}px, ${roach.y - ROACH_SIZE / 2}px) rotate(${angle}deg)`;
+}
+
+function triggerNearMissBoost(roach, now) {
+  if (now < roach.boostedUntil) return;
+
+  roach.boostedUntil = now + NEAR_MISS_DURATION;
+
+  const currentAngle = Math.atan2(roach.vy, roach.vx);
+  const boostedSpeed = roach.baseSpeed * NEAR_MISS_SPEED_MULTIPLIER;
+
+  roach.vx = Math.cos(currentAngle) * boostedSpeed;
+  roach.vy = Math.sin(currentAngle) * boostedSpeed;
 }
 
 function updateRoaches(now) {
@@ -559,6 +593,16 @@ function updateRoaches(now) {
   const maxY = Math.max(halfSize, bounds.height - halfSize);
 
   for (const roach of roaches) {
+    // Restore normal speed after the near-miss boost expires.
+    if (roach.boostedUntil && now >= roach.boostedUntil) {
+      roach.boostedUntil = 0;
+
+      const currentAngle = Math.atan2(roach.vy, roach.vx);
+
+      roach.vx = Math.cos(currentAngle) * roach.baseSpeed;
+      roach.vy = Math.sin(currentAngle) * roach.baseSpeed;
+    }
+
     roach.x += roach.vx * delta;
     roach.y += roach.vy * delta;
 
@@ -620,7 +664,19 @@ game.addEventListener("pointerdown", (event) => {
     (roach) => Math.hypot(roach.x - x, roach.y - y) < HIT_RADIUS
   );
 
-  if (hitIndex === -1) return;
+  if (hitIndex === -1) {
+    const now = performance.now();
+
+    for (const roach of roaches) {
+      const distance = Math.hypot(roach.x - x, roach.y - y);
+
+      if (distance < NEAR_MISS_RADIUS) {
+        triggerNearMissBoost(roach, now);
+      }
+    }
+
+    return;
+  }
 
   roaches[hitIndex].element.remove();
   roaches.splice(hitIndex, 1);
