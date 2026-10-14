@@ -12,7 +12,6 @@ const scoreDisplay = document.querySelector("#score");
 const timerDisplay = document.querySelector("#timer");
 const roachesKilledDisplay = document.querySelector("#high-score");
 const message = document.querySelector("#message");
-const languageSelect = document.querySelector("#language");
 
 const STAGE_TIME = 30;
 const INITIAL_ROACHES = 5;
@@ -27,6 +26,7 @@ const ROACHES_KILLED_STORAGE_KEY = "roachPatrolRoachesKilled";
 
 const translations = {
   en: {
+	  gameTitle: "Roach Patrol",
     language: "Language",
     stage: "Stage",
     target: "Target",
@@ -42,10 +42,10 @@ const translations = {
     continue: "Continue",
     done: "Done",
     timeUp: "Time's up! You hit {score} of {target}.",
-    tryAgain: "Try again?",
-    refresh: "Refresh the page when you're ready to play."
+    tryAgain: "Try again?"
   },
   es: {
+	  gameTitle: "Putas cucarachas",
     language: "Idioma",
     stage: "Fase",
     target: "Objetivo",
@@ -61,10 +61,10 @@ const translations = {
     continue: "Continuar",
     done: "Listo",
     timeUp: "¡Se acabó el tiempo! Has acertado {score} de {target}.",
-    tryAgain: "¿Lo intentas de nuevo?",
-    refresh: "Recarga la página cuando quieras jugar."
+    tryAgain: "¿Lo intentas de nuevo?"
   },
   zh: {
+	  gameTitle: "打曱甴",
     language: "語言",
     stage: "關卡",
     target: "目標",
@@ -72,16 +72,14 @@ const translations = {
     time: "時間",
     best: "隻死曱甴",
     instructions: "撳一下或點一下，打曱甴！",
-    ready:
-      "喺30秒內清除所有曱甴。想播背景音樂就開啟音樂掣。",
+    ready: "喺30秒內清除所有曱甴。想播背景音樂就開啟音樂掣。",
     start: "開始遊戲",
     music: "背景音樂",
     stageCleared: "過關喇！準備好玩第 {stage} 關未？",
     continue: "繼續",
     done: "完成",
     timeUp: "時間到！你打中咗 {target} 隻入面嘅 {score} 隻。",
-    tryAgain: "再玩一次？",
-    refresh: "想玩嘅時候，重新載入呢頁。"
+    tryAgain: "再玩一次？"
   }
 };
 
@@ -149,24 +147,12 @@ function text(key, values = {}) {
 function updateLabels() {
   document.documentElement.lang = language === "zh" ? "zh-Hant-HK" : language;
 
-  document.querySelector("#language-label").textContent = text("language");
-  document.querySelector("#stage-label")?.replaceChildren(text("stage"));
-  document.querySelector("#target-label")?.replaceChildren(text("target"));
-  document.querySelector("#hit-label")?.replaceChildren(text("hit"));
-  document.querySelector("#time-label")?.replaceChildren(text("time"));
+  document.querySelector("#stage-label").textContent = text("stage");
+  document.querySelector("#target-label").textContent = text("target");
+  document.querySelector("#hit-label").textContent = text("hit");
+  document.querySelector("#time-label").textContent = text("time");
   document.querySelector("#high-score-label").textContent = text("best");
-
   message.textContent = text("instructions");
-}
-
-function setLanguage(nextLanguage) {
-  if (!VALID_LANGUAGES.includes(nextLanguage)) return;
-
-  language = nextLanguage;
-  localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-  languageSelect.value = language;
-  updateLabels();
-  updateDisplays();
 }
 
 function updateDisplays() {
@@ -175,6 +161,42 @@ function updateDisplays() {
   scoreDisplay.textContent = score;
   timerDisplay.textContent = timeLeft;
   roachesKilledDisplay.textContent = roachesKilled;
+}
+
+function setLanguage(nextLanguage) {
+  if (!VALID_LANGUAGES.includes(nextLanguage)) return;
+
+  language = nextLanguage;
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+
+  updateLabels();
+  updateDisplays();
+
+  // Refresh the translated text in the currently open dialog, if any.
+  if (overlayElement) {
+    const title = overlayElement.querySelector(".game-dialog-title");
+    const body = overlayElement.querySelector(".game-dialog-message");
+    const languageLabel = overlayElement.querySelector("#language-label");
+    const musicLabel = overlayElement.querySelector(".music-toggle > span");
+
+    if (title?.dataset.dialogType === "start") {
+      title.textContent = text("gameTitle");
+      body.textContent = text("ready");
+    }
+
+    if (languageLabel) languageLabel.textContent = text("language");
+    if (musicLabel) musicLabel.textContent = text("music");
+
+    const languageSelect = overlayElement.querySelector("#language");
+    if (languageSelect) languageSelect.value = language;
+
+    const buttons = [...overlayElement.querySelectorAll(".game-dialog-buttons button")];
+
+    for (const button of buttons) {
+      const key = button.dataset.translationKey;
+      if (key) button.textContent = text(key);
+    }
+  }
 }
 
 function drawFloor() {
@@ -205,14 +227,12 @@ function playHitSound() {
     }
 
     const now = audioContext.currentTime;
-
     const thump = audioContext.createOscillator();
     const thumpGain = audioContext.createGain();
 
     thump.type = "sine";
     thump.frequency.setValueAtTime(150, now);
     thump.frequency.exponentialRampToValueAtTime(55, now + 0.12);
-
     thumpGain.gain.setValueAtTime(0.45, now);
     thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
 
@@ -241,7 +261,6 @@ function playHitSound() {
     filter.type = "lowpass";
     filter.frequency.setValueAtTime(1400, now);
     filter.frequency.exponentialRampToValueAtTime(350, now + 0.08);
-
     noiseGain.gain.setValueAtTime(0.45, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
@@ -267,7 +286,14 @@ function showImpact(x, y) {
   window.setTimeout(() => impact.remove(), 450);
 }
 
-function showOverlay({ title, body, buttons, musicToggle = false }) {
+function showOverlay({
+  title,
+  body,
+  buttons,
+  musicToggle = false,
+  languagePicker = false,
+  dialogType = ""
+}) {
   overlayElement?.remove();
 
   const overlay = document.createElement("div");
@@ -281,12 +307,46 @@ function showOverlay({ title, body, buttons, musicToggle = false }) {
   const heading = document.createElement("h2");
   heading.className = "game-dialog-title";
   heading.textContent = title;
+  heading.dataset.dialogType = dialogType;
 
   const content = document.createElement("p");
   content.className = "game-dialog-message";
   content.textContent = body;
 
   dialog.append(heading, content);
+
+  if (languagePicker) {
+    const languageControl = document.createElement("label");
+    languageControl.className = "language-control";
+    languageControl.htmlFor = "language";
+
+    const labelText = document.createElement("span");
+    labelText.id = "language-label";
+    labelText.textContent = text("language");
+
+    const select = document.createElement("select");
+    select.id = "language";
+    select.setAttribute("aria-labelledby", "language-label");
+
+    const options = [
+      ["en", "English"],
+      ["es", "Español"],
+      ["zh", "繁體中文"]
+    ];
+
+    for (const [value, label] of options) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      select.append(option);
+    }
+
+    select.value = language;
+    select.addEventListener("change", () => setLanguage(select.value));
+
+    languageControl.append(labelText, select);
+    dialog.append(languageControl);
+  }
 
   if (musicToggle) {
     const toggleLabel = document.createElement("label");
@@ -327,6 +387,10 @@ function showOverlay({ title, body, buttons, musicToggle = false }) {
     element.type = "button";
     element.textContent = button.label;
 
+    if (button.translationKey) {
+      element.dataset.translationKey = button.translationKey;
+    }
+
     if (button.primary) {
       element.classList.add("primary");
     }
@@ -350,12 +414,15 @@ function showOverlay({ title, body, buttons, musicToggle = false }) {
 
 function showStart() {
   showOverlay({
-    title: "Roach Patrol",
+    title: text("gameTitle"),
     body: text("ready"),
     musicToggle: true,
+    languagePicker: true,
+    dialogType: "start",
     buttons: [
       {
         label: text("start"),
+        translationKey: "start",
         primary: true,
         onClick: startNewGame
       }
@@ -417,12 +484,9 @@ function endStage(won) {
       buttons: [
         {
           label: text("continue"),
+          translationKey: "continue",
           primary: true,
           onClick: startStage
-        },
-        {
-          label: text("done"),
-          onClick: showStart
         }
       ]
     });
@@ -436,11 +500,13 @@ function endStage(won) {
     buttons: [
       {
         label: text("tryAgain"),
+        translationKey: "tryAgain",
         primary: true,
         onClick: showStart
       },
       {
         label: text("done"),
+        translationKey: "done",
         onClick: showStart
       }
     ]
@@ -547,6 +613,7 @@ game.addEventListener("pointerdown", (event) => {
   const y = event.clientY - bounds.top;
 
   showSandal(x, y);
+
   if (!running) return;
 
   const hitIndex = roaches.findIndex(
@@ -581,13 +648,12 @@ game.addEventListener("pointerdown", (event) => {
   }
 });
 
-languageSelect.value = language;
-languageSelect.addEventListener("change", () => {
-  setLanguage(languageSelect.value);
-});
+function initialize() {
+  updateLabels();
+  updateDisplays();
+  drawFloor();
+  window.addEventListener("resize", drawFloor);
+  showStart();
+}
 
-updateLabels();
-updateDisplays();
-drawFloor();
-window.addEventListener("resize", drawFloor);
-showStart();
+initialize();

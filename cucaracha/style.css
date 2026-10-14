@@ -123,11 +123,6 @@ body {
   font-size: 14px;
 }
 
-.language-control select {
-  max-width: 190px;
-  font: inherit;
-}
-
 .game-dialog-overlay {
   position: fixed;
   inset: 0;
@@ -168,7 +163,8 @@ body {
   margin-top: 22px;
 }
 
-.game-dialog button {
+.game-dialog button,
+.game-dialog select {
   min-height: 42px;
   padding: 9px 16px;
   border: 1px solid #555;
@@ -176,6 +172,9 @@ body {
   background: #eee;
   color: inherit;
   font: inherit;
+}
+
+.game-dialog button {
   cursor: pointer;
 }
 
@@ -184,7 +183,7 @@ body {
 }
 
 .game-dialog button:focus-visible,
-.language-control select:focus-visible {
+.game-dialog select:focus-visible {
   outline: 3px solid #2877d4;
   outline-offset: 2px;
 }
@@ -197,6 +196,24 @@ body {
 
 .game-dialog button.primary:hover {
   background: #111;
+}
+
+.language-control label,
+.game-dialog .language-control {
+  display: grid;
+  gap: 8px;
+}
+
+.game-dialog .language-control {
+  position: static;
+  margin-top: 18px;
+  padding: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+.game-dialog .language-control select {
+  width: 100%;
 }
 
 .music-toggle {
