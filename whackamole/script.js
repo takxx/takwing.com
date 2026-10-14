@@ -159,6 +159,35 @@ let countdownTimer = null;
 let nextMoleTimer = null;
 let language = getInitialLanguage();
 
+  const board = document.querySelector(".playfield");
+  const canvas = document.createElement("canvas");
+  const size = 128;
+  const colors = [
+    [117, 67, 45],
+    [180, 119, 75],
+    [137, 80, 52],
+    [96, 53, 31]
+  ];
+
+  canvas.width = size;
+  canvas.height = size;
+
+  const context = canvas.getContext("2d");
+  const image = context.createImageData(size, size);
+
+  for (let i = 0; i < image.data.length; i += 4) {
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    image.data[i] = color[0];
+    image.data[i + 1] = color[1];
+    image.data[i + 2] = color[2];
+    image.data[i + 3] = 255;
+  }
+
+  context.putImageData(image, 0, 0);
+  board.style.backgroundImage = `url(${canvas.toDataURL()})`;
+  board.style.backgroundSize = "100% 100%";
+
+
 function normalizeLanguage(value) {
   if (!value) return null;
 
