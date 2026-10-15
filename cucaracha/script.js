@@ -1,5 +1,16 @@
 "use strict";
 
+import {
+  LANGUAGE_STORAGE_KEY,
+  VALID_LANGUAGES,
+  getLanguage,
+  setLanguage,
+  text
+} from "./lang.js";
+
+import { music, playHitSound } from "./audio.js";
+import { drawFloor } from "./background.js";
+
 const game = document.querySelector("#game");
 const floor = document.querySelector("#floor");
 const floorContext = floor.getContext("2d");
@@ -21,78 +32,11 @@ const HIT_RADIUS = 58;
 const NEAR_MISS_RADIUS = 130;
 const NEAR_MISS_SPEED_MULTIPLIER = 2;
 const NEAR_MISS_DURATION = 1000;
-const ROACH_SPEED_VARIATION = 0.08; // ±8% speed variation
+const ROACH_SPEED_VARIATION = 0.08;
 const ROACH_SIZE = 48;
 
-const LANGUAGE_STORAGE_KEY = "roachPatrolLanguage";
 const ROACHES_KILLED_STORAGE_KEY = "roachPatrolRoachesKilled";
 
-const translations = {
-  en: {
-    gameTitle: "Roach Patrol",
-    language: "Language",
-    stage: "Stage",
-    target: "Target",
-    hit: "Hit",
-    time: "Time",
-    best: "dead",
-    instructions: "Click or tap to swat the roaches!",
-    ready:
-      "Clear all the roaches before the 30-second timer runs out. Use the music switch if you want background music.",
-    start: "Start game",
-    music: "Background music",
-    stageCleared: "Stage cleared! Ready for stage {stage}?",
-    continue: "Continue",
-    done: "Done",
-    timeUp: "Time's up! You hit {score} of {target}.",
-    tryAgain: "Try again?"
-  },
-  es: {
-    gameTitle: "Putas cucarachas",
-    language: "Idioma",
-    stage: "Fase",
-    target: "Objetivo",
-    hit: "Aciertos",
-    time: "Tiempo",
-    best: "eliminadas",
-    instructions: "¡Haz clic o toca para aplastar las cucarachas!",
-    ready:
-      "Elimina todas las cucarachas antes de que termine el límite de 30 segundos. Usa el interruptor si quieres música de fondo.",
-    start: "Empezar",
-    music: "Música de fondo",
-    stageCleared: "¡Fase superada! ¿Listo para la fase {stage}?",
-    continue: "Continuar",
-    done: "Listo",
-    timeUp: "¡Se acabó el tiempo! Has acertado {score} de {target}.",
-    tryAgain: "¿Lo intentas de nuevo?"
-  },
-  zh: {
-    gameTitle: "打曱甴",
-    language: "語言",
-    stage: "關卡",
-    target: "目標",
-    hit: "擊中",
-    time: "時間",
-    best: "隻死曱甴",
-    instructions: "撳一下或點一下，打曱甴！",
-    ready: "喺30秒內清除所有曱甴。想播背景音樂就開啟音樂掣。",
-    start: "開始遊戲",
-    music: "背景音樂",
-    stageCleared: "過關喇！準備好玩第 {stage} 關未？",
-    continue: "繼續",
-    done: "完成",
-    timeUp: "時間到！你打中咗 {target} 隻入面嘅 {score} 隻。",
-    tryAgain: "再玩一次？"
-  }
-};
-
-const VALID_LANGUAGES = ["en", "es", "zh"];
-
-const music = new Audio("lacucaracha.mp3");
-music.loop = true;
-music.volume = 0.25;
-
-let language = getInitialLanguage();
 let stage = 1;
 let score = 0;
 let target = INITIAL_ROACHES;
@@ -105,50 +49,13 @@ let running = false;
 let lastFrame = 0;
 let clockTimer = null;
 let sandalTimeout = null;
-let audioContext = null;
 let overlayElement = null;
 
-function getInitialLanguage() {
-  const queryLanguage = new URLSearchParams(window.location.search).get("lang");
-
-  if (VALID_LANGUAGES.includes(queryLanguage)) {
-    return queryLanguage;
-  }
-
-  const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-
-  if (VALID_LANGUAGES.includes(savedLanguage)) {
-    return savedLanguage;
-  }
-
-  const browserLanguage = (navigator.language || "").toLowerCase();
-
-  if (browserLanguage.startsWith("es")) return "es";
-
-  if (
-    browserLanguage.startsWith("zh-hk") ||
-    browserLanguage.startsWith("zh-tw") ||
-    browserLanguage.startsWith("zh-hant") ||
-    browserLanguage.startsWith("yue")
-  ) {
-    return "zh";
-  }
-
-  return "en";
-}
-
-function text(key, values = {}) {
-  let result = translations[language][key] ?? translations.en[key] ?? key;
-
-  for (const [name, value] of Object.entries(values)) {
-    result = result.replaceAll(`{${name}}`, String(value));
-  }
-
-  return result;
-}
-
 function updateLabels() {
-  document.documentElement.lang = language === "zh" ? "zh-Hant-HK" : language;
+  const language = getLanguage();
+
+  document.documentElement.lang =
+    language === "zh" ? "zh-Hant-HK" : language;
 
   document.querySelector("#stage-label").textContent = text("stage");
   document.querySelector("#target-label").textContent = text("target");
@@ -166,113 +73,42 @@ function updateDisplays() {
   roachesKilledDisplay.textContent = roachesKilled;
 }
 
-function setLanguage(nextLanguage) {
+function updateOverlayLanguage() {
+  if (!overlayElement) return;
+
+  const title = overlayElement.querySelector(".game-dialog-title");
+  const body = overlayElement.querySelector(".game-dialog-message");
+  const languageLabel = overlayElement.querySelector("#language-label");
+  const musicLabel = overlayElement.querySelector(".music-toggle > span");
+
+  if (title?.dataset.dialogType === "start") {
+    title.textContent = text("gameTitle");
+    body.textContent = text("ready");
+  }
+
+  if (languageLabel) languageLabel.textContent = text("language");
+  if (musicLabel) musicLabel.textContent = text("music");
+
+  const languageSelect = overlayElement.querySelector("#language");
+  if (languageSelect) languageSelect.value = getLanguage();
+
+  const buttons = [
+    ...overlayElement.querySelectorAll(".game-dialog-buttons button")
+  ];
+
+  for (const button of buttons) {
+    const key = button.dataset.translationKey;
+    if (key) button.textContent = text(key);
+  }
+}
+
+function handleLanguageChange(nextLanguage) {
   if (!VALID_LANGUAGES.includes(nextLanguage)) return;
 
-  language = nextLanguage;
-  localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-
+  setLanguage(nextLanguage);
   updateLabels();
   updateDisplays();
-
-  if (overlayElement) {
-    const title = overlayElement.querySelector(".game-dialog-title");
-    const body = overlayElement.querySelector(".game-dialog-message");
-    const languageLabel = overlayElement.querySelector("#language-label");
-    const musicLabel = overlayElement.querySelector(".music-toggle > span");
-
-    if (title?.dataset.dialogType === "start") {
-      title.textContent = text("gameTitle");
-      body.textContent = text("ready");
-    }
-
-    if (languageLabel) languageLabel.textContent = text("language");
-    if (musicLabel) musicLabel.textContent = text("music");
-
-    const languageSelect = overlayElement.querySelector("#language");
-    if (languageSelect) languageSelect.value = language;
-
-    const buttons = [...overlayElement.querySelectorAll(".game-dialog-buttons button")];
-
-    for (const button of buttons) {
-      const key = button.dataset.translationKey;
-      if (key) button.textContent = text(key);
-    }
-  }
-}
-
-function drawFloor() {
-  const pixelSize = 4;
-  const greys = ["#c9c9c6", "#d2d2cf", "#d9d9d6", "#e0e0dd"];
-  const width = game.clientWidth;
-  const height = game.clientHeight;
-  const scale = window.devicePixelRatio || 1;
-
-  floor.width = Math.round(width * scale);
-  floor.height = Math.round(height * scale);
-  floorContext.setTransform(scale, 0, 0, scale, 0, 0);
-
-  for (let y = 0; y < height; y += pixelSize) {
-    for (let x = 0; x < width; x += pixelSize) {
-      floorContext.fillStyle = greys[Math.floor(Math.random() * greys.length)];
-      floorContext.fillRect(x, y, pixelSize, pixelSize);
-    }
-  }
-}
-
-function playHitSound() {
-  try {
-    audioContext ??= new AudioContext();
-
-    if (audioContext.state === "suspended") {
-      audioContext.resume();
-    }
-
-    const now = audioContext.currentTime;
-    const thump = audioContext.createOscillator();
-    const thumpGain = audioContext.createGain();
-
-    thump.type = "sine";
-    thump.frequency.setValueAtTime(150, now);
-    thump.frequency.exponentialRampToValueAtTime(55, now + 0.12);
-    thumpGain.gain.setValueAtTime(0.45, now);
-    thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-
-    thump.connect(thumpGain);
-    thumpGain.connect(audioContext.destination);
-    thump.start(now);
-    thump.stop(now + 0.15);
-
-    const bufferSize = Math.floor(audioContext.sampleRate * 0.08);
-    const buffer = audioContext.createBuffer(
-      1,
-      bufferSize,
-      audioContext.sampleRate
-    );
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-    }
-
-    const noise = audioContext.createBufferSource();
-    const filter = audioContext.createBiquadFilter();
-    const noiseGain = audioContext.createGain();
-
-    noise.buffer = buffer;
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(1400, now);
-    filter.frequency.exponentialRampToValueAtTime(350, now + 0.08);
-    noiseGain.gain.setValueAtTime(0.45, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(audioContext.destination);
-    noise.start(now);
-  } catch {
-    // The game remains playable if audio is unavailable.
-  }
+  updateOverlayLanguage();
 }
 
 function showImpact(x, y) {
@@ -343,8 +179,10 @@ function showOverlay({
       select.append(option);
     }
 
-    select.value = language;
-    select.addEventListener("change", () => setLanguage(select.value));
+    select.value = getLanguage();
+    select.addEventListener("change", () =>
+      handleLanguageChange(select.value)
+    );
 
     languageControl.append(labelText, select);
     dialog.append(languageControl);
@@ -440,17 +278,13 @@ function startNewGame() {
 function getAdditionalRoachCount() {
   const roll = Math.random();
 
-  // 1 extra roach: 1/3 chance
-  // 2 extra roaches: 1/2 chance
-  // 3 extra roaches: 1/6 chance
   if (roll < 1 / 3) return 1;
   if (roll < 1 / 3 + 1 / 2) return 2;
   return 3;
 }
 
 function startStage() {
-  const additionalRoaches =
-    stage === 1 ? 0 : getAdditionalRoachCount();
+  const additionalRoaches = stage === 1 ? 0 : (stage - 1) + getAdditionalRoachCount();
 
   target = INITIAL_ROACHES + additionalRoaches;
   timeLeft = STAGE_TIME;
@@ -496,7 +330,7 @@ function endStage(won) {
 
     showOverlay({
       title: text("stageCleared", { stage }),
-      body: text("stageCleared", { stage }),
+      body: text("stageClearedBody", { score }),
       buttons: [
         {
           label: text("continue"),
@@ -510,9 +344,11 @@ function endStage(won) {
     return;
   }
 
+  const remaining = target - score;
+
   showOverlay({
-    title: text("tryAgain"),
-    body: text("timeUp", { score, target }),
+    title: text("timeUp"),
+    body: text(remaining === 1 ? "timeUpBodyOne" : "timeUpBodyMany", {remaining}),
     buttons: [
       {
         label: text("tryAgain"),
@@ -540,8 +376,8 @@ function spawnRoach() {
   const y = minY + Math.random() * (maxY - minY);
   const angle = Math.random() * Math.PI * 2;
 
-  // Each roach gets a small, permanent speed variation.
-  const speedVariation = 1 + (Math.random() * 2 - 1) * ROACH_SPEED_VARIATION;
+  const speedVariation =
+    1 + (Math.random() * 2 - 1) * ROACH_SPEED_VARIATION;
   const speed = roachSpeed * speedVariation;
 
   const element = document.createElement("div");
@@ -563,10 +399,13 @@ function spawnRoach() {
 }
 
 function positionRoach(roach) {
-  const angle = Math.atan2(roach.vy, roach.vx) * (180 / Math.PI) + 90;
+  const angle =
+    Math.atan2(roach.vy, roach.vx) * (180 / Math.PI) + 90;
 
   roach.element.style.transform =
-    `translate(${roach.x - ROACH_SIZE / 2}px, ${roach.y - ROACH_SIZE / 2}px) rotate(${angle}deg)`;
+    `translate(${roach.x - ROACH_SIZE / 2}px, ${
+      roach.y - ROACH_SIZE / 2
+    }px) rotate(${angle}deg)`;
 }
 
 function triggerNearMissBoost(roach, now) {
@@ -593,7 +432,6 @@ function updateRoaches(now) {
   const maxY = Math.max(halfSize, bounds.height - halfSize);
 
   for (const roach of roaches) {
-    // Restore normal speed after the near-miss boost expires.
     if (roach.boostedUntil && now >= roach.boostedUntil) {
       roach.boostedUntil = 0;
 
@@ -707,8 +545,10 @@ game.addEventListener("pointerdown", (event) => {
 function initialize() {
   updateLabels();
   updateDisplays();
-  drawFloor();
-  window.addEventListener("resize", drawFloor);
+  drawFloor(game, floor, floorContext);
+  window.addEventListener("resize", () =>
+    drawFloor(game, floor, floorContext)
+  );
   showStart();
 }
 
