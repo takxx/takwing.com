@@ -155,6 +155,14 @@
         );
       mix-blend-mode: screen;
     }
+    
+    .glyph {
+	      position: relative;
+	      z-index: 1;
+	      color: var(--icon-color, var(--cream));
+	      -webkit-text-fill-color: currentColor;
+	  }
+
 
     .tile:hover .icon,
     .tile:focus-visible .icon {
@@ -252,10 +260,10 @@
       {id:"bingo",emoji:"🎱",color:"pink",en:"Bingo",es:"Bingo",	zh:"冰高"	},
       {id:"buzzword",emoji:"🐝",color:"violet",en:"Buzzword"},
       {id:"checkers",emoji:"✡️",color:"blue",en:"Chinese Checkers",es:"Damas chinas",zh:"波子棋"},
-      {id:"connect4",emoji:"4️⃣",color:"yellow",en:"Connect 4",es:"Conecta 4",zh:"四子棋"},
+      {id:"connect4",emoji:"\u2999",color:"yellow",en:"Connect 4",es:"Conecta 4",zh:"四子棋"},
       {id:"cow",emoji:"🐄",color:"salmon",en:"Find the Cow",es:"Busca la vaca",	zh:"搵牛牛"	},
       {id:"cucaracha",emoji:"🩴",color:"yellow",en:"Roach Patrol",es:"Putas cucarachas",zh:"打曱甴"},
-      {id:"domino",emoji:"🎴",color:"turquoise",en:"Dominoes",es:"Dominó",zh:"骨牌"},
+      {id:"domino",emoji:"🂏",color:"violet",en:"Dominoes",es:"Dominó",zh:"骨牌"},
       {id:"dopewars",emoji:"💊",color:"cream",en:"Dope Wars",es:"Dope wars"},
       {id:"fishprawncrab",emoji:"🦀",color:"mint",zh:"魚蝦蟹"},
       {id:"freecell",emoji:"👑",color:"salmon",en:"FreeCell",es:"FreeCell",zh:"接龍"},
@@ -271,9 +279,9 @@
       {id:"rummi",emoji:"🌝",color:"violet",en:"Rummiqub",es:"Rummiqub",zh:"巴別橋"},
       {id:"rushhour",emoji:"🚙",color:"salmon",en:"Rush Hour",es:"Hora punta",zh:"繁忙時間"},
       {id:"sfcave",emoji:"〰️",color:"cream",en:"SFCave",es:"SFCave",zh:"SFCave"},
-      {id:"shikaku",emoji:"🔲",color:"mint",en:"Shikaku",es:"Shikaku",zh:"數方"},
-      {id:"simon",emoji:"🧠",color:"turquoise",en:"Simon",es:"Simón",zh:"六角西門"},
-      {id:"slant",emoji:"📏",color:"blue",en:"Slant",es:"Diagonales",zh:"斜線謎題"},
+      {id:"shikaku",emoji:"\u2338",color:"mint",en:"Shikaku",es:"Shikaku",zh:"數方"},
+      {id:"simon",emoji:"\u1368",color:"yellow",en:"Simon",es:"Simón",zh:"六角西門"},
+      {id:"slant",emoji:"\u2215",color:"blue",en:"Slant",es:"Diagonales",zh:"斜線謎題"},
       {id:"slot",emoji:"🎰",color:"pink",en:"Slot Machine",es:"Máquina tragaperras",zh:"老虎機"},
       {id:"snake",emoji:"🐍",color:"violet",en:"Snake",es:"Serpiente",zh:"貪食蛇"},
       {id:"spin",emoji:"☸️",color:"mint",en:"Wheel of Decision",es:"La Ruleta de Opciones",zh:"幸運輪"},
@@ -338,7 +346,11 @@ const visiblePages = pages
         "--icon-color",
         pastelColors[page.color] || "var(--cream)"
       );
-      icon.textContent = page.emoji || "🔗";
+      
+      const glyph = document.createElement("span");
+      glyph.className = "glyph";
+      glyph.textContent = page.emoji || "🔗";
+      icon.append(glyph);
 
       const name = document.createElement("span");
       name.className = "name";
