@@ -2,53 +2,41 @@
   const translations = {
     en: {
       title: "How to play",
-      intro: "<p>Combine matching numbered tiles to reach <b>2048</b>. Each move slides all tiles in one direction; matching tiles merge once per move. A new tile appears after each valid move. Reach 2048 to win—you can keep playing afterwards.</p><ul><li>Use the arrow keys or WASD.</li><li>Swipe across the board on a touchscreen.</li><li>Tilt your device to move in the corresponding direction.</li><li>The game ends when no moves remain.</li></ul>",
+      intro: "<p>Combine matching numbered tiles to reach <b>2048</b>. Each move slides all tiles in one direction; matching tiles merge once per move. A new tile appears after each valid move. Reach 2048 to win—you can keep playing afterwards.</p><ul><li>Use the arrow keys or WASD.</li><li>Swipe across the board on a touchscreen.</li><li>The game ends when no moves remain.</li></ul>",
       language: "Language",
       start: "Start game",
       score: "Score",
       best: "Best",
       newGame: "New game",
-      tilt: "Enable tilt",
-      tiltReady: "Tilt enabled",
-      tiltUnsupported: "Tilt controls are not available on this device.",
-      tiltDenied: "Motion permission was not granted.",
       won: "You reached 2048! You can keep playing.",
       over: "No moves left. Start a new game?",
-      help: "Move with arrow keys or WASD, swipe the board, or enable tilt.",
+      help: "Move with arrow keys or WASD, or swipe the board.",
       directions: { up:"Up", down:"Down", left:"Left", right:"Right" }
     },
     es: {
       title: "Cómo jugar",
-      intro: "<p>Combina fichas con el mismo número para llegar a <b>2048</b>. Cada movimiento desliza todas las fichas en una dirección; las fichas iguales se fusionan una sola vez por movimiento. Después de cada movimiento válido aparece una ficha nueva. Llega a 2048 para ganar; puedes seguir jugando después.</p><ul><li>Usa las flechas o WASD.</li><li>Desliza el dedo sobre el tablero en una pantalla táctil.</li><li>Inclina el dispositivo para moverte en esa dirección.</li><li>La partida termina cuando no quedan movimientos.</li></ul>",
+      intro: "<p>Combina fichas con el mismo número para llegar a <b>2048</b>. Cada movimiento desliza todas las fichas en una dirección; las fichas iguales se fusionan una sola vez por movimiento. Después de cada movimiento válido aparece una ficha nueva. Llega a 2048 para ganar; puedes seguir jugando después.</p><ul><li>Usa las flechas o WASD.</li><li>Desliza el dedo sobre el tablero en una pantalla táctil.</li><li>La partida termina cuando no quedan movimientos.</li></ul>",
       language: "Idioma",
       start: "Empezar",
       score: "Puntuación",
       best: "Récord",
       newGame: "Nueva partida",
-      tilt: "Activar inclinación",
-      tiltReady: "Inclinación activada",
-      tiltUnsupported: "Este dispositivo no admite controles por inclinación.",
-      tiltDenied: "No se concedió permiso para usar el sensor de movimiento.",
       won: "¡Has llegado a 2048! Puedes seguir jugando.",
       over: "No quedan movimientos. ¿Empezar otra partida?",
-      help: "Usa las flechas o WASD, desliza sobre el tablero o activa la inclinación.",
+      help: "Usa las flechas o WASD, o desliza sobre el tablero.",
       directions: { up:"Arriba", down:"Abajo", left:"Izquierda", right:"Derecha" }
     },
     zh: {
       title: "遊戲玩法",
-      intro: "<p>將相同數字的方塊合併，目標係砌出 <b>2048</b>。每次移動，所有方塊會向同一方向滑動；相同數字每回合只會合併一次。每次有效移動後會出現一個新方塊。砌出 2048 就算贏，之後仍可繼續玩。</p><ul><li>用方向鍵或 WASD 操作。</li><li>喺觸控螢幕上掃動棋盤。</li><li>傾斜裝置，方塊就會向相應方向移動。</li><li>冇剩餘移動時遊戲結束。</li></ul>",
+      intro: "<p>將相同數字的方塊合併，目標係砌出 <b>2048</b>。每次移動，所有方塊會向同一方向滑動；相同數字每回合只會合併一次。每次有效移動後會出現一個新方塊。砌出 2048 就算贏，之後仍可繼續玩。</p><ul><li>用方向鍵或 WASD 操作。</li><li>喺觸控螢幕上掃動棋盤。</li><li>冇剩餘移動時遊戲結束。</li></ul>",
       language: "語言",
       start: "開始遊戲",
       score: "分數",
       best: "最高分",
       newGame: "新遊戲",
-      tilt: "啟用傾斜控制",
-      tiltReady: "傾斜控制已啟用",
-      tiltUnsupported: "呢部裝置唔支援傾斜控制。",
-      tiltDenied: "未能取得動作感應器權限。",
       won: "你砌出 2048 啦！可以繼續玩。",
       over: "冇剩餘移動。要重新開始嗎？",
-      help: "用方向鍵或 WASD、掃動棋盤，或者啟用傾斜控制。",
+      help: "用方向鍵或 WASD、或者掃動棋盤。",
       directions: { up:"上", down:"下", left:"左", right:"右" }
     }
   };
@@ -69,7 +57,6 @@
   const $ = id => document.getElementById(id);
   const intro = $("intro"), game = $("game"), boardEl = $("board");
   let t = translations[lang], grid, score = 0, won = false, ended = false;
-  let tiltEnabled = false, lastTilt = 0;
 
   document.documentElement.lang = lang === "zh" ? "zh-HK" : lang === "es" ? "es-ES" : "en-GB";
 
@@ -83,7 +70,6 @@
     $("score-label").textContent = t.score;
     $("best-label").textContent = t.best;
     $("new-game").textContent = t.newGame;
-    $("tilt").textContent = tiltEnabled ? t.tiltReady : t.tilt;
     $("game-help").textContent = t.help;
     document.documentElement.lang = lang === "zh" ? "zh-HK" : lang === "es" ? "es-ES" : "en-GB";
   }
@@ -235,35 +221,6 @@ const colors = {
     move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
   });
   boardEl.addEventListener("pointercancel", () => { touchStart = null; });
-
-  function onMotion(e) {
-    if (!tiltEnabled || !game.classList.contains("active")) return;
-    const now = Date.now();
-    if (now - lastTilt < 450) return;
-    const x = e.gamma || 0, y = e.beta || 0;
-    if (Math.max(Math.abs(x), Math.abs(y)) < 18) return;
-    lastTilt = now;
-    move(Math.abs(x) > Math.abs(y) ? (x > 0 ? "right" : "left") : (y > 0 ? "down" : "up"));
-  }
-
-  $("tilt").addEventListener("click", async () => {
-    if (!("DeviceOrientationEvent" in window)) {
-      $("status").textContent = t.tiltUnsupported;
-      return;
-    }
-    try {
-      if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        const permission = await DeviceOrientationEvent.requestPermission();
-        if (permission !== "granted") throw new Error("denied");
-      }
-      tiltEnabled = true;
-      window.addEventListener("deviceorientation", onMotion);
-      renderLanguage();
-      $("status").textContent = t.tiltReady;
-    } catch {
-      $("status").textContent = t.tiltDenied;
-    }
-  });
 
   renderLanguage();
 })();
