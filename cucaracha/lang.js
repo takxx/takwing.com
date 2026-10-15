@@ -14,7 +14,7 @@ export const translations = {
     best: "dead",
     instructions: "Click or tap to swat the roaches!",
     ready:
-      "Clear all the roaches before the 30-second timer runs out. Use the music switch if you want background music.",
+      "Clear all the roaches before the 20-second timer runs out. Use the music switch if you want background music.",
     start: "Start game",
     music: "Background music",
     stageCleared: "Stage cleared! Ready for stage {stage}?",
@@ -39,7 +39,7 @@ export const translations = {
     best: "eliminadas",
     instructions: "¡Haz clic o toca para aplastar las cucarachas!",
     ready:
-      "Elimina todas las cucarachas antes de que termine el límite de 30 segundos. Usa el interruptor si quieres música de fondo.",
+      "Elimina todas las cucarachas antes de que termine el límite de 20 segundos. Usa el interruptor si quieres música de fondo.",
     start: "Empezar",
     music: "Música de fondo",
     stageCleared: "¡Fase superada! ¿Listo para la fase {stage}?",
@@ -63,7 +63,7 @@ export const translations = {
     time: "時間",
     best: "隻死曱甴",
     instructions: "撳一下或點一下，打曱甴！",
-    ready: "喺30秒內清除所有曱甴。想播背景音樂就開啟音樂掣。",
+    ready: "喺20秒內清除所有曱甴。想播背景音樂就開啟音樂掣。",
     start: "開始遊戲",
     music: "背景音樂",
     stageCleared: "過關喇！準備好玩第 {stage} 關未？",
@@ -71,7 +71,8 @@ export const translations = {
     continue: "繼續",
     done: "完成",
     timeUp: "時間到！",
-    timeUpBody: "任務失敗。仲有 {remaining} 隻曱甴周圍走。",
+    timeUpBodyOne: "任務失敗。仲有 {remaining} 隻曱甴周圍走。",
+    timeUpBodyMany: "任務失敗。仲有 {remaining} 隻曱甴周圍走。",
     tryAgain: "再玩一次？"
   }
 };

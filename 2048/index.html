@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2048</title>
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+</style>
+
+</head>
+<body>
+<main>
+  <h1>2048</h1>
+
+  <section id="intro" class="screen active" aria-labelledby="intro-title">
+    <h2 id="intro-title"></h2>
+    <div id="intro-copy" class="instructions"></div>
+    <div class="language-control">
+      <label id="language-label" for="language"></label>
+      <select id="language" aria-label="Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
+    <div style="text-align:center;margin-top:18px">
+      <button id="start"></button>
+    </div>
+  </section>
+
+  <section id="game" class="screen" aria-label="2048 game">
+    <div class="game-top">
+      <div class="score-box"><span id="score-label"></span>: <strong id="score">0</strong></div>
+      <div class="score-box"><span id="best-label"></span>: <strong id="best">0</strong></div>
+      <button id="new-game"></button>
+      <button id="tilt"></button>
+    </div>
+    <div id="board" role="grid" aria-label="2048 game board"></div>
+    <div id="status" role="status" aria-live="polite"></div>
+    <div class="instructions" id="game-help"></div>
+  </section>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>

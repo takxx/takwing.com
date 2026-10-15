@@ -24,7 +24,7 @@ const timerDisplay = document.querySelector("#timer");
 const roachesKilledDisplay = document.querySelector("#high-score");
 const message = document.querySelector("#message");
 
-const STAGE_TIME = 30;
+const STAGE_TIME = 20;
 const INITIAL_ROACHES = 5;
 const INITIAL_SPEED = 95;
 const SPEED_PER_STAGE = 12;
@@ -32,7 +32,7 @@ const HIT_RADIUS = 58;
 const NEAR_MISS_RADIUS = 130;
 const NEAR_MISS_SPEED_MULTIPLIER = 2;
 const NEAR_MISS_DURATION = 1000;
-const ROACH_SPEED_VARIATION = 0.08;
+const ROACH_SPEED_VARIATION = 0.2;
 const ROACH_SIZE = 48;
 
 const ROACHES_KILLED_STORAGE_KEY = "roachPatrolRoachesKilled";
