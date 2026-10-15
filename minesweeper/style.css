@@ -1,0 +1,252 @@
+:root {
+  color-scheme: dark;
+  font-family: Georgia, "Times New Roman", serif;
+  --hex-w: 52px;
+  --hex-h: 60px;
+  --row-step: 45px;
+  --row-offset: 26px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px 12px 40px;
+  color: #f2dfb2;
+  text-align: center;
+  background:
+    radial-gradient(ellipse at 50% 10%, #423222 0%, #211b16 65%, #15120f 100%);
+}
+
+.game {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+h1 {
+  margin: 0 0 18px;
+  color: #e3bb6c;
+  font-size: 1.9rem;
+  letter-spacing: 0.06em;
+  text-shadow: 2px 3px 0 #24180e;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+#board-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 10px;
+}
+
+#board {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: max-content;
+  margin-inline: auto;
+  user-select: none;
+}
+
+.row {
+  display: flex;
+  flex: 0 0 var(--row-step);
+  align-items: flex-start;
+  height: var(--row-step);
+}
+
+.row.odd {
+  margin-left: var(--row-offset);
+}
+
+.hex {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--hex-w);
+  width: var(--hex-w);
+  height: var(--hex-h);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  clip-path: polygon(
+    50% 0,
+    100% 25%,
+    100% 75%,
+    50% 100%,
+    0 75%,
+    0 25%
+  );
+  background: var(--rim, #b58949);
+  color: #f1dfb7;
+  font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hex::before {
+  position: absolute;
+  z-index: -1;
+  inset: 2px;
+  content: "";
+  clip-path: polygon(
+    50% 0,
+    100% 25%,
+    100% 75%,
+    50% 100%,
+    0 75%,
+    0 25%
+  );
+  background: var(--tile, #34271f);
+  pointer-events: none;
+}
+
+.hex:hover:not(.revealed):not(.flagged) {
+  --rim: #e0b85f;
+  --tile: #503b29;
+}
+
+.hex:focus-visible {
+  outline: 3px solid #f4d489;
+  outline-offset: 2px;
+}
+
+.hex.revealed {
+  --rim: #756243;
+  --tile: #2a2722;
+  cursor: default;
+}
+
+.hex.flagged {
+  --rim: #e2b24e;
+  --tile: #5b4025;
+  color: #ffe2a0;
+}
+
+.hex.mine-hit {
+  --rim: #df8067;
+  --tile: #713326;
+}
+
+.hex.mine-lost {
+  --rim: #bd6953;
+  --tile: #542a22;
+}
+
+.hex.mine-win {
+  --rim: #92a568;
+  --tile: #34402b;
+}
+
+.hex[data-number="1"] { color: #91bde8; }
+.hex[data-number="2"] { color: #a4cf8b; }
+.hex[data-number="3"] { color: #ed8c71; }
+.hex[data-number="4"] { color: #c3a1e8; }
+.hex[data-number="5"] { color: #e7a34f; }
+.hex[data-number="6"] { color: #82c7c2; }
+
+#stats {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 10px 0;
+  color: #e8d3a3;
+  font-variant-numeric: tabular-nums;
+}
+
+#status {
+  min-height: 1.5em;
+  margin: 10px 0 18px;
+  color: #ddc38e;
+  font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 14px;
+  color: #e8d3a3;
+}
+
+.toolbar select,
+.language-control select {
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid #8b6b3c;
+  border-radius: 4px;
+  color: #f2dfb2;
+  background: #30251d;
+}
+
+.toolbar-button {
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 1px solid #e0bb71;
+  border-radius: 4px;
+  color: #21170e;
+  background: linear-gradient(#e3bb6c, #aa7836);
+  box-shadow: 0 2px 0 #5a3b1c;
+  cursor: pointer;
+}
+
+.toolbar-button:hover {
+  background: linear-gradient(#f0d18a, #c08b42);
+}
+
+.toolbar-button[aria-pressed="true"] {
+  border-color: #e3bb6c;
+  color: #fff1c8;
+  background: linear-gradient(#704c2b, #50351f);
+}
+
+.toolbar-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.language-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #e8d3a3;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid #f4d489;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 18px 8px 28px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+
+  .toolbar {
+    gap: 8px;
+  }
+}

@@ -24,7 +24,7 @@ const timerDisplay = document.querySelector("#timer");
 const roachesKilledDisplay = document.querySelector("#high-score");
 const message = document.querySelector("#message");
 
-const STAGE_TIME = 20;
+const STAGE_TIME = 15;
 const INITIAL_ROACHES = 5;
 const INITIAL_SPEED = 95;
 const SPEED_PER_STAGE = 12;

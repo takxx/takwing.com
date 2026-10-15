@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hexagonal Minesweeper</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="script.js"></script>
+</head>
+<body>
+  <main class="game">
+    <h1 id="title">Hexagonal Minesweeper</h1>
+
+    <div id="board-wrap">
+      <div id="board" aria-label="Minesweeper board"></div>
+    </div>
+
+    <div id="stats">
+      <span id="mines-left"></span>
+      <span id="timer"></span>
+    </div>
+
+    <div id="status" aria-live="polite"></div>
+
+    <div class="toolbar">
+      <label for="size" id="size-label">Board</label>
+      <select id="size">
+        <option value="8,9,10" id="small-option">Small</option>
+        <option value="10,11,18" id="medium-option" selected>Medium</option>
+        <option value="12,13,30" id="large-option">Large</option>
+      </select>
+
+      <button id="new-game" class="toolbar-button" type="button">
+        New game
+      </button>
+
+      <button
+        id="flag-mode"
+        class="toolbar-button"
+        type="button"
+        aria-pressed="false"
+      >
+        Flag mode: off
+      </button>
+    </div>
+
+    <div class="language-control">
+      <label for="language" id="language-label">Language</label>
+      <select id="language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
+  </main>
+</body>
+</html>
