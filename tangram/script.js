@@ -7,18 +7,7 @@
   const info = document.querySelector("#info");
   const langSelect = document.querySelector("#lang");
 
-  let pieces = [];
-  let selected = null;
-
-  let dragging = null;
-  let activePointerId = null;
-  let dragStartPoint = null;
-  let dragStartPosition = null;
-  let didDrag = false;
-
-  let lastTapPiece = null;
-  let lastTapTime = 0;
-  let tapTimer = null;
+  if (!workspace) return;
 
   const translations = {
     en: {
@@ -27,14 +16,12 @@
       instructions:
         "Drag the pieces to form a shape. Tap to rotate; double-tap to flip."
     },
-
     es: {
       title: "Tangram",
       language: "Idioma:",
       instructions:
         "Arrastra las piezas para formar una figura. Toca para rotar; toca dos veces para voltear."
     },
-
     "zh-Hant": {
       title: "七巧板",
       language: "語言：",
@@ -42,81 +29,6 @@
         "拖曳碎片組成圖形。輕點一下旋轉；連續輕點兩下翻轉。"
     }
   };
-
-  const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
-
-  function getLangFromUrl() {
-    const lang = new URLSearchParams(window.location.search)
-      .get("lang")
-      ?.toLowerCase();
-
-    if (lang === "en") return "en";
-    if (lang === "es") return "es";
-    if (lang && lang.startsWith("zh")) return "zh-Hant";
-
-    return null;
-  }
-
-  function detectLanguage() {
-    const urlLang = getLangFromUrl();
-
-    if (urlLang && SUPPORTED_LANGUAGES.includes(urlLang)) {
-      return urlLang;
-    }
-
-    const browserLanguages = Array.isArray(navigator.languages)
-      ? navigator.languages
-      : [navigator.language || "en"];
-
-    for (const language of browserLanguages) {
-      if (!language) continue;
-
-      const normalized = language.toLowerCase();
-
-      if (
-        normalized.startsWith("zh-hant") ||
-        normalized.startsWith("zh-hk") ||
-        normalized.startsWith("zh-mo") ||
-        normalized.startsWith("zh-tw") ||
-        normalized === "zh"
-      ) {
-        return "zh-Hant";
-      }
-
-      if (normalized.startsWith("es")) {
-        return "es";
-      }
-
-      if (normalized.startsWith("en")) {
-        return "en";
-      }
-    }
-
-    return "en";
-  }
-
-  let currentLang = detectLanguage();
-
-  function getTranslation(key) {
-    const language = translations[currentLang] || translations.en;
-
-    return language[key] || translations.en[key] || key;
-  }
-
-  function applyTranslations() {
-    document.documentElement.lang =
-      currentLang === "zh-Hant" ? "zh-Hant" : currentLang;
-
-    document.querySelectorAll("[data-i18n]").forEach((element) => {
-      const key = element.getAttribute("data-i18n");
-
-      element.textContent = getTranslation(key);
-    });
-
-    if (langSelect) {
-      langSelect.value = currentLang;
-    }
-  }
 
   const shapes = [
     {
@@ -156,9 +68,6 @@
     }
   ];
 
-  /*
-    These positions avoid the title and instructions at startup.
-  */
   const homePositions = [
     [100, 560],
     [340, 560],
@@ -169,7 +78,76 @@
     [700, 760]
   ];
 
-  function makeElement(name, attributes = {}) {
+  let pieces = [];
+  let selected = null;
+  let currentLang = detectLanguage();
+
+  let dragging = null;
+  let activePointerId = null;
+  let dragStartPoint = null;
+  let dragStartPosition = null;
+  let didDrag = false;
+  let pendingDragPoint = null;
+  let dragFrame = 0;
+
+  let lastTapPiece = null;
+  let lastTapTime = 0;
+  let tapTimer = null;
+  let lastTouchTapTime = 0;
+
+  function detectLanguage() {
+    const urlLang = new URLSearchParams(window.location.search)
+      .get("lang")
+      ?.toLowerCase();
+
+    if (urlLang === "es") return "es";
+    if (urlLang?.startsWith("zh")) return "zh-Hant";
+    if (urlLang === "en") return "en";
+
+    const browserLanguages = Array.isArray(navigator.languages)
+      ? navigator.languages
+      : [navigator.language || "en"];
+
+    for (const language of browserLanguages) {
+      const normalized = language?.toLowerCase();
+      if (!normalized) continue;
+
+      if (
+        normalized.startsWith("zh-hant") ||
+        normalized.startsWith("zh-hk") ||
+        normalized.startsWith("zh-mo") ||
+        normalized.startsWith("zh-tw") ||
+        normalized === "zh"
+      ) {
+        return "zh-Hant";
+      }
+
+      if (normalized.startsWith("es")) return "es";
+      if (normalized.startsWith("en")) return "en";
+    }
+
+    return "en";
+  }
+
+  function getTranslation(key) {
+    return translations[currentLang]?.[key] ?? translations.en[key] ?? key;
+  }
+
+  function applyTranslations() {
+    document.documentElement.lang = currentLang;
+
+    document.querySelectorAll("[data-i18n]").forEach((element) => {
+      element.textContent = getTranslation(
+        element.getAttribute("data-i18n")
+      );
+    });
+
+    if (langSelect) {
+      langSelect.value = currentLang;
+    }
+  }
+
+  function makeSvgElement(name, attributes = {}) {
     const element = document.createElementNS(SVG_NS, name);
 
     for (const [key, value] of Object.entries(attributes)) {
@@ -180,66 +158,52 @@
   }
 
   function updatePiece(piece) {
-    const x = Number(piece.dataset.x);
-    const y = Number(piece.dataset.y);
-    const rotation = Number(piece.dataset.rotation);
-    const flip = Number(piece.dataset.flip);
-
     piece.setAttribute(
       "transform",
-      `
-        translate(${x} ${y})
-        rotate(${rotation})
-        scale(${flip} 1)
-      `
+      `translate(${piece.dataset.x} ${piece.dataset.y}) ` +
+        `rotate(${piece.dataset.rotation}) ` +
+        `scale(${piece.dataset.flip} 1)`
     );
   }
 
   function selectPiece(piece) {
-    pieces.forEach((item) => {
-      item.classList.remove("selected");
-    });
+    pieces.forEach((item) => item.classList.remove("selected"));
 
     selected = piece;
     selected.classList.add("selected");
 
-    // Move selected piece above all other pieces.
+    // Append last so the selected piece appears above the others.
     workspace.appendChild(selected);
   }
 
   function rotatePiece(piece) {
     if (!piece) return;
 
-    piece.dataset.rotation =
-      Number(piece.dataset.rotation) + 45;
-
+    piece.dataset.rotation = Number(piece.dataset.rotation) + 45;
     updatePiece(piece);
   }
 
   function flipPiece(piece) {
     if (!piece) return;
 
-    piece.dataset.flip =
-      Number(piece.dataset.flip) * -1;
-
+    piece.dataset.flip = Number(piece.dataset.flip) * -1;
     updatePiece(piece);
   }
 
   function getSvgPoint(event) {
-    const point = new DOMPoint(
-      event.clientX,
-      event.clientY
-    );
+    const screenMatrix = workspace.getScreenCTM();
 
-    return point.matrixTransform(
-      workspace.getScreenCTM().inverse()
-    );
+    if (!screenMatrix) {
+      return { x: event.clientX, y: event.clientY };
+    }
+
+    const point = new DOMPoint(event.clientX, event.clientY);
+    return point.matrixTransform(screenMatrix.inverse());
   }
 
-  /*
-    Begin dragging a piece.
-  */
   function startDragging(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+
     event.preventDefault();
 
     const piece = event.currentTarget;
@@ -250,78 +214,75 @@
     dragging = piece;
     activePointerId = event.pointerId;
     didDrag = false;
+    pendingDragPoint = null;
 
-    dragStartPoint = {
-      x: point.x,
-      y: point.y
-    };
-
+    dragStartPoint = { x: point.x, y: point.y };
     dragStartPosition = {
       x: Number(piece.dataset.x),
       y: Number(piece.dataset.y)
     };
 
-    /*
-      Pointer capture keeps the drag alive even when the pointer
-      leaves the rotated piece.
-    */
     try {
       piece.setPointerCapture(event.pointerId);
     } catch {
-      // Some browsers may not support pointer capture.
+      // Pointer capture may be unavailable in some browsers.
     }
 
-    window.addEventListener("pointermove", dragPiece, {
-      passive: false
-    });
-
+    window.addEventListener("pointermove", dragPiece, { passive: false });
     window.addEventListener("pointerup", finishDragging);
     window.addEventListener("pointercancel", finishDragging);
   }
 
-  /*
-    Move by pointer delta rather than using the piece's bounding box.
-    This avoids jumps after rotating or flipping.
-  */
   function dragPiece(event) {
-    if (!dragging) return;
-    if (event.pointerId !== activePointerId) return;
+    if (!dragging || event.pointerId !== activePointerId) return;
 
     event.preventDefault();
+    pendingDragPoint = getSvgPoint(event);
 
-    const point = getSvgPoint(event);
+    if (!dragFrame) {
+      dragFrame = requestAnimationFrame(applyDrag);
+    }
+  }
 
-    const dx = point.x - dragStartPoint.x;
-    const dy = point.y - dragStartPoint.y;
+  function applyDrag() {
+    dragFrame = 0;
 
-    if (Math.hypot(dx, dy) > 5) {
-      didDrag = true;
+    if (!dragging || !pendingDragPoint) return;
 
-      if (info) {
-        info.classList.add("hidden");
-      }
+    const dx = pendingDragPoint.x - dragStartPoint.x;
+    const dy = pendingDragPoint.y - dragStartPoint.y;
+
+    if (Math.hypot(dx, dy) <= 5) return;
+
+    didDrag = true;
+
+    if (info) {
+      info.classList.add("hidden");
     }
 
     dragging.dataset.x = dragStartPosition.x + dx;
     dragging.dataset.y = dragStartPosition.y + dy;
-
     updatePiece(dragging);
   }
 
-  /*
-    Finish dragging globally.
-  */
   function finishDragging(event) {
-    if (!dragging) return;
-    if (event.pointerId !== activePointerId) return;
+    if (!dragging || event.pointerId !== activePointerId) return;
+
+    // Apply the last pointer position before ending the drag.
+    if (dragFrame) {
+      cancelAnimationFrame(dragFrame);
+      dragFrame = 0;
+    }
+    applyDrag();
 
     const piece = dragging;
     const wasDragged = didDrag;
+    const pointerType = event.pointerType;
 
     try {
       piece.releasePointerCapture(activePointerId);
     } catch {
-      // Pointer capture may already have ended.
+      // Capture may already have ended.
     }
 
     window.removeEventListener("pointermove", dragPiece);
@@ -332,11 +293,9 @@
     activePointerId = null;
     dragStartPoint = null;
     dragStartPosition = null;
+    pendingDragPoint = null;
     didDrag = false;
 
-    /*
-      A drag should never also count as a tap.
-    */
     if (wasDragged) {
       lastTapPiece = null;
       lastTapTime = 0;
@@ -344,46 +303,13 @@
       return;
     }
 
-    /*
-      Only touchscreen taps use this behavior.
-    */
-    if (event.pointerType === "touch") {
+    if (pointerType === "touch") {
       handleTouchTap(piece);
     }
   }
 
-  /*
-    Desktop right-click rotates.
-  */
-  function handleContextMenu(event) {
-    event.preventDefault();
-
-    const piece = event.currentTarget;
-
-    selectPiece(piece);
-    rotatePiece(piece);
-  }
-
-  /*
-    Desktop double-click flips.
-  */
-  function handleDoubleClick(event) {
-    event.preventDefault();
-
-    const piece = event.currentTarget;
-
-    selectPiece(piece);
-    flipPiece(piece);
-  }
-
-  /*
-    Touch controls:
-    - Single tap rotates.
-    - Double-tap flips.
-  */
   function handleTouchTap(piece) {
     const now = Date.now();
-
     selectPiece(piece);
 
     const isDoubleTap =
@@ -395,28 +321,47 @@
     if (isDoubleTap) {
       lastTapPiece = null;
       lastTapTime = 0;
-
+      lastTouchTapTime = now;
       flipPiece(piece);
       return;
     }
 
     lastTapPiece = piece;
     lastTapTime = now;
+    lastTouchTapTime = now;
 
     tapTimer = setTimeout(() => {
       rotatePiece(piece);
-
       lastTapPiece = null;
       lastTapTime = 0;
     }, 320);
   }
 
+  function handleContextMenu(event) {
+    event.preventDefault();
+
+    const piece = event.currentTarget;
+    selectPiece(piece);
+    rotatePiece(piece);
+  }
+
+  function handleDoubleClick(event) {
+    event.preventDefault();
+
+    // Touch double-taps are handled by handleTouchTap.
+    if (Date.now() - lastTouchTapTime < 500) return;
+
+    const piece = event.currentTarget;
+    selectPiece(piece);
+    flipPiece(piece);
+  }
+
   function createPieces() {
-    workspace.innerHTML = "";
+    workspace.replaceChildren();
     pieces = [];
 
     shapes.forEach((shape, index) => {
-      const piece = makeElement("polygon", {
+      const piece = makeSvgElement("polygon", {
         points: shape.points,
         fill: shape.color,
         class: "piece",
@@ -429,7 +374,6 @@
       piece.dataset.flip = 1;
 
       updatePiece(piece);
-
       workspace.appendChild(piece);
       pieces.push(piece);
 
@@ -439,12 +383,13 @@
     });
   }
 
-  if (langSelect) {
-    langSelect.addEventListener("change", (event) => {
-      currentLang = event.target.value;
+  langSelect?.addEventListener("change", (event) => {
+    const language = event.target.value;
+    if (translations[language]) {
+      currentLang = language;
       applyTranslations();
-    });
-  }
+    }
+  });
 
   applyTranslations();
   createPieces();

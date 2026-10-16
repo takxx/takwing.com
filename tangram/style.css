@@ -112,3 +112,7 @@ body {
 .piece.selected {
   stroke-width: 6;
 }
+
+.piece {
+  touch-action: none;
+}

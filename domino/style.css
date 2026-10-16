@@ -1,12 +1,12 @@
 :root {
   color-scheme: dark;
 
-  --page-background: #111315;
-  --board-background: #15191b;
-  --panel-background: #191d20;
-  --panel-background-soft: #20262a;
+  --page-background: #194a30;
+  --board-background: #194a30;
+  --panel-background: #194a30;
+  --panel-background-soft: #194a30;
 
-  --line: #353c41;
+  --line: #c8aa68;
   --text: #f2eee3;
   --muted: #aeb4b8;
 
@@ -25,6 +25,10 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+}
+
+h1, h2 {
+	color: var(--accent);
 }
 
 * {
