@@ -1,20 +1,20 @@
 import {
   applyLanguage,
   getInitialLanguage,
-  SUPPORTED_LANGUAGES,
   translate,
 } from "./lang.js";
 
 import {
+  COLS,
+  ROWS,
   createCells,
-  getGridMetrics,
+  isRotatedLayout,
   render,
 } from "./render.js";
 
 import {
   cloneCars,
   generatePuzzle,
-  legalPositions,
 } from "./genpuzzle.js";
 
 const board = document.getElementById("board");
@@ -72,7 +72,7 @@ function newPuzzle() {
 function checkWin() {
   const target = cars.find(car => car.id === "target");
 
-  if (target.col + target.length < 9 || solved) return;
+  if (!target || target.col + target.length < COLS || solved) return;
 
   solved = true;
   const oldBest = Number(localStorage.getItem(bestKey()));
@@ -104,20 +104,22 @@ function canPlace(car, row, col) {
     if (other.id === car.id) continue;
 
     for (let i = 0; i < other.length; i += 1) {
-      const rowAt = other.row + (other.dir === "v" ? i : 0);
-      const colAt = other.col + (other.dir === "h" ? i : 0);
-      occupied.add(`${rowAt},${colAt}`);
+      const occupiedRow = other.row + (other.dir === "v" ? i : 0);
+      const occupiedCol = other.col + (other.dir === "h" ? i : 0);
+      occupied.add(`${occupiedRow},${occupiedCol}`);
     }
   }
 
   for (let i = 0; i < car.length; i += 1) {
-    const rowAt = row + (car.dir === "v" ? i : 0);
-    const colAt = col + (car.dir === "h" ? i : 0);
+    const candidateRow = row + (car.dir === "v" ? i : 0);
+    const candidateCol = col + (car.dir === "h" ? i : 0);
 
     if (
-      rowAt < 0 || rowAt >= 6 ||
-      colAt < 0 || colAt >= 9 ||
-      occupied.has(`${rowAt},${colAt}`)
+      candidateRow < 0 ||
+      candidateRow >= ROWS ||
+      candidateCol < 0 ||
+      candidateCol >= COLS ||
+      occupied.has(`${candidateRow},${candidateCol}`)
     ) {
       return false;
     }
@@ -141,29 +143,55 @@ function dragCar(event, car, element, metrics) {
 
   element.setPointerCapture(event.pointerId);
 
-  function move(pointerEvent) {
-    const dx = pointerEvent.clientX - startX;
-    const dy = pointerEvent.clientY - startY;
-    let row = originalRow;
-    let col = originalCol;
+function move(pointerEvent) {
+  const dx = pointerEvent.clientX - startX;
+  const dy = pointerEvent.clientY - startY;
 
+  let requestedRow = originalRow;
+  let requestedCol = originalCol;
+
+  if (!metrics.rotated) {
     if (car.dir === "h") {
-      col += Math.round(dx / metrics.stepX);
+      requestedCol += Math.round(dx / metrics.stepX);
     } else {
-      row += Math.round(dy / metrics.stepY);
+      requestedRow += Math.round(dy / metrics.stepY);
     }
-
-    if (!canPlace(car, row, col)) return;
-
-    car.row = row;
-    car.col = col;
-
-    // Update visual position without rebuilding the board mid-drag.
-    const left = metrics.paddingLeft + col * metrics.stepX;
-    const top = metrics.paddingTop + row * metrics.stepY;
-    element.style.left = `${left}px`;
-    element.style.top = `${top}px`;
+  } else if (car.dir === "h") {
+    // On the rotated board, screen-down moves an original horizontal car right.
+    requestedCol += Math.round(dy / metrics.stepY);
+  } else {
+    // On the rotated board, screen-right moves an original vertical car upward.
+    requestedRow -= Math.round(dx / metrics.stepX);
   }
+
+  let row = originalRow;
+  let col = originalCol;
+
+  while (row !== requestedRow || col !== requestedCol) {
+    const nextRow = row + Math.sign(requestedRow - row);
+    const nextCol = col + Math.sign(requestedCol - col);
+
+    if (!canPlace(car, nextRow, nextCol)) break;
+
+    row = nextRow;
+    col = nextCol;
+  }
+
+  car.row = row;
+  car.col = col;
+
+  const screenRow = metrics.rotated ? col : row;
+  const screenCol = metrics.rotated
+    ? car.dir === "v"
+      ? ROWS - 1 - (row + car.length - 1)
+      : ROWS - 1 - row
+    : col;
+
+  element.style.left =
+    `${metrics.paddingLeft + screenCol * metrics.stepX}px`;
+  element.style.top =
+    `${metrics.paddingTop + screenRow * metrics.stepY}px`;
+}
 
   function end() {
     if (car.row !== originalRow || car.col !== originalCol) {
@@ -196,6 +224,7 @@ languageSelect.value = language;
 languageSelect.addEventListener("change", updateLanguage);
 
 window.addEventListener("resize", draw);
+window.matchMedia("(max-width: 600px)").addEventListener("change", draw);
 
 createCells(board);
 applyLanguage(language, cars, { message });
