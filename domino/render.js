@@ -281,15 +281,23 @@ export function createRenderer(elements) {
       counterclockwise: COUNTERCLOCKWISE_FLOW[endpoint.flow]
     };
 
-    for (const turn of turnOrder(side)) {
-      const candidate = createCandidate(endpoint.marker, turnFlows[turn]);
+for (const turn of turnOrder(side)) {
+  const candidate = createCandidate(endpoint.marker, turnFlows[turn]);
 
-      if (candidateFits(side, candidate)) {
-        recordTurn(side);
-        return candidate;
-      }
-    }
+  if (
+    candidate.nextMarker.col >= 0 &&
+    candidate.nextMarker.col < COLUMN_COUNT &&
+    (candidate.nextMarker.row < topRow ||
+      candidate.nextMarker.row > bottomRow)
+  ) {
+    extendToward(candidate.nextMarker);
+  }
 
+  if (candidateFits(side, candidate)) {
+    recordTurn(side);
+    return candidate;
+  }
+}
     // If the snake needs vertical room, add rows on the side it is
     // approaching, then retry the straight route.
     const nextMarker = straight.nextMarker;

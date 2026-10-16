@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hex</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="script.js"></script>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" data-i18n="eyebrow">A game of connection</p>
+        <h1 data-i18n="title">Hex</h1>
+      </div>
+      <button id="new-game" class="secondary-button" data-i18n="newGame">
+        New game
+      </button>
+    </header>
+
+    <section class="game-panel" aria-label="Hex game">
+      <div class="game-info">
+        <p id="status" class="status" aria-live="polite"></p>
+        <p class="legend">
+          <span class="stone stone-red"></span>
+          <span data-i18n="redGoal">Red connects left to right</span>
+          <span class="legend-gap"></span>
+          <span class="stone stone-blue"></span>
+          <span data-i18n="blueGoal">Blue connects top to bottom</span>
+        </p>
+      </div>
+      <div class="board-wrap">
+        <svg id="board" class="board" role="grid" aria-label="Hex board"></svg>
+      </div>
+    </section>
+
+    <footer data-i18n="footer">
+      There are no draws in Hex: one player will always make a connecting path.
+    </footer>
+  </main>
+
+  <div id="start-overlay" class="overlay" role="dialog"
+       aria-modal="true" aria-labelledby="dialog-title">
+    <section class="dialog">
+      <p class="eyebrow" data-i18n="eyebrow">A game of connection</p>
+      <h2 id="dialog-title" data-i18n="welcome">Welcome to Hex</h2>
+      <p data-i18n="instructions">
+        Take turns placing stones on empty hexes. Red tries to connect the
+        left and right edges; blue tries to connect the top and bottom edges.
+        The first player to connect their two sides wins.
+      </p>
+
+      <label for="mode-select" data-i18n="modeLabel">Play mode</label>
+      <select id="mode-select">
+        <option value="computer" data-i18n="vsComputer">Play against computer</option>
+        <option value="human" data-i18n="twoPlayers">Two players</option>
+      </select>
+
+      <label for="size-select" data-i18n="boardLabel">Board size</label>
+      <select id="size-select">
+        <option value="11">11 × 11</option>
+        <option value="13">13 × 13</option>
+      </select>
+
+      <label for="language-select" data-i18n="languageLabel">Language</label>
+      <select id="language-select" aria-label="Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
+
+      <button id="start-game" class="primary-button" data-i18n="start">
+        Start game
+      </button>
+    </section>
+  </div>
+</body>
+</html>
