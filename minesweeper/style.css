@@ -68,6 +68,10 @@ select {
   margin-left: var(--row-offset);
 }
 
+.row:last-child {
+  flex-basis: var(--hex-h);
+}
+
 .hex {
   position: relative;
   isolation: isolate;
