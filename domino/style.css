@@ -104,12 +104,15 @@ button:disabled {
 }
 
 .board {
+  --board-columns: 17;
+  --board-rows: 9;
+
   position: relative;
   display: grid;
-  grid-template-columns: repeat(17, 1fr);
-  grid-template-rows: repeat(17, 1fr);
+  grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--board-rows), minmax(0, 1fr));
   width: min(100%, var(--board-size));
-  aspect-ratio: 1;
+  height: var(--board-height, auto);
   overflow: visible;
   background: var(--board-background);
 }

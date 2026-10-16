@@ -1,44 +1,7 @@
-/*
-  render.js
-
-  Renderer-only module.
-
-  - A01–Q17 board coordinates
-  - Board descriptors and renderer invariants
-  - Physical tile placement
-  - Directed snake routing
-  - Clockwise turns
-  - DOM rendering for board and hands
-
-  Board descriptor:
-  [pip, role, flow]
-
-  role:
-  - "left"       = exposed side of a tile placed on the logical left chain
-  - "right"      = exposed side of a tile placed on the logical right chain
-  - "double"     = a double, centered on its logical board cell
-  - "open-left"  = reserved next connection for the logical left chain
-  - "open-right" = reserved next connection for the logical right chain
-
-  Directed flow convention:
-  - WE = west → east   (move right / dc +1)
-  - EW = east → west   (move left  / dc -1)
-  - SN = south → north (move up    / dr -1)
-  - NS = north → south (move down  / dr +1)
-
-  Clockwise turns:
-  - WE → NS
-  - NS → EW
-  - EW → SN
-  - SN → WE
-
-  Opening for a 6-6:
-  H09 = [6, "open-left", "EW"]
-  I09 = [6, "double", "EW"]
-  J09 = [6, "open-right", "WE"]
-*/
-
-const BOARD_SIZE = 17;
+const COLUMN_COUNT = 17;
+const INITIAL_TOP_ROW = 45;
+const INITIAL_BOTTOM_ROW = 53;
+const ROWS_PER_EXTENSION = 4;
 const TURN_MARGIN = 2;
 
 const FLOW_DIRECTIONS = Object.freeze({
@@ -63,23 +26,7 @@ const COUNTERCLOCKWISE_FLOW = Object.freeze({
 });
 
 function coordinate(row, col) {
-  return `${String.fromCharCode(65 + col)}${String(row + 1).padStart(2, "0")}`;
-}
-
-function createEmptyBoard() {
-  return Array.from(
-    { length: BOARD_SIZE },
-    () => Array.from({ length: BOARD_SIZE }, () => null)
-  );
-}
-
-function add(point, flow, amount = 1) {
-  const direction = FLOW_DIRECTIONS[flow];
-
-  return {
-    row: point.row + direction.dr * amount,
-    col: point.col + direction.dc * amount
-  };
+  return `${String.fromCharCode(65 + col)}${String(row).padStart(2, "0")}`;
 }
 
 function pipPositions(value) {
@@ -110,12 +57,18 @@ function createPipHalf(value) {
   }
 
   half.appendChild(pips);
-
   return half;
 }
 
 function isHorizontalFlow(flow) {
   return flow === "WE" || flow === "EW";
+}
+
+function createTurnState() {
+  return {
+    left: { preferred: "clockwise", count: 0 },
+    right: { preferred: "clockwise", count: 0 }
+  };
 }
 
 export function createRenderer(elements) {
@@ -130,33 +83,32 @@ export function createRenderer(elements) {
     status
   } = elements;
 
-  let grid = createEmptyBoard();
+  // Grid entries are stored by their stable, displayed row and column.
+  // Extending the board never renumbers cells already on it.
+  let cells = new Map();
+  let topRow = INITIAL_TOP_ROW;
+  let bottomRow = INITIAL_BOTTOM_ROW;
   let visualTiles = [];
+  let endpoints = { left: null, right: null };
 
-  /*
-    Every endpoint has exactly one current reserved marker.
+  // Each end tracks its turning preference independently.
+  let turnState = createTurnState();
 
-    That marker:
-    - contains the only pip allowed to join that chain end
-    - is the exact square consumed by the next tile
-    - is never skipped on a turn
-  */
-  let endpoints = {
-    left: null,
-    right: null
-  };
+  function key(point) {
+    return `${point.row}:${point.col}`;
+  }
 
   function inside(point) {
-    return point.row >= 0
-      && point.row < BOARD_SIZE
-      && point.col >= 0
-      && point.col < BOARD_SIZE;
+    return (
+      point.row >= topRow &&
+      point.row <= bottomRow &&
+      point.col >= 0 &&
+      point.col < COLUMN_COUNT
+    );
   }
 
   function read(point) {
-    return inside(point)
-      ? grid[point.row][point.col]
-      : null;
+    return inside(point) ? (cells.get(key(point)) ?? null) : null;
   }
 
   function write(point, descriptor) {
@@ -166,11 +118,31 @@ export function createRenderer(elements) {
       );
     }
 
-    grid[point.row][point.col] = descriptor;
+    cells.set(key(point), descriptor);
   }
 
   function isEmpty(point) {
     return inside(point) && read(point) === null;
+  }
+
+  function add(point, flow, amount = 1) {
+    const direction = FLOW_DIRECTIONS[flow];
+
+    return {
+      row: point.row + direction.dr * amount,
+      col: point.col + direction.dc * amount
+    };
+  }
+
+  function extendToward(point) {
+    if (point.row < topRow) {
+      topRow -= ROWS_PER_EXTENSION;
+      return;
+    }
+
+    if (point.row > bottomRow) {
+      bottomRow += ROWS_PER_EXTENSION;
+    }
   }
 
   function markerRoleFor(side) {
@@ -200,43 +172,26 @@ export function createRenderer(elements) {
 
     if (!descriptor) {
       throw new Error(
-        `Missing ${side} open marker at ${
-          coordinate(endpoint.marker.row, endpoint.marker.col)
-        }.`
+        `Missing ${side} open marker at ${coordinate(
+          endpoint.marker.row,
+          endpoint.marker.col
+        )}.`
       );
     }
 
     const [reservedPip, role, flow] = descriptor;
 
-    if (reservedPip !== endpoint.value) {
+    if (
+      reservedPip !== endpoint.value ||
+      reservedPip !== matchingPip ||
+      role !== markerRoleFor(side) ||
+      flow !== endpoint.flow
+    ) {
       throw new Error(
-        `Endpoint state mismatch at ${
-          coordinate(endpoint.marker.row, endpoint.marker.col)
-        }. Endpoint value is ${endpoint.value}; marker pip is ${reservedPip}.`
-      );
-    }
-
-    if (reservedPip !== matchingPip) {
-      throw new Error(
-        `Invalid renderer connection at ${
-          coordinate(endpoint.marker.row, endpoint.marker.col)
-        }. Reserved pip is ${reservedPip}; tile matching pip is ${matchingPip}.`
-      );
-    }
-
-    if (role !== markerRoleFor(side)) {
-      throw new Error(
-        `Invalid marker role at ${
-          coordinate(endpoint.marker.row, endpoint.marker.col)
-        }. Expected "${markerRoleFor(side)}"; got "${role}".`
-      );
-    }
-
-    if (flow !== endpoint.flow) {
-      throw new Error(
-        `Invalid marker flow at ${
-          coordinate(endpoint.marker.row, endpoint.marker.col)
-        }. Expected "${endpoint.flow}"; got "${flow}".`
+        `Invalid ${side} endpoint marker at ${coordinate(
+          endpoint.marker.row,
+          endpoint.marker.col
+        )}.`
       );
     }
   }
@@ -244,48 +199,23 @@ export function createRenderer(elements) {
   function distanceToEdge(point, flow) {
     const direction = FLOW_DIRECTIONS[flow];
 
-    if (direction.dc === 1) {
-      return BOARD_SIZE - 1 - point.col;
-    }
+    if (direction.dc === 1) return COLUMN_COUNT - 1 - point.col;
+    if (direction.dc === -1) return point.col;
+    if (direction.dr === 1) return bottomRow - point.row;
 
-    if (direction.dc === -1) {
-      return point.col;
-    }
-
-    if (direction.dr === 1) {
-      return BOARD_SIZE - 1 - point.row;
-    }
-
-    return point.row;
+    return point.row - topRow;
   }
 
-  function shouldTurnAt(marker, flow) {
-    /*
-      A normal domino consumes:
-      - marker       = matching half
-      - next square  = exposed half
-      - next + one   = next open marker
-
-      So it needs two positions ahead after the marker.
-    */
-    return distanceToEdge(marker, flow) <= TURN_MARGIN;
+  function shouldTurnAt(point, flow) {
+    return distanceToEdge(point, flow) <= TURN_MARGIN;
   }
 
-  /*
-    Every candidate starts at the exact current marker.
-
-    The next marker is one cell beyond the exposed half.
-  */
   function createCandidate(marker, flow) {
-    const first = marker;
-    const second = add(marker, flow, 1);
-    const nextMarker = add(second, flow, 1);
-
     return {
       flow,
-      first,
-      second,
-      nextMarker
+      first: marker,
+      second: add(marker, flow),
+      nextMarker: add(marker, flow, 2)
     };
   }
 
@@ -293,145 +223,123 @@ export function createRenderer(elements) {
     const endpoint = endpoints[side];
     const firstDescriptor = read(candidate.first);
 
-    const firstIsCurrentMarker = firstDescriptor
-      && firstDescriptor[0] === endpoint.value
-      && firstDescriptor[1] === markerRoleFor(side)
-      && firstDescriptor[2] === endpoint.flow;
+    const firstIsCurrentMarker =
+      firstDescriptor &&
+      firstDescriptor[0] === endpoint.value &&
+      firstDescriptor[1] === markerRoleFor(side) &&
+      firstDescriptor[2] === endpoint.flow;
 
-    return firstIsCurrentMarker
-      && isEmpty(candidate.second)
-      && inside(candidate.nextMarker)
-      && isEmpty(candidate.nextMarker);
+    return (
+      firstIsCurrentMarker &&
+      isEmpty(candidate.second) &&
+      inside(candidate.nextMarker) &&
+      isEmpty(candidate.nextMarker)
+    );
   }
 
-/*
-  A normal tile consumes:
-  - marker       = matching half
-  - second       = exposed half
-  - nextMarker   = next reserved endpoint
+  function straightPathIsClear(candidate) {
+    const beyond = add(candidate.nextMarker, candidate.flow);
 
-  To avoid turning directly into the snake body, also inspect the cell
-  immediately beyond nextMarker. If that cell is occupied, treat the
-  straight path as unsafe and try to turn now.
-*/
-function straightPathIsClear(side, candidate) {
-  const beyond = add(candidate.nextMarker, candidate.flow, 1);
-
-  return (
-    isEmpty(candidate.second)
-    && isEmpty(candidate.nextMarker)
-    && inside(beyond)
-    && isEmpty(beyond)
-  );
-}
-
-function chooseNormalPath(side) {
-  const endpoint = endpoints[side];
-
-  const straight = createCandidate(endpoint.marker, endpoint.flow);
-
-  /*
-    Take the straight path only when:
-    - there is enough room before the board edge, and
-    - the placement cells are empty, and
-    - the cell beyond the next marker is also empty.
-  */
-  if (
-    !shouldTurnAt(endpoint.marker, endpoint.flow)
-    && straightPathIsClear(side, straight)
-  ) {
-    return straight;
+    return (
+      isEmpty(candidate.second) &&
+      isEmpty(candidate.nextMarker) &&
+      inside(beyond) &&
+      isEmpty(beyond)
+    );
   }
 
-  const clockwise = createCandidate(
-    endpoint.marker,
-    CLOCKWISE_FLOW[endpoint.flow]
-  );
-
-  if (candidateFits(side, clockwise)) {
-    return clockwise;
+  function turnOrder(side) {
+    return turnState[side].preferred === "clockwise"
+      ? ["clockwise", "counterclockwise"]
+      : ["counterclockwise", "clockwise"];
   }
 
-  const counterClockwise = createCandidate(
-    endpoint.marker,
-    COUNTERCLOCKWISE_FLOW[endpoint.flow]
-  );
+  function recordTurn(side) {
+    const state = turnState[side];
+    state.count += 1;
 
-  if (candidateFits(side, counterClockwise)) {
-    return counterClockwise;
+    if (state.count === 2) {
+      state.count = 0;
+      state.preferred =
+        state.preferred === "clockwise" ? "counterclockwise" : "clockwise";
+    }
   }
 
-  /*
-    Last resort: allow the straight placement if its immediate cells fit,
-    even if the lookahead cell is blocked. This prevents an unnecessary
-    failure when both turn directions are unavailable.
-  */
-  if (candidateFits(side, straight)) {
-    return straight;
+  function chooseNormalPath(side) {
+    const endpoint = endpoints[side];
+    const straight = createCandidate(endpoint.marker, endpoint.flow);
+
+    if (
+      !shouldTurnAt(endpoint.marker, endpoint.flow) &&
+      straightPathIsClear(straight)
+    ) {
+      return straight;
+    }
+
+    const turnFlows = {
+      clockwise: CLOCKWISE_FLOW[endpoint.flow],
+      counterclockwise: COUNTERCLOCKWISE_FLOW[endpoint.flow]
+    };
+
+    for (const turn of turnOrder(side)) {
+      const candidate = createCandidate(endpoint.marker, turnFlows[turn]);
+
+      if (candidateFits(side, candidate)) {
+        recordTurn(side);
+        return candidate;
+      }
+    }
+
+    // If the snake needs vertical room, add rows on the side it is
+    // approaching, then retry the straight route.
+    const nextMarker = straight.nextMarker;
+
+    if (
+      (nextMarker.row < topRow || nextMarker.row > bottomRow) &&
+      nextMarker.col >= 0 &&
+      nextMarker.col < COLUMN_COUNT
+    ) {
+      extendToward(nextMarker);
+
+      if (candidateFits(side, straight)) {
+        return straight;
+      }
+    }
+
+    if (candidateFits(side, straight)) {
+      return straight;
+    }
+
+    return null;
   }
 
-  return null;
-}
-  /*
-    Opening layout for a double:
-
-    H09 = [value, "open-left", "EW"]
-    I09 = [value, "double", "EW"]
-    J09 = [value, "open-right", "WE"]
-
-    Left chain starts moving west. Right chain starts moving east.
-  */
   function reset(opening) {
-    grid = createEmptyBoard();
+    cells = new Map();
+    topRow = INITIAL_TOP_ROW;
+    bottomRow = INITIAL_BOTTOM_ROW;
     visualTiles = [];
+    turnState = createTurnState();
 
-    const center = { row: 8, col: 8 };
-    const leftMarker = { row: 8, col: 7 };
-    const rightMarker = { row: 8, col: 9 };
+    const center = { row: 49, col: 8 };
+    const leftMarker = { row: 49, col: 7 };
+    const rightMarker = { row: 49, col: 9 };
 
     write(center, [opening.value, "double", "EW"]);
-
     setOpenMarker("left", leftMarker, opening.value, "EW");
     setOpenMarker("right", rightMarker, opening.value, "WE");
 
-    visualTiles.push({
-      kind: "double",
-      center,
-      flow: "EW"
-    });
+    visualTiles.push({ kind: "double", center, flow: "EW" });
 
-    endpoints.left = {
-      marker: leftMarker,
-      flow: "EW",
-      value: opening.value
-    };
-
-    endpoints.right = {
-      marker: rightMarker,
-      flow: "WE",
-      value: opening.value
+    endpoints = {
+      left: { marker: leftMarker, flow: "EW", value: opening.value },
+      right: { marker: rightMarker, flow: "WE", value: opening.value }
     };
 
     renderBoard();
   }
 
-  /*
-    A normal play always does this:
-
-    Existing:
-    [matching, "open-left/right", oldFlow]
-
-    Becomes:
-    [matching, "left/right", newFlow]
-    [exposed,  "right/left", newFlow]
-    [exposed,  "open-left/right", newFlow]
-
-    The marker pip always becomes the matching half, regardless of whether
-    newFlow is straight, clockwise, or counter-clockwise.
-  */
   function placeNormal(placement) {
-    const side = placement.side;
-
+    const { side } = placement;
     assertEndpointMarker(side, placement.matching);
 
     const path = chooseNormalPath(side);
@@ -466,39 +374,21 @@ function chooseNormalPath(side) {
     };
   }
 
-  /*
-    A double consumes the current reserved marker as its center.
-
-    Its center advances the chain by exactly one grid cell in the current
-    flow, regardless of whether that flow is horizontal or vertical.
-
-    The other half of the double is rendered perpendicular to the chain.
-  */
   function placeDouble(placement) {
-    const side = placement.side;
+    const { side } = placement;
     const endpoint = endpoints[side];
 
     assertEndpointMarker(side, placement.matching);
 
     const center = endpoint.marker;
-    const nextMarker = add(center, endpoint.flow, 1);
+    const nextMarker = add(center, endpoint.flow);
 
     if (!inside(nextMarker) || !isEmpty(nextMarker)) {
       throw new Error(`No space is available for a ${side} double.`);
     }
 
-    write(center, [
-      placement.matching,
-      "double",
-      endpoint.flow
-    ]);
-
-    setOpenMarker(
-      side,
-      nextMarker,
-      placement.exposed,
-      endpoint.flow
-    );
+    write(center, [placement.matching, "double", endpoint.flow]);
+    setOpenMarker(side, nextMarker, placement.exposed, endpoint.flow);
 
     visualTiles.push({
       kind: "double",
@@ -519,12 +409,12 @@ function chooseNormalPath(side) {
     }
 
     if (
-      !Number.isInteger(placement.matching)
-      || placement.matching < 0
-      || placement.matching > 6
-      || !Number.isInteger(placement.exposed)
-      || placement.exposed < 0
-      || placement.exposed > 6
+      !Number.isInteger(placement.matching) ||
+      placement.matching < 0 ||
+      placement.matching > 6 ||
+      !Number.isInteger(placement.exposed) ||
+      placement.exposed < 0 ||
+      placement.exposed > 6
     ) {
       throw new Error("Placement pips must be integers from 0 through 6.");
     }
@@ -538,13 +428,20 @@ function chooseNormalPath(side) {
     renderBoard();
   }
 
-  function renderGridCells() {
+  function renderGridCells(unit) {
     const fragment = document.createDocumentFragment();
+    const rowCount = bottomRow - topRow + 1;
 
-    for (let row = 0; row < BOARD_SIZE; row += 1) {
-      for (let col = 0; col < BOARD_SIZE; col += 1) {
+    board.style.setProperty("--board-columns", String(COLUMN_COUNT));
+    board.style.setProperty("--board-rows", String(rowCount));
+    board.style.setProperty("--board-height", `${rowCount * unit}px`);
+    board.replaceChildren();
+
+    for (let row = topRow; row <= bottomRow; row += 1) {
+      for (let col = 0; col < COLUMN_COUNT; col += 1) {
+        const point = { row, col };
         const cell = document.createElement("div");
-        const descriptor = grid[row][col];
+        const descriptor = read(point);
 
         cell.className = "board-cell";
         cell.dataset.coordinate = coordinate(row, col);
@@ -553,7 +450,6 @@ function chooseNormalPath(side) {
 
         if (descriptor) {
           const [pip, role, flow] = descriptor;
-
           cell.dataset.pip = String(pip);
           cell.dataset.role = role;
           cell.dataset.flow = flow;
@@ -567,7 +463,7 @@ function chooseNormalPath(side) {
       }
     }
 
-    board.replaceChildren(fragment);
+    board.appendChild(fragment);
   }
 
   function renderNormalTile(tileData, unit) {
@@ -576,25 +472,20 @@ function chooseNormalPath(side) {
     const secondDescriptor = read(second);
 
     if (!firstDescriptor || !secondDescriptor) {
-      throw new Error("Cannot render a normal domino without both board descriptors.");
+      throw new Error("Cannot render a normal domino without both descriptors.");
     }
 
     const horizontal = first.row === second.row;
     const startRow = Math.min(first.row, second.row);
     const startCol = Math.min(first.col, second.col);
-
     const tile = document.createElement("div");
-    tile.className = `board-domino ${horizontal ? "horizontal" : "vertical"}`;
 
+    tile.className = `board-domino ${horizontal ? "horizontal" : "vertical"}`;
     tile.style.left = `${startCol * unit}px`;
-    tile.style.top = `${startRow * unit}px`;
+    tile.style.top = `${(startRow - topRow) * unit}px`;
     tile.style.width = `${horizontal ? unit * 2 : unit}px`;
     tile.style.height = `${horizontal ? unit : unit * 2}px`;
 
-    /*
-      DOM order follows physical screen order. For west/upward movement,
-      reverse the pip sequence to match the displayed tile orientation.
-    */
     const firstBeforeSecond = horizontal
       ? first.col < second.col
       : first.row < second.row;
@@ -603,22 +494,10 @@ function chooseNormalPath(side) {
       ? [firstDescriptor[0], secondDescriptor[0]]
       : [secondDescriptor[0], firstDescriptor[0]];
 
-    tile.append(
-      createPipHalf(orderedPips[0]),
-      createPipHalf(orderedPips[1])
-    );
-
+    tile.append(createPipHalf(orderedPips[0]), createPipHalf(orderedPips[1]));
     board.appendChild(tile);
   }
 
-  /*
-    Doubles are drawn perpendicular to their directed flow:
-    - horizontal chain flow → vertical double
-    - vertical chain flow   → horizontal double
-
-    This is only their visual orientation. In the grid model, the chain
-    advances one cell from the double's center in every flow direction.
-  */
   function renderDoubleTile(tileData, unit) {
     const descriptor = read(tileData.center);
 
@@ -628,42 +507,40 @@ function chooseNormalPath(side) {
 
     const [pip] = descriptor;
     const vertical = isHorizontalFlow(tileData.flow);
-
     const tile = document.createElement("div");
+
     tile.className = `board-domino board-double ${
       vertical ? "vertical" : "horizontal"
     }`;
 
     if (vertical) {
       tile.style.left = `${tileData.center.col * unit}px`;
-      tile.style.top = `${(tileData.center.row - 0.5) * unit}px`;
+      tile.style.top = `${
+        (tileData.center.row - topRow - 0.5) * unit
+      }px`;
       tile.style.width = `${unit}px`;
       tile.style.height = `${unit * 2}px`;
     } else {
       tile.style.left = `${(tileData.center.col - 0.5) * unit}px`;
-      tile.style.top = `${tileData.center.row * unit}px`;
+      tile.style.top = `${(tileData.center.row - topRow) * unit}px`;
       tile.style.width = `${unit * 2}px`;
       tile.style.height = `${unit}px`;
     }
 
-    tile.append(
-      createPipHalf(pip),
-      createPipHalf(pip)
-    );
-
+    tile.append(createPipHalf(pip), createPipHalf(pip));
     board.appendChild(tile);
   }
 
   function renderBoard() {
-    renderGridCells();
+    const width = board.getBoundingClientRect().width;
 
-    const boardWidth = board.getBoundingClientRect().width;
+    if (!width) return;
 
-    if (!boardWidth) {
-      return;
-    }
+    const unit = width / COLUMN_COUNT;
+    const rowCount = bottomRow - topRow + 1;
 
-    const unit = boardWidth / BOARD_SIZE;
+    renderGridCells(unit);
+    board.style.height = `${unit * rowCount}px`;
 
     for (const tileData of visualTiles) {
       if (tileData.kind === "double") {
@@ -679,23 +556,17 @@ function chooseNormalPath(side) {
 
     for (const tile of tiles) {
       const playable = options.enabled && options.isPlayable(tile);
-
       const button = document.createElement("button");
+
       button.type = "button";
       button.className = `hand-domino${playable ? " playable" : ""}`;
       button.disabled = !playable;
       button.title = `${tile.a}-${tile.b}`;
       button.setAttribute("aria-label", `${tile.a}-${tile.b}`);
-
-      button.append(
-        createPipHalf(tile.a),
-        createPipHalf(tile.b)
-      );
+      button.append(createPipHalf(tile.a), createPipHalf(tile.b));
 
       if (playable) {
-        button.addEventListener("click", () => {
-          options.onTileClick(tile);
-        });
+        button.addEventListener("click", () => options.onTileClick(tile));
       }
 
       fragment.appendChild(button);
@@ -725,11 +596,14 @@ function chooseNormalPath(side) {
     status.textContent = values.message || "";
   }
 
-  /*
-    Read-only debug/testing snapshot.
-  */
   function boardSnapshot() {
-    return structuredClone(grid);
+    return Array.from({ length: bottomRow - topRow + 1 }, (_, index) => {
+      const row = topRow + index;
+
+      return Array.from({ length: COLUMN_COUNT }, (_, col) =>
+        cells.get(key({ row, col })) ?? null
+      );
+    });
   }
 
   return {
