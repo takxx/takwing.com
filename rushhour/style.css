@@ -248,15 +248,14 @@ select:hover {
     grid-template-rows: repeat(9, minmax(0, 1fr));
   }
 
-.exit {
-  border-radius: 0 0 7px 7px;
-}
-
-.exit::after {
-  top: auto;
-  right: 50%;
-  bottom: -29px;
-  transform: translateX(50%) rotate(90deg);
-}
-
+	.exit {
+	  border-radius: 0 0 7px 7px;
+	}
+	
+	.exit::after {
+	  top: auto;
+	  right: 50%;
+	  bottom: -29px;
+	  transform: translateX(50%) rotate(90deg);
+	}
 }
