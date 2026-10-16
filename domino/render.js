@@ -304,43 +304,74 @@ export function createRenderer(elements) {
       && isEmpty(candidate.nextMarker);
   }
 
-  function chooseNormalPath(side) {
-    const endpoint = endpoints[side];
+/*
+  A normal tile consumes:
+  - marker       = matching half
+  - second       = exposed half
+  - nextMarker   = next reserved endpoint
 
-    const straight = createCandidate(endpoint.marker, endpoint.flow);
+  To avoid turning directly into the snake body, also inspect the cell
+  immediately beyond nextMarker. If that cell is occupied, treat the
+  straight path as unsafe and try to turn now.
+*/
+function straightPathIsClear(side, candidate) {
+  const beyond = add(candidate.nextMarker, candidate.flow, 1);
 
-    if (
-      !shouldTurnAt(endpoint.marker, endpoint.flow)
-      && candidateFits(side, straight)
-    ) {
-      return straight;
-    }
+  return (
+    isEmpty(candidate.second)
+    && isEmpty(candidate.nextMarker)
+    && inside(beyond)
+    && isEmpty(beyond)
+  );
+}
 
-    const clockwise = createCandidate(
-      endpoint.marker,
-      CLOCKWISE_FLOW[endpoint.flow]
-    );
+function chooseNormalPath(side) {
+  const endpoint = endpoints[side];
 
-    if (candidateFits(side, clockwise)) {
-      return clockwise;
-    }
+  const straight = createCandidate(endpoint.marker, endpoint.flow);
 
-    const counterClockwise = createCandidate(
-      endpoint.marker,
-      COUNTERCLOCKWISE_FLOW[endpoint.flow]
-    );
-
-    if (candidateFits(side, counterClockwise)) {
-      return counterClockwise;
-    }
-
-    if (candidateFits(side, straight)) {
-      return straight;
-    }
-
-    return null;
+  /*
+    Take the straight path only when:
+    - there is enough room before the board edge, and
+    - the placement cells are empty, and
+    - the cell beyond the next marker is also empty.
+  */
+  if (
+    !shouldTurnAt(endpoint.marker, endpoint.flow)
+    && straightPathIsClear(side, straight)
+  ) {
+    return straight;
   }
 
+  const clockwise = createCandidate(
+    endpoint.marker,
+    CLOCKWISE_FLOW[endpoint.flow]
+  );
+
+  if (candidateFits(side, clockwise)) {
+    return clockwise;
+  }
+
+  const counterClockwise = createCandidate(
+    endpoint.marker,
+    COUNTERCLOCKWISE_FLOW[endpoint.flow]
+  );
+
+  if (candidateFits(side, counterClockwise)) {
+    return counterClockwise;
+  }
+
+  /*
+    Last resort: allow the straight placement if its immediate cells fit,
+    even if the lookahead cell is blocked. This prevents an unnecessary
+    failure when both turn directions are unavailable.
+  */
+  if (candidateFits(side, straight)) {
+    return straight;
+  }
+
+  return null;
+}
   /*
     Opening layout for a double:
 

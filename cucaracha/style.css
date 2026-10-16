@@ -95,7 +95,7 @@ body {
   display: none;
   font-size: 58px;
   line-height: 1;
-  transform: translate(-50%, -50%) rotate(180deg);
+  transform: translate(-50%, -50%) rotate(215deg);
   pointer-events: none;
   filter: drop-shadow(0 3px 2px #0005);
   animation: swat 180ms ease-out;
