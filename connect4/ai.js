@@ -11,14 +11,24 @@ export function chooseComputerColumn({
   cols,
   player,
   computer,
-  depth
+  depth = 4,
+  mistakeChance = 0.02
 }) {
   const validColumns = getValidColumns(board, cols);
+
+  if (validColumns.length === 0) {
+    return null;
+  }
+
+  // Occasionally make a less strategic move for a more casual opponent.
+  if (Math.random() < mistakeChance) {
+    return randomItem(validColumns);
+  }
 
   let bestScore = -Infinity;
   let bestColumns = [];
 
-  for (const column of orderColumns(validColumns)) {
+  for (const column of orderColumns(validColumns, cols)) {
     const row = dropPiece(board, column, computer, rows);
 
     const score = minimax({
@@ -27,7 +37,7 @@ export function chooseComputerColumn({
       cols,
       player,
       computer,
-      depth: depth - 1,
+      depth: Math.max(0, depth - 1),
       maximizing: false,
       alpha: -Infinity,
       beta: Infinity
@@ -43,9 +53,7 @@ export function chooseComputerColumn({
     }
   }
 
-  return bestColumns[
-    Math.floor(Math.random() * bestColumns.length)
-  ];
+  return randomItem(bestColumns);
 }
 
 function minimax({
@@ -59,24 +67,27 @@ function minimax({
   alpha,
   beta
 }) {
+  const computerWon = findWinningLine(
+    board, computer, rows, cols
+  ).won;
+
+  const playerWon = findWinningLine(
+    board, player, rows, cols
+  ).won;
+
+  if (computerWon) return 1_000_000 + depth;
+  if (playerWon) return -1_000_000 - depth;
+
   const validColumns = getValidColumns(board, cols);
 
-  if (findWinningLine(board, computer, rows, cols).won) {
-    return 1000000 + depth;
-  }
-
-  if (findWinningLine(board, player, rows, cols).won) {
-    return -1000000 - depth;
-  }
-
-  if (depth === 0 || validColumns.length === 0) {
+  if (depth <= 0 || validColumns.length === 0) {
     return evaluateBoard(board, rows, cols, player, computer);
   }
 
   if (maximizing) {
     let bestScore = -Infinity;
 
-    for (const column of orderColumns(validColumns)) {
+    for (const column of orderColumns(validColumns, cols)) {
       const row = dropPiece(board, column, computer, rows);
 
       const score = minimax({
@@ -96,9 +107,7 @@ function minimax({
       bestScore = Math.max(bestScore, score);
       alpha = Math.max(alpha, bestScore);
 
-      if (beta <= alpha) {
-        break;
-      }
+      if (beta <= alpha) break;
     }
 
     return bestScore;
@@ -106,7 +115,7 @@ function minimax({
 
   let bestScore = Infinity;
 
-  for (const column of orderColumns(validColumns)) {
+  for (const column of orderColumns(validColumns, cols)) {
     const row = dropPiece(board, column, player, rows);
 
     const score = minimax({
@@ -126,19 +135,17 @@ function minimax({
     bestScore = Math.min(bestScore, score);
     beta = Math.min(beta, bestScore);
 
-    if (beta <= alpha) {
-      break;
-    }
+    if (beta <= alpha) break;
   }
 
   return bestScore;
 }
 
-function orderColumns(columns) {
-  const preferredOrder = [3, 2, 4, 1, 5, 0, 6];
+function orderColumns(columns, cols) {
+  const center = Math.floor(cols / 2);
 
-  return preferredOrder.filter(column =>
-    columns.includes(column)
+  return [...columns].sort(
+    (a, b) => Math.abs(a - center) - Math.abs(b - center)
   );
 }
 
@@ -147,11 +154,8 @@ function evaluateBoard(board, rows, cols, player, computer) {
   const centerColumn = Math.floor(cols / 2);
 
   for (let row = 0; row < rows; row++) {
-    if (board[row][centerColumn] === computer) {
-      score += 6;
-    } else if (board[row][centerColumn] === player) {
-      score -= 6;
-    }
+    if (board[row][centerColumn] === computer) score += 6;
+    if (board[row][centerColumn] === player) score -= 6;
   }
 
   for (let row = 0; row < rows; row++) {
@@ -207,19 +211,21 @@ function evaluateWindow(windowCells, player, computer) {
   const emptyCount =
     windowCells.filter(cell => cell === EMPTY).length;
 
-  if (computerCount > 0 && playerCount > 0) {
-    return 0;
-  }
+  if (computerCount > 0 && playerCount > 0) return 0;
 
-  if (computerCount === 4) return 100000;
+  if (computerCount === 4) return 100_000;
   if (computerCount === 3 && emptyCount === 1) return 120;
   if (computerCount === 2 && emptyCount === 2) return 12;
   if (computerCount === 1 && emptyCount === 3) return 2;
 
-  if (playerCount === 4) return -100000;
+  if (playerCount === 4) return -100_000;
   if (playerCount === 3 && emptyCount === 1) return -150;
   if (playerCount === 2 && emptyCount === 2) return -15;
   if (playerCount === 1 && emptyCount === 3) return -2;
 
   return 0;
+}
+
+function randomItem(items) {
+  return items[Math.floor(Math.random() * items.length)];
 }
