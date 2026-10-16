@@ -1,7 +1,7 @@
 const COLUMN_COUNT = 17;
 const INITIAL_TOP_ROW = 45;
 const INITIAL_BOTTOM_ROW = 53;
-const ROWS_PER_EXTENSION = 4;
+const ROWS_PER_EXTENSION = 2;
 const TURN_MARGIN = 2;
 
 const FLOW_DIRECTIONS = Object.freeze({
