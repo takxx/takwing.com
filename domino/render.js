@@ -390,6 +390,14 @@ for (const turn of turnOrder(side)) {
 
     const center = endpoint.marker;
     const nextMarker = add(center, endpoint.flow);
+      
+    if (
+      nextMarker.col >= 0 &&
+      nextMarker.col < COLUMN_COUNT &&
+      (nextMarker.row < topRow || nextMarker.row > bottomRow)
+    ) {
+      extendToward(nextMarker);
+    }
 
     if (!inside(nextMarker) || !isEmpty(nextMarker)) {
       throw new Error(`No space is available for a ${side} double.`);
