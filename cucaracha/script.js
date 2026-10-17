@@ -26,8 +26,8 @@ const message = document.querySelector("#message");
 
 const STAGE_TIME = 15;
 const INITIAL_ROACHES = 5;
-const INITIAL_SPEED = 95;
-const SPEED_PER_STAGE = 12;
+const INITIAL_SPEED = 140;
+const SPEED_PER_STAGE = 20;
 const HIT_RADIUS = 58;
 const NEAR_MISS_RADIUS = 130;
 const NEAR_MISS_SPEED_MULTIPLIER = 2;
@@ -111,12 +111,17 @@ function handleLanguageChange(nextLanguage) {
   updateOverlayLanguage();
 }
 
-function showImpact(x, y) {
-  const impact = document.createElement("span");
+function createEmojiImage(emoji, alt = "") {
+  const image = document.createElement("img");
+  image.src = `${encodeURIComponent(emoji)}.svg`;
+  image.alt = alt;
+  image.setAttribute("aria-hidden", "true");
+  return image;
+}
 
+function showImpact(x, y) {
+  const impact = createEmojiImage("💥");
   impact.className = "impact";
-  impact.textContent = "💥";
-  impact.setAttribute("aria-hidden", "true");
   impact.style.left = `${x}px`;
   impact.style.top = `${y}px`;
 
@@ -382,7 +387,7 @@ function spawnRoach() {
 
   const element = document.createElement("div");
   element.className = "roach";
-  element.textContent = "🪳";
+  element.appendChild(createEmojiImage("🪳"));
   roachLayer.appendChild(element);
 
   roaches.push({
