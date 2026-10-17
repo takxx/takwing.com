@@ -1,16 +1,3 @@
-/*
-  CONTROLLER MODULE
-
-  This is the only module that imports both game.js and render.js.
-
-  1. Start and reset rounds.
-  2. Ask game.js whether moves are legal.
-  3. Tell render.js to draw accepted game placements.
-  4. Handle player clicks and the left/right board overlay.
-  5. Run the computer turn.
-  6. Apply language changes.
-*/
-
 import {
   initializeLanguage,
   setLanguage,
@@ -37,12 +24,7 @@ const elements = {
   status: document.getElementById("game-status"),
 
   newGame: document.getElementById("new-game"),
-  languageSelect: document.getElementById("language-select"),
-
-  sidePicker: document.getElementById("side-picker"),
-  playLeft: document.getElementById("play-left"),
-  playRight: document.getElementById("play-right"),
-  cancelPlay: document.getElementById("cancel-play")
+  languageSelect: document.getElementById("language-select")
 };
 
 const game = createGame();
@@ -64,18 +46,6 @@ function sideText(side) {
   return t(side === "left" ? "leftSide" : "rightSide");
 }
 
-function setSidePickerVisible(visible) {
-  const wasHidden = elements.sidePicker.classList.contains("is-hidden");
-
-  elements.sidePicker.classList.toggle("is-hidden", !visible);
-
-  if (visible && wasHidden) {
-    window.requestAnimationFrame(() => {
-      elements.playLeft.focus();
-    });
-  }
-}
-
 function rememberTileButton(tile) {
   const buttons = elements.playerHand.querySelectorAll(".hand-domino");
   const targetLabel = `${tile.a}-${tile.b}`;
@@ -86,9 +56,7 @@ function rememberTileButton(tile) {
 }
 
 function restoreTileFocus() {
-  if (!pendingTileButton) {
-    return;
-  }
+  if (!pendingTileButton) return;
 
   const button = pendingTileButton;
   pendingTileButton = null;
@@ -102,7 +70,7 @@ function restoreTileFocus() {
 
 function clearPendingTile({ restoreFocus = false } = {}) {
   pendingTile = null;
-  setSidePickerVisible(false);
+  renderer.hideSideSelector();
 
   if (restoreFocus) {
     restoreTileFocus();
@@ -130,9 +98,7 @@ function resultMessage(snapshot) {
     return t("blockedTie");
   }
 
-  if (statusOverride) {
-    return statusOverride;
-  }
+  if (statusOverride) return statusOverride;
 
   if (event?.type === "opening") {
     return event.player === PLAYER.HUMAN
@@ -200,12 +166,24 @@ function renderApplication() {
     message: resultMessage(snapshot)
   });
 
-  setSidePickerVisible(Boolean(pendingTile));
+  if (pendingTile) {
+    renderer.showSideSelector({
+      label: t("chooseSide"),
+      sideLabels: {
+        left: t("leftSide"),
+        right: t("rightSide")
+      },
+      onSelect(side) {
+        if (pendingTile) {
+          playHumanTile(pendingTile, side);
+        }
+      }
+    });
+  } else {
+    renderer.hideSideSelector();
+  }
 
-  elements.newGame.classList.toggle(
-    "is-hidden",
-    !snapshot.gameOver
-  );
+  elements.newGame.classList.toggle("is-hidden", !snapshot.gameOver);
 }
 
 function scheduleComputerTurn(delay = 350) {
@@ -224,7 +202,6 @@ function beginHumanTurn() {
     return;
   }
 
-  // If the turn has already passed to the computer, hand control over.
   if (beforeDraw.turn !== PLAYER.HUMAN) {
     renderApplication();
 
@@ -245,7 +222,6 @@ function beginHumanTurn() {
     return;
   }
 
-  // Drawing may have failed to find a playable tile, causing a pass.
   if (afterDraw.turn !== PLAYER.HUMAN) {
     statusOverride = t("computerTurn");
     renderApplication();
@@ -278,16 +254,13 @@ function onHumanTileClick(tile) {
 
   const sides = game.legalSides(tile);
 
-  if (sides.length === 0) {
-    return;
-  }
+  if (sides.length === 0) return;
 
   if (sides.length === 1) {
     playHumanTile(tile, sides[0]);
     return;
   }
 
-  // If both ends show the same number, the choice has no gameplay effect.
   if (snapshot.ends.left === snapshot.ends.right) {
     const side = sides[Math.floor(Math.random() * sides.length)];
     playHumanTile(tile, side);
@@ -328,7 +301,6 @@ function beginComputerTurn() {
     return;
   }
 
-  // A delayed callback may run after the turn has already changed.
   if (beforeTurn.turn !== PLAYER.COMPUTER) {
     computerThinking = false;
     renderApplication();
@@ -354,7 +326,6 @@ function beginComputerTurn() {
       return;
     }
 
-    // The computer may have passed during the draw attempt.
     if (afterDraw.turn !== PLAYER.COMPUTER) {
       computerThinking = false;
       statusOverride = t("yourTurn");
@@ -369,7 +340,6 @@ function beginComputerTurn() {
 
     const move = game.chooseComputerMove();
 
-    // Defensive fallback: do not leave the game waiting on the computer.
     if (!move) {
       computerThinking = false;
 
@@ -446,24 +416,6 @@ function bindEvents() {
 
   elements.languageSelect.addEventListener("change", (event) => {
     setLanguage(event.target.value, true);
-    renderApplication();
-  });
-
-  elements.playLeft.addEventListener("click", () => {
-    if (pendingTile) {
-      playHumanTile(pendingTile, "left");
-    }
-  });
-
-  elements.playRight.addEventListener("click", () => {
-    if (pendingTile) {
-      playHumanTile(pendingTile, "right");
-    }
-  });
-
-  elements.cancelPlay.addEventListener("click", () => {
-    clearPendingTile({ restoreFocus: true });
-    statusOverride = t("yourTurn");
     renderApplication();
   });
 

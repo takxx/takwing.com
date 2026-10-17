@@ -8,21 +8,21 @@ const FLOW_DIRECTIONS = Object.freeze({
   WE: { dr: 0, dc: 1 },
   EW: { dr: 0, dc: -1 },
   SN: { dr: -1, dc: 0 },
-  NS: { dr: 1, dc: 0 }
+  NS: { dr: 1, dc: 0 },
 });
 
 const CLOCKWISE_FLOW = Object.freeze({
   WE: "NS",
   NS: "EW",
   EW: "SN",
-  SN: "WE"
+  SN: "WE",
 });
 
 const COUNTERCLOCKWISE_FLOW = Object.freeze({
   WE: "SN",
   SN: "EW",
   EW: "NS",
-  NS: "WE"
+  NS: "WE",
 });
 
 function coordinate(row, col) {
@@ -37,7 +37,7 @@ function pipPositions(value) {
     3: [1, 5, 9],
     4: [1, 3, 7, 9],
     5: [1, 3, 5, 7, 9],
-    6: [1, 3, 4, 6, 7, 9]
+    6: [1, 3, 4, 6, 7, 9],
   };
 
   return positions[value] || [];
@@ -67,7 +67,7 @@ function isHorizontalFlow(flow) {
 function createTurnState() {
   return {
     left: { preferred: "clockwise", count: 0 },
-    right: { preferred: "clockwise", count: 0 }
+    right: { preferred: "clockwise", count: 0 },
   };
 }
 
@@ -80,19 +80,18 @@ export function createRenderer(elements) {
     computerCount,
     boneyardCount,
     score,
-    status
+    status,
   } = elements;
 
-  // Grid entries are stored by their stable, displayed row and column.
-  // Extending the board never renumbers cells already on it.
   let cells = new Map();
   let topRow = INITIAL_TOP_ROW;
   let bottomRow = INITIAL_BOTTOM_ROW;
   let visualTiles = [];
   let endpoints = { left: null, right: null };
-
-  // Each end tracks its turning preference independently.
   let turnState = createTurnState();
+  let visibleLeftCol = 4;
+  let visibleRightCol = 12;
+  let sideSelector = null;
 
   function key(point) {
     return `${point.row}:${point.col}`;
@@ -114,7 +113,7 @@ export function createRenderer(elements) {
   function write(point, descriptor) {
     if (!inside(point)) {
       throw new Error(
-        `Cannot write outside board at ${coordinate(point.row, point.col)}.`
+        `Cannot write outside board at ${coordinate(point.row, point.col)}.`,
       );
     }
 
@@ -130,17 +129,14 @@ export function createRenderer(elements) {
 
     return {
       row: point.row + direction.dr * amount,
-      col: point.col + direction.dc * amount
+      col: point.col + direction.dc * amount,
     };
   }
 
   function extendToward(point) {
     if (point.row < topRow) {
       topRow -= ROWS_PER_EXTENSION;
-      return;
-    }
-
-    if (point.row > bottomRow) {
+    } else if (point.row > bottomRow) {
       bottomRow += ROWS_PER_EXTENSION;
     }
   }
@@ -174,8 +170,8 @@ export function createRenderer(elements) {
       throw new Error(
         `Missing ${side} open marker at ${coordinate(
           endpoint.marker.row,
-          endpoint.marker.col
-        )}.`
+          endpoint.marker.col,
+        )}.`,
       );
     }
 
@@ -190,8 +186,8 @@ export function createRenderer(elements) {
       throw new Error(
         `Invalid ${side} endpoint marker at ${coordinate(
           endpoint.marker.row,
-          endpoint.marker.col
-        )}.`
+          endpoint.marker.col,
+        )}.`,
       );
     }
   }
@@ -215,7 +211,7 @@ export function createRenderer(elements) {
       flow,
       first: marker,
       second: add(marker, flow),
-      nextMarker: add(marker, flow, 2)
+      nextMarker: add(marker, flow, 2),
     };
   }
 
@@ -278,28 +274,30 @@ export function createRenderer(elements) {
 
     const turnFlows = {
       clockwise: CLOCKWISE_FLOW[endpoint.flow],
-      counterclockwise: COUNTERCLOCKWISE_FLOW[endpoint.flow]
+      counterclockwise: COUNTERCLOCKWISE_FLOW[endpoint.flow],
     };
 
-for (const turn of turnOrder(side)) {
-  const candidate = createCandidate(endpoint.marker, turnFlows[turn]);
+    for (const turn of turnOrder(side)) {
+      const candidate = createCandidate(
+        endpoint.marker,
+        turnFlows[turn],
+      );
 
-  if (
-    candidate.nextMarker.col >= 0 &&
-    candidate.nextMarker.col < COLUMN_COUNT &&
-    (candidate.nextMarker.row < topRow ||
-      candidate.nextMarker.row > bottomRow)
-  ) {
-    extendToward(candidate.nextMarker);
-  }
+      if (
+        candidate.nextMarker.col >= 0 &&
+        candidate.nextMarker.col < COLUMN_COUNT &&
+        (candidate.nextMarker.row < topRow ||
+          candidate.nextMarker.row > bottomRow)
+      ) {
+        extendToward(candidate.nextMarker);
+      }
 
-  if (candidateFits(side, candidate)) {
-    recordTurn(side);
-    return candidate;
-  }
-}
-    // If the snake needs vertical room, add rows on the side it is
-    // approaching, then retry the straight route.
+      if (candidateFits(side, candidate)) {
+        recordTurn(side);
+        return candidate;
+      }
+    }
+
     const nextMarker = straight.nextMarker;
 
     if (
@@ -314,40 +312,12 @@ for (const turn of turnOrder(side)) {
       }
     }
 
-    if (candidateFits(side, straight)) {
-      return straight;
-    }
-
-    return null;
-  }
-
-  function reset(opening) {
-    cells = new Map();
-    topRow = INITIAL_TOP_ROW;
-    bottomRow = INITIAL_BOTTOM_ROW;
-    visualTiles = [];
-    turnState = createTurnState();
-
-    const center = { row: 49, col: 8 };
-    const leftMarker = { row: 49, col: 7 };
-    const rightMarker = { row: 49, col: 9 };
-
-    write(center, [opening.value, "double", "EW"]);
-    setOpenMarker("left", leftMarker, opening.value, "EW");
-    setOpenMarker("right", rightMarker, opening.value, "WE");
-
-    visualTiles.push({ kind: "double", center, flow: "EW" });
-
-    endpoints = {
-      left: { marker: leftMarker, flow: "EW", value: opening.value },
-      right: { marker: rightMarker, flow: "WE", value: opening.value }
-    };
-
-    renderBoard();
+    return candidateFits(side, straight) ? straight : null;
   }
 
   function placeNormal(placement) {
     const { side } = placement;
+
     assertEndpointMarker(side, placement.matching);
 
     const path = chooseNormalPath(side);
@@ -359,26 +329,26 @@ for (const turn of turnOrder(side)) {
     write(path.first, [
       placement.matching,
       matchingRoleFor(side),
-      path.flow
+      path.flow,
     ]);
 
     write(path.second, [
       placement.exposed,
       exposedRoleFor(side),
-      path.flow
+      path.flow,
     ]);
 
     setOpenMarker(side, path.nextMarker, placement.exposed, path.flow);
 
     visualTiles.push({
       kind: "normal",
-      cells: [path.first, path.second]
+      cells: [path.first, path.second],
     });
 
     endpoints[side] = {
       marker: path.nextMarker,
       flow: path.flow,
-      value: placement.exposed
+      value: placement.exposed,
     };
   }
 
@@ -390,7 +360,7 @@ for (const turn of turnOrder(side)) {
 
     const center = endpoint.marker;
     const nextMarker = add(center, endpoint.flow);
-      
+
     if (
       nextMarker.col >= 0 &&
       nextMarker.col < COLUMN_COUNT &&
@@ -409,13 +379,13 @@ for (const turn of turnOrder(side)) {
     visualTiles.push({
       kind: "double",
       center,
-      flow: endpoint.flow
+      flow: endpoint.flow,
     });
 
     endpoints[side] = {
       marker: nextMarker,
       flow: endpoint.flow,
-      value: placement.exposed
+      value: placement.exposed,
     };
   }
 
@@ -424,15 +394,10 @@ for (const turn of turnOrder(side)) {
       throw new Error(`Invalid placement side "${placement.side}".`);
     }
 
-    if (
-      !Number.isInteger(placement.matching) ||
-      placement.matching < 0 ||
-      placement.matching > 6 ||
-      !Number.isInteger(placement.exposed) ||
-      placement.exposed < 0 ||
-      placement.exposed > 6
-    ) {
-      throw new Error("Placement pips must be integers from 0 through 6.");
+    for (const pip of [placement.matching, placement.exposed]) {
+      if (!Number.isInteger(pip) || pip < 0 || pip > 6) {
+        throw new Error("Placement pips must be integers from 0 through 6.");
+      }
     }
 
     if (placement.double) {
@@ -444,17 +409,40 @@ for (const turn of turnOrder(side)) {
     renderBoard();
   }
 
-  function renderGridCells(unit) {
+  function updateVisibleColumns() {
+    let showLeftBand = false;
+    let showRightBand = false;
+
+    for (const cellKey of cells.keys()) {
+      const col = Number(cellKey.split(":")[1]);
+
+      if (col <= 3) showLeftBand = true;
+      if (col >= 13) showRightBand = true;
+    }
+
+    visibleLeftCol = showLeftBand ? 0 : 4;
+    visibleRightCol = showRightBand ? 16 : 12;
+  }
+
+  function visibleColumnIndex(logicalCol) {
+    return logicalCol - visibleLeftCol;
+  }
+
+  function renderGridCells() {
     const fragment = document.createDocumentFragment();
     const rowCount = bottomRow - topRow + 1;
+    const columnCount = visibleRightCol - visibleLeftCol + 1;
 
-    board.style.setProperty("--board-columns", String(COLUMN_COUNT));
+    board.style.setProperty("--board-columns", String(columnCount));
     board.style.setProperty("--board-rows", String(rowCount));
-    board.style.setProperty("--board-height", `${rowCount * unit}px`);
     board.replaceChildren();
 
     for (let row = topRow; row <= bottomRow; row += 1) {
-      for (let col = 0; col < COLUMN_COUNT; col += 1) {
+      for (
+        let col = visibleLeftCol;
+        col <= visibleRightCol;
+        col += 1
+      ) {
         const point = { row, col };
         const cell = document.createElement("div");
         const descriptor = read(point);
@@ -466,6 +454,7 @@ for (const turn of turnOrder(side)) {
 
         if (descriptor) {
           const [pip, role, flow] = descriptor;
+
           cell.dataset.pip = String(pip);
           cell.dataset.role = role;
           cell.dataset.flow = flow;
@@ -494,11 +483,13 @@ for (const turn of turnOrder(side)) {
     const horizontal = first.row === second.row;
     const startRow = Math.min(first.row, second.row);
     const startCol = Math.min(first.col, second.col);
-    const tile = document.createElement("div");
+    const left = visibleColumnIndex(startCol);
+    const top = startRow - topRow;
 
+    const tile = document.createElement("div");
     tile.className = `board-domino ${horizontal ? "horizontal" : "vertical"}`;
-    tile.style.left = `${startCol * unit}px`;
-    tile.style.top = `${(startRow - topRow) * unit}px`;
+    tile.style.left = `${left * unit}px`;
+    tile.style.top = `${top * unit}px`;
     tile.style.width = `${horizontal ? unit * 2 : unit}px`;
     tile.style.height = `${horizontal ? unit : unit * 2}px`;
 
@@ -530,14 +521,14 @@ for (const turn of turnOrder(side)) {
     }`;
 
     if (vertical) {
-      tile.style.left = `${tileData.center.col * unit}px`;
-      tile.style.top = `${
-        (tileData.center.row - topRow - 0.5) * unit
-      }px`;
+      tile.style.left = `${visibleColumnIndex(tileData.center.col) * unit}px`;
+      tile.style.top = `${(tileData.center.row - topRow - 0.5) * unit}px`;
       tile.style.width = `${unit}px`;
       tile.style.height = `${unit * 2}px`;
     } else {
-      tile.style.left = `${(tileData.center.col - 0.5) * unit}px`;
+      tile.style.left = `${
+        (visibleColumnIndex(tileData.center.col) - 0.5) * unit
+      }px`;
       tile.style.top = `${(tileData.center.row - topRow) * unit}px`;
       tile.style.width = `${unit * 2}px`;
       tile.style.height = `${unit}px`;
@@ -547,15 +538,111 @@ for (const turn of turnOrder(side)) {
     board.appendChild(tile);
   }
 
+  function markerCenter(marker, unit) {
+    return {
+      x: (visibleColumnIndex(marker.col) + 0.5) * unit,
+      y: (marker.row - topRow + 0.5) * unit,
+    };
+  }
+
+  function renderSideSelector(unit) {
+    if (!sideSelector) return;
+
+    const selector = sideSelector;
+    const overlay = document.createElement("div");
+
+    overlay.className = "side-selector";
+    overlay.setAttribute("role", "group");
+    overlay.setAttribute("aria-label", selector.label);
+
+    const leftCenter = markerCenter(endpoints.left.marker, unit);
+    const rightCenter = markerCenter(endpoints.right.marker, unit);
+
+    overlay.style.setProperty("--left-x", `${leftCenter.x}px`);
+    overlay.style.setProperty("--left-y", `${leftCenter.y}px`);
+    overlay.style.setProperty("--right-x", `${rightCenter.x}px`);
+    overlay.style.setProperty("--right-y", `${rightCenter.y}px`);
+
+    const prompt = document.createElement("div");
+    prompt.className = "side-selector-prompt";
+    prompt.textContent = selector.label;
+    overlay.appendChild(prompt);
+
+    for (const side of ["left", "right"]) {
+      const center = side === "left" ? leftCenter : rightCenter;
+      const button = document.createElement("button");
+
+      button.type = "button";
+      button.className = `side-selector-button side-selector-${side}`;
+      button.setAttribute("aria-label", selector.sideLabels[side]);
+      button.style.left = `${center.x}px`;
+      button.style.top = `${center.y}px`;
+
+      // Track movement so a drag or swipe does not count as a selection.
+      let pointerStart = null;
+      let dragged = false;
+
+      button.addEventListener("pointerdown", (event) => {
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+
+        pointerStart = { x: event.clientX, y: event.clientY };
+        dragged = false;
+
+        try {
+          button.setPointerCapture(event.pointerId);
+        } catch {
+          // Pointer capture is a convenience; selection still works without it.
+        }
+      });
+
+      button.addEventListener("pointermove", (event) => {
+        if (!pointerStart) return;
+
+        const dx = event.clientX - pointerStart.x;
+        const dy = event.clientY - pointerStart.y;
+
+        if (Math.hypot(dx, dy) > 12) {
+          dragged = true;
+        }
+      });
+
+      button.addEventListener("pointercancel", () => {
+        pointerStart = null;
+        dragged = false;
+      });
+
+      button.addEventListener("click", () => {
+        if (dragged) {
+          pointerStart = null;
+          dragged = false;
+          return;
+        }
+
+        const callback = sideSelector?.onSelect;
+        if (!callback) return;
+
+        sideSelector = null;
+        renderBoard();
+        callback(side);
+      });
+
+      overlay.appendChild(button);
+    }
+
+    board.appendChild(overlay);
+  }
+
   function renderBoard() {
     const width = board.getBoundingClientRect().width;
-
     if (!width) return;
 
-    const unit = width / COLUMN_COUNT;
+    updateVisibleColumns();
+
+    const columnCount = visibleRightCol - visibleLeftCol + 1;
+    const unit = width / columnCount;
     const rowCount = bottomRow - topRow + 1;
 
-    renderGridCells(unit);
+    renderGridCells();
     board.style.height = `${unit * rowCount}px`;
 
     for (const tileData of visualTiles) {
@@ -565,6 +652,50 @@ for (const turn of turnOrder(side)) {
         renderNormalTile(tileData, unit);
       }
     }
+
+    renderSideSelector(unit);
+  }
+
+  function showSideSelector({ label, sideLabels, onSelect }) {
+    sideSelector = { label, sideLabels, onSelect };
+    renderBoard();
+  }
+
+  function hideSideSelector() {
+    sideSelector = null;
+    renderBoard();
+  }
+
+  function reset(opening) {
+    sideSelector = null;
+    cells = new Map();
+    topRow = INITIAL_TOP_ROW;
+    bottomRow = INITIAL_BOTTOM_ROW;
+    visualTiles = [];
+    turnState = createTurnState();
+    visibleLeftCol = 4;
+    visibleRightCol = 12;
+
+    const center = { row: 49, col: 8 };
+    const leftMarker = { row: 49, col: 7 };
+    const rightMarker = { row: 49, col: 9 };
+
+    write(center, [opening.value, "double", "EW"]);
+    setOpenMarker("left", leftMarker, opening.value, "EW");
+    setOpenMarker("right", rightMarker, opening.value, "WE");
+
+    visualTiles.push({
+      kind: "double",
+      center,
+      flow: "EW",
+    });
+
+    endpoints = {
+      left: { marker: leftMarker, flow: "EW", value: opening.value },
+      right: { marker: rightMarker, flow: "WE", value: opening.value },
+    };
+
+    renderBoard();
   }
 
   function renderHand(tiles, options) {
@@ -613,13 +744,17 @@ for (const turn of turnOrder(side)) {
   }
 
   function boardSnapshot() {
-    return Array.from({ length: bottomRow - topRow + 1 }, (_, index) => {
-      const row = topRow + index;
+    return Array.from(
+      { length: bottomRow - topRow + 1 },
+      (_, index) => {
+        const row = topRow + index;
 
-      return Array.from({ length: COLUMN_COUNT }, (_, col) =>
-        cells.get(key({ row, col })) ?? null
-      );
-    });
+        return Array.from(
+          { length: COLUMN_COUNT },
+          (_, col) => cells.get(key({ row, col })) ?? null,
+        );
+      },
+    );
   }
 
   return {
@@ -629,6 +764,8 @@ for (const turn of turnOrder(side)) {
     renderHand,
     renderComputerHand,
     renderStats,
-    boardSnapshot
+    boardSnapshot,
+    showSideSelector,
+    hideSideSelector,
   };
 }
