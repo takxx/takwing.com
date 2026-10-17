@@ -2,57 +2,113 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title data-i18n-title="title">Rush Hour</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
   <main class="game">
-    <h1 data-i18n="title">Rush Hour</h1>
+    <header class="page-header">
+      <h1 data-i18n="title">Rush Hour</h1>
 
-    <p class="subtitle" data-i18n="subtitle">
-      Move the red car to the exit.
-    </p>
-
-    <div class="toolbar">
-      <div class="stats">
-        <span>
-          <span data-i18n="moves">Moves</span>:
-          <strong id="moveCount">0</strong>
-        </span>
-
-        <span>
-          <span data-i18n="best">Best</span>:
-          <strong id="bestCount">—</strong>
-        </span>
- 
       <select id="language" aria-label="Language">
         <option value="en">English</option>
         <option value="es">Español</option>
         <option value="zh-Hant">中文</option>
       </select>
+    </header>
+
+    <section class="wide-toolbar" aria-label="Game controls">
+      <p class="subtitle" data-i18n="subtitle">
+        Move the red car to the exit.
+      </p>
+
+      <div class="move-counter" aria-live="polite">
+        <span data-i18n="moves">Moves</span>:
+        <strong id="moveCount">0</strong>
       </div>
-   </div>
+
+      <div class="controls">
+        <button id="resetButton" type="button" data-i18n="reset">Reset</button>
+        <button id="newButton" type="button" data-i18n="newPuzzle">
+          New Puzzle
+        </button>
+      </div>
+    </section>
 
     <div id="board" class="board" style="aspect-ratio: 9 / 6;">
-      <div class="exit"></div>
+      <div class="exit" aria-hidden="true"></div>
     </div>
 
-    <div class="controls">
-      <button id="resetButton" data-i18n="reset">Reset</button>
-      <button id="newButton" data-i18n="newPuzzle">
-        New Puzzle
-      </button>
+    <div class="mobile-toolbar">
+      <div class="move-counter" aria-live="polite">
+        <span data-i18n="moves">Moves</span>:
+        <strong class="mobile-move-count">0</strong>
+      </div>
+
+      <p class="instructions" data-i18n="instructions">
+        Drag cars only in the direction they are facing.
+      </p>
+
+      <div class="controls">
+        <button class="reset-button" type="button" data-i18n="reset">Reset</button>
+        <button class="new-button" type="button" data-i18n="newPuzzle">
+          New Puzzle
+        </button>
+      </div>
+
+      <select class="mobile-language" aria-label="Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">中文</option>
+      </select>
     </div>
 
-    <div id="message" class="message"></div>
-
-    <p class="instructions" data-i18n="instructions">
+    <p class="instructions desktop-instructions" data-i18n="instructions">
       Drag cars only in the direction they are facing.
     </p>
+
+    <div id="message" class="message" aria-live="polite"></div>
   </main>
 
   <script type="module" src="script.js"></script>
+
+  <script>
+    // Keep the duplicated mobile controls connected to the IDs used by script.js.
+    const desktopMoveCount = document.getElementById("moveCount");
+    const mobileMoveCount = document.querySelector(".mobile-move-count");
+    const desktopLanguage = document.getElementById("language");
+    const mobileLanguage = document.querySelector(".mobile-language");
+
+    const syncMoveCount = () => {
+      mobileMoveCount.textContent = desktopMoveCount.textContent;
+    };
+
+    new MutationObserver(syncMoveCount).observe(desktopMoveCount, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+
+    mobileLanguage.value = desktopLanguage.value;
+
+    mobileLanguage.addEventListener("change", () => {
+      desktopLanguage.value = mobileLanguage.value;
+      desktopLanguage.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    desktopLanguage.addEventListener("change", () => {
+      mobileLanguage.value = desktopLanguage.value;
+    });
+
+    document.querySelector(".reset-button").addEventListener("click", () => {
+      document.getElementById("resetButton").click();
+    });
+
+    document.querySelector(".new-button").addEventListener("click", () => {
+      document.getElementById("newButton").click();
+    });
+  </script>
 </body>
 </html>

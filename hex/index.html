@@ -22,16 +22,21 @@
     <section class="game-panel" aria-label="Hex game">
       <div class="game-info">
         <p id="status" class="status" aria-live="polite"></p>
-        <p class="legend">
-          <span class="stone stone-red"></span>
-          <span data-i18n="redGoal">Red connects left to right</span>
-          <span class="legend-gap"></span>
-          <span class="stone stone-blue"></span>
-          <span data-i18n="blueGoal">Blue connects top to bottom</span>
-        </p>
       </div>
       <div class="board-wrap">
-        <svg id="board" class="board" role="grid" aria-label="Hex board"></svg>
+<div class="legend">
+  <span class="legend-item">
+    <span class="stone stone-red"></span>
+    <span data-i18n="redGoal">Red connects left to right</span>
+  </span>
+
+  <span class="legend-item">
+    <span class="stone stone-blue"></span>
+    <span data-i18n="blueGoal">Blue connects top to bottom</span>
+  </span>
+</div>
+<div id="computer-record" class="computer-record" hidden></div>
+       <svg id="board" class="board" role="grid" aria-label="Hex board"></svg>
       </div>
     </section>
 

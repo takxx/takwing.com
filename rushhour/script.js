@@ -18,7 +18,6 @@ import {
 } from "./genpuzzle.js";
 
 const board = document.getElementById("board");
-const bestCount = document.getElementById("bestCount");
 const message = document.getElementById("message");
 const languageSelect = document.getElementById("language");
 
@@ -29,17 +28,11 @@ let puzzleNumber = 0;
 let solved = false;
 let language = getInitialLanguage();
 
-function bestKey() {
-  return `rush-hour-best-${language}-${puzzleNumber}`;
-}
-
 function draw() {
   render({
     board,
     cars,
     moves,
-    bestCount,
-    bestKey: bestKey(),
     onPointerDown: dragCar,
   });
 }
@@ -75,11 +68,6 @@ function checkWin() {
   if (!target || target.col + target.length < COLS || solved) return;
 
   solved = true;
-  const oldBest = Number(localStorage.getItem(bestKey()));
-
-  if (!oldBest || moves < oldBest) {
-    localStorage.setItem(bestKey(), moves);
-  }
 
   message.textContent = translate(language, "solved")
     .replace("{moves}", moves);
@@ -143,55 +131,55 @@ function dragCar(event, car, element, metrics) {
 
   element.setPointerCapture(event.pointerId);
 
-function move(pointerEvent) {
-  const dx = pointerEvent.clientX - startX;
-  const dy = pointerEvent.clientY - startY;
+  function move(pointerEvent) {
+    const dx = pointerEvent.clientX - startX;
+    const dy = pointerEvent.clientY - startY;
 
-  let requestedRow = originalRow;
-  let requestedCol = originalCol;
+    let requestedRow = originalRow;
+    let requestedCol = originalCol;
 
-  if (!metrics.rotated) {
-    if (car.dir === "h") {
-      requestedCol += Math.round(dx / metrics.stepX);
+    if (!metrics.rotated) {
+      if (car.dir === "h") {
+        requestedCol += Math.round(dx / metrics.stepX);
+      } else {
+        requestedRow += Math.round(dy / metrics.stepY);
+      }
+    } else if (car.dir === "h") {
+      // On the rotated board, screen-down moves an original horizontal car right.
+      requestedCol += Math.round(dy / metrics.stepY);
     } else {
-      requestedRow += Math.round(dy / metrics.stepY);
+      // On the rotated board, screen-right moves an original vertical car upward.
+      requestedRow -= Math.round(dx / metrics.stepX);
     }
-  } else if (car.dir === "h") {
-    // On the rotated board, screen-down moves an original horizontal car right.
-    requestedCol += Math.round(dy / metrics.stepY);
-  } else {
-    // On the rotated board, screen-right moves an original vertical car upward.
-    requestedRow -= Math.round(dx / metrics.stepX);
+
+    let row = originalRow;
+    let col = originalCol;
+
+    while (row !== requestedRow || col !== requestedCol) {
+      const nextRow = row + Math.sign(requestedRow - row);
+      const nextCol = col + Math.sign(requestedCol - col);
+
+      if (!canPlace(car, nextRow, nextCol)) break;
+
+      row = nextRow;
+      col = nextCol;
+    }
+
+    car.row = row;
+    car.col = col;
+
+    const screenRow = metrics.rotated ? col : row;
+    const screenCol = metrics.rotated
+      ? car.dir === "v"
+        ? ROWS - 1 - (row + car.length - 1)
+        : ROWS - 1 - row
+      : col;
+
+    element.style.left =
+      `${metrics.paddingLeft + screenCol * metrics.stepX}px`;
+    element.style.top =
+      `${metrics.paddingTop + screenRow * metrics.stepY}px`;
   }
-
-  let row = originalRow;
-  let col = originalCol;
-
-  while (row !== requestedRow || col !== requestedCol) {
-    const nextRow = row + Math.sign(requestedRow - row);
-    const nextCol = col + Math.sign(requestedCol - col);
-
-    if (!canPlace(car, nextRow, nextCol)) break;
-
-    row = nextRow;
-    col = nextCol;
-  }
-
-  car.row = row;
-  car.col = col;
-
-  const screenRow = metrics.rotated ? col : row;
-  const screenCol = metrics.rotated
-    ? car.dir === "v"
-      ? ROWS - 1 - (row + car.length - 1)
-      : ROWS - 1 - row
-    : col;
-
-  element.style.left =
-    `${metrics.paddingLeft + screenCol * metrics.stepX}px`;
-  element.style.top =
-    `${metrics.paddingTop + screenRow * metrics.stepY}px`;
-}
 
   function end() {
     if (car.row !== originalRow || car.col !== originalCol) {

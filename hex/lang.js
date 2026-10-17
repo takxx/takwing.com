@@ -22,6 +22,7 @@ const messages = {
     blueWins: "Blue wins!",
     youWin: "You win!",
     computerWins: "Computer wins!",
+    winloss: "Wins/Losses: ",
     cellLabel: (row, col, occupant) =>
       `Row ${row}, column ${col}${occupant ? `, ${occupant}` : ", empty"}`
   },
@@ -48,6 +49,7 @@ const messages = {
     blueWins: "¡Gana el azul!",
     youWin: "¡Has ganado!",
     computerWins: "¡Gana el ordenador!",
+    winloss: "Ganadas/perdidas: ",
     cellLabel: (row, col, occupant) =>
       `Fila ${row}, columna ${col}${occupant ? `, ${occupant}` : ", vacía"}`
   },
@@ -74,6 +76,7 @@ const messages = {
     blueWins: "藍方獲勝！",
     youWin: "你贏咗！",
     computerWins: "電腦獲勝！",
+    winloss: "勝負：",
     cellLabel: (row, col, occupant) =>
       `第 ${row} 行，第 ${col} 列${occupant ? `，${occupant}` : "，空格"}`
   }

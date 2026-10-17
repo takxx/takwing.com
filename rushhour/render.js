@@ -65,7 +65,6 @@ function cellPosition(row, col, metrics, car) {
   };
 }
 
-
 export function createCells(board) {
   board.querySelectorAll(".cell").forEach(cell => cell.remove());
 
@@ -90,10 +89,14 @@ function renderCar(board, car, metrics, onPointerDown) {
 
   const position = cellPosition(car.row, car.col, metrics, car);
   const visualWidthInCells =
-    car.dir === "h" ? (metrics.rotated ? 1 : car.length) : (metrics.rotated ? car.length : 1);
+    car.dir === "h"
+      ? (metrics.rotated ? 1 : car.length)
+      : (metrics.rotated ? car.length : 1);
 
   const visualHeightInCells =
-    car.dir === "v" ? (metrics.rotated ? 1 : car.length) : (metrics.rotated ? car.length : 1);
+    car.dir === "v"
+      ? (metrics.rotated ? 1 : car.length)
+      : (metrics.rotated ? car.length : 1);
 
   element.style.left = `${position.left}px`;
   element.style.top = `${position.top}px`;
@@ -140,14 +143,7 @@ function positionExit(board, target, metrics) {
   exit.style.height = "18px";
 }
 
-export function render({
-  board,
-  cars,
-  moves,
-  bestCount,
-  bestKey,
-  onPointerDown,
-}) {
+export function render({ board, cars, moves, onPointerDown }) {
   board.querySelectorAll(".car").forEach(element => element.remove());
 
   const rotated = isRotatedLayout();
@@ -184,5 +180,4 @@ export function render({
   }
 
   document.getElementById("moveCount").textContent = moves;
-  bestCount.textContent = localStorage.getItem(bestKey) || "—";
 }
