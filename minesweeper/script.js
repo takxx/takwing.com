@@ -62,21 +62,6 @@ function applyLanguage() {
   render();
 }
 
-function resizeHexes() {
-  if (!cols) return;
-
-  const maxWidth = window.innerWidth <= 600 ? 44 : 52;
-  const availableWidth = Math.max(0, window.innerWidth - 24);
-  const fittedWidth = availableWidth / (cols + 0.5);
-  const width = Math.min(maxWidth, Math.max(30, fittedWidth));
-  const height = width * (60 / 52);
-
-  document.documentElement.style.setProperty("--hex-w", `${width}px`);
-  document.documentElement.style.setProperty("--hex-h", `${height}px`);
-  document.documentElement.style.setProperty("--row-step", `${height * 0.75}px`);
-  document.documentElement.style.setProperty("--row-offset", `${width * 0.5}px`);
-}
-
 function newGame() {
   const [baseRows, baseCols, selectedMineTotal] =
     sizeEl.value.split(",").map(Number);
@@ -265,88 +250,171 @@ function updateFlagModeButton() {
   flagModeButton.textContent = flagMode ? text.flagOn : text.flagOff;
 }
 
+let hexWidth = 40;
+let hexHeight = 46.15; // proportion for pointy-topped hexes (width * 2/sqrt(3) approx or ratio)
+
+function resizeHexes() {
+  if (!cols) return;
+
+  const maxWidth = window.innerWidth <= 600 ? 44 : 52;
+  const availableWidth = Math.max(0, window.innerWidth - 24);
+  const fittedWidth = availableWidth / (cols + 0.5);
+  hexWidth = Math.min(maxWidth, Math.max(30, fittedWidth));
+  hexHeight = hexWidth * (60 / 52);
+
+  // Set total SVG dimensions so it scales and scrolls properly
+  const totalWidth = (cols + 0.5) * hexWidth;
+  const totalHeight = rows * (hexHeight * 0.75) + (hexHeight * 0.25);
+  
+  boardEl.setAttribute("width", totalWidth);
+  boardEl.setAttribute("height", totalHeight);
+}
+
+// Helper to generate the polygon points for a pointy-topped hexagon
+function getHexPoints(x, y, w, h) {
+  const hw = w / 2;
+  const hh = h / 2;
+  // Pointy-topped vertices: top, top-right, bottom-right, bottom, bottom-left, top-left
+  return `
+    ${x + hw},${y}
+    ${x + w},${y + hh * 0.5}
+    ${x + w},${y + hh * 1.5}
+    ${x + hw},${y + h}
+    ${x},${y + hh * 1.5}
+    ${x},${y + hh * 0.5}
+  `;
+}
+
+let hoveredCellId = null;
+
 function render() {
   if (!cells) return;
 
   boardEl.replaceChildren();
   boardEl.setAttribute("aria-label", text.boardAria);
 
-  for (let row = 0; row < rows; row++) {
-    const rowEl = document.createElement("div");
-    rowEl.className = `row${row % 2 ? " odd" : ""}`;
+  // Paint opened cells first and unopened cells afterward. SVG paints later
+  // elements on top, so unopened borders take precedence at shared edges.
+  const paintPriority = cell => {
+    if (ended && cell.mine) return 2; // mine-win / mine-lost: above other cells
+    return cell.revealed ? 0 : 1;    // unopened cells above ordinary opened cells
+  };
+	
+  const orderedCells = [...cells].sort(
+    (a, b) => paintPriority(a) - paintPriority(b) || a.id - b.id
+  );
 
-    for (let col = 0; col < cols; col++) {
-      const cell = cells[row * cols + col];
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "hex";
+  const groups = new Map();
 
-      let label = translate("cellHidden", {
-        row: row + 1,
-        col: col + 1
-      });
+  for (const cell of orderedCells) {
+    const row = cell.row;
+    const col = cell.col;
+    const x = col * hexWidth + (row % 2 === 1 ? hexWidth * 0.5 : 0);
+    const y = row * (hexHeight * 0.75);
 
-      if (cell.revealed) {
-        button.classList.add("revealed");
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "hex-group");
+    g.setAttribute("transform", `translate(${x}, ${y})`);
+    g.setAttribute("role", "button");
 
-        if (cell.mine) {
-          if (cell.hit) {
-            button.textContent = "💥";
-            button.classList.add("mine-hit");
-            label = translate("cellExploded", {
-              row: row + 1,
-              col: col + 1
-            });
-          } else {
-            button.textContent = "💣";
-            button.classList.add(gameWon ? "mine-win" : "mine-lost");
-            label = translate("cellMine", {
-              row: row + 1,
-              col: col + 1
-            });
-          }
-        } else if (cell.count > 0) {
-          button.textContent = String(cell.count);
-          button.dataset.number = cell.count;
-          label = translate("cellAdjacent", {
-            row: row + 1,
-            col: col + 1,
-            count: cell.count
-          });
+    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    polygon.setAttribute("points", getHexPoints(0, 0, hexWidth, hexHeight));
+    polygon.setAttribute("class", "hex");
+
+    let content = "";
+    let label = translate("cellHidden", { row: row + 1, col: col + 1 });
+    let extraClass = "";
+
+    if (cell.revealed) {
+      extraClass = "revealed";
+
+      if (cell.mine) {
+        if (cell.hit) {
+          content = "💥";
+          extraClass += " mine-hit";
+          label = translate("cellExploded", { row: row + 1, col: col + 1 });
         } else {
-          label = translate("cellEmpty", {
-            row: row + 1,
-            col: col + 1
-          });
+          content = "💣";
+          extraClass += gameWon ? " mine-win" : " mine-lost";
+          label = translate("cellMine", { row: row + 1, col: col + 1 });
         }
-      } else if (cell.flagged) {
-        button.classList.add("flagged");
-        button.textContent = "🚩";
-        label = translate("cellFlagged", {
+      } else if (cell.count > 0) {
+        content = String(cell.count);
+        polygon.dataset.number = cell.count;
+        label = translate("cellAdjacent", {
           row: row + 1,
-          col: col + 1
+          col: col + 1,
+          count: cell.count
         });
+      } else {
+        label = translate("cellEmpty", { row: row + 1, col: col + 1 });
       }
-
-      button.setAttribute("aria-label", label);
-
-      button.addEventListener("click", () => {
-        if (flagMode) {
-          toggleFlag(cell);
-        } else {
-          reveal(cell);
-        }
-      });
-
-      button.addEventListener("contextmenu", event => {
-        event.preventDefault();
-        toggleFlag(cell);
-      });
-
-      rowEl.append(button);
+    } else if (cell.flagged) {
+      extraClass = "flagged";
+      content = "🚩";
+      label = translate("cellFlagged", { row: row + 1, col: col + 1 });
     }
 
-    boardEl.append(rowEl);
+    if (extraClass) {
+      polygon.setAttribute("class", `hex ${extraClass}`);
+    }
+
+    g.setAttribute("aria-label", label);
+    g.append(polygon);
+
+    if (content) {
+      const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      textEl.textContent = content;
+      textEl.setAttribute("x", hexWidth / 2);
+      textEl.setAttribute("y", hexHeight / 2);
+      textEl.setAttribute("dominant-baseline", "central");
+      textEl.setAttribute("text-anchor", "middle");
+      textEl.setAttribute("class", "hex-text");
+      g.append(textEl);
+    }
+
+    g.addEventListener("pointerenter", () => {
+      hoveredCellId = cell.id;
+      reorderGroups();
+    });
+
+    g.addEventListener("pointerleave", () => {
+      if (hoveredCellId === cell.id) {
+        hoveredCellId = null;
+        reorderGroups();
+      }
+    });
+
+    g.addEventListener("click", () => {
+      if (flagMode) {
+        toggleFlag(cell);
+      } else {
+        reveal(cell);
+      }
+    });
+
+    g.addEventListener("contextmenu", event => {
+      event.preventDefault();
+      toggleFlag(cell);
+    });
+
+    groups.set(cell.id, g);
+    boardEl.append(g);
+  }
+
+  function reorderGroups() {
+    // Restore the base order: revealed first, unrevealed afterward.
+    for (const cell of orderedCells) {
+      if (cell.id !== hoveredCellId) {
+        boardEl.append(groups.get(cell.id));
+      }
+    }
+
+    // The hovered cell is always the topmost painted cell.
+    if (hoveredCellId !== null) {
+      const hoveredGroup = groups.get(hoveredCellId);
+      if (hoveredGroup) boardEl.append(hoveredGroup);
+    }
   }
 }
 
@@ -367,7 +435,10 @@ languageEl.addEventListener("change", () => {
   applyLanguage();
 });
 
-window.addEventListener("resize", resizeHexes);
+window.addEventListener("resize", () => {
+  resizeHexes();
+  render();
+});
 
 newGame();
 applyLanguage();

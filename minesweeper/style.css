@@ -1,10 +1,5 @@
 :root {
-  color-scheme: dark;
   font-family: Georgia, "Times New Roman", serif;
-  --hex-w: 52px;
-  --hex-h: 60px;
-  --row-step: 45px;
-  --row-offset: 26px;
 }
 
 * {
@@ -35,11 +30,6 @@ h1 {
   text-shadow: 2px 3px 0 #24180e;
 }
 
-button,
-select {
-  font: inherit;
-}
-
 #board-wrap {
   width: 100%;
   overflow-x: auto;
@@ -49,119 +39,71 @@ select {
 }
 
 #board {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: max-content;
-  margin-inline: auto;
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
   user-select: none;
 }
 
-.row {
-  display: flex;
-  flex: 0 0 var(--row-step);
-  align-items: flex-start;
-  height: var(--row-step);
-}
-
-.row.odd {
-  margin-left: var(--row-offset);
-}
-
-.row:last-child {
-  flex-basis: var(--hex-h);
-}
-
-.hex {
-  position: relative;
-  isolation: isolate;
-  display: grid;
-  place-items: center;
-  flex: 0 0 var(--hex-w);
-  width: var(--hex-w);
-  height: var(--hex-h);
-  margin: 0;
-  padding: 0;
-  border: 0;
-  clip-path: polygon(
-    50% 0,
-    100% 25%,
-    100% 75%,
-    50% 100%,
-    0 75%,
-    0 25%
-  );
-  background: var(--rim, #b58949);
-  color: #f1dfb7;
-  font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-  font-size: 1.1rem;
-  font-weight: 800;
-  line-height: 1;
+.hex-group {
   cursor: pointer;
-  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-.hex::before {
-  position: absolute;
-  z-index: -1;
-  inset: 2px;
-  content: "";
-  clip-path: polygon(
-    50% 0,
-    100% 25%,
-    100% 75%,
-    50% 100%,
-    0 75%,
-    0 25%
-  );
-  background: var(--tile, #34271f);
-  pointer-events: none;
+.hex {
+  fill: #34271f;
+  stroke: #b58949;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  transition: fill 0.2s, stroke 0.2s;
 }
 
-.hex:hover:not(.revealed):not(.flagged) {
-  --rim: #e0b85f;
-  --tile: #503b29;
-}
-
-.hex:focus-visible {
-  outline: 3px solid #f4d489;
-  outline-offset: 2px;
+.hex-group:hover .hex:not(.revealed):not(.flagged) {
+  fill: #503b29;
+  stroke: #e0b85f;
 }
 
 .hex.revealed {
-  --rim: #756243;
-  --tile: #2a2722;
+  fill: #2a2722;
+  stroke: #756243;
   cursor: default;
 }
 
 .hex.flagged {
-  --rim: #e2b24e;
-  --tile: #5b4025;
-  color: #ffe2a0;
+  fill: #5b4025;
+  stroke: #e2b24e;
 }
 
 .hex.mine-hit {
-  --rim: #df8067;
-  --tile: #713326;
+  fill: #713326;
+  stroke: #df8067;
 }
 
 .hex.mine-lost {
-  --rim: #bd6953;
-  --tile: #542a22;
+  fill: #542a22;
+  stroke: #bd6953;
 }
 
 .hex.mine-win {
-  --rim: #92a568;
-  --tile: #34402b;
+  fill: #34402b;
+  stroke: #92a568;
 }
 
-.hex[data-number="1"] { color: #91bde8; }
-.hex[data-number="2"] { color: #a4cf8b; }
-.hex[data-number="3"] { color: #ed8c71; }
-.hex[data-number="4"] { color: #c3a1e8; }
-.hex[data-number="5"] { color: #e7a34f; }
-.hex[data-number="6"] { color: #82c7c2; }
+.hex-text {
+  fill: #f1dfb7;
+  font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hex[data-number="1"] + .hex-text { fill: #91bde8; }
+.hex[data-number="2"] + .hex-text { fill: #a4cf8b; }
+.hex[data-number="3"] + .hex-text { fill: #ed8c71; }
+.hex[data-number="4"] + .hex-text { fill: #c3a1e8; }
+.hex[data-number="5"] + .hex-text { fill: #e7a34f; }
+.hex[data-number="6"] + .hex-text { fill: #82c7c2; }
 
 #stats {
   display: flex;
@@ -178,6 +120,11 @@ select {
   margin: 10px 0 18px;
   color: #ddc38e;
   font-weight: 600;
+}
+
+button,
+select {
+  font: inherit;
 }
 
 .toolbar {
