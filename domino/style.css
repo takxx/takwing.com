@@ -1,8 +1,5 @@
 :root {
   --page-background: #194a30;
-  --board-background: #194a30;
-  --panel-background: #194a30;
-  --panel-background-soft: #194a30;
 
   --line: #c8aa68;
   --text: #f2eee3;
@@ -14,8 +11,6 @@
   --accent: #c8aa68;
 
   --board-size: min(72vw, 760px);
-  --selection-dim: rgb(0 0 0 / 35%);
-  --selector-hole-radius: 4.5em;
 
   font-family:
     Inter,
@@ -49,6 +44,8 @@ select {
   font: inherit;
 }
 
+/* General controls */
+
 button {
   min-height: 40px;
   border: 1px solid transparent;
@@ -74,7 +71,7 @@ button:active:not(:disabled) {
 
 button:focus-visible,
 select:focus-visible {
-  outline: 3px solid #f4ecd9;
+  outline: 3px solid var(--ivory);
   outline-offset: 3px;
 }
 
@@ -88,6 +85,17 @@ button:disabled {
   background: transparent;
   color: var(--text);
 }
+
+select {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0 0.65rem;
+  background: var(--page-background);
+  color: var(--text);
+}
+
+/* Main layout */
 
 .app-shell {
   display: grid;
@@ -107,59 +115,51 @@ button:disabled {
   min-width: 0;
 }
 
-/* The board container stays HTML; the renderer inserts an SVG into it. */
 .board {
-  position: relative;
   width: min(100%, var(--board-size));
-  overflow: visible;
-  background: var(--board-background);
+  overflow: visible;  
 }
 
-/* The SVG controls its own viewBox and aspect ratio from the renderer. */
 .domino-board-svg {
   display: block;
   width: 100%;
   overflow: visible;
 }
 
-/* SVG grid cells */
+/* SVG board */
+
 .board-cell {
   fill: transparent;
-  stroke: transparent;
+  stroke: none;
   pointer-events: none;
-}
-
-.board-cell.open-left,
-.board-cell.open-right {
-  /* Marker styling is drawn by the SVG renderer or can use this fill. */
-}
-
-/* SVG domino halves */
-.domino-half {
-  fill: var(--ivory);
-  stroke: rgb(25 25 22 / 75%);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
 }
 
 .board-domino {
   pointer-events: none;
 }
 
-.board-domino .domino-half {
+/* One rounded body per complete tile. */
+.domino-board-svg .domino-body {
+  fill: var(--ivory);
+  stroke: var(--page-background);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
   filter: drop-shadow(0 2px 3px rgb(0 0 0 / 35%));
 }
 
-.board-double {
-  z-index: 6;
+.domino-board-svg .domino-divider {
+  stroke: rgb(25 25 22 / 72%);
+  stroke-width: 1;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 
-/* SVG pips */
-.pip {
+.domino-board-svg .pip {
   fill: var(--domino-ink);
 }
 
 /* SVG side selector */
+
 .side-selector {
   pointer-events: none;
 }
@@ -190,7 +190,7 @@ button:disabled {
 }
 
 .side-selector-button:hover .side-selector-hit-area,
-.side-selector-button:focus .side-selector-hit-area {
+.side-selector-button:focus-visible .side-selector-hit-area {
   fill: rgb(200 170 104 / 24%);
   stroke: var(--line);
 }
@@ -199,10 +199,12 @@ button:disabled {
   outline: none;
 }
 
-.side-selector-button:focus .side-selector-hit-area {
+.side-selector-button:focus-visible .side-selector-hit-area {
   stroke: var(--ivory);
   stroke-width: 3;
 }
+
+/* Sidebar and headings */
 
 .sidebar {
   display: flex;
@@ -235,7 +237,7 @@ button:disabled {
 .instructions {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--panel-background);
+  background: var(--page-background);
   padding: 0.9rem;
 }
 
@@ -282,6 +284,8 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* Computer hand */
+
 .computer-hand {
   display: flex;
   flex-wrap: wrap;
@@ -297,6 +301,8 @@ button:disabled {
   background: var(--ivory-back);
 }
 
+/* Player hand — HTML tiles, separate from SVG board tiles */
+
 .player-hand {
   display: flex;
   flex-wrap: wrap;
@@ -307,10 +313,10 @@ button:disabled {
 .hand-domino {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  flex: 0 0 auto;
   width: clamp(3.45rem, 5.2vw, 4.85rem);
   aspect-ratio: 2 / 1;
   overflow: hidden;
-  flex: 0 0 auto;
   border: 1px solid rgb(25 25 22 / 75%);
   border-radius: 7px;
   padding: 0;
@@ -333,7 +339,6 @@ button:disabled {
   place-items: center;
   min-width: 0;
   min-height: 0;
-  border: 0;
 }
 
 .hand-domino .domino-half + .domino-half {
@@ -357,15 +362,52 @@ button:disabled {
   background: var(--domino-ink);
 }
 
-.pip-1 { grid-column: 1; grid-row: 1; }
-.pip-2 { grid-column: 2; grid-row: 1; }
-.pip-3 { grid-column: 3; grid-row: 1; }
-.pip-4 { grid-column: 1; grid-row: 2; }
-.pip-5 { grid-column: 2; grid-row: 2; }
-.pip-6 { grid-column: 3; grid-row: 2; }
-.pip-7 { grid-column: 1; grid-row: 3; }
-.pip-8 { grid-column: 2; grid-row: 3; }
-.pip-9 { grid-column: 3; grid-row: 3; }
+.pip-1 {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.pip-2 {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.pip-3 {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.pip-4 {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.pip-5 {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.pip-6 {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.pip-7 {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.pip-8 {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.pip-9 {
+  grid-column: 3;
+  grid-row: 3;
+}
+
+/* Optional HTML side picker */
 
 .side-picker p {
   margin: 0 0 0.7rem;
@@ -407,6 +449,8 @@ button:disabled {
   pointer-events: none;
 }
 
+/* Controls and instructions */
+
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -420,15 +464,6 @@ button:disabled {
   font-size: 0.9rem;
 }
 
-select {
-  min-height: 40px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 0 0.65rem;
-  background: var(--panel-background-soft);
-  color: var(--text);
-}
-
 .instructions p {
   margin: 0.52rem 0 0;
   color: var(--muted);
@@ -440,10 +475,11 @@ select {
   display: none;
 }
 
+/* Responsive layout */
+
 @media (max-width: 820px) {
   :root {
     --board-size: min(calc(100vw - 2rem), 680px);
-    --selector-hole-radius: 3.5em;
   }
 
   .app-shell {
@@ -466,18 +502,28 @@ select {
     gap: 0.9rem;
   }
 
-  .player-section { order: 1; }
-  .computer-section { order: 2; }
-  .status-card { order: 3; }
-  .controls { order: 4; }
-  .instructions { order: 5; }
+  .player-section {
+    order: 1;
+  }
+
+  .computer-section {
+    order: 2;
+  }
+
+  .status-card {
+    order: 3;
+  }
+
+  .controls {
+    order: 4;
+  }
+
+  .instructions {
+    order: 5;
+  }
 }
 
 @media (max-width: 430px) {
-  :root {
-    --selector-hole-radius: 3.5em;
-  }
-
   .hand-domino {
     width: auto;
     min-width: 2.8rem;
@@ -489,10 +535,6 @@ select {
 
   .board-side-picker {
     width: calc(100% - 1rem);
-  }
-
-  .board-side-picker .button-row {
-    justify-content: stretch;
   }
 
   .board-side-picker .button-row button {

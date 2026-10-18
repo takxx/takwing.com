@@ -4,6 +4,8 @@ const INITIAL_ROWS = 9;
 const ROWS_PER_EXTENSION = 2;
 const TURN_MARGIN = 2;
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+
 const FLOW_DIRECTIONS = Object.freeze({
   WE: { dr: 0, dc: 1 },
   EW: { dr: 0, dc: -1 },
@@ -35,8 +37,6 @@ const PIP_POSITIONS = Object.freeze({
   6: [1, 3, 4, 6, 7, 9],
 });
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-
 function coordinate(row, col) {
   return `${String.fromCharCode(65 + col)}${String(row).padStart(2, "0")}`;
 }
@@ -46,6 +46,75 @@ function createTurnState() {
     left: { preferred: "clockwise", count: 0 },
     right: { preferred: "clockwise", count: 0 },
   };
+}
+
+function svgElement(name, attributes = {}) {
+  const element = document.createElementNS(SVG_NS, name);
+
+  for (const [attribute, value] of Object.entries(attributes)) {
+    element.setAttribute(attribute, String(value));
+  }
+
+  return element;
+}
+
+function addPips(group, value, x, y, size) {
+  const inset = size * 0.2;
+  const span = size - inset * 2;
+  const radius = Math.max(1.5, size * 0.055);
+
+  for (const position of PIP_POSITIONS[value] ?? []) {
+    const index = position - 1;
+    const col = index % 3;
+    const row = Math.floor(index / 3);
+
+    group.appendChild(
+      svgElement("circle", {
+        cx: x + inset + (col * span) / 2,
+        cy: y + inset + (row * span) / 2,
+        r: radius,
+        class: "pip",
+      }),
+    );
+  }
+}
+
+function addDomino(group, values, x, y, unit, horizontal) {
+  const width = horizontal ? unit * 2 : unit;
+  const height = horizontal ? unit : unit * 2;
+  const dividerInset = unit * 0.15;
+
+  // A single body keeps the center seam square and continuous.
+  group.appendChild(
+    svgElement("rect", {
+      x,
+      y,
+      width,
+      height,
+      rx: unit * 0.1,
+      class: "domino-body",
+    }),
+  );
+
+  group.appendChild(
+    svgElement("line", {
+      x1: horizontal ? x + unit : x + dividerInset,
+      y1: horizontal ? y + dividerInset : y + unit,
+      x2: horizontal ? x + unit : x + unit - dividerInset,
+      y2: horizontal ? y + unit - dividerInset : y + unit,
+      class: "domino-divider",
+    }),
+  );
+
+  addPips(group, values[0], x, y, unit);
+
+  addPips(
+    group,
+    values[1],
+    horizontal ? x + unit : x,
+    horizontal ? y : y + unit,
+    unit,
+  );
 }
 
 export function createRenderer(elements) {
@@ -65,11 +134,16 @@ export function createRenderer(elements) {
   let bottomRow = INITIAL_ROWS - 1;
   let leftCol = 0;
   let rightCol = INITIAL_COLUMNS - 1;
+
   let visualTiles = [];
   let endpoints = { left: null, right: null };
   let turnState = createTurnState();
   let sideSelector = null;
-  let resizeObserver = null;
+
+  const resizeObserver =
+    typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => renderBoard())
+      : null;
 
   function key(point) {
     return `${point.row}:${point.col}`;
@@ -90,8 +164,11 @@ export function createRenderer(elements) {
 
   function write(point, descriptor) {
     if (!inside(point)) {
-      throw new Error(`Cannot write outside board at ${coordinate(point.row, point.col)}.`);
+      throw new Error(
+        `Cannot write outside board at ${coordinate(point.row, point.col)}.`,
+      );
     }
+
     cells.set(key(point), descriptor);
   }
 
@@ -101,35 +178,30 @@ export function createRenderer(elements) {
 
   function add(point, flow, amount = 1) {
     const direction = FLOW_DIRECTIONS[flow];
+
     return {
       row: point.row + direction.dr * amount,
       col: point.col + direction.dc * amount,
     };
   }
 
-  function extendHorizontalToward(point) {
-    if (point.col < leftCol && rightCol - leftCol + 1 < MAX_COLUMNS) {
-      leftCol -= 2;
-    } else if (point.col > rightCol && rightCol - leftCol + 1 < MAX_COLUMNS) {
-      rightCol += 2;
-    }
-  }
+  function extendToward(point) {
+    const columns = rightCol - leftCol + 1;
 
-  function extendVerticalToward(point) {
+    if (columns < MAX_COLUMNS) {
+      const extension = Math.min(2, MAX_COLUMNS - columns);
+
+      if (point.col < leftCol) {
+        leftCol -= extension;
+      } else if (point.col > rightCol) {
+        rightCol += extension;
+      }
+    }
+
     if (point.row < topRow) {
       topRow -= ROWS_PER_EXTENSION;
     } else if (point.row > bottomRow) {
       bottomRow += ROWS_PER_EXTENSION;
-    }
-  }
-
-  function extendToward(point) {
-    if (point.col < leftCol || point.col > rightCol) {
-      extendHorizontalToward(point);
-    }
-
-    if (point.row < topRow || point.row > bottomRow) {
-      extendVerticalToward(point);
     }
   }
 
@@ -151,23 +223,34 @@ export function createRenderer(elements) {
 
   function assertEndpointMarker(side, matchingPip) {
     const endpoint = endpoints[side];
+
     if (!endpoint) {
       throw new Error(`The ${side} endpoint has not been initialized.`);
     }
 
     const descriptor = read(endpoint.marker);
+
     if (!descriptor) {
-      throw new Error(`Missing ${side} open marker at ${coordinate(endpoint.marker.row, endpoint.marker.col)}.`);
+      throw new Error(
+        `Missing ${side} open marker at ${
+          coordinate(endpoint.marker.row, endpoint.marker.col)
+        }.`,
+      );
     }
 
     const [reservedPip, role, flow] = descriptor;
+
     if (
       reservedPip !== endpoint.value ||
       reservedPip !== matchingPip ||
       role !== markerRoleFor(side) ||
       flow !== endpoint.flow
     ) {
-      throw new Error(`Invalid ${side} endpoint marker at ${coordinate(endpoint.marker.row, endpoint.marker.col)}.`);
+      throw new Error(
+        `Invalid ${side} endpoint marker at ${
+          coordinate(endpoint.marker.row, endpoint.marker.col)
+        }.`,
+      );
     }
   }
 
@@ -177,6 +260,7 @@ export function createRenderer(elements) {
     if (direction.dc === 1) return rightCol - point.col;
     if (direction.dc === -1) return point.col - leftCol;
     if (direction.dr === 1) return bottomRow - point.row;
+
     return point.row - topRow;
   }
 
@@ -196,26 +280,26 @@ export function createRenderer(elements) {
   function candidateFits(side, candidate) {
     const endpoint = endpoints[side];
     const firstDescriptor = read(candidate.first);
+
     const firstIsCurrentMarker =
       firstDescriptor &&
       firstDescriptor[0] === endpoint.value &&
       firstDescriptor[1] === markerRoleFor(side) &&
       firstDescriptor[2] === endpoint.flow;
 
-    return (
+    return Boolean(
       firstIsCurrentMarker &&
       isEmpty(candidate.second) &&
-      inside(candidate.nextMarker) &&
-      isEmpty(candidate.nextMarker)
+      isEmpty(candidate.nextMarker),
     );
   }
 
   function straightPathIsClear(candidate) {
     const beyond = add(candidate.nextMarker, candidate.flow);
+
     return (
       isEmpty(candidate.second) &&
       isEmpty(candidate.nextMarker) &&
-      inside(beyond) &&
       isEmpty(beyond)
     );
   }
@@ -233,36 +317,32 @@ export function createRenderer(elements) {
     if (state.count === 2) {
       state.count = 0;
       state.preferred =
-        state.preferred === "clockwise" ? "counterclockwise" : "clockwise";
+        state.preferred === "clockwise"
+          ? "counterclockwise"
+          : "clockwise";
     }
   }
 
   function chooseNormalPath(side) {
     const endpoint = endpoints[side];
-const straight = createCandidate(endpoint.marker, endpoint.flow);
-const horizontal = endpoint.flow === "WE" || endpoint.flow === "EW";
+    const straight = createCandidate(endpoint.marker, endpoint.flow);
+    const horizontal =
+      endpoint.flow === "WE" || endpoint.flow === "EW";
 
-if (horizontal && shouldTurnAt(endpoint.marker, endpoint.flow)) {
-  const beyond = add(straight.nextMarker, straight.flow);
+    if (horizontal && shouldTurnAt(endpoint.marker, endpoint.flow)) {
+      const beyond = add(straight.nextMarker, straight.flow);
 
-  if (!inside(beyond)) {
-    extendToward(beyond);
-  }
+      if (!inside(beyond)) {
+        extendToward(beyond);
+      }
+    }
 
-  if (
-    !shouldTurnAt(endpoint.marker, endpoint.flow) &&
-    straightPathIsClear(straight)
-  ) {
-    return straight;
-  }
-}
-
-if (
-  !shouldTurnAt(endpoint.marker, endpoint.flow) &&
-  straightPathIsClear(straight)
-) {
-  return straight;
-}
+    if (
+      !shouldTurnAt(endpoint.marker, endpoint.flow) &&
+      straightPathIsClear(straight)
+    ) {
+      return straight;
+    }
 
     const turnFlows = {
       clockwise: CLOCKWISE_FLOW[endpoint.flow],
@@ -270,14 +350,12 @@ if (
     };
 
     for (const turn of turnOrder(side)) {
-      const candidate = createCandidate(endpoint.marker, turnFlows[turn]);
+      const candidate = createCandidate(
+        endpoint.marker,
+        turnFlows[turn],
+      );
 
-      if (
-        candidate.nextMarker.col < leftCol ||
-        candidate.nextMarker.col > rightCol ||
-        candidate.nextMarker.row < topRow ||
-        candidate.nextMarker.row > bottomRow
-      ) {
+      if (!inside(candidate.nextMarker)) {
         extendToward(candidate.nextMarker);
       }
 
@@ -287,12 +365,7 @@ if (
       }
     }
 
-    if (
-      straight.nextMarker.col < leftCol ||
-      straight.nextMarker.col > rightCol ||
-      straight.nextMarker.row < topRow ||
-      straight.nextMarker.row > bottomRow
-    ) {
+    if (!inside(straight.nextMarker)) {
       extendToward(straight.nextMarker);
     }
 
@@ -300,55 +373,64 @@ if (
   }
 
   function placeNormal(placement) {
-    const { side } = placement;
-    assertEndpointMarker(side, placement.matching);
+    const { side, matching, exposed } = placement;
+
+    assertEndpointMarker(side, matching);
 
     const path = chooseNormalPath(side);
+
     if (!path) {
-      throw new Error(`No contiguous route is available for the ${side} chain.`);
+      throw new Error(
+        `No contiguous route is available for the ${side} chain.`,
+      );
     }
 
-    write(path.first, [placement.matching, matchingRoleFor(side), path.flow]);
-    write(path.second, [placement.exposed, exposedRoleFor(side), path.flow]);
-    setOpenMarker(side, path.nextMarker, placement.exposed, path.flow);
+    write(path.first, [matching, matchingRoleFor(side), path.flow]);
+    write(path.second, [exposed, exposedRoleFor(side), path.flow]);
+    setOpenMarker(side, path.nextMarker, exposed, path.flow);
 
-    visualTiles.push({ kind: "normal", cells: [path.first, path.second] });
+    visualTiles.push({
+      kind: "normal",
+      cells: [path.first, path.second],
+    });
+
     endpoints[side] = {
       marker: path.nextMarker,
       flow: path.flow,
-      value: placement.exposed,
+      value: exposed,
     };
   }
 
   function placeDouble(placement) {
-    const { side } = placement;
-    const endpoint = endpoints[side];
-    assertEndpointMarker(side, placement.matching);
+    const { side, matching, exposed } = placement;
 
+    assertEndpointMarker(side, matching);
+
+    const endpoint = endpoints[side];
     const center = endpoint.marker;
     const nextMarker = add(center, endpoint.flow);
 
-    if (
-      nextMarker.col < leftCol ||
-      nextMarker.col > rightCol ||
-      nextMarker.row < topRow ||
-      nextMarker.row > bottomRow
-    ) {
+    if (!inside(nextMarker)) {
       extendToward(nextMarker);
     }
 
-    if (!inside(nextMarker) || !isEmpty(nextMarker)) {
+    if (!isEmpty(nextMarker)) {
       throw new Error(`No space is available for a ${side} double.`);
     }
 
-    write(center, [placement.matching, "double", endpoint.flow]);
-    setOpenMarker(side, nextMarker, placement.exposed, endpoint.flow);
+    write(center, [matching, "double", endpoint.flow]);
+    setOpenMarker(side, nextMarker, exposed, endpoint.flow);
 
-    visualTiles.push({ kind: "double", center, flow: endpoint.flow });
+    visualTiles.push({
+      kind: "double",
+      center,
+      flow: endpoint.flow,
+    });
+
     endpoints[side] = {
       marker: nextMarker,
       flow: endpoint.flow,
-      value: placement.exposed,
+      value: exposed,
     };
   }
 
@@ -359,7 +441,9 @@ if (
 
     for (const pip of [placement.matching, placement.exposed]) {
       if (!Number.isInteger(pip) || pip < 0 || pip > 6) {
-        throw new Error("Placement pips must be integers from 0 through 6.");
+        throw new Error(
+          "Placement pips must be integers from 0 through 6.",
+        );
       }
     }
 
@@ -372,72 +456,30 @@ if (
     renderBoard();
   }
 
-  function svgElement(name, attributes = {}) {
-    const element = document.createElementNS(SVG_NS, name);
-    for (const [attribute, value] of Object.entries(attributes)) {
-      element.setAttribute(attribute, String(value));
-    }
-    return element;
-  }
-
-  function addPips(group, value, x, y, size) {
-    const positions = PIP_POSITIONS[value] || [];
-    const inset = size * 0.2;
-    const span = size - inset * 2;
-    const radius = Math.max(1.5, size * 0.055);
-
-    for (const position of positions) {
-      const index = position - 1;
-      const col = index % 3;
-      const row = Math.floor(index / 3);
-      const cx = x + inset + (col * span) / 2;
-      const cy = y + inset + (row * span) / 2;
-
-      group.appendChild(
-        svgElement("circle", {
-          cx,
-          cy,
-          r: radius,
-          class: "pip",
-        }),
-      );
-    }
-  }
-
-  function addHalf(group, value, x, y, width, height) {
-    group.appendChild(
-      svgElement("rect", {
-        x,
-        y,
-        width,
-        height,
-        rx: Math.min(width, height) * 0.1,
-        class: "domino-half",
-      }),
-    );
-    addPips(group, value, x, y, Math.min(width, height));
-  }
-
-  function renderGrid(svg, unit, rows, columns) {
+  function renderGrid(svg, unit) {
     for (let row = topRow; row <= bottomRow; row += 1) {
       for (let col = leftCol; col <= rightCol; col += 1) {
         const descriptor = read({ row, col });
+        const label = coordinate(row, col);
+
         const cell = svgElement("rect", {
           x: (col - leftCol) * unit,
           y: (row - topRow) * unit,
           width: unit,
           height: unit,
           class: "board-cell",
-          "data-coordinate": coordinate(row, col),
+          "data-coordinate": label,
           role: "gridcell",
-          "aria-label": coordinate(row, col),
+          "aria-label": label,
         });
 
         if (descriptor) {
           const [pip, role, flow] = descriptor;
+
           cell.setAttribute("data-pip", String(pip));
           cell.setAttribute("data-role", role);
           cell.setAttribute("data-flow", flow);
+
           if (role === "open-left" || role === "open-right") {
             cell.classList.add(role);
           }
@@ -454,54 +496,66 @@ if (
     const secondDescriptor = read(second);
 
     if (!firstDescriptor || !secondDescriptor) {
-      throw new Error("Cannot render a normal domino without both descriptors.");
+      throw new Error(
+        "Cannot render a normal domino without both descriptors.",
+      );
     }
 
     const horizontal = first.row === second.row;
-    const x = (Math.min(first.col, second.col) - leftCol) * unit;
-    const y = (Math.min(first.row, second.row) - topRow) * unit;
-    const width = horizontal ? unit * 2 : unit;
-    const height = horizontal ? unit : unit * 2;
+
+    const x =
+      (Math.min(first.col, second.col) - leftCol) * unit;
+    const y =
+      (Math.min(first.row, second.row) - topRow) * unit;
+
     const firstBeforeSecond = horizontal
       ? first.col < second.col
       : first.row < second.row;
-    const pips = firstBeforeSecond
+
+    const values = firstBeforeSecond
       ? [firstDescriptor[0], secondDescriptor[0]]
       : [secondDescriptor[0], firstDescriptor[0]];
 
-    const group = svgElement("g", { class: `board-domino ${horizontal ? "horizontal" : "vertical"}` });
+    const group = svgElement("g", {
+      class: `board-domino ${
+        horizontal ? "horizontal" : "vertical"
+      }`,
+    });
 
-    if (horizontal) {
-      addHalf(group, pips[0], x, y, unit, unit);
-      addHalf(group, pips[1], x + unit, y, unit, unit);
-    } else {
-      addHalf(group, pips[0], x, y, unit, unit);
-      addHalf(group, pips[1], x, y + unit, unit, unit);
-    }
-
-    group.setAttribute("width", width);
-    group.setAttribute("height", height);
+    addDomino(group, values, x, y, unit, horizontal);
     svg.appendChild(group);
   }
 
   function renderDoubleTile(svg, tileData, unit) {
     const descriptor = read(tileData.center);
+
     if (!descriptor) {
-      throw new Error("Cannot render a double without its board descriptor.");
+      throw new Error(
+        "Cannot render a double without its board descriptor.",
+      );
     }
 
-    const vertical = tileData.flow === "WE" || tileData.flow === "EW";
+    const vertical =
+      tileData.flow === "WE" || tileData.flow === "EW";
+
     const centerX = (tileData.center.col - leftCol) * unit;
     const centerY = (tileData.center.row - topRow) * unit;
-    const group = svgElement("g", { class: "board-domino board-double" });
 
-    if (vertical) {
-      addHalf(group, descriptor[0], centerX, centerY - unit / 2, unit, unit);
-      addHalf(group, descriptor[0], centerX, centerY + unit / 2, unit, unit);
-    } else {
-      addHalf(group, descriptor[0], centerX - unit / 2, centerY, unit, unit);
-      addHalf(group, descriptor[0], centerX + unit / 2, centerY, unit, unit);
-    }
+    const x = vertical ? centerX : centerX - unit / 2;
+    const y = vertical ? centerY - unit / 2 : centerY;
+
+    const group = svgElement("g", {
+      class: "board-domino board-double",
+    });
+
+    addDomino(
+      group,
+      [descriptor[0], descriptor[0]],
+      x,
+      y,
+      unit,
+      !vertical,
+    );
 
     svg.appendChild(group);
   }
@@ -510,6 +564,7 @@ if (
     if (!sideSelector) return;
 
     const selector = sideSelector;
+
     const group = svgElement("g", {
       class: "side-selector",
       role: "group",
@@ -522,13 +577,13 @@ if (
       "text-anchor": "middle",
       class: "side-selector-prompt",
     });
+
     prompt.textContent = selector.label;
     group.appendChild(prompt);
 
     for (const side of ["left", "right"]) {
       const marker = endpoints[side].marker;
-      const cx = (marker.col - leftCol + 0.5) * unit;
-      const cy = (marker.row - topRow + 0.5) * unit;
+
       const button = svgElement("g", {
         class: `side-selector-button side-selector-${side}`,
         role: "button",
@@ -538,22 +593,26 @@ if (
 
       button.appendChild(
         svgElement("circle", {
-          cx,
-          cy,
+          cx: (marker.col - leftCol + 0.5) * unit,
+          cy: (marker.row - topRow + 0.5) * unit,
           r: unit * 0.42,
           class: "side-selector-hit-area",
         }),
       );
 
       const select = () => {
-        const callback = sideSelector?.onSelect;
-        if (!callback) return;
+        // Ignore a stale selector if a newer one has replaced it.
+        if (sideSelector !== selector) return;
+
+        const callback = selector.onSelect;
+
         sideSelector = null;
         renderBoard();
         callback(side);
       };
 
       button.addEventListener("click", select);
+
       button.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -569,6 +628,7 @@ if (
 
   function renderBoard() {
     const width = board.getBoundingClientRect().width;
+
     if (!width) return;
 
     const columns = rightCol - leftCol + 1;
@@ -586,7 +646,7 @@ if (
       "aria-label": "Domino board",
     });
 
-    renderGrid(svg, unit, rows, columns);
+    renderGrid(svg, unit);
 
     for (const tileData of visualTiles) {
       if (tileData.kind === "double") {
@@ -597,6 +657,7 @@ if (
     }
 
     renderSideSelector(svg, unit);
+
     board.replaceChildren(svg);
     board.style.height = `${height}px`;
   }
@@ -624,18 +685,42 @@ if (
     visualTiles = [];
     turnState = createTurnState();
 
-    const center = { row: topRow + 4, col: leftCol + 5 };
-    const leftMarker = { row: center.row, col: center.col - 1 };
-    const rightMarker = { row: center.row, col: center.col + 1 };
+    const center = {
+      row: topRow + (INITIAL_ROWS - 1)/2,
+      col: leftCol + (INITIAL_COLUMNS - 1)/2,
+    };
+
+    const leftMarker = {
+      row: center.row,
+      col: center.col - 1,
+    };
+
+    const rightMarker = {
+      row: center.row,
+      col: center.col + 1,
+    };
 
     write(center, [opening.value, "double", "EW"]);
     setOpenMarker("left", leftMarker, opening.value, "EW");
     setOpenMarker("right", rightMarker, opening.value, "WE");
 
-    visualTiles.push({ kind: "double", center, flow: "EW" });
+    visualTiles.push({
+      kind: "double",
+      center,
+      flow: "EW",
+    });
+
     endpoints = {
-      left: { marker: leftMarker, flow: "EW", value: opening.value },
-      right: { marker: rightMarker, flow: "WE", value: opening.value },
+      left: {
+        marker: leftMarker,
+        flow: "EW",
+        value: opening.value,
+      },
+      right: {
+        marker: rightMarker,
+        flow: "WE",
+        value: opening.value,
+      },
     };
 
     renderBoard();
@@ -645,22 +730,26 @@ if (
     const fragment = document.createDocumentFragment();
 
     for (const tile of tiles) {
-      const playable = options.enabled && options.isPlayable(tile);
+      const playable =
+        options.enabled && options.isPlayable(tile);
+
       const button = document.createElement("button");
+
       button.type = "button";
-      button.className = `hand-domino${playable ? " playable" : ""}`;
+      button.className =
+        `hand-domino${playable ? " playable" : ""}`;
       button.disabled = !playable;
       button.title = `${tile.a}-${tile.b}`;
       button.setAttribute("aria-label", `${tile.a}-${tile.b}`);
 
-      // Hand tiles remain HTML controls; the board itself is SVG.
       for (const value of [tile.a, tile.b]) {
         const half = document.createElement("span");
         half.className = "domino-half";
+
         const pips = document.createElement("span");
         pips.className = "pips";
 
-        for (const position of PIP_POSITIONS[value] || []) {
+        for (const position of PIP_POSITIONS[value] ?? []) {
           const pip = document.createElement("span");
           pip.className = `pip pip-${position}`;
           pips.appendChild(pip);
@@ -671,8 +760,11 @@ if (
       }
 
       if (playable) {
-        button.addEventListener("click", () => options.onTileClick(tile));
+        button.addEventListener("click", () => {
+          options.onTileClick(tile);
+        });
       }
+
       fragment.appendChild(button);
     }
 
@@ -684,8 +776,10 @@ if (
 
     for (let index = 0; index < count; index += 1) {
       const tileBack = document.createElement("span");
+
       tileBack.className = "computer-back";
       tileBack.setAttribute("aria-hidden", "true");
+
       fragment.appendChild(tileBack);
     }
 
@@ -696,24 +790,34 @@ if (
     playerCount.textContent = values.playerTiles;
     computerCount.textContent = values.computerTiles;
     boneyardCount.textContent = values.boneyardTiles;
-    score.textContent = `${values.playerWins} – ${values.computerWins}`;
+    score.textContent =
+      `${values.playerWins} – ${values.computerWins}`;
     status.textContent = values.message || "";
   }
 
   function boardSnapshot() {
-    return Array.from({ length: bottomRow - topRow + 1 }, (_, index) => {
-      const row = topRow + index;
-      return Array.from(
-        { length: rightCol - leftCol + 1 },
-        (_, offset) => cells.get(key({ row, col: leftCol + offset })) ?? null
-      );
+    const rows = bottomRow - topRow + 1;
+    const columns = rightCol - leftCol + 1;
+
+    return Array.from({ length: rows }, (_, rowOffset) => {
+      const row = topRow + rowOffset;
+
+      return Array.from({ length: columns }, (_, colOffset) => {
+        const col = leftCol + colOffset;
+
+        return cells.get(key({ row, col })) ?? null;
+      });
     });
   }
 
-  if (typeof ResizeObserver !== "undefined") {
-    resizeObserver = new ResizeObserver(renderBoard);
-    resizeObserver.observe(board);
+  function destroy() {
+    resizeObserver?.disconnect();
+    sideSelector = null;
+    board.replaceChildren();
+    board.style.removeProperty("height");
   }
+
+  resizeObserver?.observe(board);
 
   return {
     reset,
@@ -725,5 +829,6 @@ if (
     boardSnapshot,
     showSideSelector,
     hideSideSelector,
+    destroy,
   };
 }
