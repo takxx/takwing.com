@@ -46,8 +46,8 @@ body {
   top: 0;
   left: 0;
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   user-select: none;
   will-change: transform;
@@ -99,8 +99,8 @@ body {
   position: absolute;
   z-index: 10;
   display: none;
-  width: 116px;
-  height: 116px;
+  width: 100px;
+  height: 100px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   filter: drop-shadow(0 3px 2px #0005);
@@ -321,13 +321,13 @@ body {
   }
 
   .roach {
-    width: 36px;
-    height: 36px;
+    width: 21px;
+    height: 21px;
   }
 
   #sandal {
-    width: 116px;
-    height: 116px;
+    width: 70px;
+    height: 70px;
   }
 
   .game-dialog {

@@ -7,6 +7,16 @@ const NEIGHBORS = [
   [1, -1]
 ];
 
+// The 6 pairs of adjacent neighbor directions around any cell that form Hex bridges
+const BRIDGE_PAIRS = [
+  [[-1, 0], [-1, 1]],
+  [[-1, 1], [0, 1]],
+  [[0, 1], [1, 0]],
+  [[1, 0], [1, -1]],
+  [[1, -1], [0, -1]],
+  [[0, -1], [-1, 0]]
+];
+
 export function chooseComputerMove(board, player = "blue") {
   const size = board.length;
   if (!size || board.some((row) => row.length !== size)) {
@@ -18,31 +28,32 @@ export function chooseComputerMove(board, player = "blue") {
 
   if (legalMoves.length === 0) return null;
 
-  // Always take a win or stop an opponent's immediate win.
+  // 1. Immediate win/loss checks
   const winningMove = findImmediateWin(board, player);
   if (winningMove) return winningMove;
 
   const opponentWinningMove = findImmediateWin(board, opponent);
   if (opponentWinningMove) return opponentWinningMove;
 
+  // 2. Setup MCTS Root
   const root = createNode(player);
-  root.untried = rankMoves(board, player, Math.min(24, legalMoves.length));
+  root.untried = rankMovesFast(board, player, Math.min(28, legalMoves.length));
 
-  // More search on larger boards can make the AI noticeably slower.
-  const simulations = size >= 12 ? 800 : size >= 9 ? 1000 : 1150;
+  // Adaptive simulation count based on board size for optimal time/strength trade-off
+  const simulations = size >= 12 ? 1200 : size >= 9 ? 1500 : 1800;
 
   for (let simulation = 0; simulation < simulations; simulation++) {
     const position = board.map((row) => row.slice());
     const path = [root];
     let node = root;
 
-    // Select through the existing tree.
+    // Selection phase
     while (!node.terminal) {
       if (node.untried === null) {
-        node.untried = rankMoves(
+        node.untried = rankMovesFast(
           position,
           node.toMove,
-          Math.min(12, getLegalMoves(position).length)
+          Math.min(14, getLegalMoves(position).length)
         );
       }
 
@@ -71,6 +82,7 @@ export function chooseComputerMove(board, player = "blue") {
       path.push(node);
     }
 
+    // Rollout phase
     const winner = node.terminal
       ? node.winner
       : rollout(position, node.toMove);
@@ -86,11 +98,10 @@ export function chooseComputerMove(board, player = "blue") {
     return legalMoves[Math.floor(Math.random() * legalMoves.length)];
   }
 
-  // Visit count is more stable than win rate with a limited number of searches.
+  // Choose best child based on visit count and win rate tie-breaker
   root.children.sort((a, b) => {
     if (b.visits !== a.visits) return b.visits - a.visits;
-    return (b.wins / Math.max(1, b.visits)) -
-      (a.wins / Math.max(1, a.visits));
+    return (b.wins / Math.max(1, b.visits)) - (a.wins / Math.max(1, a.visits));
   });
 
   return root.children[0].move;
@@ -123,11 +134,8 @@ function selectChild(node, computer) {
       ? computerWinRate
       : 1 - computerWinRate;
 
-    const exploration =
-      1.25 * Math.sqrt(logParent / child.visits);
-
-    // A small, fading preference for moves ranked well by the path heuristic.
-    const priorBonus = 0.16 * child.prior / (1 + child.visits);
+    const exploration = 1.41 * Math.sqrt(logParent / child.visits);
+    const priorBonus = 0.2 * child.prior / (1 + child.visits);
     const score = exploitation + exploration + priorBonus;
 
     if (score > bestScore) {
@@ -153,30 +161,21 @@ function rollout(board, firstPlayer) {
 
     let move = null;
 
-    // Finish a one-empty-cell connection if possible.
     if (ownPath.cost === 1 && ownPathMoves.length === 1) {
       move = ownPathMoves[0];
     }
 
-    // Otherwise block the opponent's immediate connection.
-    if (
-      !move &&
-      opponentPath.cost === 1 &&
-      opponentPathMoves.length === 1
-    ) {
+    if (!move && opponentPath.cost === 1 && opponentPathMoves.length === 1) {
       move = opponentPathMoves[0];
     }
 
-    // Prefer extending our route, but sometimes spend a move contesting theirs.
     if (!move) {
-      const useOwnPath =
-        opponentPathMoves.length === 0 || Math.random() < 0.78;
+      const useOwnPath = opponentPathMoves.length === 0 || Math.random() < 0.8;
       const preferred = useOwnPath ? ownPathMoves : opponentPathMoves;
       const fallback = useOwnPath ? opponentPathMoves : ownPathMoves;
       move = randomItem(preferred) || randomItem(fallback);
     }
 
-    // Defensive fallback for unusual or fully blocked positions.
     if (!move) {
       const remaining = getLegalMoves(board);
       move = randomItem(remaining);
@@ -190,57 +189,61 @@ function rollout(board, firstPlayer) {
     player = opponent;
   }
 
-  // Hex should finish before the board fills. This fallback handles malformed
-  // or unexpected positions without making the rollout throw.
   return otherPlayer(firstPlayer);
 }
 
-function rankMoves(board, player, limit) {
+// Enhanced fast heuristic ranking with bridge creation and disruption
+function rankMovesFast(board, player, limit) {
   const size = board.length;
-  const opponent = otherPlayer(player);
-  const ownBefore = finiteCost(connectionInfo(board, player).cost, size);
-  const opponentBefore = finiteCost(connectionInfo(board, opponent).cost, size);
   const center = (size - 1) / 2;
+  const opponent = otherPlayer(player);
   const ranked = [];
 
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
       if (board[row][col] !== null) continue;
 
-      board[row][col] = player;
+      let friendlyNeighbors = 0;
+      let bridgePotential = 0;
+      let disruptionScore = 0;
 
-      const ownAfter = finiteCost(connectionInfo(board, player).cost, size);
-      const opponentAfter = finiteCost(
-        connectionInfo(board, opponent).cost,
-        size
-      );
-
-      let adjacentOwn = 0;
+      // Check direct neighbors
       for (const [dr, dc] of NEIGHBORS) {
-        const nextRow = row + dr;
-        const nextCol = col + dc;
-
-        if (
-          nextRow >= 0 && nextRow < size &&
-          nextCol >= 0 && nextCol < size &&
-          board[nextRow][nextCol] === player
-        ) {
-          adjacentOwn++;
+        const nr = row + dr;
+        const nc = col + dc;
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+          if (board[nr][nc] === player) friendlyNeighbors++;
         }
       }
 
-      board[row][col] = null;
+      // Check bridge pairs for building own links and disrupting opponent alternate piece links
+      for (const [n1, n2] of BRIDGE_PAIRS) {
+        const r1 = row + n1[0], c1 = col + n1[1];
+        const r2 = row + n2[0], c2 = col + n2[1];
 
-      const ownProgress = ownBefore - ownAfter;
-      const blockingProgress = opponentAfter - opponentBefore;
-      const centerPreference =
-        (Math.abs(row - center) + Math.abs(col - center)) * 0.025;
+        if (r1 >= 0 && r1 < size && c1 >= 0 && c1 < size &&
+            r2 >= 0 && r2 < size && c2 >= 0 && c2 < size) {
+          
+          if (board[r1][c1] === player && board[r2][c2] === player) {
+            bridgePotential++;
+          }
+          if (board[r1][c1] === opponent && board[r2][c2] === opponent) {
+            disruptionScore++;
+          }
+        }
+      }
 
-      const score =
-        ownProgress * 1.15 +
-        blockingProgress * 1.05 +
-        adjacentOwn * 0.09 -
-        centerPreference;
+      // Distance from center preference
+      const centerDist = Math.abs(row - center) + Math.abs(col - center);
+      const goalProgress = player === "blue" ? row : col;
+      const positionalScore = (size - centerDist) * 0.1 + goalProgress * 0.05;
+
+      // Weighted score prioritizing opponent bridge disruption
+      const score = 
+        friendlyNeighbors * 1.5 + 
+        bridgePotential * 2.0 + 
+        disruptionScore * 3.5 + 
+        positionalScore;
 
       ranked.push({ row, col, score });
     }
@@ -252,8 +255,7 @@ function rankMoves(board, player, limit) {
   return ranked.slice(0, count).map((move, index) => ({
     row: move.row,
     col: move.col,
-    // Keep the heuristic as a mild search preference, not a decision by itself.
-    prior: 1 / (1 + index * 0.18)
+    prior: 1 / (1 + index * 0.15)
   }));
 }
 
@@ -266,8 +268,6 @@ function connectionInfo(board, player) {
   distances.fill(0x3fffffff);
   previous.fill(-1);
 
-  // Bucketed 0–1 shortest path: own stones cost 0, empty cells cost 1,
-  // and opponent stones cannot be crossed.
   const buckets = Array.from({ length: total + 1 }, () => []);
 
   const addStart = (row, col) => {
@@ -429,10 +429,6 @@ function getLegalMoves(board) {
     }
   }
   return moves;
-}
-
-function finiteCost(cost, size) {
-  return Number.isFinite(cost) ? cost : size * size;
 }
 
 function randomItem(items) {

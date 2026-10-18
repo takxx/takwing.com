@@ -1,0 +1,311 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #fff8e8;
+  background: #190b26;
+
+  --velvet: #281238;
+  --velvet-deep: #190b26;
+  --velvet-light: #39204b;
+  --gold: #d7b66b;
+  --gold-bright: #f0d78d;
+  --cream: #fff8e8;
+  --muted: #dfd2e6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse at top left, #39204b 0, transparent 55%),
+    var(--velvet-deep);
+  color: var(--cream);
+}
+
+button,
+select {
+  font: inherit;
+}
+
+button {
+  color: var(--cream);
+  background: var(--velvet);
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  padding: .55rem .75rem;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--velvet-light);
+  border-color: var(--gold-bright);
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "board title"
+    "board hands";
+  gap: 1.25rem;
+  align-items: start;
+  width: min(1600px, 100%);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.sidebar-header {
+  grid-area: title;
+  position: relative;
+}
+
+#new-game {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+#board-panel {
+  grid-area: board;
+  height: min(92vh, 1000px);
+  min-height: 360px;
+  overflow: hidden;
+  background: transparent;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  box-shadow: 0 10px 35px #0005;
+  touch-action: manipulation;
+}
+
+#board {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sidebar-header,
+.play-area {
+  min-width: 0;
+  background: var(--velvet);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px #0003;
+}
+
+.sidebar-header h1 {
+  margin: 0 0 .5rem;
+  color: var(--gold-bright);
+  font-size: 1.45rem;
+}
+
+#status {
+  min-height: 1.5rem;
+  margin-bottom: .75rem;
+  color: var(--cream);
+}
+
+.play-area {
+  grid-area: hands;
+}
+
+#pile-count {
+  margin-bottom: .75rem;
+  color: var(--muted);
+}
+
+#players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .65rem;
+  background: var(--velvet-deep);
+  border: 1px solid #927a4c;
+  border-radius: 6px;
+}
+
+.player.active {
+  border: 2px solid var(--gold-bright);
+}
+
+.mini-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 100px;
+}
+
+.mini-piece {
+  width: 12px;
+  height: 7px;
+  flex: 0 0 12px;
+  background: var(--cream);
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+}
+
+#hand-title {
+  color: var(--gold-bright);
+  font-size: 1.1rem;
+}
+
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.tile-button {
+  display: flex;
+  gap: 2px;
+  padding: 5px;
+  background: #fffdf6;
+  border: 2px solid var(--gold);
+  border-radius: 6px;
+}
+
+.tile-button[aria-pressed="true"] {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+.swatch {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 3px;
+  color: #fff;
+  font-weight: 800;
+  text-shadow: 0 1px 3px #000;
+}
+
+.swatch.wild {
+  background:
+    linear-gradient(135deg, #fff 0 35%, #e8d9a8 35% 65%, #fff 65%);
+  color: #4b2c53;
+  text-shadow: none;
+}
+
+#hint {
+  min-height: 2.5em;
+  color: var(--muted);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+/* The modal follows the same velvet-and-gold palette. */
+dialog {
+  width: min(92vw, 540px);
+  padding: 1.25rem;
+  color: var(--cream);
+  background: var(--velvet);
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  box-shadow: 0 14px 60px #0009;
+}
+
+dialog::backdrop {
+  background: #090510c9;
+}
+
+#start-form {
+  display: grid;
+  gap: .75rem;
+}
+
+#start-form h2,
+#start-form p {
+  margin: 0;
+}
+
+#start-form h2 {
+  color: var(--gold-bright);
+}
+
+#start-form select {
+  padding: .55rem;
+  color: var(--cream);
+  background: var(--velvet-deep);
+  border: 1px solid var(--gold);
+  border-radius: 5px;
+}
+
+.board-cell {
+  stroke: #4f4552;
+  stroke-width: 1.5;
+}
+
+.wild-cell {
+  stroke: #94783f;
+  stroke-width: 2;
+}
+
+.move-preview {
+  cursor: pointer;
+  fill: var(--gold-bright);
+  opacity: .6;
+  stroke: #40e0d0;
+  stroke-width: 1.5;
+}
+
+.move-preview:hover,
+.move-preview:focus {
+  opacity: 1;
+  fill: var(--gold);
+  stroke: #bb831b;
+  stroke-width: 4;
+  outline: none;
+}
+
+.move-star {
+  pointer-events: none;
+  fill: #4b2c53;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    display: flex;
+    flex-direction: column;
+    padding: .5rem;
+  }
+
+  .sidebar-header,
+  #board-panel,
+  .play-area {
+    width: 100%;
+  }
+
+  #board-panel {
+    height: 48vh;
+    min-height: 250px;
+  }
+}
