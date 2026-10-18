@@ -296,8 +296,10 @@ function render() {
   // Paint opened cells first and unopened cells afterward. SVG paints later
   // elements on top, so unopened borders take precedence at shared edges.
   const paintPriority = cell => {
-    if (ended && cell.mine) return 2; // mine-win / mine-lost: above other cells
-    return cell.revealed ? 0 : 1;    // unopened cells above ordinary opened cells
+    if (ended && cell.mine) return 4;
+    if (hoveredCellId === cell.id) return 3;
+    if (cell.flagged) return 2;
+    return cell.revealed ? 0 : 1;
   };
 	
   const orderedCells = [...cells].sort(
@@ -386,6 +388,7 @@ function render() {
     });
 
     g.addEventListener("click", () => {
+      hoveredCellId = null; // Clear hover so it doesn't take top priority upon reveal
       if (flagMode) {
         toggleFlag(cell);
       } else {
