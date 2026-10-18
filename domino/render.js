@@ -1,6 +1,6 @@
-const COLUMN_COUNT = 17;
-const INITIAL_TOP_ROW = 45;
-const INITIAL_BOTTOM_ROW = 53;
+const INITIAL_COLUMNS = 11;
+const MAX_COLUMNS = 15;
+const INITIAL_ROWS = 9;
 const ROWS_PER_EXTENSION = 2;
 const TURN_MARGIN = 2;
 
@@ -25,43 +25,20 @@ const COUNTERCLOCKWISE_FLOW = Object.freeze({
   NS: "WE",
 });
 
+const PIP_POSITIONS = Object.freeze({
+  0: [],
+  1: [5],
+  2: [1, 9],
+  3: [1, 5, 9],
+  4: [1, 3, 7, 9],
+  5: [1, 3, 5, 7, 9],
+  6: [1, 3, 4, 6, 7, 9],
+});
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
 function coordinate(row, col) {
   return `${String.fromCharCode(65 + col)}${String(row).padStart(2, "0")}`;
-}
-
-function pipPositions(value) {
-  const positions = {
-    0: [],
-    1: [5],
-    2: [1, 9],
-    3: [1, 5, 9],
-    4: [1, 3, 7, 9],
-    5: [1, 3, 5, 7, 9],
-    6: [1, 3, 4, 6, 7, 9],
-  };
-
-  return positions[value] || [];
-}
-
-function createPipHalf(value) {
-  const half = document.createElement("div");
-  half.className = "domino-half";
-
-  const pips = document.createElement("div");
-  pips.className = "pips";
-
-  for (const position of pipPositions(value)) {
-    const pip = document.createElement("span");
-    pip.className = `pip pip-${position}`;
-    pips.appendChild(pip);
-  }
-
-  half.appendChild(pips);
-  return half;
-}
-
-function isHorizontalFlow(flow) {
-  return flow === "WE" || flow === "EW";
 }
 
 function createTurnState() {
@@ -84,14 +61,15 @@ export function createRenderer(elements) {
   } = elements;
 
   let cells = new Map();
-  let topRow = INITIAL_TOP_ROW;
-  let bottomRow = INITIAL_BOTTOM_ROW;
+  let topRow = 0;
+  let bottomRow = INITIAL_ROWS - 1;
+  let leftCol = 0;
+  let rightCol = INITIAL_COLUMNS - 1;
   let visualTiles = [];
   let endpoints = { left: null, right: null };
   let turnState = createTurnState();
-  let visibleLeftCol = 4;
-  let visibleRightCol = 12;
   let sideSelector = null;
+  let resizeObserver = null;
 
   function key(point) {
     return `${point.row}:${point.col}`;
@@ -101,8 +79,8 @@ export function createRenderer(elements) {
     return (
       point.row >= topRow &&
       point.row <= bottomRow &&
-      point.col >= 0 &&
-      point.col < COLUMN_COUNT
+      point.col >= leftCol &&
+      point.col <= rightCol
     );
   }
 
@@ -112,11 +90,8 @@ export function createRenderer(elements) {
 
   function write(point, descriptor) {
     if (!inside(point)) {
-      throw new Error(
-        `Cannot write outside board at ${coordinate(point.row, point.col)}.`,
-      );
+      throw new Error(`Cannot write outside board at ${coordinate(point.row, point.col)}.`);
     }
-
     cells.set(key(point), descriptor);
   }
 
@@ -126,18 +101,35 @@ export function createRenderer(elements) {
 
   function add(point, flow, amount = 1) {
     const direction = FLOW_DIRECTIONS[flow];
-
     return {
       row: point.row + direction.dr * amount,
       col: point.col + direction.dc * amount,
     };
   }
 
-  function extendToward(point) {
+  function extendHorizontalToward(point) {
+    if (point.col < leftCol && rightCol - leftCol + 1 < MAX_COLUMNS) {
+      leftCol -= 2;
+    } else if (point.col > rightCol && rightCol - leftCol + 1 < MAX_COLUMNS) {
+      rightCol += 2;
+    }
+  }
+
+  function extendVerticalToward(point) {
     if (point.row < topRow) {
       topRow -= ROWS_PER_EXTENSION;
     } else if (point.row > bottomRow) {
       bottomRow += ROWS_PER_EXTENSION;
+    }
+  }
+
+  function extendToward(point) {
+    if (point.col < leftCol || point.col > rightCol) {
+      extendHorizontalToward(point);
+    }
+
+    if (point.row < topRow || point.row > bottomRow) {
+      extendVerticalToward(point);
     }
   }
 
@@ -159,46 +151,32 @@ export function createRenderer(elements) {
 
   function assertEndpointMarker(side, matchingPip) {
     const endpoint = endpoints[side];
-
     if (!endpoint) {
       throw new Error(`The ${side} endpoint has not been initialized.`);
     }
 
     const descriptor = read(endpoint.marker);
-
     if (!descriptor) {
-      throw new Error(
-        `Missing ${side} open marker at ${coordinate(
-          endpoint.marker.row,
-          endpoint.marker.col,
-        )}.`,
-      );
+      throw new Error(`Missing ${side} open marker at ${coordinate(endpoint.marker.row, endpoint.marker.col)}.`);
     }
 
     const [reservedPip, role, flow] = descriptor;
-
     if (
       reservedPip !== endpoint.value ||
       reservedPip !== matchingPip ||
       role !== markerRoleFor(side) ||
       flow !== endpoint.flow
     ) {
-      throw new Error(
-        `Invalid ${side} endpoint marker at ${coordinate(
-          endpoint.marker.row,
-          endpoint.marker.col,
-        )}.`,
-      );
+      throw new Error(`Invalid ${side} endpoint marker at ${coordinate(endpoint.marker.row, endpoint.marker.col)}.`);
     }
   }
 
   function distanceToEdge(point, flow) {
     const direction = FLOW_DIRECTIONS[flow];
 
-    if (direction.dc === 1) return COLUMN_COUNT - 1 - point.col;
-    if (direction.dc === -1) return point.col;
+    if (direction.dc === 1) return rightCol - point.col;
+    if (direction.dc === -1) return point.col - leftCol;
     if (direction.dr === 1) return bottomRow - point.row;
-
     return point.row - topRow;
   }
 
@@ -218,7 +196,6 @@ export function createRenderer(elements) {
   function candidateFits(side, candidate) {
     const endpoint = endpoints[side];
     const firstDescriptor = read(candidate.first);
-
     const firstIsCurrentMarker =
       firstDescriptor &&
       firstDescriptor[0] === endpoint.value &&
@@ -235,7 +212,6 @@ export function createRenderer(elements) {
 
   function straightPathIsClear(candidate) {
     const beyond = add(candidate.nextMarker, candidate.flow);
-
     return (
       isEmpty(candidate.second) &&
       isEmpty(candidate.nextMarker) &&
@@ -263,14 +239,30 @@ export function createRenderer(elements) {
 
   function chooseNormalPath(side) {
     const endpoint = endpoints[side];
-    const straight = createCandidate(endpoint.marker, endpoint.flow);
+const straight = createCandidate(endpoint.marker, endpoint.flow);
+const horizontal = endpoint.flow === "WE" || endpoint.flow === "EW";
 
-    if (
-      !shouldTurnAt(endpoint.marker, endpoint.flow) &&
-      straightPathIsClear(straight)
-    ) {
-      return straight;
-    }
+if (horizontal && shouldTurnAt(endpoint.marker, endpoint.flow)) {
+  const beyond = add(straight.nextMarker, straight.flow);
+
+  if (!inside(beyond)) {
+    extendToward(beyond);
+  }
+
+  if (
+    !shouldTurnAt(endpoint.marker, endpoint.flow) &&
+    straightPathIsClear(straight)
+  ) {
+    return straight;
+  }
+}
+
+if (
+  !shouldTurnAt(endpoint.marker, endpoint.flow) &&
+  straightPathIsClear(straight)
+) {
+  return straight;
+}
 
     const turnFlows = {
       clockwise: CLOCKWISE_FLOW[endpoint.flow],
@@ -278,16 +270,13 @@ export function createRenderer(elements) {
     };
 
     for (const turn of turnOrder(side)) {
-      const candidate = createCandidate(
-        endpoint.marker,
-        turnFlows[turn],
-      );
+      const candidate = createCandidate(endpoint.marker, turnFlows[turn]);
 
       if (
-        candidate.nextMarker.col >= 0 &&
-        candidate.nextMarker.col < COLUMN_COUNT &&
-        (candidate.nextMarker.row < topRow ||
-          candidate.nextMarker.row > bottomRow)
+        candidate.nextMarker.col < leftCol ||
+        candidate.nextMarker.col > rightCol ||
+        candidate.nextMarker.row < topRow ||
+        candidate.nextMarker.row > bottomRow
       ) {
         extendToward(candidate.nextMarker);
       }
@@ -298,18 +287,13 @@ export function createRenderer(elements) {
       }
     }
 
-    const nextMarker = straight.nextMarker;
-
     if (
-      (nextMarker.row < topRow || nextMarker.row > bottomRow) &&
-      nextMarker.col >= 0 &&
-      nextMarker.col < COLUMN_COUNT
+      straight.nextMarker.col < leftCol ||
+      straight.nextMarker.col > rightCol ||
+      straight.nextMarker.row < topRow ||
+      straight.nextMarker.row > bottomRow
     ) {
-      extendToward(nextMarker);
-
-      if (candidateFits(side, straight)) {
-        return straight;
-      }
+      extendToward(straight.nextMarker);
     }
 
     return candidateFits(side, straight) ? straight : null;
@@ -317,34 +301,18 @@ export function createRenderer(elements) {
 
   function placeNormal(placement) {
     const { side } = placement;
-
     assertEndpointMarker(side, placement.matching);
 
     const path = chooseNormalPath(side);
-
     if (!path) {
       throw new Error(`No contiguous route is available for the ${side} chain.`);
     }
 
-    write(path.first, [
-      placement.matching,
-      matchingRoleFor(side),
-      path.flow,
-    ]);
-
-    write(path.second, [
-      placement.exposed,
-      exposedRoleFor(side),
-      path.flow,
-    ]);
-
+    write(path.first, [placement.matching, matchingRoleFor(side), path.flow]);
+    write(path.second, [placement.exposed, exposedRoleFor(side), path.flow]);
     setOpenMarker(side, path.nextMarker, placement.exposed, path.flow);
 
-    visualTiles.push({
-      kind: "normal",
-      cells: [path.first, path.second],
-    });
-
+    visualTiles.push({ kind: "normal", cells: [path.first, path.second] });
     endpoints[side] = {
       marker: path.nextMarker,
       flow: path.flow,
@@ -355,16 +323,16 @@ export function createRenderer(elements) {
   function placeDouble(placement) {
     const { side } = placement;
     const endpoint = endpoints[side];
-
     assertEndpointMarker(side, placement.matching);
 
     const center = endpoint.marker;
     const nextMarker = add(center, endpoint.flow);
 
     if (
-      nextMarker.col >= 0 &&
-      nextMarker.col < COLUMN_COUNT &&
-      (nextMarker.row < topRow || nextMarker.row > bottomRow)
+      nextMarker.col < leftCol ||
+      nextMarker.col > rightCol ||
+      nextMarker.row < topRow ||
+      nextMarker.row > bottomRow
     ) {
       extendToward(nextMarker);
     }
@@ -376,12 +344,7 @@ export function createRenderer(elements) {
     write(center, [placement.matching, "double", endpoint.flow]);
     setOpenMarker(side, nextMarker, placement.exposed, endpoint.flow);
 
-    visualTiles.push({
-      kind: "double",
-      center,
-      flow: endpoint.flow,
-    });
-
+    visualTiles.push({ kind: "double", center, flow: endpoint.flow });
     endpoints[side] = {
       marker: nextMarker,
       flow: endpoint.flow,
@@ -409,69 +372,83 @@ export function createRenderer(elements) {
     renderBoard();
   }
 
-  function updateVisibleColumns() {
-    let showLeftBand = false;
-    let showRightBand = false;
-
-    for (const cellKey of cells.keys()) {
-      const col = Number(cellKey.split(":")[1]);
-
-      if (col <= 3) showLeftBand = true;
-      if (col >= 13) showRightBand = true;
+  function svgElement(name, attributes = {}) {
+    const element = document.createElementNS(SVG_NS, name);
+    for (const [attribute, value] of Object.entries(attributes)) {
+      element.setAttribute(attribute, String(value));
     }
-
-    visibleLeftCol = showLeftBand ? 0 : 4;
-    visibleRightCol = showRightBand ? 16 : 12;
+    return element;
   }
 
-  function visibleColumnIndex(logicalCol) {
-    return logicalCol - visibleLeftCol;
+  function addPips(group, value, x, y, size) {
+    const positions = PIP_POSITIONS[value] || [];
+    const inset = size * 0.2;
+    const span = size - inset * 2;
+    const radius = Math.max(1.5, size * 0.055);
+
+    for (const position of positions) {
+      const index = position - 1;
+      const col = index % 3;
+      const row = Math.floor(index / 3);
+      const cx = x + inset + (col * span) / 2;
+      const cy = y + inset + (row * span) / 2;
+
+      group.appendChild(
+        svgElement("circle", {
+          cx,
+          cy,
+          r: radius,
+          class: "pip",
+        }),
+      );
+    }
   }
 
-  function renderGridCells() {
-    const fragment = document.createDocumentFragment();
-    const rowCount = bottomRow - topRow + 1;
-    const columnCount = visibleRightCol - visibleLeftCol + 1;
+  function addHalf(group, value, x, y, width, height) {
+    group.appendChild(
+      svgElement("rect", {
+        x,
+        y,
+        width,
+        height,
+        rx: Math.min(width, height) * 0.1,
+        class: "domino-half",
+      }),
+    );
+    addPips(group, value, x, y, Math.min(width, height));
+  }
 
-    board.style.setProperty("--board-columns", String(columnCount));
-    board.style.setProperty("--board-rows", String(rowCount));
-    board.replaceChildren();
-
+  function renderGrid(svg, unit, rows, columns) {
     for (let row = topRow; row <= bottomRow; row += 1) {
-      for (
-        let col = visibleLeftCol;
-        col <= visibleRightCol;
-        col += 1
-      ) {
-        const point = { row, col };
-        const cell = document.createElement("div");
-        const descriptor = read(point);
-
-        cell.className = "board-cell";
-        cell.dataset.coordinate = coordinate(row, col);
-        cell.setAttribute("role", "gridcell");
-        cell.setAttribute("aria-label", coordinate(row, col));
+      for (let col = leftCol; col <= rightCol; col += 1) {
+        const descriptor = read({ row, col });
+        const cell = svgElement("rect", {
+          x: (col - leftCol) * unit,
+          y: (row - topRow) * unit,
+          width: unit,
+          height: unit,
+          class: "board-cell",
+          "data-coordinate": coordinate(row, col),
+          role: "gridcell",
+          "aria-label": coordinate(row, col),
+        });
 
         if (descriptor) {
           const [pip, role, flow] = descriptor;
-
-          cell.dataset.pip = String(pip);
-          cell.dataset.role = role;
-          cell.dataset.flow = flow;
-
+          cell.setAttribute("data-pip", String(pip));
+          cell.setAttribute("data-role", role);
+          cell.setAttribute("data-flow", flow);
           if (role === "open-left" || role === "open-right") {
             cell.classList.add(role);
           }
         }
 
-        fragment.appendChild(cell);
+        svg.appendChild(cell);
       }
     }
-
-    board.appendChild(fragment);
   }
 
-  function renderNormalTile(tileData, unit) {
+  function renderNormalTile(svg, tileData, unit) {
     const [first, second] = tileData.cells;
     const firstDescriptor = read(first);
     const secondDescriptor = read(second);
@@ -481,179 +458,147 @@ export function createRenderer(elements) {
     }
 
     const horizontal = first.row === second.row;
-    const startRow = Math.min(first.row, second.row);
-    const startCol = Math.min(first.col, second.col);
-    const left = visibleColumnIndex(startCol);
-    const top = startRow - topRow;
-
-    const tile = document.createElement("div");
-    tile.className = `board-domino ${horizontal ? "horizontal" : "vertical"}`;
-    tile.style.left = `${left * unit}px`;
-    tile.style.top = `${top * unit}px`;
-    tile.style.width = `${horizontal ? unit * 2 : unit}px`;
-    tile.style.height = `${horizontal ? unit : unit * 2}px`;
-
+    const x = (Math.min(first.col, second.col) - leftCol) * unit;
+    const y = (Math.min(first.row, second.row) - topRow) * unit;
+    const width = horizontal ? unit * 2 : unit;
+    const height = horizontal ? unit : unit * 2;
     const firstBeforeSecond = horizontal
       ? first.col < second.col
       : first.row < second.row;
-
-    const orderedPips = firstBeforeSecond
+    const pips = firstBeforeSecond
       ? [firstDescriptor[0], secondDescriptor[0]]
       : [secondDescriptor[0], firstDescriptor[0]];
 
-    tile.append(createPipHalf(orderedPips[0]), createPipHalf(orderedPips[1]));
-    board.appendChild(tile);
+    const group = svgElement("g", { class: `board-domino ${horizontal ? "horizontal" : "vertical"}` });
+
+    if (horizontal) {
+      addHalf(group, pips[0], x, y, unit, unit);
+      addHalf(group, pips[1], x + unit, y, unit, unit);
+    } else {
+      addHalf(group, pips[0], x, y, unit, unit);
+      addHalf(group, pips[1], x, y + unit, unit, unit);
+    }
+
+    group.setAttribute("width", width);
+    group.setAttribute("height", height);
+    svg.appendChild(group);
   }
 
-  function renderDoubleTile(tileData, unit) {
+  function renderDoubleTile(svg, tileData, unit) {
     const descriptor = read(tileData.center);
-
     if (!descriptor) {
       throw new Error("Cannot render a double without its board descriptor.");
     }
 
-    const [pip] = descriptor;
-    const vertical = isHorizontalFlow(tileData.flow);
-    const tile = document.createElement("div");
-
-    tile.className = `board-domino board-double ${
-      vertical ? "vertical" : "horizontal"
-    }`;
+    const vertical = tileData.flow === "WE" || tileData.flow === "EW";
+    const centerX = (tileData.center.col - leftCol) * unit;
+    const centerY = (tileData.center.row - topRow) * unit;
+    const group = svgElement("g", { class: "board-domino board-double" });
 
     if (vertical) {
-      tile.style.left = `${visibleColumnIndex(tileData.center.col) * unit}px`;
-      tile.style.top = `${(tileData.center.row - topRow - 0.5) * unit}px`;
-      tile.style.width = `${unit}px`;
-      tile.style.height = `${unit * 2}px`;
+      addHalf(group, descriptor[0], centerX, centerY - unit / 2, unit, unit);
+      addHalf(group, descriptor[0], centerX, centerY + unit / 2, unit, unit);
     } else {
-      tile.style.left = `${
-        (visibleColumnIndex(tileData.center.col) - 0.5) * unit
-      }px`;
-      tile.style.top = `${(tileData.center.row - topRow) * unit}px`;
-      tile.style.width = `${unit * 2}px`;
-      tile.style.height = `${unit}px`;
+      addHalf(group, descriptor[0], centerX - unit / 2, centerY, unit, unit);
+      addHalf(group, descriptor[0], centerX + unit / 2, centerY, unit, unit);
     }
 
-    tile.append(createPipHalf(pip), createPipHalf(pip));
-    board.appendChild(tile);
+    svg.appendChild(group);
   }
 
-  function markerCenter(marker, unit) {
-    return {
-      x: (visibleColumnIndex(marker.col) + 0.5) * unit,
-      y: (marker.row - topRow + 0.5) * unit,
-    };
-  }
-
-  function renderSideSelector(unit) {
+  function renderSideSelector(svg, unit) {
     if (!sideSelector) return;
 
     const selector = sideSelector;
-    const overlay = document.createElement("div");
+    const group = svgElement("g", {
+      class: "side-selector",
+      role: "group",
+      "aria-label": selector.label,
+    });
 
-    overlay.className = "side-selector";
-    overlay.setAttribute("role", "group");
-    overlay.setAttribute("aria-label", selector.label);
-
-    const leftCenter = markerCenter(endpoints.left.marker, unit);
-    const rightCenter = markerCenter(endpoints.right.marker, unit);
-
-    overlay.style.setProperty("--left-x", `${leftCenter.x}px`);
-    overlay.style.setProperty("--left-y", `${leftCenter.y}px`);
-    overlay.style.setProperty("--right-x", `${rightCenter.x}px`);
-    overlay.style.setProperty("--right-y", `${rightCenter.y}px`);
-
-    const prompt = document.createElement("div");
-    prompt.className = "side-selector-prompt";
+    const prompt = svgElement("text", {
+      x: ((rightCol - leftCol + 1) * unit) / 2,
+      y: 20,
+      "text-anchor": "middle",
+      class: "side-selector-prompt",
+    });
     prompt.textContent = selector.label;
-    overlay.appendChild(prompt);
+    group.appendChild(prompt);
 
     for (const side of ["left", "right"]) {
-      const center = side === "left" ? leftCenter : rightCenter;
-      const button = document.createElement("button");
-
-      button.type = "button";
-      button.className = `side-selector-button side-selector-${side}`;
-      button.setAttribute("aria-label", selector.sideLabels[side]);
-      button.style.left = `${center.x}px`;
-      button.style.top = `${center.y}px`;
-
-      // Track movement so a drag or swipe does not count as a selection.
-      let pointerStart = null;
-      let dragged = false;
-
-      button.addEventListener("pointerdown", (event) => {
-        if (event.pointerType === "mouse" && event.button !== 0) return;
-
-        pointerStart = { x: event.clientX, y: event.clientY };
-        dragged = false;
-
-        try {
-          button.setPointerCapture(event.pointerId);
-        } catch {
-          // Pointer capture is a convenience; selection still works without it.
-        }
+      const marker = endpoints[side].marker;
+      const cx = (marker.col - leftCol + 0.5) * unit;
+      const cy = (marker.row - topRow + 0.5) * unit;
+      const button = svgElement("g", {
+        class: `side-selector-button side-selector-${side}`,
+        role: "button",
+        tabindex: "0",
+        "aria-label": selector.sideLabels[side],
       });
 
-      button.addEventListener("pointermove", (event) => {
-        if (!pointerStart) return;
+      button.appendChild(
+        svgElement("circle", {
+          cx,
+          cy,
+          r: unit * 0.42,
+          class: "side-selector-hit-area",
+        }),
+      );
 
-        const dx = event.clientX - pointerStart.x;
-        const dy = event.clientY - pointerStart.y;
-
-        if (Math.hypot(dx, dy) > 12) {
-          dragged = true;
-        }
-      });
-
-      button.addEventListener("pointercancel", () => {
-        pointerStart = null;
-        dragged = false;
-      });
-
-      button.addEventListener("click", () => {
-        if (dragged) {
-          pointerStart = null;
-          dragged = false;
-          return;
-        }
-
+      const select = () => {
         const callback = sideSelector?.onSelect;
         if (!callback) return;
-
         sideSelector = null;
         renderBoard();
         callback(side);
+      };
+
+      button.addEventListener("click", select);
+      button.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          select();
+        }
       });
 
-      overlay.appendChild(button);
+      group.appendChild(button);
     }
 
-    board.appendChild(overlay);
+    svg.appendChild(group);
   }
 
   function renderBoard() {
     const width = board.getBoundingClientRect().width;
     if (!width) return;
 
-    updateVisibleColumns();
+    const columns = rightCol - leftCol + 1;
+    const rows = bottomRow - topRow + 1;
+    const unit = width / columns;
+    const height = unit * rows;
 
-    const columnCount = visibleRightCol - visibleLeftCol + 1;
-    const unit = width / columnCount;
-    const rowCount = bottomRow - topRow + 1;
+    const svg = svgElement("svg", {
+      class: "domino-board-svg",
+      xmlns: SVG_NS,
+      viewBox: `0 0 ${width} ${height}`,
+      width: "100%",
+      height,
+      role: "grid",
+      "aria-label": "Domino board",
+    });
 
-    renderGridCells();
-    board.style.height = `${unit * rowCount}px`;
+    renderGrid(svg, unit, rows, columns);
 
     for (const tileData of visualTiles) {
       if (tileData.kind === "double") {
-        renderDoubleTile(tileData, unit);
+        renderDoubleTile(svg, tileData, unit);
       } else {
-        renderNormalTile(tileData, unit);
+        renderNormalTile(svg, tileData, unit);
       }
     }
 
-    renderSideSelector(unit);
+    renderSideSelector(svg, unit);
+    board.replaceChildren(svg);
+    board.style.height = `${height}px`;
   }
 
   function showSideSelector({ label, sideLabels, onSelect }) {
@@ -669,27 +614,25 @@ export function createRenderer(elements) {
   function reset(opening) {
     sideSelector = null;
     cells = new Map();
-    topRow = INITIAL_TOP_ROW;
-    bottomRow = INITIAL_BOTTOM_ROW;
+
+    // Center the initial 11 × 9 board around the opening double.
+    leftCol = 5;
+    rightCol = leftCol + INITIAL_COLUMNS - 1;
+    topRow = 45;
+    bottomRow = topRow + INITIAL_ROWS - 1;
+
     visualTiles = [];
     turnState = createTurnState();
-    visibleLeftCol = 4;
-    visibleRightCol = 12;
 
-    const center = { row: 49, col: 8 };
-    const leftMarker = { row: 49, col: 7 };
-    const rightMarker = { row: 49, col: 9 };
+    const center = { row: topRow + 4, col: leftCol + 5 };
+    const leftMarker = { row: center.row, col: center.col - 1 };
+    const rightMarker = { row: center.row, col: center.col + 1 };
 
     write(center, [opening.value, "double", "EW"]);
     setOpenMarker("left", leftMarker, opening.value, "EW");
     setOpenMarker("right", rightMarker, opening.value, "WE");
 
-    visualTiles.push({
-      kind: "double",
-      center,
-      flow: "EW",
-    });
-
+    visualTiles.push({ kind: "double", center, flow: "EW" });
     endpoints = {
       left: { marker: leftMarker, flow: "EW", value: opening.value },
       right: { marker: rightMarker, flow: "WE", value: opening.value },
@@ -704,18 +647,32 @@ export function createRenderer(elements) {
     for (const tile of tiles) {
       const playable = options.enabled && options.isPlayable(tile);
       const button = document.createElement("button");
-
       button.type = "button";
       button.className = `hand-domino${playable ? " playable" : ""}`;
       button.disabled = !playable;
       button.title = `${tile.a}-${tile.b}`;
       button.setAttribute("aria-label", `${tile.a}-${tile.b}`);
-      button.append(createPipHalf(tile.a), createPipHalf(tile.b));
+
+      // Hand tiles remain HTML controls; the board itself is SVG.
+      for (const value of [tile.a, tile.b]) {
+        const half = document.createElement("span");
+        half.className = "domino-half";
+        const pips = document.createElement("span");
+        pips.className = "pips";
+
+        for (const position of PIP_POSITIONS[value] || []) {
+          const pip = document.createElement("span");
+          pip.className = `pip pip-${position}`;
+          pips.appendChild(pip);
+        }
+
+        half.appendChild(pips);
+        button.appendChild(half);
+      }
 
       if (playable) {
         button.addEventListener("click", () => options.onTileClick(tile));
       }
-
       fragment.appendChild(button);
     }
 
@@ -744,17 +701,18 @@ export function createRenderer(elements) {
   }
 
   function boardSnapshot() {
-    return Array.from(
-      { length: bottomRow - topRow + 1 },
-      (_, index) => {
-        const row = topRow + index;
+    return Array.from({ length: bottomRow - topRow + 1 }, (_, index) => {
+      const row = topRow + index;
+      return Array.from(
+        { length: rightCol - leftCol + 1 },
+        (_, offset) => cells.get(key({ row, col: leftCol + offset })) ?? null
+      );
+    });
+  }
 
-        return Array.from(
-          { length: COLUMN_COUNT },
-          (_, col) => cells.get(key({ row, col })) ?? null,
-        );
-      },
-    );
+  if (typeof ResizeObserver !== "undefined") {
+    resizeObserver = new ResizeObserver(renderBoard);
+    resizeObserver.observe(board);
   }
 
   return {

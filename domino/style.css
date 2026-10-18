@@ -107,107 +107,102 @@ button:disabled {
   min-width: 0;
 }
 
+/* The board container stays HTML; the renderer inserts an SVG into it. */
 .board {
-  --board-columns: 9;
-  --board-rows: 9;
-
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
-  grid-template-rows: repeat(var(--board-rows), minmax(0, 1fr));
   width: min(100%, var(--board-size));
-  height: var(--board-height, auto);
   overflow: visible;
   background: var(--board-background);
 }
 
-.board-cell {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
+/* The SVG controls its own viewBox and aspect ratio from the renderer. */
+.domino-board-svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
 }
 
-.board-cell.open-left::after,
-.board-cell.open-right::after {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  left: 50%;
-  width: 24%;
-  aspect-ratio: 1;
-  border: 1px solid rgb(200 170 104 / 75%);
-  border-radius: 50%;
-  background: rgb(200 170 104 / 14%);
-  transform: translate(-50%, -50%);
-  content: "";
+/* SVG grid cells */
+.board-cell {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: none;
+}
+
+.board-cell.open-left,
+.board-cell.open-right {
+  /* Marker styling is drawn by the SVG renderer or can use this fill. */
+}
+
+/* SVG domino halves */
+.domino-half {
+  fill: var(--ivory);
+  stroke: rgb(25 25 22 / 75%);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
 .board-domino {
-  position: absolute;
-  z-index: 5;
-  display: grid;
-  overflow: hidden;
-  border: 1px solid rgb(25 25 22 / 75%);
-  border-radius: clamp(2px, 0.38vw, 5px);
-  background: var(--ivory);
-  box-shadow: 0 2px 7px rgb(0 0 0 / 35%);
+  pointer-events: none;
 }
 
-.board-domino.horizontal {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr;
-}
-
-.board-domino.vertical {
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr 1fr;
+.board-domino .domino-half {
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 35%));
 }
 
 .board-double {
   z-index: 6;
 }
 
-.domino-half {
-  display: grid;
-  place-items: center;
-  min-width: 0;
-  min-height: 0;
-}
-
-.horizontal .domino-half + .domino-half {
-  border-left: 1px solid rgb(25 25 22 / 72%);
-}
-
-.vertical .domino-half + .domino-half {
-  border-top: 1px solid rgb(25 25 22 / 72%);
-}
-
-.pips {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  width: 69%;
-  height: 69%;
-}
-
+/* SVG pips */
 .pip {
-  width: 38%;
-  aspect-ratio: 1;
-  align-self: center;
-  justify-self: center;
-  border-radius: 50%;
-  background: var(--domino-ink);
+  fill: var(--domino-ink);
 }
 
-.pip-1 { grid-column: 1; grid-row: 1; }
-.pip-2 { grid-column: 2; grid-row: 1; }
-.pip-3 { grid-column: 3; grid-row: 1; }
-.pip-4 { grid-column: 1; grid-row: 2; }
-.pip-5 { grid-column: 2; grid-row: 2; }
-.pip-6 { grid-column: 3; grid-row: 2; }
-.pip-7 { grid-column: 1; grid-row: 3; }
-.pip-8 { grid-column: 2; grid-row: 3; }
-.pip-9 { grid-column: 3; grid-row: 3; }
+/* SVG side selector */
+.side-selector {
+  pointer-events: none;
+}
+
+.side-selector-prompt {
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgb(0 0 0 / 55%);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.side-selector-button {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.side-selector-hit-area {
+  fill: rgb(200 170 104 / 10%);
+  stroke: rgb(200 170 104 / 65%);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  transition:
+    fill 120ms ease,
+    stroke 120ms ease;
+}
+
+.side-selector-button:hover .side-selector-hit-area,
+.side-selector-button:focus .side-selector-hit-area {
+  fill: rgb(200 170 104 / 24%);
+  stroke: var(--line);
+}
+
+.side-selector-button:focus {
+  outline: none;
+}
+
+.side-selector-button:focus .side-selector-hit-area {
+  stroke: var(--ivory);
+  stroke-width: 3;
+}
 
 .sidebar {
   display: flex;
@@ -333,9 +328,44 @@ button:disabled {
   transform: translateY(-3px);
 }
 
+.hand-domino .domino-half {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+}
+
 .hand-domino .domino-half + .domino-half {
   border-left: 1px solid rgb(25 25 22 / 72%);
 }
+
+.hand-domino .pips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 69%;
+  height: 69%;
+}
+
+.hand-domino .pip {
+  width: 38%;
+  aspect-ratio: 1;
+  align-self: center;
+  justify-self: center;
+  border-radius: 50%;
+  background: var(--domino-ink);
+}
+
+.pip-1 { grid-column: 1; grid-row: 1; }
+.pip-2 { grid-column: 2; grid-row: 1; }
+.pip-3 { grid-column: 3; grid-row: 1; }
+.pip-4 { grid-column: 1; grid-row: 2; }
+.pip-5 { grid-column: 2; grid-row: 2; }
+.pip-6 { grid-column: 3; grid-row: 2; }
+.pip-7 { grid-column: 1; grid-row: 3; }
+.pip-8 { grid-column: 2; grid-row: 3; }
+.pip-9 { grid-column: 3; grid-row: 3; }
 
 .side-picker p {
   margin: 0 0 0.7rem;
@@ -410,111 +440,6 @@ select {
   display: none;
 }
 
-/*
- * The four panels dim everything around the two selector buttons.
- * They leave clear circular areas underneath the buttons, without relying
- * on mask compositing. The JS already sets --left-x/--left-y and
- * --right-x/--right-y on this element.
- */
-.side-selector {
-  position: absolute;
-  z-index: 10;
-  inset: 0;
-  overflow: visible;
-  background: transparent;
-  -webkit-mask-image: none;
-  mask-image: none;
-  pointer-events: none;
-
-  --hole-radius: 4.5em;
-
-  /* One mask: opaque everywhere except the two circular holes. */
-  -webkit-mask-image:
-    radial-gradient(
-      circle var(--hole-radius) at var(--left-x) var(--left-y),
-      transparent 98%,
-      #000 100%
-    ),
-    radial-gradient(
-      circle var(--hole-radius) at var(--right-x) var(--right-y),
-      transparent 98%,
-      #000 100%
-    );
-  -webkit-mask-composite: source-over;
-
-  mask-image:
-    radial-gradient(
-      circle var(--hole-radius) at var(--left-x) var(--left-y),
-      transparent 98%,
-      #000 100%
-    ),
-    radial-gradient(
-      circle var(--hole-radius) at var(--right-x) var(--right-y),
-      transparent 98%,
-      #000 100%
-    );
-  mask-composite: add;
-}
-
-.side-selector-button {
-  background: transparent;
-}
-
-/* Dim the board above and below the selector hit areas. */
-.side-selector-prompt {
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.5em 0.8em;
-  border-radius: 0.4em;
-  color: white;
-  background: rgb(0 0 0 / 60%);
-  pointer-events: none;
-}
-
-.side-selector-button {
-  position: absolute;
-  z-index: 3;
-  display: block;
-  width: 9em;
-  height: 9em;
-  min-height: 0;
-  padding: 0;
-  transform: translate(-50%, -50%);
-  border: 2px solid rgb(200 170 104 / 45%);
-  border-radius: 50%;
-  background: transparent;
-  color: white;
-  cursor: pointer;
-  pointer-events: auto;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.side-selector-button:hover {
-  filter: none;
-  border-color: var(--line);
-}
-
-.side-selector-button:active {
-  transform: translate(-50%, -50%) scale(1.08);
-}
-
-.side-selector-button:focus-visible {
-  outline: 3px solid var(--line);
-  outline-offset: 3px;
-}
-
-.side-selector-left {
-  z-index: 4;
-}
-
-.side-selector-right {
-  z-index: 5;
-}
-
 @media (max-width: 820px) {
   :root {
     --board-size: min(calc(100vw - 2rem), 680px);
@@ -572,10 +497,5 @@ select {
 
   .board-side-picker .button-row button {
     flex: 1 1 100%;
-  }
-
-  .side-selector-button {
-    width: 7em;
-    height: 7em;
   }
 }
