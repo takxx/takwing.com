@@ -74,9 +74,7 @@ export class Renderer {
       element.className = `player ${index === game.current ? "active" : ""}`;
 
       const name = document.createElement("span");
-      name.textContent = player.human
-        ? t("human")
-        : t("computer", { n: index });
+      name.textContent = player.name;
       element.append(name);
 
       if (!player.human) {
@@ -107,9 +105,7 @@ export class Renderer {
     if (game.finished) {
       const winner = game.players[game.winner];
       this.status.textContent = t("gameOver", {
-        name: winner.human
-          ? t("human")
-          : t("computer", { n: game.winner })
+        name: winner.name
       });
       return;
     }
@@ -117,14 +113,14 @@ export class Renderer {
     const player = game.players[game.current];
     this.status.textContent = player.human
       ? t("yourTurn")
-      : t("aiTurn", { name: t("computer", { n: game.current }) });
+      : t("aiTurn", { name: player.name });
   }
 
   renderHand() {
     const game = this.game;
     const player = game.players[game.current];
-    this.hand.replaceChildren();
 
+    this.hand.replaceChildren();
     this.handTitle.textContent = player?.human ? t("yourHand") : "";
 
     if (!player?.human || game.finished) {

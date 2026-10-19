@@ -1,16 +1,18 @@
 :root {
   color-scheme: dark;
   font: 15px/1.4 serif;
-  color: #f2f4f5;
+  color: #f5efe2;
 
-  --maroon: #4b2028;
-  --felt: #1f5b3a;
-  --felt-dark: #194a30;
-  --walnut: #6b4226;
-  --walnut-light: #805331;
-  --ebony: #171717;
-
-  background: var(--maroon);
+  --royal: #1e2f66;
+  --royal-deep: #13214a;
+  --royal-soft: #2b448c;
+  --velvet: #243a7a;
+  --gold: #d7b15a;
+  --gold-light: #f0cf82;
+  --gold-dim: #a88634;
+  --tile-brown: #4a2f1f;
+  --tile-brown-dark: #352014;
+  --tile-border: #8a5a31;
 }
 
 * {
@@ -18,9 +20,14 @@
 }
 
 body {
+  min-height: 100vh;
   margin: 0;
   padding: 18px;
-  background: var(--maroon);
+  color: #f5efe2;
+  background:
+    radial-gradient(circle at top, rgb(82 113 214 / 30%), transparent 35%),
+    radial-gradient(circle at bottom right, rgb(215 177 90 / 12%), transparent 28%),
+    linear-gradient(135deg, #243a7a 0%, #162658 50%, #0f1731 100%);
 }
 
 .game {
@@ -45,6 +52,7 @@ body {
 }
 
 .game-header h1 {
+  color: var(--gold-light);
   margin: 0 0 6px;
 }
 
@@ -75,6 +83,19 @@ h2 {
   font-size: 1.08rem;
 }
 
+.title-row,
+.hand-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.title-row h1,
+.hand-title-row h2 {
+  margin: 0;
+}
+
 .board-layout {
   display: grid;
   width: min(100%, 720px);
@@ -88,10 +109,10 @@ h2 {
     / 28px minmax(0, 5fr) 28px;
   gap: 4px;
   padding: 5px;
-  border: 1px solid var(--walnut);
+  border: 1px solid var(--gold-dim);
   border-radius: 12px;
-  background: var(--walnut);
-  box-shadow: 0 4px 14px #0006;
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
 }
 
 .board-center {
@@ -100,9 +121,9 @@ h2 {
   min-height: 0;
   overflow: auto;
   padding: 8px;
-  border: 1px solid var(--walnut);
+  border: 1px solid var(--gold-dim);
   border-radius: 8px;
-  background: var(--felt-dark);
+  background: linear-gradient(180deg, var(--royal) 0%, var(--royal-deep) 100%);
 }
 
 .table {
@@ -121,7 +142,7 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  color: #f2f4f5;
+  color: #1a2f66;
   text-align: center;
   font-size: 11px;
   white-space: nowrap;
@@ -154,6 +175,7 @@ h2 {
 .opponent-count {
   flex: 0 0 auto;
   font-weight: 400;
+  color: #1a2f66;
 }
 
 .mini-rack {
@@ -174,10 +196,10 @@ h2 {
   flex: 0 0 auto;
   width: 9px;
   height: 13px;
-  border: 1px solid #403b36;
+  border: 1px solid #7a5a37;
   border-radius: 2px;
-  background: var(--ebony);;
-  box-shadow: 1px 1px 2px #0008;
+  background: linear-gradient(180deg, #4b3020 0%, #2f1d12 100%);
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 45%);
 }
 
 .opponent-left .mini-tile,
@@ -193,9 +215,9 @@ h2 {
   align-items: center;
   gap: 7px;
   padding: 10px;
-  border: 1px solid var(--walnut);
+  border: 1px solid var(--gold-dim);
   border-radius: 10px;
-  background: var(--felt);
+  background: linear-gradient(180deg, #243a7a 0%, #1b2d63 100%);
 }
 
 .loose-area {
@@ -213,24 +235,20 @@ h2 {
   position: absolute;
   top: 6px;
   left: 10px;
-  color: #c5d4ca;
+  color: #dfd0a6;
   font-size: 0.82rem;
-  content: "Draft — drag rack or board tiles here";
+  content: var(--draft-hint, "Draft — drag rack or board tiles here");
   pointer-events: none;
 }
 
-.loose-area:not(:empty)::before {
-  content: "Draft";
-}
-
 .loose-area.is-drop-ready {
-  border-color: #a1886f;
+  border-color: #ecd38a;
 }
 
 .loose-area.drag-over {
-  border-color: #71d99a;
-  background: #173126;
-  box-shadow: 0 0 0 2px #4ac87955;
+  border-color: var(--gold-light);
+  background: #17365c;
+  box-shadow: 0 0 0 2px rgb(240 207 130 / 22%);
 }
 
 .set {
@@ -241,9 +259,9 @@ h2 {
   flex-wrap: nowrap;
   gap: 3px;
   padding: 7px;
-  border: 1px solid var(--walnut);
+  border: 1px solid var(--gold-dim);
   border-radius: 8px;
-  background: #286847;
+  background: linear-gradient(180deg, #304a93 0%, #21356f 100%);
   transition:
     border-color 140ms ease,
     background 140ms ease,
@@ -251,15 +269,14 @@ h2 {
 }
 
 .set.drag-over {
-  border-color: #71d99a;
-  background: #1c382b;
+  border-color: var(--gold-light);
+  background: #1c3a76;
 }
 
-/* Invalid table leftovers during the player's draft. */
 .set.set-invalid {
-  border: 2px solid #ff5252;
-  background: #3b2023;
-  box-shadow: 0 0 10px #ff303066;
+  border: 2px solid #ff8d6a;
+  background: #4a2430;
+  box-shadow: 0 0 10px rgb(255 120 90 / 35%);
 }
 
 .tile {
@@ -269,9 +286,9 @@ h2 {
   height: 52px;
   place-items: center;
   padding: 0;
-  border: 2px solid #403b36;
+  border: 2px solid var(--tile-border);
   border-radius: 7px;
-  background: var(--ebony);
+  background: linear-gradient(180deg, var(--tile-brown) 0%, var(--tile-brown-dark) 100%);
   color: var(--tile-color, #fff);
   text-shadow: 0 0 8px color-mix(in srgb, var(--tile-color) 45%, transparent);
   font-size: 1.2rem;
@@ -295,6 +312,21 @@ h2 {
   opacity: 1;
 }
 
+.log-tile {
+  display: inline-grid;
+  min-width: 1.65em;
+  height: 1.8em;
+  margin: 0 2px;
+  padding: 0 3px;
+  place-items: center;
+  border: 1px solid #7a5a37;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #4b3020 0%, #2f1d12 100%);
+  color: var(--tile-color, #fff);
+  font-weight: 900;
+  vertical-align: middle;
+}
+
 .draft-valid-tick {
   right: 8px;
   top: 8px;
@@ -304,19 +336,19 @@ h2 {
   height: 2rem;
   place-items: center;
   padding: 0;
-  border: 1px solid #3da969;
+  border: 1px solid #c7a34b;
   border-radius: 50%;
-  background: #17613b;
-  color: #a8ffc7;
+  background: linear-gradient(180deg, #d9b45f 0%, #b88a2f 100%);
+  color: #2a1d07;
   font: inherit;
   font-size: 1.5rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 0 12px #35c87555;
+  box-shadow: 0 0 12px rgb(215 177 90 / 34%);
 }
 
 .draft-valid-tick:hover {
-  background: #207b4b;
+  background: linear-gradient(180deg, #f0cf82 0%, #c99a3d 100%);
 }
 
 .draft-valid-tick[hidden] {
@@ -358,22 +390,30 @@ h2 {
   margin-top: 12px;
 }
 
-.controls button {
+.controls button,
+.header-button,
+.draw-button,
+#instructions-dialog button {
   min-height: 40px;
   padding: 9px 12px;
-  border: 1px solid var(--walnut);
+  border: 1px solid var(--gold-dim);
   border-radius: 7px;
-  background: var(--walnut);
-  color: #f2f4f5;
+  background: linear-gradient(180deg, #d9b45f 0%, #b88a2f 100%);
+  color: #2a1d07;
   font: inherit;
   cursor: pointer;
 }
 
-.controls button:hover:not(:disabled) {
-  background: var(--walnut-light);
+.controls button:hover:not(:disabled),
+.header-button:hover:not(:disabled),
+.draw-button:hover:not(:disabled),
+#instructions-dialog button:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--gold-light) 0%, #c99a3d 100%);
 }
 
-.controls button:disabled {
+.controls button:disabled,
+.header-button:disabled,
+.draw-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -385,9 +425,9 @@ h2 {
   gap: 7px 16px;
   margin: 0;
   padding: 12px;
-  border: 1px solid var(--walnut);
+  border: 1px solid var(--gold-dim);
   border-radius: 10px;
-  background: var(--felt);
+  background: linear-gradient(180deg, #243a7a 0%, #1a2a5d 100%);
 }
 
 .status > p {
@@ -412,23 +452,47 @@ h2 {
   border-bottom: 0;
 }
 
-.log-tile {
-  display: inline-grid;
-  min-width: 1.65em;
-  height: 1.8em;
-  margin: 0 2px;
-  padding: 0 3px;
-  place-items: center;
-  border: 1px solid #403b36;
-  border-radius: 4px;
-  background: var(--ebony);
-  color: var(--tile-color, #fff);
-  font-weight: 900;
-  vertical-align: middle;
-}
-
 #turn {
   display: none;
+}
+
+.instructions-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#instructions-dialog {
+  width: min(90vw, 38rem);
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid var(--gold-dim);
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: linear-gradient(180deg, #1c2c62 0%, #121c3f 100%);
+  color: #f5efe2;
+}
+
+#instructions-dialog::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+
+#instructions-dialog h2 {
+  margin-bottom: 1rem;
+}
+
+#instructions-dialog h3 {
+  margin: 1rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+#instructions-dialog p {
+  margin: 0;
 }
 
 @media (min-width: 801px) {
@@ -533,55 +597,4 @@ h2 {
   .loose-area {
     min-height: 84px;
   }
-}
-
-.instructions-link {
-  border: 0;
-  padding: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-#instructions-dialog {
-  width: min(90vw, 38rem);
-  max-height: 85vh;
-  overflow-y: auto;
-  border: 1px solid var(--walnut);
-  border-radius: 12px;
-  padding: 1.5rem;
-  background: var(--felt-dark);
-  color: #f2f4f5;
-}
-
-#instructions-dialog::backdrop {
-  background: rgb(0 0 0 / 70%);
-}
-
-#instructions-dialog h2 {
-  margin-bottom: 1rem;
-}
-
-#instructions-dialog h3 {
-  margin: 1rem 0 0.25rem;
-  font-size: 1rem;
-}
-
-#instructions-dialog p {
-  margin: 0;
-}
-
-#instructions-dialog button {
-  min-height: 40px;
-  margin-top: 1.25rem;
-  padding: 8px 12px;
-  border: 1px solid var(--walnut);
-  border-radius: 7px;
-  background: var(--walnut);
-  color: #f2f4f5;
-  font: inherit;
-  cursor: pointer;
 }

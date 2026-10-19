@@ -10,15 +10,20 @@
   <main class="game">
     <div id="game-layout" class="game-layout">
       <header class="game-header">
-        <h1 data-i18n="title">Rummiqub</h1>
-<button
-  id="instructions-button"
-  class="instructions-link"
-  type="button"
-  data-i18n="instructionsLink"
-  aria-haspopup="dialog"
-  aria-controls="instructions-dialog"
-></button>
+        <div class="title-row">
+          <h1 data-i18n="title">Rummiqub</h1>
+          <button id="new-game" class="header-button" type="button" data-i18n="newGame">
+            New game
+          </button>
+        </div>
+        <button
+          id="instructions-button"
+          class="instructions-link"
+          type="button"
+          data-i18n="instructionsLink"
+          aria-haspopup="dialog"
+          aria-controls="instructions-dialog"
+        ></button>
       </header>
 
       <section class="board-column" aria-label="Game board">
@@ -37,7 +42,12 @@
 
       <aside class="side-panel">
         <section class="hand-section">
-          <h2 data-i18n="yourTiles">Your tiles</h2>
+          <div class="hand-title-row">
+            <h2 data-i18n="yourTiles">Your tiles</h2>
+            <button id="draw" class="draw-button" type="button" data-i18n="draw">
+              Draw a tile
+            </button>
+          </div>
           <div id="hand" class="hand" aria-label="Your tiles"></div>
 
           <h2 class="draft-heading" data-i18n="draftArea">Draft</h2>
@@ -51,12 +61,6 @@
           <div class="controls">
             <button id="play" type="button" data-i18n="play">
               Play selected tiles
-            </button>
-            <button id="draw" type="button" data-i18n="draw">
-              Draw a tile
-            </button>
-            <button id="new-game" type="button" data-i18n="newGame">
-              New game
             </button>
           </div>
         </section>

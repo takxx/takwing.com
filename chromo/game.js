@@ -67,14 +67,14 @@ export class Game {
   constructor(aiCount, onChange) {
     this.onChange = onChange;
     this.board = new Map();
-    this.players = [
-      { name: "You", human: true, hand: [] },
-      ...Array.from({ length: aiCount }, (_, index) => ({
-        name: `Computer ${index + 1}`,
-        human: false,
-        hand: []
-      }))
-    ];
+this.players = [
+  { name: "👤", human: true, hand: [] },
+  ...Array.from({ length: aiCount }, (_, index) => ({
+    name: ["🤖", "👾", "💻", "🖥️"][index] ?? `🤖 ${index + 1}`,
+    human: false,
+    hand: []
+  }))
+];
 
     this.current = 0;
     this.selected = null;

@@ -49,7 +49,7 @@ const messages = {
     blueWins: "¡Gana el azul!",
     youWin: "¡Has ganado!",
     computerWins: "¡Gana el ordenador!",
-    winloss: "Ganadas/perdidas: ",
+    winloss: "Partitas ganadas/perdidas: ",
     cellLabel: (row, col, occupant) =>
       `Fila ${row}, columna ${col}${occupant ? `, ${occupant}` : ", vacía"}`
   },
