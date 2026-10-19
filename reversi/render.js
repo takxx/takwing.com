@@ -29,7 +29,7 @@ function hexPoints(position, cellSize) {
   const points = [];
 
   for (let index = 0; index < 6; index += 1) {
-    const angle = Math.PI / 180 * (60 * index - 30);
+    const angle = Math.PI / 180 * (60 * index);
     points.push([
       position.x + cellSize * Math.cos(angle),
       position.y + cellSize * Math.sin(angle)

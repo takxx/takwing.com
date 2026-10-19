@@ -131,8 +131,8 @@ export function createHexagonalBoard() {
       cellSize: 42,
       positions: cells.map(cell => ({
         id: cell.id,
-        x: 42 * Math.sqrt(3) * (cell.q + cell.r / 2),
-        y: 42 * 1.5 * cell.r
+        x: 42 * 1.5 * cell.q,
+        y: 42 * Math.sqrt(3) * (cell.r + cell.q / 2)
       }))
     }
   };
