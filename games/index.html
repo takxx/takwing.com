@@ -163,6 +163,21 @@
 	      -webkit-text-fill-color: currentColor;
 	  }
 
+    .svg-glyph {
+      position: relative;
+      z-index: 1;
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      color: var(--icon-color, var(--cream));
+    }
+    
+    @media (max-width: 520px) {
+      .svg-glyph {
+        width: 34px;
+        height: 34px;
+      }
+    }
 
     .tile:hover .icon,
     .tile:focus-visible .icon {
@@ -255,44 +270,44 @@
     };
 
     const pages = [
-      {id:"2048",emoji:"2️⃣",color:"salmon",en:"2048",es:"2048",zh:"2048"},
-      {id:"addoku",emoji:"🔢",color:"yellow",en:"Killer Sudoku",es:"Addoku",zh:"殺手數獨"},
-      {id:"bingo",emoji:"🎱",color:"pink",en:"Bingo",es:"Bingo",	zh:"冰高"	},
-      {id:"buzzword",emoji:"🐝",color:"violet",en:"Buzzword"},
-      {id:"checkers",emoji:"✡️",color:"blue",en:"Chinese Checkers",es:"Damas chinas",zh:"波子棋"},
-      {id:"chromo",emoji:"🚥",color:"blue",en:"Dominoes of Colours",es:"Dominós de colores",zh:"七彩骨牌"},
-      {id:"connect4",emoji:"\u2999",color:"blue",en:"Connect 4",es:"Conecta 4",zh:"四子棋"},
-      {id:"cow",emoji:"🐄",color:"salmon",en:"Find the Cow",es:"Busca la vaca",	zh:"搵牛牛"	},
-      {id:"cucaracha",emoji:"🩴",color:"yellow",en:"Roach Patrol",es:"Putas cucarachas",zh:"打曱甴"},
-      {id:"domino",emoji:"🂏",color:"yellow",en:"Dominoes",es:"Dominó",zh:"骨牌"},
-      {id:"dopewars",emoji:"💊",color:"cream",en:"Dope Wars",es:"Dope wars"},
-      {id:"fishprawncrab",emoji:"🦀",color:"mint",zh:"魚蝦蟹"},
-      {id:"freecell",emoji:"👑",color:"salmon",en:"FreeCell",es:"FreeCell",zh:"接龍"},
-      {id:"froggy",emoji:"🐸",color:"violet",en:"Froggy Hop",es:"Salto de Ranita",zh:"青蛙跳"},
-      {id:"hex",emoji:"\u2394",color:"pink",en:"Hex",es:"Hex",zh:"六角棋"},
-      {id:"hockey",emoji:"🏒",color:"turquoise",en:"Touch Air Hockey",es:"Air Hockey Táctil",zh:"觸控空氣曲棍球"},
-      {id:"horoscope",emoji:"🔮",color:"violet",en:"Daily Horoscope",es:"Horóscopos del Día",zh:"每日星座運程"},
-      {id:"labyrinth",emoji:"🕳️",color:"yellow",en:"Classic Labyrinth",es:"Laberinto clásico",zh:"經典迷宮"},
-      {id:"mahjong",emoji:"🀄",color:"salmon",en:"Mahjong Solitaire",es:"Solitario de Mahjong",zh:"四川省"},
-      {id:"match",emoji:"🐙",color:"turquoise",en:"Sea Matches",es:"Parejas del Mar",zh:"深海群組"},
-      {id:"minesweeper",emoji:"💣",color:"yellow",en:"Minesweeper",es:"Buscaminas",zh:"掃地雷"},
-      {id:"palabeja",emoji:"🐝",color:"violet",es:"Palabeja"},
-      {id:"reversi",emoji:"⚫",color:"salmon",en:"Reversi",es:"Reversi",zh:"黑白棋"},
-      {id:"rico3",emoji:"🎩",color:"mint",zh:"大富翁3"},
-      {id:"rummi",emoji:"🌝",color:"violet",en:"Rummiqub",es:"Rummiqub",zh:"巴別橋"},
-      {id:"rushhour",emoji:"🚙",color:"salmon",en:"Rush Hour",es:"Hora punta",zh:"繁忙時間"},
-      {id:"sfcave",emoji:"〰️",color:"cream",en:"SFCave",es:"SFCave",zh:"SFCave"},
-      {id:"shikaku",emoji:"◰",color:"mint",en:"Shikaku",es:"Shikaku",zh:"數方"},
-      {id:"simon",emoji:"\u1368",color:"yellow",en:"Simon",es:"Simón",zh:"六角西門"},
-      {id:"slant",emoji:"\u2215",color:"blue",en:"Slant",es:"Diagonales",zh:"斜線謎題"},
-      {id:"slot",emoji:"🎰",color:"pink",en:"Slot Machine",es:"Máquina tragaperras",zh:"老虎機"},
-      {id:"snake",emoji:"🐍",color:"violet",en:"Snake",es:"Serpiente",zh:"貪食蛇"},
-      {id:"spin",emoji:"☸️",color:"mint",en:"Wheel of Decision",es:"La Ruleta de Opciones",zh:"幸運輪"},
-      {id:"sudoku",emoji:"🔢",color:"yellow",en:"Sudoku",es:"Sudoku",zh:"數獨"},
-      {id:"tangram",emoji:"🧩",color:"blue",en:"Tangram",es:"Tangram",zh:"七巧板"},
-      {id:"tetris",emoji:"🪆",color:"mint",en:"Tetris",es:"Tetris",zh:"俄羅斯方塊"},
-      {id:"whackamole",emoji:"✊🏾",color:"cream",en:"Whack-a-Mole",es:"A golpear topos",zh:"扑傻瓜"},
-      {id:"wordle",emoji:"🟩",color:"pink",en:"Wordle",es:"Wordle"}
+      {id:"2048",color:"salmon",en:"2048",es:"2048",zh:"2048"},
+      {id:"addoku",color:"violet",en:"Killer Sudoku",es:"Addoku",zh:"殺手數獨"},
+      {id:"bingo",color:"pink",en:"Bingo",es:"Bingo",	zh:"冰高"	},
+      {id:"buzzword",color:"yellow",en:"Buzzword"},
+      {id:"checkers",color:"blue",en:"Chinese Checkers",es:"Damas chinas",zh:"波子棋"},
+      {id:"chromo",color:"cream",en:"Dominoes of Colours",es:"Dominós de colores",zh:"七彩骨牌"},
+      {id:"connect4",color:"blue",en:"Connect 4",es:"Conecta 4",zh:"四子棋"},
+      {id:"cow",color:"mint",en:"Find the Cow",es:"Busca la vaca",	zh:"搵牛牛"	},
+      {id:"cucaracha",color:"mint",en:"Roach Patrol",es:"Putas cucarachas",zh:"打曱甴"},
+      {id:"domino",color:"yellow",en:"Dominoes",es:"Dominó",zh:"骨牌"},
+      {id:"dopewars",color:"salmon",en:"Dope Wars",es:"Dope wars"},
+      {id:"fishprawncrab",color:"pink",zh:"魚蝦蟹"},
+      {id:"freecell",color:"violet",en:"FreeCell",es:"FreeCell",zh:"接龍"},
+      {id:"froggy",color:"mint",en:"Froggy Hop",es:"Salto de Ranita",zh:"青蛙跳"},
+      {id:"hex",color:"pink",en:"Hex",es:"Hex",zh:"六角棋"},
+      {id:"hockey",color:"pink",en:"Touch Air Hockey",es:"Air Hockey Táctil",zh:"觸控空氣曲棍球"},
+      {id:"horoscope",color:"violet",en:"Daily Horoscope",es:"Horóscopos del Día",zh:"每日星座運程"},
+      {id:"labyrinth",color:"yellow",en:"Classic Labyrinth",es:"Laberinto clásico",zh:"經典迷宮"},
+      {id:"mahjong",color:"salmon",en:"Mahjong Solitaire",es:"Solitario de Mahjong",zh:"四川省"},
+      {id:"match",color:"turquoise",en:"Sea Matches",es:"Parejas del Mar",zh:"深海群組"},
+      {id:"minesweeper",color:"pink",en:"Minesweeper",es:"Buscaminas",zh:"掃地雷"},
+      {id:"palabeja",color:"yellow",es:"Palabeja"},
+      {id:"reversi",color:"salmon",en:"Reversi",es:"Reversi",zh:"黑白棋"},
+      {id:"rico3",color:"turquoise",zh:"大富翁3"},
+      {id:"rummi",color:"violet",en:"Rummiqub",es:"Rummiqub",zh:"巴別橋"},
+      {id:"rushhour",color:"salmon",en:"Rush Hour",es:"Hora punta",zh:"繁忙時間"},
+      {id:"sfcave",color:"mint",en:"SFCave",es:"SFCave",zh:"SFCave"},
+      {id:"shikaku",color:"cream",en:"Shikaku",es:"Shikaku",zh:"數方"},
+      {id:"simon",color:"yellow",en:"Simon",es:"Simón",zh:"六角西門"},
+      {id:"slant",color:"blue",en:"Slant",es:"Diagonales",zh:"斜線謎題"},
+      {id:"slot",color:"turquoise",en:"Slot Machine",es:"Máquina tragaperras",zh:"老虎機"},
+      {id:"snake",color:"violet",en:"Snake",es:"Serpiente",zh:"貪食蛇"},
+      {id:"spin",color:"mint",en:"Wheel of Decision",es:"La Ruleta de Opciones",zh:"幸運輪"},
+      {id:"sudoku",color:"yellow",en:"Sudoku",es:"Sudoku",zh:"數獨"},
+      {id:"tangram",color:"blue",en:"Tangram",es:"Tangram",zh:"七巧板"},
+      {id:"tetris",color:"mint",en:"Tetris",es:"Tetris",zh:"俄羅斯方塊"},
+      {id:"whackamole",color:"violet",en:"Whack-a-Mole",es:"A golpear topos",zh:"扑傻瓜"},
+      {id:"wordle",color:"mint",en:"Wordle",es:"Wordle"}
     ];
 
     const allowedLanguages = ["en", "es", "zh"];
@@ -350,10 +365,23 @@ const visiblePages = pages
         pastelColors[page.color] || "var(--cream)"
       );
       
-      const glyph = document.createElement("span");
-      glyph.className = "glyph";
-      glyph.textContent = page.emoji || "🔗";
-      icon.append(glyph);
+const image = document.createElement("img");
+image.className = "glyph svg-glyph";
+image.alt = "";
+image.draggable = false;
+
+image.addEventListener("error", () => {
+  image.remove();
+
+  const glyph = document.createElement("span");
+  glyph.className = "glyph";
+  glyph.textContent = page.emoji || "🔗";
+  icon.append(glyph);
+}, { once: true });
+
+image.src = `./svg/${encodeURIComponent(page.id)}.svg`;
+
+icon.append(image);
 
       const name = document.createElement("span");
       name.className = "name";
