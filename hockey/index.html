@@ -249,7 +249,8 @@
       running: false,
       secondsRemaining: 99,
       leftScore: 0,
-      rightScore: 0
+      rightScore: 0,
+      timerId: null
     };
 
     const puck = {
@@ -280,28 +281,12 @@
       velocityY: 0
     };
 
-    /*
-      Velocities are in pixels per second.
-      Friction is per second, so it is independent of frame rate.
-    */
     const physics = {
-      frictionPerSecond: 0.88,
+      friction: 0.998,
       wallBounce: 0.88,
       paddleBounce: 1.15,
       paddleVelocityInfluence: 1.35,
-      maxPuckSpeed: 0,
-      minimumPuckSpeed: 0
-    };
-
-    /*
-      Physics runs at a stable 60 Hz. Rendering still occurs once per
-      animation frame, which may be 60 Hz, 90 Hz, 120 Hz, etc.
-    */
-    const physicsTiming = {
-      fixedDelta: 1 / 60,
-      maximumFrameDelta: 0.25,
-      accumulator: 0,
-      previousTime: 0
+      maxPuckSpeed: 0
     };
 
     /*
@@ -513,8 +498,7 @@
       leftPaddle.radius = base * 0.045;
       rightPaddle.radius = base * 0.045;
 
-      physics.maxPuckSpeed = base * 4.8;
-      physics.minimumPuckSpeed = base * 0.25;
+      physics.maxPuckSpeed = base * 0.08;
 
       const goalHeight = height * 0.36;
 
@@ -564,12 +548,25 @@
 
       resetPositions();
 
-      physicsTiming.accumulator = 0;
-      physicsTiming.previousTime = performance.now();
+      clearInterval(game.timerId);
+
+      game.timerId = setInterval(() => {
+        if (!game.running) return;
+
+        game.secondsRemaining--;
+
+        if (game.secondsRemaining <= 0) {
+          game.secondsRemaining = 0;
+          finishGame();
+        }
+      }, 1000);
     }
 
     function finishGame() {
       game.running = false;
+
+      clearInterval(game.timerId);
+      game.timerId = null;
 
       playTimeUpSound();
       vibrateGameOver();
@@ -839,12 +836,6 @@
       puck.velocityX *= physics.paddleBounce;
       puck.velocityY *= physics.paddleBounce;
 
-      limitPuckSpeed();
-      playPuckHitSound();
-      vibratePuckHit();
-    }
-
-    function limitPuckSpeed() {
       const speed = Math.hypot(
         puck.velocityX,
         puck.velocityY
@@ -856,6 +847,9 @@
         puck.velocityX *= scale;
         puck.velocityY *= scale;
       }
+
+      playPuckHitSound();
+      vibratePuckHit();
     }
 
     function checkGoals() {
@@ -890,26 +884,17 @@
       return false;
     }
 
-    function updatePhysics(deltaTime) {
+    function updatePhysics() {
       if (!game.running) return;
 
-      /*
-        Apply exponential friction correctly for any delta time:
-        v = v * frictionPerSecond ^ deltaTime
-      */
-      const frictionFactor = Math.pow(
-        physics.frictionPerSecond,
-        deltaTime
-      );
+      puck.velocityX *= physics.friction;
+      puck.velocityY *= physics.friction;
 
-      puck.velocityX *= frictionFactor;
-      puck.velocityY *= frictionFactor;
-
-      puck.x += puck.velocityX * deltaTime;
-      puck.y += puck.velocityY * deltaTime;
+      puck.x += puck.velocityX;
+      puck.y += puck.velocityY;
 
       // Check goals immediately after moving the puck.
-      // If a goal is scored, reset and skip wall/paddle collisions this step.
+      // If a goal is scored, reset and skip wall/paddle collisions this frame.
       if (checkGoals()) {
         return;
       }
@@ -924,26 +909,9 @@
         puck.velocityY
       );
 
-      if (speed < physics.minimumPuckSpeed) {
-        const randomSpeed = physics.minimumPuckSpeed;
-
-        const randomAngle = Math.random() * Math.PI * 2;
-
-        puck.velocityX += Math.cos(randomAngle) * randomSpeed;
-        puck.velocityY += Math.sin(randomAngle) * randomSpeed;
-
-        limitPuckSpeed();
-      }
-    }
-
-    function updateGameTime(deltaTime) {
-      if (!game.running) return;
-
-      game.secondsRemaining -= deltaTime;
-
-      if (game.secondsRemaining <= 0) {
-        game.secondsRemaining = 0;
-        finishGame();
+      if (speed < 0.35) {
+        puck.velocityX += (Math.random() - 0.5) * 0.35;
+        puck.velocityY += (Math.random() - 0.5) * 0.35;
       }
     }
 
@@ -1035,13 +1003,7 @@
       const base = Math.min(width, height);
       const scoreSize = base * 0.34;
       const timerSize = base * 0.08;
-
-      const remainingSeconds = Math.max(
-        0,
-        Math.ceil(game.secondsRemaining)
-      );
-
-      const time = String(remainingSeconds).padStart(2, "0");
+      const time = String(game.secondsRemaining).padStart(2, "0");
 
       /*
         Scores face outward.
@@ -1163,49 +1125,9 @@
       ------------------------------------------------------------
     */
 
-    function gameLoop(currentTime) {
-      if (!physicsTiming.previousTime) {
-        physicsTiming.previousTime = currentTime;
-      }
-
-      let frameDelta =
-        (currentTime - physicsTiming.previousTime) / 1000;
-
-      physicsTiming.previousTime = currentTime;
-
-      /*
-        Clamp large gaps, such as returning from a background tab,
-        to prevent a long burst of physics updates.
-      */
-      frameDelta = Math.min(
-        frameDelta,
-        physicsTiming.maximumFrameDelta
-      );
-
-      if (game.running) {
-        physicsTiming.accumulator += frameDelta;
-
-        let steps = 0;
-
-        while (
-          physicsTiming.accumulator >= physicsTiming.fixedDelta &&
-          steps < 5
-        ) {
-          updatePhysics(physicsTiming.fixedDelta);
-          updateGameTime(physicsTiming.fixedDelta);
-
-          physicsTiming.accumulator -= physicsTiming.fixedDelta;
-          steps++;
-
-          if (!game.running) {
-            physicsTiming.accumulator = 0;
-            break;
-          }
-        }
-      }
-
+    function gameLoop() {
+      updatePhysics();
       render();
-
       requestAnimationFrame(gameLoop);
     }
 
@@ -1225,7 +1147,7 @@
     window.addEventListener("resize", resizeCanvas);
 
     resizeCanvas();
-    requestAnimationFrame(gameLoop);
+    gameLoop();
   </script>
 </body>
 </html>
