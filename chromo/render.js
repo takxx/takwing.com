@@ -116,78 +116,87 @@ export class Renderer {
       : t("aiTurn", { name: player.name });
   }
 
-  renderHand() {
-    const game = this.game;
-    const player = game.players[game.current];
+renderHand() {
+  const game = this.game;
+  const player = game.players[game.current];
+  const human = game.players.find(p => p.human);
 
-    this.hand.replaceChildren();
-    this.handTitle.textContent = player?.human ? t("yourHand") : "";
+  this.hand.replaceChildren();
 
-    if (!player?.human || game.finished) {
-      this.hint.textContent = "";
-      this.drawButton.disabled = true;
-      return;
-    }
+  this.handTitle.textContent = human ? t("yourHand") : "";
 
-    for (const tile of player.hand) {
-      const playable = game.legalMoves(tile).length > 0;
-      const button = document.createElement("button");
+  if (!human) {
+    this.hint.textContent = "";
+    this.drawButton.disabled = true;
+    return;
+  }
 
-      button.type = "button";
-      button.className = "tile-button";
-      button.disabled = !playable;
-      button.setAttribute(
-        "aria-pressed",
-        String(game.selected?.id === tile.id)
-      );
-      button.setAttribute(
-        "aria-label",
-        tile.colors.map(color =>
-          color === -1 ? t("wild") : color
-        ).join(", ")
-      );
+  for (const tile of human.hand) {
+    const playable =
+      !game.finished &&
+      player?.human &&
+      game.legalMoves(tile).length > 0;
 
-      button.addEventListener("click", () => {
-        if (!playable) return;
+    const button = document.createElement("button");
 
-        if (game.selected?.id === tile.id) {
-          game.selected = null;
-        } else {
-          game.selectTile(tile.id);
-        }
+    button.type = "button";
+    button.className = "tile-button";
+    button.disabled = !playable;
+    button.setAttribute(
+      "aria-pressed",
+      String(game.selected?.id === tile.id)
+    );
+    button.setAttribute(
+      "aria-label",
+      tile.colors.map(color =>
+        color === -1 ? t("wild") : color
+      ).join(", ")
+    );
 
-        this.render();
-      });
+    button.addEventListener("click", () => {
+      if (!playable) return;
 
-      tile.colors.forEach(color => {
-        const swatch = document.createElement("span");
-        swatch.className = `swatch ${color === -1 ? "wild" : ""}`;
+      if (game.selected?.id === tile.id) {
+        game.selected = null;
+      } else {
+        game.selectTile(tile.id);
+      }
 
-        if (color !== -1) {
-          swatch.style.backgroundColor = COLORS[color];
-        } else {
-          swatch.textContent = "★";
-        }
+      this.render();
+    });
 
-        button.append(swatch);
-      });
+    tile.colors.forEach(color => {
+      const swatch = document.createElement("span");
+      swatch.className = `swatch ${color === -1 ? "wild" : ""}`;
 
-      this.hand.append(button);
-    }
+      if (color !== -1) {
+        swatch.style.backgroundColor = COLORS[color];
+      } else {
+        swatch.textContent = "★";
+      }
 
-    const canPlay = game.hasAnyMove(player);
+      button.append(swatch);
+    });
 
-    this.drawButton.disabled =
-      canPlay ||
-      game.drawnThisTurn ||
-      game.deck.length === 0;
+    this.hand.append(button);
+  }
 
-    this.hint.textContent = game.selected
+  const canPlay = !game.finished && game.hasAnyMove(human);
+
+  this.drawButton.disabled =
+    game.finished ||
+    canPlay ||
+    game.drawnThisTurn ||
+    game.deck.length === 0;
+
+  this.hint.textContent = game.finished
+    ? ""
+    : game.selected
       ? t("chooseMove")
       : canPlay
         ? t("selectTile")
         : t("mustDraw");
-  }
+}
 
   renderBoard() {
     const game = this.game;
