@@ -8,8 +8,8 @@
   --card-border: #aaa;
   --card-red: #b00000;
 
-  --button-background: #653419;
-  --button-hover: #271f15;
+  --button-background: #a88634;
+  --button-hover: #d7b15a;
 
   --board-max-width: 1120px;
 }
@@ -75,7 +75,7 @@ button,
   border: 0;
   border-radius: 8px;
   background: var(--button-background);
-  color: #fff;
+  color: #000000;
   font: inherit;
   cursor: pointer;
 }
