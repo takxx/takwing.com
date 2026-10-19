@@ -4,41 +4,81 @@
   <meta charset="UTF-8" />
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
   />
   <title>Sea Matches</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="game">
-    <header class="topbar">
+  <div id="introOverlay" class="intro-overlay" hidden>
+    <div class="intro-card">
       <h1 data-i18n="title">Sea Matches</h1>
 
-      <div class="topbar-controls">
-        <label class="control language-control">
+      <p class="intro-description" data-i18n="introHow">
+        Swap neighbouring animals to make lines of three or more.
+      </p>
+
+      <div class="mode-explanations">
+        <p>
+          <strong data-i18n="modeRelaxed">Relaxed</strong>
+          <span data-i18n="howRelaxed">
+            Play without a timer; the game ends when no moves remain.
+          </span>
+        </p>
+
+        <p>
+          <strong data-i18n="modeTimed">Timed</strong>
+          <span data-i18n="howTimed">
+            Match quickly to earn extra time before time runs out.
+          </span>
+        </p>
+      </div>
+
+      <div class="intro-controls">
+        <div class="mode-toggle">
+          <span class="mode-toggle-label" data-i18n="chooseMode">
+            Choose game mode
+          </span>
+
+          <div class="toggle-row">
+            <span data-i18n="modeRelaxed">Relaxed</span>
+
+            <label class="toggle-track">
+              <input type="checkbox" id="modeToggle" />
+              <span class="toggle-slider"></span>
+              <span class="visually-hidden">Timed mode</span>
+            </label>
+
+            <span data-i18n="modeTimed">Timed</span>
+          </div>
+        </div>
+
+        <label class="language-control">
           <span data-i18n="language">Language</span>
 
-          <select id="languageSelect" aria-label="Language">
+          <select id="introLanguageSelect" aria-label="Language">
             <option value="en">English</option>
             <option value="es">Español</option>
-            <option value="zh-TW">中文</option>
+            <option value="zh">中文</option>
           </select>
         </label>
 
-        <label class="control mode-control">
-          <span data-i18n="mode">Mode</span>
-
-          <select id="modeSelect" aria-label="Game mode">
-            <option value="relaxed" data-i18n="modeRelaxed">
-              Relaxed
-            </option>
-
-            <option value="timed" data-i18n="modeTimed">
-              Timed
-            </option>
-          </select>
-        </label>
+        <button type="button" id="startGame" data-i18n="startGame">
+          Start Game
+        </button>
       </div>
+    </div>
+  </div>
+
+  <main class="game">
+    <header class="topbar">
+
+      <h1 data-i18n="title">Sea Matches</h1>
+
+      <div class="topbar-spacer" aria-hidden="true"></div>
+      <button type="button" id="newGame" data-i18n="newGame">
+        New Game
+      </button>
     </header>
 
     <section class="stats" aria-label="Game statistics">
@@ -66,15 +106,16 @@
     <div id="board" aria-label="Animal match game board"></div>
 
     <p id="message" data-i18n="instructions">
-      Click or swipe neighboring animals to match them.
+      Click or swipe neighbouring animals to match them.
     </p>
 
     <div class="controls">
-      <button id="hintButton" data-i18n="hint">Hint</button>
-      <button id="newGame" data-i18n="newGame">New Game</button>
+      <button type="button" id="hintButton" data-i18n="hint">
+        Hint
+      </button>
     </div>
   </main>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
