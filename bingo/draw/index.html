@@ -8,9 +8,7 @@
   <style>
     :root {
       --casino-green: #075b38;
-      --dark-green: #043b25;
       --gold: #f6c453;
-
       --b-color: #d83b3b;
       --i-color: #db961d;
       --n-color: #188aca;
@@ -30,30 +28,30 @@
     }
 
     body {
-      overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
+      overflow: hidden;
       padding: 2vh 2vw;
       color: white;
       font-family: Arial, Helvetica, sans-serif;
       background:
-        radial-gradient(
-          circle at center,
-          rgba(255, 255, 255, 0.06) 1px,
-          transparent 1px
-        ),
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
         linear-gradient(135deg, #087044, var(--casino-green), #034227);
       background-size: 18px 18px, cover;
     }
 
     .game {
+      display: grid;
+      grid-template-areas:
+        "board board"
+        "draw controls";
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 1fr auto;
+      gap: clamp(10px, 2vh, 18px);
       width: min(1200px, 96vw);
       height: min(94vh, 675px);
       min-height: 440px;
-      display: grid;
-      grid-template-rows: auto auto 1fr auto;
-      gap: clamp(10px, 2vh, 18px);
       padding: clamp(14px, 2vw, 26px);
       overflow: hidden;
       border: 3px solid var(--gold);
@@ -64,20 +62,12 @@
         inset 0 0 25px rgba(255, 255, 255, 0.05);
     }
 
-    h1 {
-      margin: 0;
-      color: var(--gold);
-      font-size: clamp(1.8rem, 4vw, 3.4rem);
-      letter-spacing: clamp(4px, 1vw, 9px);
-      text-align: center;
-      text-shadow: 2px 3px 0 #633e0a;
-    }
-
     .number-board {
-      width: 100%;
+      grid-area: board;
       display: grid;
       grid-template-columns: repeat(15, 1fr);
       gap: 4px;
+      width: 100%;
       padding: 8px;
       border: 2px solid var(--gold);
       border-radius: 12px;
@@ -85,16 +75,16 @@
     }
 
     .number {
-      aspect-ratio: 1.4 / 1;
       display: flex;
       justify-content: center;
       align-items: center;
+      aspect-ratio: 1.4 / 1;
       border-radius: 5px;
       color: #16452d;
       background: #e9ead7;
       font-size: clamp(0.55rem, 1.35vw, 0.95rem);
       font-weight: bold;
-      transition: 0.25s ease;
+      transition: background-color 0.25s ease, transform 0.25s ease;
     }
 
     .number.drawn {
@@ -103,48 +93,38 @@
       box-shadow: 0 0 9px rgba(255, 255, 255, 0.65);
     }
 
-    .number.drawn.b {
-      background: var(--b-color);
-    }
-
-    .number.drawn.i {
-      background: var(--i-color);
-    }
-
-    .number.drawn.n {
-      background: var(--n-color);
-    }
-
-    .number.drawn.g {
-      background: var(--g-color);
-    }
-
-    .number.drawn.o {
-      background: var(--o-color);
-    }
+    .number.drawn.b { background: var(--b-color); }
+    .number.drawn.i { background: var(--i-color); }
+    .number.drawn.n { background: var(--n-color); }
+    .number.drawn.g { background: var(--g-color); }
+    .number.drawn.o { background: var(--o-color); }
 
     .draw-area {
-      min-height: 0;
+      grid-area: draw;
       display: flex;
       justify-content: center;
       align-items: center;
-      perspective: 900px;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .ball-wrapper {
+      position: relative;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      gap: 12px;
+      width: clamp(210px, 33vh, 330px);
+      aspect-ratio: 1;
     }
 
     .ball {
       position: relative;
-      width: clamp(145px, 25vh, 245px);
-      aspect-ratio: 1;
+      z-index: 1;
       display: flex;
       justify-content: center;
       align-items: center;
+      width: 100%;
+      aspect-ratio: 1;
       border-radius: 50%;
       color: white;
       background: var(--ball-color, #777);
@@ -152,50 +132,7 @@
         inset -20px -22px 28px rgba(0, 0, 0, 0.38),
         inset 18px 15px 24px rgba(255, 255, 255, 0.35),
         0 22px 15px rgba(0, 0, 0, 0.35);
-      transform-style: preserve-3d;
     }
-
-    .ball::before {
-      content: "";
-      position: absolute;
-      top: 10%;
-      left: 18%;
-      width: 26%;
-      height: 18%;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.7);
-      filter: blur(5px);
-      transform: rotate(-35deg);
-    }
-
-    .ball::after {
-      content: "";
-      position: absolute;
-      inset: 8%;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.22);
-    }
-
-    .ball.b {
-      --ball-color: var(--b-color);
-    }
-
-    .ball.i {
-      --ball-color: var(--i-color);
-    }
-
-    .ball.n {
-      --ball-color: var(--n-color);
-    }
-
-    .ball.g {
-      --ball-color: var(--g-color);
-    }
-
-    .ball.o {
-      --ball-color: var(--o-color);
-    }
-
     .ball-number {
       position: relative;
       z-index: 1;
@@ -214,53 +151,121 @@
         inset -4px -5px 8px rgba(0, 0, 0, 0.22);
     }
 
-    .ball-label {
-      color: var(--gold);
-      font-size: clamp(1rem, 2.2vw, 1.5rem);
-      font-weight: bold;
-      letter-spacing: 2px;
+    .ball::after {
+      position: absolute;
+      inset: 8%;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 50%;
+      content: "";
+      pointer-events: none;
+    }
+
+    .ball.b { --ball-color: var(--b-color); }
+    .ball.i { --ball-color: var(--i-color); }
+    .ball.n { --ball-color: var(--n-color); }
+    .ball.g { --ball-color: var(--g-color); }
+    .ball.o { --ball-color: var(--o-color); }
+
+    /* The wrapper and reflection translate together; the ball rotates separately. */
+    .ball-wrapper.animate {
+      animation: moveBall 1s cubic-bezier(0.22, 0.61, 0.36, 1);
     }
 
     .ball.animate {
-      animation: bounce 0.7s ease;
+      animation: spinBall 1s cubic-bezier(0.22, 0.61, 0.36, 1);
     }
 
-    @keyframes bounce {
+    .ball-reflection {
+      position: absolute;
+      z-index: 2;
+      top: 10%;
+      left: 18%;
+      width: 26%;
+      height: 18%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.7);
+      filter: blur(5px);
+      transform: rotate(-35deg);
+      pointer-events: none;
+    }
+
+    @keyframes moveBall {
       0% {
-        transform: translateY(0) rotateY(0);
+        opacity: 0;
+        transform: translateX(-80vw);
       }
-
-      35% {
-        transform: translateY(-35px) rotateY(180deg);
+      15% {
+        opacity: 1;
       }
-
-      70% {
-        transform: translateY(8px) rotateY(330deg);
+      85% {
+        transform: translateX(2vw);
       }
-
       100% {
-        transform: translateY(0) rotateY(360deg);
+        opacity: 1;
+        transform: translateX(0);
       }
     }
 
-    .controls {
+    @keyframes spinBall {
+      0% { transform: rotate(-540deg); }
+      85% { transform: rotate(30deg); }
+      100% { transform: rotate(0); }
+    }
+
+    .controls-panel {
+      grid-area: controls;
       display: flex;
+      flex-direction: column;
       justify-content: center;
-      align-items: center;
+      align-items: flex-end;
+      gap: 16px;
+      min-width: 160px;
+      padding-left: 20px;
+    }
+
+    .ball-label {
+      color: var(--gold);
+      font-size: clamp(3rem, 7vw, 5.6rem);
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-align: center;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    .ball-label.hidden {
+      opacity: 0;
+      transition: none;
+    }
+
+    .status {
+      min-height: 1.2rem;
+      color: var(--gold);
+      font-size: 0.95rem;
+      font-weight: bold;
+      text-align: right;
+    }
+
+    .buttons {
+      display: flex;
       gap: 12px;
     }
 
     button {
-      min-width: 150px;
-      padding: 12px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 58px;
+      height: 58px;
+      padding: 0;
       border: 2px solid var(--gold);
-      border-radius: 999px;
+      border-radius: 50%;
       color: #173d2b;
       background: var(--gold);
-      font-size: 1rem;
-      font-weight: bold;
+      font-size: 1.5rem;
+      line-height: 1;
       cursor: pointer;
-      transition: 0.15s ease;
+      transition: background-color 0.15s ease, transform 0.15s ease;
     }
 
     button:hover {
@@ -284,21 +289,23 @@
       background: var(--gold);
     }
 
-    .status {
-      position: absolute;
-      left: -9999px;
-    }
-
-    @media (max-width: 700px) {
+    @media (max-width: 800px) {
       body {
         padding: 1vh 1vw;
       }
 
       .game {
+        grid-template-areas:
+          "board"
+          "draw"
+          "controls";
+        grid-template-rows: auto auto auto;
+        grid-template-columns: 1fr;
+        gap: 10px;
         width: 99vw;
         height: 98vh;
-        padding: 12px 8px;
-        gap: 9px;
+        padding: 12px 10px;
+        overflow-y: auto;
       }
 
       .number-board {
@@ -306,19 +313,36 @@
         padding: 5px;
       }
 
-      .number {
-        border-radius: 3px;
-        font-size: 0.55rem;
+      .ball-wrapper {
+        width: min(25vh, 160px);
       }
 
-      .ball {
-        width: min(35vh, 210px);
+      .controls-panel {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        min-width: 0;
+        padding: 12px 0 0;
+        border-top: 2px dashed rgba(246, 196, 83, 0.3);
       }
 
-      button {
-        min-width: 125px;
-        padding: 10px 14px;
-        font-size: 0.85rem;
+      .ball-label {
+        font-size: clamp(2rem, 8vw, 4rem);
+      }
+
+      .status {
+        text-align: left;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
       }
     }
   </style>
@@ -326,35 +350,40 @@
 
 <body>
   <main class="game">
-
     <section
       id="numberBoard"
       class="number-board"
       aria-label="Bingo number board"
     ></section>
 
-    <section class="draw-area">
-      <div class="ball-wrapper">
+    <section class="draw-area" aria-label="Drawn bingo ball">
+      <div id="ballWrapper" class="ball-wrapper">
+        <div class="ball-reflection" aria-hidden="true"></div>
         <div id="ball" class="ball">
           <div id="ballNumber" class="ball-number">?</div>
-        </div>
-
-        <div id="ballLabel" class="ball-label">
-          READY TO DRAW
         </div>
       </div>
     </section>
 
-    <div class="controls">
-      <button id="drawButton">Draw Ball</button>
-      <button id="resetButton" class="secondary">Reset Game</button>
-    </div>
+    <section class="controls-panel">
+      <div id="ballLabel" class="ball-label" aria-live="polite"></div>
+      <div id="status" class="status" aria-live="polite">Game ready.</div>
 
-    <p id="status" class="status" aria-live="polite"></p>
+      <div class="buttons">
+        <button id="drawButton" aria-label="Draw ball" title="Draw ball">▶️</button>
+        <button
+          id="resetButton"
+          class="secondary"
+          aria-label="Reset game"
+          title="Reset game"
+        >🧹</button>
+      </div>
+    </section>
   </main>
 
   <script>
     const numberBoard = document.getElementById("numberBoard");
+    const ballWrapper = document.getElementById("ballWrapper");
     const ball = document.getElementById("ball");
     const ballNumber = document.getElementById("ballNumber");
     const ballLabel = document.getElementById("ballLabel");
@@ -364,6 +393,7 @@
 
     let remainingNumbers = [];
     let drawnNumbers = [];
+    let labelTimer;
 
     function getColumn(number) {
       if (number <= 15) return "b";
@@ -373,22 +403,16 @@
       return "o";
     }
 
-    function getColumnName(column) {
-      return column.toUpperCase();
-    }
-
     function createNumberBoard() {
       numberBoard.innerHTML = "";
 
       for (let number = 1; number <= 75; number++) {
-        const numberCell = document.createElement("div");
-
-        numberCell.className = "number";
-        numberCell.id = `number-${number}`;
-        numberCell.textContent = number;
-        numberCell.setAttribute("aria-label", `Number ${number}`);
-
-        numberBoard.appendChild(numberCell);
+        const cell = document.createElement("div");
+        cell.className = "number";
+        cell.id = `number-${number}`;
+        cell.textContent = number;
+        cell.setAttribute("aria-label", `Number ${number}`);
+        numberBoard.appendChild(cell);
       }
     }
 
@@ -397,76 +421,79 @@
 
       for (let i = shuffled.length - 1; i > 0; i--) {
         const randomIndex = Math.floor(Math.random() * (i + 1));
-
-        [shuffled[i], shuffled[randomIndex]] = [
-          shuffled[randomIndex],
-          shuffled[i]
-        ];
+        [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
       }
 
       return shuffled;
     }
 
-    function resetGame() {
+    function startNewGame() {
       remainingNumbers = shuffle(
         Array.from({ length: 75 }, (_, index) => index + 1)
       );
-
       drawnNumbers = [];
 
-      document.querySelectorAll(".number.drawn").forEach((cell) => {
+      numberBoard.querySelectorAll(".number.drawn").forEach((cell) => {
         cell.className = "number";
       });
 
+      clearTimeout(labelTimer);
+      ballWrapper.classList.remove("animate");
       ball.className = "ball";
       ballNumber.textContent = "?";
-      ballLabel.textContent = "READY TO DRAW";
+      ballLabel.classList.remove("hidden");
+      ballLabel.textContent = "";
       drawButton.disabled = false;
-      status.textContent = "Game reset. Ready to draw.";
+      status.textContent = "Game ready.";
     }
 
     function drawBall() {
-      if (remainingNumbers.length === 0) {
-        ballLabel.textContent = "ALL NUMBERS DRAWN";
-        drawButton.disabled = true;
-        return;
-      }
+      if (remainingNumbers.length === 0) return;
+
+      // Hide synchronously before changing the label text.
+      ballLabel.classList.add("hidden");
+      clearTimeout(labelTimer);
 
       const selectedNumber = remainingNumbers.pop();
       const column = getColumn(selectedNumber);
-      const numberCell = document.getElementById(
-        `number-${selectedNumber}`
-      );
+      const cell = document.getElementById(`number-${selectedNumber}`);
 
       drawnNumbers.push(selectedNumber);
-
-      numberCell.classList.add("drawn", column);
+      cell.classList.add("drawn", column);
 
       ball.className = `ball ${column}`;
-      ball.classList.remove("animate");
-
-      // Restart the animation every time a ball is drawn
-      void ball.offsetWidth;
-      ball.classList.add("animate");
-
       ballNumber.textContent = selectedNumber;
-      ballLabel.textContent =
-        `${getColumnName(column)} ${selectedNumber}`;
+      ballLabel.textContent = `${column.toUpperCase()} ${selectedNumber}`;
 
-      status.textContent =
-        `${drawnNumbers.length} of 75 numbers drawn.`;
+      status.textContent = `${drawnNumbers.length}/75`;
 
       if (remainingNumbers.length === 0) {
         drawButton.disabled = true;
         ballLabel.textContent += " — FINAL BALL";
       }
+
+      // Restart both animations so the wrapper moves while the ball spins.
+      ballWrapper.classList.remove("animate");
+      ball.classList.remove("animate");
+      void ball.offsetWidth;
+      ballWrapper.classList.add("animate");
+      ball.classList.add("animate");
+
+      labelTimer = setTimeout(() => {
+        ballLabel.classList.remove("hidden");
+      }, 1000);
+    }
+
+    function resetGame() {
+      if (!window.confirm("Reset?")) return;
+      startNewGame();
     }
 
     drawButton.addEventListener("click", drawBall);
     resetButton.addEventListener("click", resetGame);
 
     createNumberBoard();
-    resetGame();
+    startNewGame();
   </script>
 </body>
 </html>

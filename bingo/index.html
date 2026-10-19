@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Casino Bingo Card Generator</title>
+  <title id="pageTitle">Casino Bingo Card Generator</title>
 
   <style>
     :root {
@@ -42,7 +42,8 @@
     }
 
     .game-container {
-      width: min(100%, 680px);
+max-width: 400px;
+width: 100%;
       padding: 28px;
       text-align: center;
       border: 3px solid var(--gold);
@@ -51,6 +52,23 @@
       box-shadow:
         0 18px 45px rgba(0, 0, 0, 0.4),
         inset 0 0 25px rgba(255, 255, 255, 0.05);
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 10px;
+    }
+
+    .lang-select {
+      padding: 6px 12px;
+      border: 2px solid var(--gold);
+      border-radius: 999px;
+      background: #02301d;
+      color: var(--gold);
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
     }
 
     h1 {
@@ -96,33 +114,17 @@
       text-shadow: 1px 2px 2px rgba(0, 0, 0, 0.4);
     }
 
-    .header-b {
-      background: #d83b3b;
-    }
-
-    .header-i {
-      background: #db961d;
-    }
-
-    .header-n {
-      background: #188aca;
-    }
-
-    .header-g {
-      background: #35933b;
-    }
-
-    .header-o {
-      background: #8a4fc7;
-    }
+    .header-b { background: #d83b3b; }
+    .header-i { background: #db961d; }
+    .header-n { background: #188aca; }
+    .header-g { background: #35933b; }
+    .header-o { background: #8a4fc7; }
 
     .cell {
       aspect-ratio: 1 / 1;
       padding: 5px;
       color: #173d2b;
       background: var(--card-cream);
-
-      /* Larger bingo numbers */
       font-size: clamp(1.15rem, 5.5vw, 2.1rem);
       font-weight: bold;
       line-height: 1.15;
@@ -142,30 +144,11 @@
       filter: brightness(1.08);
     }
 
-    .cell.selected.col-b {
-      color: white;
-      background: #d83b3b;
-    }
-
-    .cell.selected.col-i {
-      color: white;
-      background: #db961d;
-    }
-
-    .cell.selected.col-n {
-      color: white;
-      background: #188aca;
-    }
-
-    .cell.selected.col-g {
-      color: white;
-      background: #35933b;
-    }
-
-    .cell.selected.col-o {
-      color: white;
-      background: #8a4fc7;
-    }
+    .cell.selected.col-b { color: white; background: #d83b3b; }
+    .cell.selected.col-i { color: white; background: #db961d; }
+    .cell.selected.col-n { color: white; background: #188aca; }
+    .cell.selected.col-g { color: white; background: #35933b; }
+    .cell.selected.col-o { color: white; background: #8a4fc7; }
 
     .cell.selected {
       box-shadow:
@@ -176,7 +159,7 @@
     .free-space {
       color: white;
       background: #bd2630 !important;
-      font-size: clamp(0.8rem, 3vw, 1.1rem);
+      font-size: clamp(0.7rem, 2.6vw, 1rem);
       cursor: default;
     }
 
@@ -224,42 +207,28 @@
     }
 
     @media (max-width: 500px) {
-      body {
-        padding: 12px;
-      }
-
-      .game-container {
-        padding: 16px 10px;
-      }
-
-      .bingo-card {
-        gap: 4px;
-        padding: 6px;
-        border-width: 3px;
-      }
-
-      .cell,
-      .column-header {
-        border-radius: 5px;
-      }
-
-      /* Extra-large numbers on phones */
-      .cell {
-        font-size: clamp(1.35rem, 6.5vw, 2.2rem);
-        padding: 2px;
-      }
-
-      .free-space {
-        font-size: clamp(0.85rem, 3.4vw, 1.15rem);
-      }
+      body { padding: 12px; }
+      .game-container { padding: 16px 10px; }
+      .bingo-card { gap: 4px; padding: 6px; border-width: 3px; }
+      .cell, .column-header { border-radius: 5px; }
+      .cell { font-size: clamp(1.35rem, 6.5vw, 2.2rem); padding: 2px; }
+      .free-space { font-size: clamp(0.75rem, 3vw, 1.05rem); }
     }
   </style>
 </head>
 
 <body>
   <main class="game-container">
+    <div class="top-bar">
+      <select id="langSelect" class="lang-select" aria-label="Select Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
+
     <h1>BINGO</h1>
-    <p class="subtitle">
+    <p id="subtitle" class="subtitle">
       Click a square to highlight it with its column color.
     </p>
 
@@ -280,69 +249,120 @@
   </main>
 
   <script>
+    // Translations Dictionary
+    const translations = {
+      en: {
+        title: "Casino Bingo Card Generator",
+        subtitle: "Click a square to highlight it with its column color.",
+        generate: "Generate New Card",
+        clear: "Clear Marks",
+        free: "FREE",
+        noMarks: "No squares marked.",
+        markedSingle: "1 square marked.",
+        markedMultiple: (count) => `${count} squares marked.`
+      },
+      es: {
+        title: "Generador de Cartón de Bingo de Casino",
+        subtitle: "Haz clic en una casilla para resaltarla con el color de su columna.",
+        generate: "Generar Nuevo Cartón",
+        clear: "Borrar Marcas",
+        free: "GRATIS",
+        noMarks: "Ninguna casilla marcada.",
+        markedSingle: "1 casilla marcada.",
+        markedMultiple: (count) => `${count} casillas marcadas.`
+      },
+      zh: {
+        title: "賭場賓果卡生成器",
+        subtitle: "點擊方格即可用其直行顏色反白標記。",
+        generate: "生成新卡片",
+        clear: "清除標記",
+        free: "免費",
+        noMarks: "未標記任何方格。",
+        markedSingle: "已標記 1 個方格。",
+        markedMultiple: (count) => `已標記 ${count} 個方格。`
+      }
+    };
+
+    // Language Selection Logic
+    function determineLanguage() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryLang = urlParams.get("lang");
+      if (translations[queryLang]) {
+        localStorage.setItem("preferred_lang", queryLang);
+        return queryLang;
+      }
+
+      const storedLang = localStorage.getItem("preferred_lang");
+      if (translations[storedLang]) {
+        return storedLang;
+      }
+
+      const browserLang = navigator.language || navigator.userLanguage || "";
+      if (browserLang.toLowerCase().startsWith("es")) return "es";
+      if (browserLang.toLowerCase().startsWith("zh")) return "zh";
+
+      return "en";
+    }
+
+    let currentLang = determineLanguage();
+    const langSelect = document.getElementById("langSelect");
+    langSelect.value = currentLang;
+
+    langSelect.addEventListener("change", (e) => {
+      currentLang = e.target.value;
+      localStorage.setItem("preferred_lang", currentLang);
+      
+      // Update URL query string without reloading page
+      const url = new URL(window.location);
+      url.searchParams.set("lang", currentLang);
+      window.history.replaceState({}, "", url);
+
+      updateTexts();
+      updateStatus();
+    });
+
+    function t(key) {
+      return translations[currentLang][key];
+    }
+
+    function updateTexts() {
+      document.documentElement.lang = currentLang;
+      document.getElementById("pageTitle").textContent = t("title");
+      document.getElementById("subtitle").textContent = t("subtitle");
+      document.getElementById("generateButton").textContent = t("generate");
+      document.getElementById("clearButton").textContent = t("clear");
+      
+      // Update free space if card exists
+      const freeSpaceCell = document.querySelector(".free-space");
+      if (freeSpaceCell) {
+        freeSpaceCell.textContent = t("free");
+      }
+    }
+
     const bingoCard = document.getElementById("bingoCard");
     const generateButton = document.getElementById("generateButton");
     const clearButton = document.getElementById("clearButton");
     const status = document.getElementById("status");
 
     const columns = [
-      {
-        letter: "B",
-        headerClass: "header-b",
-        cellClass: "col-b",
-        min: 1,
-        max: 15
-      },
-      {
-        letter: "I",
-        headerClass: "header-i",
-        cellClass: "col-i",
-        min: 16,
-        max: 30
-      },
-      {
-        letter: "N",
-        headerClass: "header-n",
-        cellClass: "col-n",
-        min: 31,
-        max: 45
-      },
-      {
-        letter: "G",
-        headerClass: "header-g",
-        cellClass: "col-g",
-        min: 46,
-        max: 60
-      },
-      {
-        letter: "O",
-        headerClass: "header-o",
-        cellClass: "col-o",
-        min: 61,
-        max: 75
-      }
+      { letter: "B", headerClass: "header-b", cellClass: "col-b", min: 1, max: 15 },
+      { letter: "I", headerClass: "header-i", cellClass: "col-i", min: 16, max: 30 },
+      { letter: "N", headerClass: "header-n", cellClass: "col-n", min: 31, max: 45 },
+      { letter: "G", headerClass: "header-g", cellClass: "col-g", min: 46, max: 60 },
+      { letter: "O", headerClass: "header-o", cellClass: "col-o", min: 61, max: 75 }
     ];
 
     function shuffle(array) {
       const shuffled = [...array];
-
       for (let i = shuffled.length - 1; i > 0; i--) {
         const randomIndex = Math.floor(Math.random() * (i + 1));
-
-        [shuffled[i], shuffled[randomIndex]] = [
-          shuffled[randomIndex],
-          shuffled[i]
-        ];
+        [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
       }
-
       return shuffled;
     }
 
     function createNumberPool(min, max) {
-      return Array.from(
-        { length: max - min + 1 },
-        (_, index) => min + index
-      );
+      return Array.from({ length: max - min + 1 }, (_, index) => min + index);
     }
 
     function generateCard() {
@@ -354,31 +374,24 @@
 
       columns.forEach((column) => {
         const header = document.createElement("div");
-
         header.className = `column-header ${column.headerClass}`;
         header.textContent = column.letter;
-
         bingoCard.appendChild(header);
       });
 
       for (let row = 0; row < 5; row++) {
         columns.forEach((column, columnIndex) => {
           const cell = document.createElement("div");
-
           cell.className = `cell ${column.cellClass}`;
 
           if (row === 2 && columnIndex === 2) {
-            cell.textContent = "FREE";
+            cell.textContent = t("free");
             cell.classList.add("free-space");
             cell.setAttribute("aria-label", "Free space");
           } else {
             const number = numbersByColumn[columnIndex][row];
-
             cell.textContent = number;
-            cell.setAttribute(
-              "aria-label",
-              `${column.letter} ${number}`
-            );
+            cell.setAttribute("aria-label", `${column.letter} ${number}`);
 
             cell.addEventListener("click", () => {
               cell.classList.toggle("selected");
@@ -394,30 +407,28 @@
     }
 
     function clearMarks() {
-      document
-        .querySelectorAll(".cell.selected")
-        .forEach((cell) => {
-          cell.classList.remove("selected");
-        });
-
+      document.querySelectorAll(".cell.selected").forEach((cell) => {
+        cell.classList.remove("selected");
+      });
       updateStatus();
     }
 
     function updateStatus() {
-      const markedCount =
-        document.querySelectorAll(".cell.selected").length;
-
+      const markedCount = document.querySelectorAll(".cell.selected").length;
       if (markedCount === 0) {
-        status.textContent = "No squares marked.";
+        status.textContent = t("noMarks");
+      } else if (markedCount === 1) {
+        status.textContent = t("markedSingle");
       } else {
-        status.textContent =
-          `${markedCount} square${markedCount === 1 ? "" : "s"} marked.`;
+        status.textContent = t("markedMultiple")(markedCount);
       }
     }
 
     generateButton.addEventListener("click", generateCard);
     clearButton.addEventListener("click", clearMarks);
 
+    // Initial load setup
+    updateTexts();
     generateCard();
   </script>
 </html>
