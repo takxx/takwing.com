@@ -120,7 +120,11 @@ const colors = {
   256:  ["#b47c47", "#fff0d2"], // ochre
   512:  ["#6c7390", "#fff0d2"], // slate blue
   1024: ["#a85e45", "#fff0d2"], // terracotta
-  2048: ["#c29a4b", "#3e2915"]  // golden wood
+  2048: ["#c29a4b", "#3e2915"], // golden wood
+  4096:  ["#7a5c7d", "#fff0d2"], // muted plum
+  8192:  ["#4f7d5c", "#fff0d2"], // deep moss
+  16384: ["#8c6a4a", "#fff0d2"], // warm chestnut
+  32768: ["#3f5d6b", "#fff0d2"] // deep slate teal
 };
 
   function draw() {

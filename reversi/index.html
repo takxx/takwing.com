@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reversi</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="title-block">
+        <h1 id="gameTitle" data-i18n="title">Reversi</h1>
+      </div>
+      <button id="newGameButton" class="primary-button" data-i18n="newGame">
+        New game
+      </button>
+    </header>
+
+    <section class="game-layout">
+      <section class="board-area">
+        <div class="board-wrapper">
+          <svg
+            id="board"
+            class="board-svg"
+            role="grid"
+            aria-label="Reversi board"
+          ></svg>
+        </div>
+        <p id="hintMessage" class="hint-message" aria-live="polite"></p>
+      </section>
+
+      <aside class="panel information-panel">
+        <section class="score-section">
+          <h2 data-i18n="currentScore">Current pieces</h2>
+
+          <div class="score-row">
+            <div class="player-label">
+              <span class="piece black-piece"></span>
+              <span id="playerOneLabel">Black</span>
+            </div>
+            <strong id="playerOneScore">2</strong>
+          </div>
+
+          <div class="score-row">
+            <div class="player-label">
+              <span class="piece white-piece"></span>
+              <span id="playerTwoLabel">White</span>
+            </div>
+            <strong id="playerTwoScore">2</strong>
+          </div>
+        </section>
+
+        <section class="record-section" id="recordSection">
+          <h2 data-i18n="record">Game record</h2>
+
+          <div class="record-row">
+            <span data-i18n="won">Won</span>
+            <strong id="wins">0</strong>
+          </div>
+
+          <div class="record-row">
+            <span data-i18n="lost">Lost</span>
+            <strong id="losses">0</strong>
+          </div>
+
+          <div class="record-row">
+            <span data-i18n="drawn">Drawn</span>
+            <strong id="draws">0</strong>
+          </div>
+        </section>
+
+        <section class="controls-section">
+          <button id="hintButton" class="secondary-button" data-i18n="hint">
+            Hint
+          </button>
+        </section>
+
+        <section class="status-section">
+          <h2 data-i18n="status">Status</h2>
+          <p id="statusText" aria-live="polite"></p>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <div id="setupOverlay" class="overlay" role="dialog" aria-modal="true">
+    <div class="overlay-card">
+       <div class="instructions">
+        <h3 data-i18n="instructionsTitle">How to play</h3>
+        <p data-i18n="instructions1">
+          Place a disk so that it traps one or more opponent disks between the
+          new disk and one of your existing disks.
+        </p>
+        <p data-i18n="instructions2">
+          All trapped opponent disks are turned to your colour. If a player has
+          no legal move, they must pass. The game ends when neither player can
+          move; the player with more disks wins.
+        </p>
+      </div>
+      <h2 data-i18n="setupTitle">New game</h2>
+
+      <label class="field">
+        <span data-i18n="gameMode">Game mode</span>
+        <select id="modeSelect">
+          <option value="hva" data-i18n="humanVsAi">Human vs AI</option>
+          <option value="hh" data-i18n="twoHumans">Two human players</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span data-i18n="boardConfiguration">Board configuration</span>
+        <select id="boardSelect">
+          <option value="board4" data-i18n="standardBoard">Standard</option>
+          <option value="board6" data-i18n="hexagonalBoard">Hexagonal</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span data-i18n="language">Language</span>
+        <select id="languageSelect">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-Hant">繁體中文</option>
+        </select>
+      </label>
+
+      <button id="startGameButton" class="primary-button" data-i18n="startGame">
+        Start game
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
