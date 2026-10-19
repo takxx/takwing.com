@@ -223,6 +223,7 @@ startGame({ mode, boardVariant }) {
       }
 
       saveRecord(this.record);
+      this.updateScores();
 
       const result =
         humanCount > aiCount ? t("youWin") :

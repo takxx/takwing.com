@@ -1,25 +1,1 @@
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="0 0 24 24" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" fill="#b9dec8" stroke="#b9dec8">
-<g id="SVGRepo_bgCarrier" stroke-width="0"/>
-<g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
-<g id="SVGRepo_iconCarrier">
-<defs>
-<style>.cls-1{fill:none;stroke:#b9dec8;stroke-miterlimit:10;stroke-width:1.88px;}</style>
-</defs>
-<path class="cls-1" d="M14.8,4.83a3.23,3.23,0,0,0,0-.82,2.82,2.82,0,0,0-5.61.43,2.55,2.55,0,0,0,0,.39,4.53,4.53,0,0,1-.84,3.42A6.2,6.2,0,0,0,7.16,12c0,3.12,2.17,5.65,4.84,5.65S16.84,15.1,16.84,12a6.18,6.18,0,0,0-1.2-3.73A4.53,4.53,0,0,1,14.8,4.83Z"/>
-<line class="cls-1" x1="16.71" y1="1.62" x2="19.53" y2="5.38"/>
-<line class="cls-1" x1="19.53" y1="0.68" x2="19.53" y2="5.38"/>
-<line class="cls-1" x1="23" y1="18.51" x2="18.34" y2="17.84"/>
-<line class="cls-1" x1="21.67" y1="21.17" x2="18.34" y2="17.84"/>
-<path class="cls-1" d="M15.5,15.87,19,14.13a.87.87,0,0,1,1,.16h0a.86.86,0,0,1,.09,1.1l-1.72,2.45L19,22.5"/>
-<path class="cls-1" d="M8.5,15.87,5,14.13a.87.87,0,0,0-1,.16H4a.86.86,0,0,0-.09,1.1l1.72,2.45L5,22.5"/>
-<line class="cls-1" x1="1" y1="18.51" x2="5.66" y2="17.84"/>
-<line class="cls-1" x1="2.33" y1="21.17" x2="5.66" y2="17.84"/>
-<line class="cls-1" x1="4.99" y1="22.51" x2="5.66" y2="17.84"/>
-<line class="cls-1" x1="4.47" y1="0.68" x2="4.47" y2="5.38"/>
-<line class="cls-1" x1="7.29" y1="1.62" x2="4.47" y2="5.38"/>
-<path class="cls-1" d="M22.36,1.62,19.53,5.38,20.39,8a1.51,1.51,0,0,1,.08.51h0a1.61,1.61,0,0,1-1.62,1.62H16.57"/>
-<path class="cls-1" d="M1.5,1.62,4.33,5.38,3.47,8a1.52,1.52,0,0,0-.09.51h0A1.62,1.62,0,0,0,5,10.09H7.29"/>
-</g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 36 36"><title>frog</title><path fill="#c6e5b3" d="M36 22c0 7.456-8.059 12-18 12S0 29.456 0 22S8.059 7 18 7s18 7.544 18 15"/><path fill="#77b255" d="M31.755 12.676A5.99 5.99 0 0 0 34 8a6 6 0 0 0-11.851-1.315A11.8 11.8 0 0 0 18 5.927c-1.465 0-2.861.275-4.149.758A6 6 0 0 0 2 8c0 1.891.877 3.576 2.245 4.676C1.6 15.356 0 18.685 0 22c0 7.456 8.059 1 18 1s18 6.456 18-1c0-3.315-1.6-6.644-4.245-9.324"/><circle cx="7.5" cy="7.5" r="3.5" fill="#fff"/><circle cx="7.5" cy="7.5" r="1.5" fill="#292f33"/><circle cx="28.5" cy="7.5" r="3.5" fill="#fff"/><circle cx="28.5" cy="7.5" r="1.5" fill="#292f33"/><circle cx="14" cy="20" r="1" fill="#5c913b"/><circle cx="22" cy="20" r="1" fill="#5c913b"/></svg>
