@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>15 Puzzle</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1 id="title">15 Puzzle</h1>
+      <button id="new-game" type="button">New game</button>
+    </header>
+
+    <div id="board" role="group" aria-label="15 puzzle board"></div>
+
+    <section class="controls">
+      <p id="instructions">
+        Move a tile next to the empty space by tapping it or sliding it.
+      </p>
+      <label for="language">
+        <span id="language-label">Language</span>
+        <select id="language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh">中文</option>
+        </select>
+      </label>
+      <p id="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

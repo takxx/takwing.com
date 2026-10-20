@@ -1,201 +1,35 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-<svg
-    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    xmlns="http://www.w3.org/2000/svg"
-    xmlns:cc="http://creativecommons.org/ns#"
-    xmlns:dc="http://purl.org/dc/elements/1.1/"
-    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-    xmlns:svg="http://www.w3.org/2000/svg"
-    xmlns:ns1="http://sozi.baierouge.fr"
-    xmlns:xlink="http://www.w3.org/1999/xlink"
-    id="svg2481"
-    sodipodi:docname="tangram-24_yves_guillou_01.svg"
-    inkscape:export-filename="/home/yves/Bureau/openclipart/tangram-24_yves_guillou_01.png"
-    viewBox="0 0 127.56 130.6"
-    sodipodi:version="0.32"
-    inkscape:export-xdpi="120"
-    version="1.0"
-    inkscape:output_extension="org.inkscape.output.svg.inkscape"
-    inkscape:export-ydpi="120"
-    inkscape:version="0.45+devel"
-    sodipodi:docbase="/home/yves/Desktop"
-  >
-  <sodipodi:namedview
-      id="base"
-      bordercolor="#666666"
-      inkscape:pageshadow="2"
-      inkscape:window-width="838"
-      pagecolor="#ffffff"
-      inkscape:zoom="0.35"
-      inkscape:window-x="0"
-      showgrid="false"
-      borderopacity="1.0"
-      inkscape:current-layer="layer1"
-      inkscape:cx="375"
-      inkscape:cy="504.4265"
-      inkscape:window-y="12"
-      inkscape:window-height="694"
-      inkscape:pageopacity="0.0"
-      inkscape:document-units="px"
-  />
-  <g
-      id="layer1"
-      inkscape:label="Calque 1"
-      inkscape:groupmode="layer"
-      transform="translate(-56.935 -92.777)"
-    >
-    <g
-        id="g2470"
-        transform="translate(-1756.6 -1481.7)"
-      >
-      <path
-          id="path4794"
-          sodipodi:nodetypes="cccc"
-          style="opacity:0.94;fill-rule:evenodd;fill:#000000"
-          d="m1826.6 1574.5v0.2l0.2-0.2h-0.2z"
-      />
-      <path
-          id="path4795"
-          sodipodi:nodetypes="cccc"
-          style="opacity:0.94;stroke-linejoin:round;fill-rule:evenodd;stroke:#000000;stroke-width:.35896;fill:#009a00"
-          d="m1877.3 1704.9h-63.6v-63.6l63.6 63.6z"
-      />
-      <path
-          id="path4796"
-          sodipodi:nodetypes="cccc"
-          style="opacity:0.94;fill-rule:evenodd;fill:#000000"
-          d="m1813.9 1578.3v0.2l0.2-0.2h-0.2z"
-      />
-      <path
-          id="path4797"
-          sodipodi:nodetypes="cccc"
-          style="opacity:.87037;stroke-linejoin:round;fill-rule:evenodd;stroke:#d22f00;stroke-width:.35896;fill:#ea6f00"
-          d="m1940.9 1577.7l-63.6 63.6-63.6-63.6h127.2z"
-      />
-      <path
-          id="path4798"
-          sodipodi:nodetypes="cccc"
-          style="stroke-linejoin:round;fill-rule:evenodd;stroke:#000000;stroke-linecap:round;stroke-width:.35896;fill:#eae500"
-          d="m1877.3 1704.9l31.8-31.8 31.8 31.8h-63.6z"
-      />
-      <path
-          id="path4799"
-          sodipodi:nodetypes="ccccc"
-          style="stroke-linejoin:round;fill-rule:evenodd;stroke:#000000;stroke-width:.38139;fill:#e500ce"
-          d="m1813.7 1577.7v63.6l31.8 31.8v-63.6l-31.8-31.8z"
-      />
-      <path
-          id="path4800"
-          sodipodi:nodetypes="cccc"
-          style="fill-rule:evenodd;stroke:#000000;stroke-width:.38139;fill:#0040e5"
-          d="m1845.5 1609.5l31.8 31.8-31.8 31.8v-63.6z"
-      />
-      <path
-          id="path4801"
-          sodipodi:nodetypes="ccccc"
-          style="fill-rule:evenodd;stroke:#000000;stroke-width:.38139;fill:#00e5a5"
-          d="m1845.5 1673.1l31.8-31.8 31.8 31.8-31.8 31.8-31.8-31.8z"
-      />
-      <path
-          id="path4802"
-          sodipodi:nodetypes="cccc"
-          style="stroke-linejoin:round;fill-rule:evenodd;stroke:#000000;stroke-width:.35896;fill:#68bce7"
-          d="m1940.9 1577.7v127.2l-63.6-63.6 63.6-63.6z"
-      />
-    </g
-    >
-  </g
-  >
-  <metadata
-    >
-    <rdf:RDF
-      >
-      <cc:Work
-        >
-        <dc:format
-          >image/svg+xml</dc:format
-        >
-        <dc:type
-            rdf:resource="http://purl.org/dc/dcmitype/StillImage"
-        />
-        <cc:license
-            rdf:resource="http://creativecommons.org/licenses/publicdomain/"
-        />
-        <dc:publisher
-          >
-          <cc:Agent
-              rdf:about="http://openclipart.org/"
-            >
-            <dc:title
-              >Openclipart</dc:title
-            >
-          </cc:Agent
-          >
-        </dc:publisher
-        >
-        <dc:title
-          >tangram</dc:title
-        >
-        <dc:date
-          >2008-01-03T20:22:04</dc:date
-        >
-        <dc:description
-        />
-        <dc:source
-          >https://openclipart.org/detail/10605/tangram-by-yves_guillou-10605</dc:source
-        >
-        <dc:creator
-          >
-          <cc:Agent
-            >
-            <dc:title
-              >yves_guillou</dc:title
-            >
-          </cc:Agent
-          >
-        </dc:creator
-        >
-        <dc:subject
-          >
-          <rdf:Bag
-            >
-            <rdf:li
-              >colouring book</rdf:li
-            >
-            <rdf:li
-              >game</rdf:li
-            >
-            <rdf:li
-              >sign</rdf:li
-            >
-            <rdf:li
-              >tangram</rdf:li
-            >
-          </rdf:Bag
-          >
-        </dc:subject
-        >
-      </cc:Work
-      >
-      <cc:License
-          rdf:about="http://creativecommons.org/licenses/publicdomain/"
-        >
-        <cc:permits
-            rdf:resource="http://creativecommons.org/ns#Reproduction"
-        />
-        <cc:permits
-            rdf:resource="http://creativecommons.org/ns#Distribution"
-        />
-        <cc:permits
-            rdf:resource="http://creativecommons.org/ns#DerivativeWorks"
-        />
-      </cc:License
-      >
-    </rdf:RDF
-    >
-  </metadata
-  >
-</svg
->
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="127.56" height="130.6" viewBox="0 0 127.56 130.6" xml:space="preserve">
+<desc>Created with Fabric.js 6.5.3</desc>
+<defs>
+</defs>
+<g transform="matrix(1 0 0 1 63.78 65.3)"  >
+<g style=""   >
+		<g transform="matrix(0.9673 0 0 0.9673 -30.7031 30.7669)" id="path4795"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: round; stroke-miterlimit: 4; fill: rgb(0,154,0); fill-rule: evenodd; opacity: 0.94;" vector-effect="non-scaling-stroke"  transform=" translate(-1845.5, -1673.1)" d="M 1877.3 1704.9 L 1813.7 1704.9 L 1813.7 1641.3 L 1877.3 1704.9 Z" stroke-linecap="round" />
+</g>
+		<g transform="matrix(0.9673 0 0 0.9673 -61.4844 -61.1504)" id="path4796"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(0,0,0); fill-rule: evenodd; opacity: 0.94;" vector-effect="non-scaling-stroke"  transform=" translate(-1814, -1578.4)" d="M 1813.9 1578.3 L 1813.9 1578.5 L 1814.1 1578.3 L 1813.9 1578.3 Z" stroke-linecap="round" />
+</g>
+		<g transform="matrix(0.9673 0 0 0.9673 0.0583 -30.756)" id="path4797"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: round; stroke-miterlimit: 4; fill: rgb(234,111,0); fill-rule: evenodd; opacity: 0.87037;" vector-effect="non-scaling-stroke"  transform=" translate(-1877.3, -1609.5)" d="M 1940.9 1577.7 L 1877.3 1641.3 L 1813.7 1577.7 L 1940.9 1577.7 Z" stroke-linecap="round" />
+</g>
+		<g transform="matrix(0.9673 0 0 0.9673 30.8197 46.1476)" id="path4798"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: round; stroke-dashoffset: 0; stroke-linejoin: round; stroke-miterlimit: 4; fill: rgb(234,229,0); fill-rule: evenodd; opacity: 1;" vector-effect="non-scaling-stroke"  transform=" translate(-1909.1, -1689)" d="M 1877.3 1704.9 L 1909.1 1673.1 L 1940.9 1704.9 L 1877.3 1704.9 Z" stroke-linecap="round" />
+</g>
+		<g transform="matrix(0.9673 0 0 0.9673 -46.0947 -15.3861)" id="path4799"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: round; stroke-miterlimit: 4; fill: rgb(229,0,206); fill-rule: evenodd; opacity: 1;" vector-effect="non-scaling-stroke"  transform=" translate(-1829.6, -1625.4)" d="M 1813.7 1577.7 L 1813.7 1641.3 L 1845.5 1673.1 L 1845.5 1609.5 L 1813.7 1577.7 Z" stroke-linecap="round" />
+</g>
+		<g transform="matrix(0.9673 0 0 0.9673 -15.3333 -0.0054)" id="path4800"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(0,64,229); fill-rule: evenodd; opacity: 1;" vector-effect="non-scaling-stroke"  transform=" translate(-1861.4, -1641.3)" d="M 1845.5 1609.5 L 1877.3 1641.3 L 1845.5 1673.1 L 1845.5 1609.5 Z" stroke-linecap="round" />
+</g>
+		<g transform="matrix(0.9673 0 0 0.9673 0.0474 30.756)" id="path4801"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(0,229,165); fill-rule: evenodd; opacity: 1;" vector-effect="non-scaling-stroke"  transform=" translate(-1877.3, -1673.1)" d="M 1845.5 1673.1 L 1877.3 1641.3 L 1909.1 1673.1 L 1877.3 1704.9 L 1845.5 1673.1 Z" stroke-linecap="round" />
+</g>
+		<g transform="matrix(0.9673 0 0 0.9673 30.8197 0.0054)" id="path4802"  >
+<path style="stroke: rgb(0,0,0); stroke-width: 2; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: round; stroke-miterlimit: 4; fill: rgb(104,188,231); fill-rule: evenodd; opacity: 1;" vector-effect="non-scaling-stroke"  transform=" translate(-1909.1, -1641.3)" d="M 1940.9 1577.7 L 1940.9 1704.9 L 1877.3 1641.3 L 1940.9 1577.7 Z" stroke-linecap="round" />
+</g>
+</g>
+</g>
+</svg>
