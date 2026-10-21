@@ -19,6 +19,8 @@ const elements = {
   totalHolesElement: document.getElementById("totalHoles"),
   centralHolesElement: document.getElementById("centralHoles"),
   armHolesElement: document.getElementById("armHoles"),
+  winCountElement: document.getElementById("winCount"),
+  lossCountElement: document.getElementById("lossCount"),
 };
 
 for (const [name, element] of Object.entries(elements)) {

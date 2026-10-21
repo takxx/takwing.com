@@ -51,6 +51,8 @@ export function createRenderer(elements, handlers) {
     totalHolesElement,
     centralHolesElement,
     armHolesElement,
+    winCountElement,
+    lossCountElement,
   } = elements;
 
   let lastSnapshot = null;
@@ -382,6 +384,11 @@ export function createRenderer(elements, handlers) {
       : t("selectOwnMarbleWithMoves");
   }
 
+  function updateWinLossCount(snapshot) {
+    winCountElement.textContent = snapshot.persistentResults.wins;
+    lossCountElement.textContent = snapshot.persistentResults.losses;
+  }
+
   function render(snapshot) {
     lastSnapshot = snapshot;
 
@@ -391,6 +398,7 @@ export function createRenderer(elements, handlers) {
     updateLegalDestinations(snapshot);
     updatePieces(snapshot);
     updateStatus(snapshot);
+    updateWinLossCount(snapshot);
   }
 
   function showCoordinateReadout(x, y) {

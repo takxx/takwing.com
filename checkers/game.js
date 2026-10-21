@@ -939,6 +939,7 @@ export function createGame({ opponentCount = 1 } = {}) {
       activePlayer,
       legalMovesForSelected,
       hasAnyLegalMove,
+      persistentResults: { ...persistentResults },
     };
   }
 
