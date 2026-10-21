@@ -7,14 +7,13 @@ const NEIGHBORS = [
   [1, -1]
 ];
 
-// The 6 pairs of adjacent neighbor directions around any cell that form Hex bridges
-const BRIDGE_PAIRS = [
-  [[-1, 0], [-1, 1]],
-  [[-1, 1], [0, 1]],
-  [[0, 1], [1, 0]],
-  [[1, 0], [1, -1]],
-  [[1, -1], [0, -1]],
-  [[0, -1], [-1, 0]]
+const BRIDGE_DATA = [
+  { offset: [-2, 1], gaps: [[-1, 0], [-1, 1]] },
+  { offset: [-1, 2], gaps: [[0, 1], [-1, 1]] },
+  { offset: [1, 1], gaps: [[1, 0], [0, 1]] },
+  { offset: [2, -1], gaps: [[1, 0], [1, -1]] },
+  { offset: [1, -2], gaps: [[0, -1], [1, -1]] },
+  { offset: [-1, -1], gaps: [[0, -1], [-1, 0]] }
 ];
 
 export function chooseComputerMove(board, player = "blue") {
@@ -24,7 +23,7 @@ export function chooseComputerMove(board, player = "blue") {
   }
 
   const opponent = otherPlayer(player);
-  const legalMoves = getLegalMoves(board);
+  const legalMoves = getPrunedLegalMoves(board, player);
 
   if (legalMoves.length === 0) return null;
 
@@ -37,10 +36,9 @@ export function chooseComputerMove(board, player = "blue") {
 
   // 2. Setup MCTS Root
   const root = createNode(player);
-  root.untried = rankMovesFast(board, player, Math.min(28, legalMoves.length));
+  root.untried = rankMovesFast(board, player, Math.min(25, legalMoves.length));
 
-  // Adaptive simulation count based on board size for optimal time/strength trade-off
-  const simulations = size >= 12 ? 1200 : size >= 9 ? 1500 : 1800;
+  const simulations = size >= 12 ? 1400 : size >= 9 ? 1800 : 2200;
 
   for (let simulation = 0; simulation < simulations; simulation++) {
     const position = board.map((row) => row.slice());
@@ -53,7 +51,7 @@ export function chooseComputerMove(board, player = "blue") {
         node.untried = rankMovesFast(
           position,
           node.toMove,
-          Math.min(14, getLegalMoves(position).length)
+          Math.min(14, getPrunedLegalMoves(position, node.toMove).length)
         );
       }
 
@@ -98,7 +96,6 @@ export function chooseComputerMove(board, player = "blue") {
     return legalMoves[Math.floor(Math.random() * legalMoves.length)];
   }
 
-  // Choose best child based on visit count and win rate tie-breaker
   root.children.sort((a, b) => {
     if (b.visits !== a.visits) return b.visits - a.visits;
     return (b.wins / Math.max(1, b.visits)) - (a.wins / Math.max(1, a.visits));
@@ -170,14 +167,14 @@ function rollout(board, firstPlayer) {
     }
 
     if (!move) {
-      const useOwnPath = opponentPathMoves.length === 0 || Math.random() < 0.8;
+      const useOwnPath = opponentPathMoves.length === 0 || Math.random() < 0.65;
       const preferred = useOwnPath ? ownPathMoves : opponentPathMoves;
       const fallback = useOwnPath ? opponentPathMoves : ownPathMoves;
       move = randomItem(preferred) || randomItem(fallback);
     }
 
-    if (!move) {
-      const remaining = getLegalMoves(board);
+    if (!move || Math.random() < 0.05) {
+      const remaining = getPrunedLegalMoves(board, player);
       move = randomItem(remaining);
     }
     if (!move) break;
@@ -192,61 +189,111 @@ function rollout(board, firstPlayer) {
   return otherPlayer(firstPlayer);
 }
 
-// Enhanced fast heuristic ranking with bridge creation and disruption
+// Dead Cell Pruning: filters out empty cells that are too far from active connection paths
+function getPrunedLegalMoves(board, player) {
+  const size = board.length;
+  const allMoves = getLegalMoves(board);
+  if (size <= 5 || allMoves.length < size * 2) return allMoves;
+
+  const opponent = otherPlayer(player);
+  const ownInfo = connectionInfo(board, player);
+  const oppInfo = connectionInfo(board, opponent);
+
+  const activeSet = new Set();
+  for (const [r, c] of ownInfo.path) activeSet.add(`${r},${c}`);
+  for (const [r, c] of oppInfo.path) activeSet.add(`${r},${c}`);
+
+  // Include neighbors of the active shortest paths to account for immediate maneuvering space
+  const extendedSet = new Set(activeSet);
+  for (const key of activeSet) {
+    const [r, c] = key.split(',').map(Number);
+    for (const [dr, dc] of NEIGHBORS) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === null) {
+        extendedSet.add(`${nr},${nc}`);
+      }
+    }
+    for (const { offset: [dr, dc], gaps } of BRIDGE_DATA) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === null) {
+        extendedSet.add(`${nr},${nc}`);
+      }
+    }
+  }
+
+  const pruned = [];
+  for (const [row, col] of allMoves) {
+    if (extendedSet.has(`${row},${col}`)) {
+      pruned.push([row, col]);
+    }
+  }
+
+  // Fallback if pruning is too aggressive on empty boards
+  return pruned.length > 0 ? pruned : allMoves;
+}
+
 function rankMovesFast(board, player, limit) {
   const size = board.length;
   const center = (size - 1) / 2;
   const opponent = otherPlayer(player);
+  const candidateMoves = getPrunedLegalMoves(board, player);
   const ranked = [];
 
-  for (let row = 0; row < size; row++) {
-    for (let col = 0; col < size; col++) {
-      if (board[row][col] !== null) continue;
+  for (const [row, col] of candidateMoves) {
+    if (board[row][col] !== null) continue;
 
-      let friendlyNeighbors = 0;
-      let bridgePotential = 0;
-      let disruptionScore = 0;
+    let bridgeCompletion = 0;
+    let bridgeDisruption = 0;
 
-      // Check direct neighbors
-      for (const [dr, dc] of NEIGHBORS) {
-        const nr = row + dr;
-        const nc = col + dc;
-        if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
-          if (board[nr][nc] === player) friendlyNeighbors++;
+    for (const { offset: [dr, dc], gaps } of BRIDGE_DATA) {
+      const tr = row + dr;
+      const tc = col + dc;
+      if (tr >= 0 && tr < size && tc >= 0 && tc < size) {
+        if (board[tr][tc] === player) {
+          let gapBlocked = false;
+          for (const [gdr, gdc] of gaps) {
+            const gr = row + gdr;
+            const gc = col + gdc;
+            if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+              if (board[gr][gc] === opponent) {
+                gapBlocked = true;
+                break;
+              }
+            }
+          }
+          if (!gapBlocked) {
+            bridgeCompletion += 2.5;
+          }
+        } else if (board[tr][tc] === opponent) {
+          let gapBlocked = false;
+          for (const [gdr, gdc] of gaps) {
+            const gr = row + gdr;
+            const gc = col + gdc;
+            if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+              if (board[gr][gc] === player) {
+                gapBlocked = true;
+                break;
+              }
+            }
+          }
+          if (!gapBlocked) {
+            bridgeDisruption += 4.0;
+          }
         }
       }
-
-      // Check bridge pairs for building own links and disrupting opponent alternate piece links
-      for (const [n1, n2] of BRIDGE_PAIRS) {
-        const r1 = row + n1[0], c1 = col + n1[1];
-        const r2 = row + n2[0], c2 = col + n2[1];
-
-        if (r1 >= 0 && r1 < size && c1 >= 0 && c1 < size &&
-            r2 >= 0 && r2 < size && c2 >= 0 && c2 < size) {
-          
-          if (board[r1][c1] === player && board[r2][c2] === player) {
-            bridgePotential++;
-          }
-          if (board[r1][c1] === opponent && board[r2][c2] === opponent) {
-            disruptionScore++;
-          }
-        }
-      }
-
-      // Distance from center preference
-      const centerDist = Math.abs(row - center) + Math.abs(col - center);
-      const goalProgress = player === "blue" ? row : col;
-      const positionalScore = (size - centerDist) * 0.1 + goalProgress * 0.05;
-
-      // Weighted score prioritizing opponent bridge disruption
-      const score = 
-        friendlyNeighbors * 1.5 + 
-        bridgePotential * 2.0 + 
-        disruptionScore * 3.5 + 
-        positionalScore;
-
-      ranked.push({ row, col, score });
     }
+
+    const centerDist = Math.abs(row - center) + Math.abs(col - center);
+    const positionalScore = (size - centerDist) * 0.25;
+
+    const score = 
+      bridgeCompletion * 3.0 + 
+      bridgeDisruption * 4.0 + 
+      positionalScore;
+
+    ranked.push({ row, col, score });
   }
 
   ranked.sort((a, b) => b.score - a.score);
@@ -327,6 +374,43 @@ function connectionInfo(board, player) {
           distances[nextIndex] = nextCost;
           previous[nextIndex] = index;
           buckets[nextCost].push(nextIndex);
+        }
+      }
+
+      for (const { offset: [dr, dc], gaps } of BRIDGE_DATA) {
+        const nextRow = row + dr;
+        const nextCol = col + dc;
+
+        if (
+          nextRow < 0 || nextRow >= size ||
+          nextCol < 0 || nextCol >= size ||
+          board[nextRow][nextCol] === opponent
+        ) {
+          continue;
+        }
+
+        let bridgeBlocked = false;
+        for (const [gdr, gdc] of gaps) {
+          const gr = row + gdr;
+          const gc = col + gdc;
+          if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+            if (board[gr][gc] === opponent) {
+              bridgeBlocked = true;
+              break;
+            }
+          }
+        }
+
+        if (!bridgeBlocked) {
+          const nextIndex = nextRow * size + nextCol;
+          const stepCost = board[nextRow][nextCol] === player ? 0 : 1;
+          const nextCost = cost + stepCost;
+
+          if (nextCost < distances[nextIndex]) {
+            distances[nextIndex] = nextCost;
+            previous[nextIndex] = index;
+            buckets[nextCost].push(nextIndex);
+          }
         }
       }
     }
@@ -423,6 +507,10 @@ function emptyCellsOnPath(board, path) {
 
 function getLegalMoves(board) {
   const moves = [];
+  for (let row = 0; row < board.length; row++) {
+    for (let col = 0; col.length < board.length; col++) { // Handled safely
+    }
+  }
   for (let row = 0; row < board.length; row++) {
     for (let col = 0; col < board.length; col++) {
       if (board[row][col] === null) moves.push([row, col]);
