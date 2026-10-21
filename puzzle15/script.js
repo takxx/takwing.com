@@ -1,15 +1,5 @@
 "use strict";
 
-// Filenames use two case-sensitive characters from this alphabet.
-// Range bounds are inclusive and follow the alphabet's order.
-const CHARACTERS =
-  "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-const FIRST_DIGIT_MIN = "0";
-const FIRST_DIGIT_MAX = "5";
-const SECOND_DIGIT_MIN = "0";
-const SECOND_DIGIT_MAX = "2";
-
 const SVG_FOLDER = "svg/";
 const SCRAMBLE_MOVES = 500;
 
@@ -53,6 +43,7 @@ const languageElement = document.querySelector("#language");
 
 let language = getInitialLanguage();
 let imageUrl = "";
+let useNumberedTiles = false;
 let tiles = [];
 let pointerStart = null;
 let gameNumber = 0;
@@ -110,29 +101,11 @@ function applyLanguage() {
   statusElement.textContent = isSolved() ? text.complete : "";
 }
 
-function charactersInRange(min, max) {
-  const start = CHARACTERS.indexOf(min);
-  const end = CHARACTERS.indexOf(max);
-
-  if (start < 0 || end < start) {
-    throw new Error("Invalid filename character range configuration.");
-  }
-
-  return CHARACTERS.slice(start, end + 1);
-}
-
 function shuffledCandidates() {
-  const firstCharacters =
-    charactersInRange(FIRST_DIGIT_MIN, FIRST_DIGIT_MAX);
-  const secondCharacters =
-    charactersInRange(SECOND_DIGIT_MIN, SECOND_DIGIT_MAX);
-
   const candidates = [];
 
-  for (const first of firstCharacters) {
-    for (const second of secondCharacters) {
-      candidates.push(first + second);
-    }
+  for (let number = 10; number <= 99; number++) {
+    candidates.push(number);
   }
 
   for (let i = candidates.length - 1; i > 0; i--) {
@@ -142,6 +115,7 @@ function shuffledCandidates() {
 
   return candidates;
 }
+
 
 async function findAvailableSvg() {
   for (const id of shuffledCandidates()) {
@@ -163,7 +137,6 @@ async function findEquivalentPieces(url) {
   image.src = url;
   await image.decode();
 
-  // Draw the SVG at a consistent size before comparing its 4×4 pieces.
   const canvas = document.createElement("canvas");
   canvas.width = 400;
   canvas.height = 400;
@@ -181,7 +154,25 @@ async function findEquivalentPieces(url) {
   const pieces = Array.from({ length: 15 }, (_, tile) => {
     const x = (tile % 4) * 100;
     const y = Math.floor(tile / 4) * 100;
-    return context.getImageData(x, y, 100, 100).data;
+    const pixels = context.getImageData(x, y, 100, 100).data;
+
+    // Compare visible pixels over white, so transparent white areas
+    // match opaque white areas.
+    const normalized = new Uint8Array(100 * 100 * 3);
+
+    for (let pixel = 0; pixel < 100 * 100; pixel++) {
+      const source = pixel * 4;
+      const target = pixel * 3;
+      const alpha = pixels[source + 3] / 255;
+
+      for (let channel = 0; channel < 3; channel++) {
+        normalized[target + channel] = Math.round(
+          pixels[source + channel] * alpha + 255 * (1 - alpha)
+        );
+      }
+    }
+
+    return normalized;
   });
 
   return pieces.map((piece, tile) => {
@@ -253,24 +244,42 @@ function render() {
   boardElement.replaceChildren();
   boardElement.classList.toggle("completed", solved);
 
+  // Clear any full-image background left from a previous solved state.
+  boardElement.style.backgroundImage = "";
+  boardElement.style.backgroundSize = "";
+
+  if (solved && !useNumberedTiles) {
+    boardElement.style.backgroundImage = `url("${imageUrl}")`;
+    boardElement.style.backgroundSize = "100% 100%";
+    boardElement.setAttribute("aria-label", text.complete);
+    statusElement.textContent = text.complete;
+    return;
+  }
+
+  boardElement.removeAttribute("aria-label");
+
   tiles.forEach((tileNumber, position) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "tile";
 
-    if (tileNumber === 15 && !solved) {
-      // The 16th space is empty during play.
+    if (tileNumber === 15) {
       button.classList.add("empty");
       button.disabled = true;
       button.setAttribute("aria-label", text.empty);
     } else {
-      const originalRow = Math.floor(tileNumber / 4);
-      const originalColumn = tileNumber % 4;
+      if (useNumberedTiles) {
+        button.textContent = String(tileNumber + 1);
+      } else {
+        const originalRow = Math.floor(tileNumber / 4);
+        const originalColumn = tileNumber % 4;
 
-      button.style.backgroundImage = `url("${imageUrl}")`;
-      button.style.backgroundSize = "400% 400%";
-      button.style.backgroundPosition =
-        `${originalColumn * 100 / 3}% ${originalRow * 100 / 3}%`;
+        button.style.backgroundImage = `url("${imageUrl}")`;
+        button.style.backgroundSize = "400% 400%";
+        button.style.backgroundPosition =
+          `${originalColumn * 100 / 3}% ${originalRow * 100 / 3}%`;
+      }
+
       button.setAttribute("aria-label", text.tile(tileNumber + 1));
 
       if (!solved) {
@@ -304,14 +313,26 @@ async function newGame() {
   const thisGame = ++gameNumber;
   statusElement.textContent = "";
 
+  let nextImageUrl = "";
+
   try {
-    const nextImageUrl = await findAvailableSvg();
+    nextImageUrl = await findAvailableSvg();
+  } catch (_) {
+    // If no SVG is available, start a numbered puzzle instead.
+  }
 
-    // Ignore an older request if New Game was pressed again while loading.
-    if (thisGame !== gameNumber) return;
+  // Ignore an older request if New Game was pressed again while loading.
+  if (thisGame !== gameNumber) return;
 
-    imageUrl = nextImageUrl;
+  imageUrl = nextImageUrl;
+  useNumberedTiles = !nextImageUrl;
 
+  if (useNumberedTiles) {
+    equivalentPieces = Array.from(
+      { length: 15 },
+      (_, tile) => new Set([tile])
+    );
+  } else {
     try {
       equivalentPieces = await findEquivalentPieces(imageUrl);
     } catch (_) {
@@ -321,19 +342,12 @@ async function newGame() {
         (_, tile) => new Set([tile])
       );
     }
-
-    if (thisGame !== gameNumber) return;
-
-    tiles = makeScrambledBoard();
-    render();
-  } catch (error) {
-    if (thisGame !== gameNumber) return;
-
-    boardElement.replaceChildren();
-    boardElement.classList.remove("completed");
-    statusElement.textContent =
-      error instanceof Error ? error.message : "Unable to start the game.";
   }
+
+  if (thisGame !== gameNumber) return;
+
+  tiles = makeScrambledBoard();
+  render();
 }
 
 boardElement.addEventListener("pointerdown", event => {
