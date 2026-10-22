@@ -293,7 +293,6 @@ select {
   pointer-events: none;
 }
 
-.tile-fallback,
 .tile-image {
   position: absolute;
   inset: 0;
@@ -310,28 +309,8 @@ select {
   user-select: none;
 }
 
-.tile-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-family:
-    "Noto Sans Symbols 2",
-    "Segoe UI Symbol",
-    "Arial Unicode MS",
-    sans-serif;
-
-  font-size: 2rem;
-  line-height: 1;
-}
-
 .tile-image {
   object-fit: contain;
-}
-
-.tile-fallback[hidden],
-.tile-image[hidden] {
-  display: none !important;
 }
 
 /* -----------------------------
@@ -469,41 +448,4 @@ select {
   to {
     filter: brightness(1.3);
   }
-}
-
-/* -----------------------------
-   Unicode fallback colours
------------------------------ */
-
-.tile.characters {
-  color: #d31920;
-}
-
-.tile.bamboo {
-  color: #168a45;
-}
-
-.tile.balls,
-.tile.winds {
-  color: #216ec2;
-}
-
-.tile.red-dragon {
-  color: #d31920;
-}
-
-.tile.green-dragon {
-  color: #168a45;
-}
-
-.tile.white-dragon {
-  color: #216ec2;
-}
-
-.tile.seasons {
-  color: #8c43b8;
-}
-
-.tile.flowers {
-  color: #e17820;
 }

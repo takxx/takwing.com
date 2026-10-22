@@ -78,7 +78,7 @@ if (requiredElements.some(element => !element)) {
 
 const UNIT_X = 58;
 const UNIT_Y = 78;
-const TILE_IMAGE_FOLDER = "";
+const TILE_SPRITE_URL = "mahjong.svg";
 const WIDE_BOARD_WIDTH = 850;
 const WIDE_BOARD_HEIGHT = 650;
 const NARROW_BOARD_WIDTH = 500;
@@ -96,7 +96,6 @@ let hintTimeout = null;
 let resizeTimeout = null;
 
 const tileElements = new Map();
-const tileImageCache = new Map();
 
 const tileDefinitions = [
   ["characters", "🀇", "character-1"],
@@ -245,42 +244,8 @@ languageSelect.addEventListener("change", event => {
   updateLanguage();
 });
 
-function imageUrlForSymbol(symbol) {
-  return `${TILE_IMAGE_FOLDER}${encodeURIComponent(symbol)}.webp`;
-}
-
-/*
- * Preload each distinct tile image once. Failed requests are cached as null,
- * so missing files use the Unicode fallback without repeated requests.
- */
-function preloadTileImages() {
-  const symbols = [...new Set(tileDefinitions.map(([, symbol]) => symbol))];
-
-  return Promise.all(
-    symbols.map(symbol => {
-      const url = imageUrlForSymbol(symbol);
-
-      const imagePromise = new Promise(resolve => {
-        const image = new Image();
-
-        image.onload = async () => {
-          try {
-            if (image.decode) await image.decode();
-          } catch {
-            // The image loaded; decode failure should not prevent gameplay.
-          }
-
-          resolve(image);
-        };
-
-        image.onerror = () => resolve(null);
-        image.src = url;
-      });
-
-      tileImageCache.set(symbol, imagePromise);
-      return imagePromise;
-    })
-  );
+function tileSpriteHref(symbol) {
+  return `${TILE_SPRITE_URL}#${encodeURIComponent(symbol)}`;
 }
 
 function shuffle(array) {
@@ -521,28 +486,22 @@ function createTileContent(tile) {
   const content = document.createElement("span");
   content.className = "tile-content";
 
-  const fallback = document.createElement("span");
-  fallback.className = "tile-fallback";
-  fallback.textContent = tile.symbol;
-  fallback.setAttribute("aria-hidden", "true");
-  content.appendChild(fallback);
+  const tileSvg = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg"
+  );
+  tileSvg.setAttribute("class", "tile-image");
+  tileSvg.setAttribute("aria-hidden", "true");
+  tileSvg.setAttribute("focusable", "false");
 
-  const cachedImage = tileImageCache.get(tile.symbol);
+  const useElement = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "use"
+  );
+  useElement.setAttribute("href", tileSpriteHref(tile.symbol));
 
-  if (cachedImage) {
-    cachedImage.then(image => {
-      if (!image || !content.isConnected) return;
-
-      const tileImage = document.createElement("img");
-      tileImage.className = "tile-image";
-      tileImage.alt = "";
-      tileImage.setAttribute("aria-hidden", "true");
-      tileImage.src = image.src;
-
-      fallback.hidden = true;
-      content.appendChild(tileImage);
-    });
-  }
+  tileSvg.appendChild(useElement);
+  content.appendChild(tileSvg);
 
   return content;
 }
@@ -763,13 +722,6 @@ hintButton.addEventListener("click", showHint);
 currentLanguage = getInitialLanguage();
 updateLanguage();
 
-/*
- * Wait for the image preload pass before dealing the first game. Missing or
- * failed images are handled by the Unicode fallback.
- */
-preloadTileImages().then(() => {
-  newGameButton.disabled = false;
-  newGame();
-});
+newGame();
 
 newGameButton.disabled = true;
