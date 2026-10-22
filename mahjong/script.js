@@ -78,6 +78,11 @@ if (requiredElements.some(element => !element)) {
 
 const UNIT_X = 58;
 const UNIT_Y = 78;
+
+// Each higher layer shifts up and slightly left to reinforce the 3D stack.
+const LAYER_OFFSET_X = -6;
+const LAYER_OFFSET_Y = 10;
+
 const TILE_SPRITE_URL = "mahjong.svg";
 const WIDE_BOARD_WIDTH = 850;
 const WIDE_BOARD_HEIGHT = 650;
@@ -512,10 +517,16 @@ function createTileElement(tile) {
   element.className = `tile ${tile.group} ${tile.matchKey}`;
   element.appendChild(createTileContent(tile));
   element.setAttribute("aria-label", `${tile.group} ${tile.matchKey}`);
-  element.style.left = `${tile.x * UNIT_X + tile.z * 10}px`;
-  element.style.top = `${tile.y * UNIT_Y - tile.z * 10}px`;
+
+  // Horizontal cascade: higher layers shift slightly left.
+  element.style.left = `${tile.x * UNIT_X + tile.z * LAYER_OFFSET_X}px`;
+
+  // Vertical cascade: higher layers shift slightly up.
+  element.style.top = `${tile.y * UNIT_Y - tile.z * LAYER_OFFSET_Y}px`;
+
   element.style.zIndex =
     tile.z * 100000 + Math.round(tile.y * 1000) + Math.round(tile.x);
+
   element.addEventListener("click", () => selectTile(tile.id));
 
   tileElements.set(tile.id, element);
@@ -668,7 +679,6 @@ function showHint() {
 function newGame() {
   clearHintTimer();
 
-  // Choose the layout once, when a new game is explicitly started.
   currentBoardMode =
     window.innerWidth < NARROW_LAYOUT_BREAKPOINT ? "narrow" : "wide";
 
