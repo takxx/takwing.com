@@ -723,5 +723,3 @@ currentLanguage = getInitialLanguage();
 updateLanguage();
 
 newGame();
-
-newGameButton.disabled = true;
