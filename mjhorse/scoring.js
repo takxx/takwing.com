@@ -92,3 +92,12 @@ export function scoreRobKong(winner, kongPlayer) {
     deltas: kongDeltas(kongPlayer, winner, 6),
   };
 }
+
+export function createScoring({ state, roundLog, transferCredits }) {
+  function transfer(deltas, label) {
+    state.credits = transferCredits({ deltas });
+    roundLog.push({ label, deltas });
+  }
+
+  return { transfer };
+}

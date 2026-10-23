@@ -1,8 +1,4 @@
-import {
-  chooseDiscard,
-  shouldPong,
-  shouldKong,
-} from "./ai.js";
+import { chooseDiscard, shouldPong, shouldKong } from "./ai.js";
 import { render } from "./render.js";
 import {
   addConcealedKong,
@@ -17,6 +13,7 @@ import {
 } from "./stat.js";
 import {
   allPayKongDeltas,
+  createScoring,
   discardWinDeltas,
   kongDeltas,
 } from "./scoring.js";
@@ -51,6 +48,7 @@ function makeWall() {
 
 export function createGame(t) {
   const stats = loadStats();
+
   const state = {
     hands: [[], [], [], []],
     melds: [[], [], [], []],
@@ -81,12 +79,23 @@ export function createGame(t) {
   let pendingDiscard = null;
   let discardClaimWindow = null;
   let discardSerial = 0;
-  let roundLog = [];
+  const roundLog = [];
+
+  const { transfer } = createScoring({
+    state,
+    roundLog,
+    transferCredits,
+  });
 
   function update() {
     state.onDiscard = discard;
     state.onNewGame = winner => {
-      const startingPlayer = Array.isArray(winner) ? winner[0] : winner;
+      const startingPlayer = state.winners.length > 1
+        ? state.nextStartingPlayer
+        : Array.isArray(winner)
+          ? winner[0]
+          : winner;
+    
       newGame(
         Number.isInteger(startingPlayer)
           ? startingPlayer
@@ -140,6 +149,7 @@ export function createGame(t) {
     }
 
     clearTimer();
+
     state.hands = [[], [], [], []];
     state.melds = [[], [], [], []];
     state.discards = [];
@@ -158,6 +168,7 @@ export function createGame(t) {
     state.gameSummary = null;
     state.winners = [];
     state.nextStartingPlayer = startingPlayer;
+
     discardClaimWindow = null;
     roundLog.length = 0;
     pendingDiscard = null;
@@ -181,10 +192,14 @@ export function createGame(t) {
       state.hands.forEach(sortHand);
       state.turn = startingPlayer;
       state.running = true;
+
       setDrawnTileIndex(
         startingPlayer,
-        state.hands[startingPlayer][state.hands[startingPlayer].length - 1],
+        state.hands[startingPlayer][
+          state.hands[startingPlayer].length - 1
+        ]
       );
+
       finishDrawnTurn(startingPlayer);
     }, 500);
   }
@@ -232,8 +247,8 @@ export function createGame(t) {
       (discarder + 3) % PLAYER_COUNT,
     ];
 
-    const eligibleWinners = order.filter((player) =>
-      canWinWith(state.hands[player], tile, state.melds[player].length),
+    const eligibleWinners = order.filter(player =>
+      canWinWith(state.hands[player], tile, state.melds[player].length)
     );
 
     if (eligibleWinners.length) {
@@ -251,7 +266,7 @@ export function createGame(t) {
 
     for (const player of order) {
       const hand = state.hands[player];
-      const matching = hand.filter((candidate) => candidate === tile).length;
+      const matching = hand.filter(candidate => candidate === tile).length;
 
       if (matching >= 3) {
         if (player === 0) {
@@ -274,7 +289,7 @@ export function createGame(t) {
             hand,
             tile,
             state.melds[player].length,
-            getVisibleTiles(),
+            getVisibleTiles()
           )
         ) {
           claimMeld(player, discarder, tile, "pong", 3);
@@ -330,9 +345,7 @@ export function createGame(t) {
       {
         label: t.win || "胡",
         run: () => {
-          if (!isCurrentClaim(window.discarder, window.tile)) {
-            return;
-          }
+          if (!isCurrentClaim(window.discarder, window.tile)) return;
 
           if (!window.winners.includes(0)) {
             window.winners.push(0);
@@ -344,10 +357,7 @@ export function createGame(t) {
       {
         label: t.pass || "過",
         run: () => {
-          if (!isCurrentClaim(window.discarder, window.tile)) {
-            return;
-          }
-
+          if (!isCurrentClaim(window.discarder, window.tile)) return;
           processNextDiscardClaim();
         },
       },
@@ -358,19 +368,21 @@ export function createGame(t) {
 
   function finishDiscardClaimWindow() {
     const window = discardClaimWindow;
-
     if (!window || !isCurrentClaim(window.discarder, window.tile)) {
       return;
     }
-
+  
     const winners = [...new Set(window.winners)];
     discardClaimWindow = null;
-
+  
     if (winners.length) {
+      if (winners.length > 1) {
+        state.nextStartingPlayer = window.discarder;
+      }
       settle(winners, false, window.discarder, window.tile);
       return;
     }
-
+  
     state.actions = [];
     continueAfterDiscard(window.discarder);
   }
@@ -380,7 +392,7 @@ export function createGame(t) {
     tile,
     canWin,
     canKong = false,
-    canPong = false,
+    canPong = false
   ) {
     state.turn = 0;
     state.message = t.pongPrompt || t.yourTurn;
@@ -401,10 +413,7 @@ export function createGame(t) {
       state.actions.push({
         label: t.kong || "槓",
         run: () => {
-          if (!isCurrentClaim(discarder, tile)) {
-            return;
-          }
-
+          if (!isCurrentClaim(discarder, tile)) return;
           if (claimMeld(0, discarder, tile, "kong", 4)) {
             drawForPlayer(0);
           }
@@ -416,13 +425,8 @@ export function createGame(t) {
       state.actions.push({
         label: t.pong || "碰",
         run: () => {
-          if (!isCurrentClaim(discarder, tile)) {
-            return;
-          }
-
-          if (!claimMeld(0, discarder, tile, "pong", 3)) {
-            return;
-          }
+          if (!isCurrentClaim(discarder, tile)) return;
+          if (!claimMeld(0, discarder, tile, "pong", 3)) return;
 
           state.turn = 0;
           state.message = t.yourTurn;
@@ -435,10 +439,7 @@ export function createGame(t) {
     state.actions.push({
       label: t.pass || "過",
       run: () => {
-        if (!isCurrentClaim(discarder, tile)) {
-          return;
-        }
-
+        if (!isCurrentClaim(discarder, tile)) return;
         state.actions = [];
         continueAfterDiscard(discarder);
       },
@@ -494,9 +495,7 @@ export function createGame(t) {
   }
 
   function continueAfterDiscard(discarder) {
-    if (!state.running) {
-      return;
-    }
+    if (!state.running) return;
 
     pendingDiscard = null;
     state.actions = [];
@@ -517,9 +516,7 @@ export function createGame(t) {
   }
 
   function takeTurn(player, drawFirst) {
-    if (!state.running || state.turn !== player) {
-      return;
-    }
+    if (!state.running || state.turn !== player) return;
 
     state.drawnTileIndex = null;
 
@@ -539,9 +536,7 @@ export function createGame(t) {
   }
 
   function finishDrawnTurn(player) {
-    if (!state.running || state.turn !== player) {
-      return;
-    }
+    if (!state.running || state.turn !== player) return;
 
     const hand = state.hands[player];
 
@@ -551,7 +546,7 @@ export function createGame(t) {
     }
 
     const upgradeablePong = state.melds[player].find(
-      (meld) => meld.kind === "pong" && hand.includes(meld.tiles[0]),
+      meld => meld.kind === "pong" && hand.includes(meld.tiles[0])
     );
 
     if (upgradeablePong) {
@@ -581,6 +576,7 @@ export function createGame(t) {
       } else {
         discardTurn(player);
       }
+
       return;
     }
 
@@ -605,15 +601,13 @@ export function createGame(t) {
       {
         label: t.pass || "過",
         run: () => {
-          if (!state.running || state.turn !== 0) {
-            return;
-          }
-
+          if (!state.running || state.turn !== 0) return;
           state.actions = [];
           showHumanDiscardTurn();
         },
       },
     ];
+
     update();
   }
 
@@ -646,7 +640,7 @@ export function createGame(t) {
         !canWinWith(
           state.hands[claimant],
           tile,
-          state.melds[claimant].length,
+          state.melds[claimant].length
         )
       ) {
         continue;
@@ -657,6 +651,7 @@ export function createGame(t) {
       } else {
         settle(claimant, false, player, tile, true);
       }
+
       return;
     }
 
@@ -670,6 +665,7 @@ export function createGame(t) {
       tile,
       serial: discardSerial,
     };
+
     state.turn = 0;
     state.message = t.robKongPrompt || t.pongPrompt || t.yourTurn;
     state.actions = [
@@ -684,16 +680,14 @@ export function createGame(t) {
       {
         label: t.pass || "過",
         run: () => {
-          if (!isCurrentClaim(kongPlayer, tile)) {
-            return;
-          }
-
+          if (!isCurrentClaim(kongPlayer, tile)) return;
           pendingDiscard = null;
           state.actions = [];
           commitPongUpgrade(kongPlayer, meld, tile);
         },
       },
     ];
+
     update();
   }
 
@@ -715,6 +709,7 @@ export function createGame(t) {
     meld.added = true;
     state.actions = [];
     state.drawnTileIndex = null;
+
     transfer(allPayKongDeltas(player, 1), t.addedKong);
     drawForPlayer(player);
   }
@@ -725,7 +720,7 @@ export function createGame(t) {
         state.hands[player],
         state.melds[player],
         tile,
-        player,
+        player
       )
     ) {
       return;
@@ -733,14 +728,13 @@ export function createGame(t) {
 
     state.actions = [];
     state.drawnTileIndex = null;
+
     transfer(allPayKongDeltas(player, 2), t.concealedKong);
     drawForPlayer(player);
   }
 
   function drawForPlayer(player) {
-    if (!state.running) {
-      return;
-    }
+    if (!state.running) return;
 
     if (state.wall.length === 0) {
       endRound(t.draw);
@@ -757,9 +751,7 @@ export function createGame(t) {
   }
 
   function discardTurn(player) {
-    if (!state.running || state.turn !== player) {
-      return;
-    }
+    if (!state.running || state.turn !== player) return;
 
     const index = chooseDiscard(state.hands[player], getVisibleTiles());
     const [tile] = state.hands[player].splice(index, 1);
@@ -775,18 +767,15 @@ export function createGame(t) {
   function getVisibleTiles() {
     return [
       ...state.discards,
-      ...state.melds.flatMap((melds) =>
-        melds.flatMap((meld) => meld.tiles),
+      ...state.melds.flatMap(melds =>
+        melds.flatMap(meld => meld.tiles)
       ),
     ];
   }
 
-  function transfer(deltas, label) {
-    state.credits = transferCredits({ deltas });
-    roundLog.push({ label, deltas });
-  }
-
   newGame();
 
-  return { newGame };
+  return {
+    newGame,
+  };
 }

@@ -23,10 +23,6 @@ const SVG_TILE_IDS = {
 };
 
 let svgDocumentPromise;
-let hasRendered = false;
-let previousDiscardCount = 0;
-let previousPlayerHandCount = 0;
-let previousDiceKey = "";
 
 function loadTileDocument() {
   if (!svgDocumentPromise) {
@@ -189,48 +185,6 @@ function diceBox(state, seat, t) {
   return box;
 }
 
-function animateDiceFromBoard(target) {
-  const board = document.querySelector(".discard-panel");
-  if (!board || !target || !target.isConnected) return;
-
-  const sourceRect = board.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-
-  const sourceX = sourceRect.left + sourceRect.width / 2;
-  const sourceY = sourceRect.top + sourceRect.height / 2;
-  const targetX = targetRect.left + targetRect.width / 2;
-  const targetY = targetRect.top + targetRect.height / 2;
-
-  const ghost = target.cloneNode(true);
-  ghost.classList.add("dice-flight");
-  ghost.setAttribute("aria-hidden", "true");
-  ghost.querySelectorAll("[aria-label]").forEach(node => {
-    node.removeAttribute("aria-label");
-  });
-
-  ghost.style.left = `${sourceX - targetRect.width / 2}px`;
-  ghost.style.top = `${sourceY - targetRect.height / 2}px`;
-  document.body.append(ghost);
-
-  const animation = ghost.animate(
-    [
-      { transform: "translate(0, 0) scale(1.15)", opacity: 1 },
-      {
-        transform:
-          `translate(${targetX - sourceX}px, ${targetY - sourceY}px) scale(1)`,
-        opacity: 0
-      }
-    ],
-    {
-      duration: 650,
-      easing: "cubic-bezier(.2,.75,.35,1)",
-      fill: "forwards"
-    }
-  );
-
-  animation.onfinish = () => ghost.remove();
-}
-
 function renderMelds(melds) {
   const box = document.createElement("div");
   box.className = "melds";
@@ -249,22 +203,7 @@ function renderMelds(melds) {
   return box;
 }
 
-function addDealAnimation(node, index) {
-  const groupDelay = Math.floor(index / 4) * 240;
-  node.classList.add("dealing-tile");
-  node.style.setProperty("--deal-delay", `${groupDelay}ms`);
-}
-
 export function render(state, t) {
-  const discardCount = state.discards.length;
-  const playerHandCount = state.hands[0]?.length || 0;
-
-  const isInitialDeal = playerHandCount > 0 && previousPlayerHandCount === 0;
-
-  previousDiscardCount = discardCount;
-  previousPlayerHandCount = playerHandCount;
-  hasRendered = true;
-
   document.querySelector("#remaining-count").textContent = state.wall.length;
   document.querySelector("#player-credits").textContent = state.credits[0];
 
@@ -277,14 +216,6 @@ export function render(state, t) {
 
   const opponents = document.querySelector("#opponents");
   opponents.replaceChildren();
-
-  const diceTargets = [];
-  const diceKey = state.dice?.length
-    ? `${state.diceSeat}:${state.dice.join(",")}`
-    : "";
-
-  const shouldAnimateDice = diceKey !== "" && diceKey !== previousDiceKey;
-  previousDiceKey = diceKey;
 
   const winners = new Set(
     Array.isArray(state.winners)
@@ -305,10 +236,7 @@ export function render(state, t) {
     name.className = "opponent-name";
 
     const dice = diceBox(state, p, t);
-    if (dice) {
-      name.append(dice);
-      if (shouldAnimateDice) diceTargets.push(dice);
-    }
+    if (dice) name.append(dice);
 
     const nameText = document.createElement("span");
     nameText.textContent = t[["", "south", "west", "north"][p]];
@@ -324,13 +252,13 @@ export function render(state, t) {
       hand.className = "opponent-hand";
 
       for (const [i, tile] of (state.hands[p] || []).entries()) {
-        const node = tileNode(
-          tile,
-          true,
-          state.winningTileIndex != null && i === state.winningTileIndex
+        hand.append(
+          tileNode(
+            tile,
+            true,
+            state.winningTileIndex != null && i === state.winningTileIndex
+          )
         );
-        if (isInitialDeal) addDealAnimation(node, i);
-        hand.append(node);
       }
     } else {
       hand.className = "back-row";
@@ -358,10 +286,7 @@ export function render(state, t) {
   playerName.dataset.label = playerLabel;
   playerName.replaceChildren(document.createTextNode(playerLabel));
 
-  if (playerDice) {
-    playerName.append(playerDice);
-    if (shouldAnimateDice) diceTargets.push(playerDice);
-  }
+  if (playerDice) playerName.append(playerDice);
 
   playerHand.replaceChildren();
 
@@ -373,7 +298,6 @@ export function render(state, t) {
     const isDrawnTile = i === state.drawnTileIndex;
     const node = tileNode(tile, false, isWinningTile || isDrawnTile);
 
-    if (isInitialDeal) addDealAnimation(node, i);
     if (state.selected === i) node.classList.add("selected");
     if (isDrawnTile) node.classList.add("drawn-tile");
 
@@ -399,14 +323,6 @@ export function render(state, t) {
     button.textContent = action.label;
     button.addEventListener("click", action.run);
     message.append(button);
-  }
-
-  if (isInitialDeal || diceTargets.length > 0) {
-    requestAnimationFrame(() => {
-      for (const target of diceTargets) {
-        animateDiceFromBoard(target);
-      }
-    });
   }
 
   const summaryEntries = Array.isArray(state.gameSummary)

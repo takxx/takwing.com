@@ -240,18 +240,12 @@ a {
 
 .hand .tile {
   cursor: pointer;
-  transition: transform .12s ease, outline-color .12s ease;
-}
-
-.hand .tile:hover {
-  transform: translateY(-4px);
 }
 
 .hand .tile.selected,
 .hand .tile.drawn-tile {
   outline: 3px solid var(--gold);
   outline-offset: 1px;
-  transform: translateY(-5px);
 }
 
 .hand .tile.drawn-tile {
@@ -281,38 +275,9 @@ a {
   color: var(--gold);
 }
 
-.player-dice,
-.dice-flight {
+.player-dice {
   display: flex;
   gap: .25rem;
-}
-
-.dealing-tile {
-  opacity: 0;
-  animation: deal-tile 180ms ease-out var(--deal-delay, 0ms) forwards;
-}
-
-@keyframes deal-tile {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dice-flight {
-  position: fixed;
-  z-index: 9999;
-  margin: 0;
-  pointer-events: none;
-}
-
-.dice-flight .die {
-  box-shadow: 0 2px 8px #0008;
 }
 
 dialog {
@@ -460,11 +425,5 @@ dialog::backdrop {
     flex: 1 1 0;
     width: 0;
     min-width: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dealing-tile {
-    animation-duration: 1ms;
   }
 }
