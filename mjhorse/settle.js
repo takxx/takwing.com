@@ -23,7 +23,7 @@ export function createSettlement({
     return tiles;
   }
 
-  function finishRoundRecord() {
+  function finishRoundRecord(deltas = [0, 0, 0, 0]) {
     const record = {
       date: new Date().toISOString(),
       diceSeat: state.diceSeat,
@@ -31,13 +31,7 @@ export function createSettlement({
       winningTile: state.winningTile,
       log: [...roundLog],
     };
-
-    const deltas = roundLog.reduce(
-      (total, entry) =>
-        total.map((value, player) => value + entry.deltas[player]),
-      [0, 0, 0, 0],
-    );
-
+  
     const latest = recordRound({ record, deltas });
     state.credits = latest.credits;
     state.records = latest.records;
@@ -54,7 +48,7 @@ export function createSettlement({
     if (!state.running) {
       return;
     }
-
+  
     state.running = false;
     clearTimer();
     state.actions = [];
@@ -64,39 +58,51 @@ export function createSettlement({
       ? state.hands[winner][state.drawnTileIndex]
       : claimedTile;
     state.winningTileIndex = selfDraw ? state.drawnTileIndex : null;
-
+  
+    let winDeltas = [0, 0, 0, 0];
+  
     if (selfDraw) {
       const result = scoreSelfDraw(
         winner,
         state.diceSeat,
         drawHorseTiles(),
       );
-
+  
+      winDeltas = result.deltas;
+  
       roundLog.unshift({
         label: `${t.selfDraw}（${t.horseHits} ${result.horseHits} ${t.tilesCount}）`,
         horseTiles: result.horseTiles,
         winningHorseTiles: result.winningHorseTiles,
         deltas: result.deltas,
       });
-
+  
       state.message =
         winner === 0
           ? `${t.win} ${t.winBySelfDraw}；${t.horseHits} ${result.horseHits} ${t.tilesCount}`
           : `${t.lose} ${t.winBySelfDraw}；${t.horseHits} ${result.horseHits} ${t.tilesCount}`;
     } else if (robKong) {
       const result = scoreRobKong(winner, discarder);
+      winDeltas = result.deltas;
+  
       roundLog.unshift({
         label: t.robKongWin || t.discardWin,
         deltas: result.deltas,
       });
+  
       state.message = winner === 0 ? t.win : t.lose;
     } else if (discarder !== null) {
-      const deltas = discardWinDeltas(winner, discarder);
-      roundLog.unshift({ label: t.discardWin, deltas });
+      winDeltas = discardWinDeltas(winner, discarder);
+  
+      roundLog.unshift({
+        label: t.discardWin,
+        deltas: winDeltas,
+      });
+  
       state.message = winner === 0 ? t.win : t.lose;
     }
-
-    finishRoundRecord();
+  
+    finishRoundRecord(winDeltas);
     update();
   }
 
