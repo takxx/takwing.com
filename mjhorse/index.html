@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123d32">
+  <title>跑馬仔</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="discard-panel panel" aria-label="棄牌區">
+      <h2 data-i18n="discards">棄牌</h2>
+      <div id="discards" class="discard-grid"></div>
+    </section>
+
+    <section class="table-column">
+      <header class="titlebar panel">
+        <h1 data-i18n="title">跑馬仔</h1>
+        <button id="new-game" data-i18n="newGame">新局</button>
+      </header>
+
+      <p class="help-row">
+        <a href="#instructions" id="open-instructions" data-i18n="instructionsLink">玩法說明</a>
+      </p>
+
+      <section class="panel remaining">
+        <span data-i18n="remaining">剩餘牌數</span>
+        <strong id="remaining-count">0</strong>
+        <span id="dice-result" class="dice-result" aria-live="polite"></span>
+      </section>
+
+      <section id="opponents" class="opponents"></section>
+
+      <section class="player-area panel">
+        <div class="player-heading">
+          <h2 data-i18n="you">你</h2>
+          <span>
+            <span data-i18n="credits">分數</span>:
+            <strong id="player-credits">0</strong>
+          </span>
+        </div>
+        <div id="player-melds" class="melds"></div>
+        <div id="player-hand" class="hand"></div>
+        <div id="turn-message" class="turn-message" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="instructions">
+    <button class="close-dialog" id="close-instructions" aria-label="Close">×</button>
+    <h2 data-i18n="instructionsTitle">玩法說明</h2>
+    <div id="instruction-copy"></div>
+  </dialog>
+
+  <script type="module" src="./script.js"></script>
+</body>
+</html>
