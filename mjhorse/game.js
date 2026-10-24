@@ -89,19 +89,24 @@ export function createGame(t) {
 
   function update() {
     state.onDiscard = discard;
+  
     state.onNewGame = winner => {
-      const startingPlayer = state.winners.length > 1
+      const hasMultipleWinners =
+        Array.isArray(winner) && winner.length > 1;
+  
+      const startingPlayer = hasMultipleWinners
         ? state.nextStartingPlayer
         : Array.isArray(winner)
           ? winner[0]
           : winner;
-    
+  
       newGame(
         Number.isInteger(startingPlayer)
           ? startingPlayer
           : state.nextStartingPlayer
       );
     };
+  
     render(state, t);
   }
 
