@@ -1,0 +1,193 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  background: #1b1028;
+  color: #f6efff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 1.25rem;
+  background:
+    radial-gradient(ellipse at top, #40235b 0%, #261536 48%, #160d20 100%);
+}
+
+.app {
+  width: min(100%, 680px);
+  margin: 0 auto;
+}
+
+.title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  letter-spacing: 0.02em;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+#resetButton,
+.language-control select {
+  border: 1px solid #a98ac4;
+  border-radius: 8px;
+  background: #39244d;
+  color: #fff;
+}
+
+#resetButton {
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+}
+
+#resetButton:hover,
+.language-control select:hover {
+  background: #503367;
+}
+
+#canvas {
+  display: block;
+  width: min(90vw, 600px);
+  height: min(90vw, 600px);
+  margin: 0 auto;
+  border: 1px solid #bba5ce;
+  border-radius: 4px;
+  background: #fff;
+  touch-action: none;
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: min(100%, 600px);
+  margin: 1rem auto 0;
+}
+
+.color-button {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 3px solid #bba5ce;
+  border-radius: 8px;
+  color: #111;
+  cursor: pointer;
+  font: bold 1rem system-ui, sans-serif;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+}
+
+.color-button.selected {
+  border-color: #fff;
+  outline: 2px solid #d8b8ff;
+  outline-offset: 2px;
+}
+
+.bottom-panel {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  margin: 1.25rem auto 0;
+  text-align: center;
+}
+
+.status,
+.instructions {
+  margin: 0;
+}
+
+.status {
+  min-height: 1.5em;
+  font-weight: 600;
+}
+
+.instructions {
+  color: #e1d3ed;
+}
+
+.language-control select {
+  padding: 0.45rem 2rem 0.45rem 0.65rem;
+  cursor: pointer;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(12 6 18 / 72%);
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay-card {
+  width: min(100%, 340px);
+  padding: 1.5rem;
+  border: 1px solid #a98ac4;
+  border-radius: 12px;
+  background: #2b193a;
+  text-align: center;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 40%);
+}
+
+#completedPreview {
+  display: block;
+  width: 120px;
+  height: 120px;
+  margin: 1rem auto;
+  border: 1px solid #bba5ce;
+  image-rendering: pixelated;
+}
+
+#newPuzzleButton {
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #a98ac4;
+  border-radius: 8px;
+  background: #39244d;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+@media (max-width: 420px) {
+  body {
+    padding: 0.75rem;
+  }
+
+  .palette {
+    gap: 0.35rem;
+  }
+
+  .color-button {
+    border-width: 2px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+}

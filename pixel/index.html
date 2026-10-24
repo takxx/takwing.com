@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pixel Perfect</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="title-bar">
+      <h1 data-i18n="title">Pixel Perfect</h1>
+      <button id="resetButton" type="button" data-i18n="reset">Reset Puzzle</button>
+    </header>
+
+    <canvas
+      id="canvas"
+      width="600"
+      height="600"
+      role="img"
+      aria-label="Color-by-number puzzle"
+    ></canvas>
+
+    <div id="palette" class="palette" role="group" aria-label="Color palette"></div>
+
+    <footer class="bottom-panel">
+      <p id="status" class="status" aria-live="polite"></p>
+      <p class="instructions" data-i18n="instructions">
+        Choose a color, then fill squares with its number.
+      </p>
+      <label class="language-control">
+        <span class="visually-hidden" data-i18n="languageLabel">Language</span>
+        <select id="languageSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh">中文</option>
+        </select>
+      </label>
+    </footer>
+    <div id="completionOverlay" class="overlay" role="dialog" aria-modal="true"
+         aria-labelledby="completionTitle" hidden>
+      <div class="overlay-card">
+        <h2 id="completionTitle" data-i18n="complete">Puzzle complete!</h2>
+        <p data-i18n="finishedPicture">Here’s your finished picture.</p>
+        <canvas id="completedPreview" width="60" height="60"></canvas>
+        <button id="newPuzzleButton" type="button" data-i18n="newPuzzle">
+          Start a new puzzle
+        </button>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

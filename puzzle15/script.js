@@ -1,7 +1,9 @@
 "use strict";
 
-const SVG_FOLDER = "svg/";
+const SPRITE_URL = new URL("/util/images.svg", document.baseURI).href;
 const SCRAMBLE_MOVES = 500;
+const MIN_SPRITE_ID = 110;
+const MAX_SPRITE_ID = 199;
 
 const translations = {
   en: {
@@ -101,35 +103,86 @@ function applyLanguage() {
   statusElement.textContent = isSolved() ? text.complete : "";
 }
 
-function shuffledCandidates() {
-  const candidates = [];
+function shuffledSpriteIds(spriteText) {
+  const documentFromSprite = new DOMParser().parseFromString(
+    spriteText,
+    "image/svg+xml"
+  );
 
-  for (let number = 10; number <= 99; number++) {
-    candidates.push(number);
+  if (documentFromSprite.querySelector("parsererror")) {
+    throw new Error("The SVG sprite could not be parsed.");
   }
 
-  for (let i = candidates.length - 1; i > 0; i--) {
+  const ids = Array.from(
+    documentFromSprite.querySelectorAll("symbol[id]")
+  )
+    .map(symbol => symbol.id)
+    .filter(id => /^1\d{2}$/.test(id));
+
+  for (let i = ids.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    [ids[i], ids[j]] = [ids[j], ids[i]];
   }
 
-  return candidates;
+  return ids;
 }
 
-
 async function findAvailableSvg() {
-  for (const id of shuffledCandidates()) {
-    const url = `${SVG_FOLDER}${id}.svg`;
+  const response = await fetch(SPRITE_URL);
 
-    try {
-      const response = await fetch(url, { method: "HEAD" });
-      if (response.ok) return url;
-    } catch (_) {
-      // Try the next filename if this request fails.
+  if (!response.ok) {
+    throw new Error(translations[language].noImage);
+  }
+
+  const spriteText = await response.text();
+  const spriteDoc = new DOMParser().parseFromString(
+    spriteText,
+    "image/svg+xml"
+  );
+
+  if (spriteDoc.querySelector("parsererror")) {
+    throw new Error("The SVG sprite could not be parsed.");
+  }
+
+  const symbols = Array.from(
+    spriteDoc.querySelectorAll("symbol[id]")
+  ).filter(symbol => {
+    const id = Number(symbol.id);
+    return Number.isInteger(id) &&
+      id >= MIN_SPRITE_ID &&
+      id <= MAX_SPRITE_ID;
+  });
+
+  if (symbols.length === 0) {
+    throw new Error(translations[language].noImage);
+  }
+
+  const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+  const svgNS = "http://www.w3.org/2000/svg";
+  const output = spriteDoc.createElementNS(svgNS, "svg");
+
+  output.setAttribute("xmlns", svgNS);
+  output.setAttribute(
+    "viewBox",
+    symbol.getAttribute("viewBox") || "0 0 400 400"
+  );
+
+  for (const node of spriteDoc.documentElement.children) {
+    if (["defs", "style"].includes(node.localName)) {
+      output.append(spriteDoc.importNode(node, true));
     }
   }
 
-  throw new Error(translations[language].noImage);
+  for (const child of symbol.children) {
+    output.append(spriteDoc.importNode(child, true));
+  }
+
+  const blob = new Blob(
+    [new XMLSerializer().serializeToString(output)],
+    { type: "image/svg+xml" }
+  );
+
+  return URL.createObjectURL(blob);
 }
 
 async function findEquivalentPieces(url) {
