@@ -6,8 +6,8 @@ const CELL = CANVAS_SIZE / SIZE;
 const MAX_COLORS = 18;
 const PREVIEW_SIZE = 60;
 const SYMBOLS = [..."ABCDEFGHJKLMNPRSTU"];
-const MIN_IMAGE_ID = 124;
-const MAX_IMAGE_ID = 223;
+const MIN_IMAGE_ID = 126;
+const MAX_IMAGE_ID = 228;
 const LANGUAGE_KEY = "pixel-perfect-language";
 
 const translations = {
