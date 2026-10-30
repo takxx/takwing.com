@@ -356,7 +356,7 @@ function updateStatus() {
 }
 
 function grayscaleColor() {
-  const gray = Math.floor(Math.random() * 256);
+  const gray = Math.floor(Math.random() * 32) + 224;
   return [gray, gray, gray, 255];
 }
 

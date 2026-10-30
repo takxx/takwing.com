@@ -1,44 +1,44 @@
 "use strict";
 
 const translations = {
-  en: {
-    title: "Mahjong Solitaire",
-    newGame: "New Game",
-    restart: "Restart",
-    undo: "Undo",
-    hint: "Hint",
-    language: "Language",
-    remaining: "Remaining:",
-    selectMatch: "Select a matching tile.",
-    notMatch: "Those tiles do not match.",
-    noHint: "No matching moves available.",
-    won: "You won!"
+  "en": {
+    "title": "Mahjong Solitaire",
+    "newGame": "New Game",
+    "restart": "Restart",
+    "undo": "Undo",
+    "hint": "Hint",
+    "language": "Language",
+    "remaining": "Remaining:",
+    "selectMatch": "Select a matching tile.",
+    "notMatch": "Those tiles do not match.",
+    "noHint": "No matching moves available.",
+    "won": "You won!"
   },
-  es: {
-    title: "Solitario de Mahjong",
-    newGame: "Nueva partida",
-    restart: "Reiniciar",
-    undo: "Deshacer",
-    hint: "Pista",
-    language: "Idioma",
-    remaining: "Restantes:",
-    selectMatch: "Selecciona una ficha que coincida.",
-    notMatch: "Esas fichas no coinciden.",
-    noHint: "No hay movimientos coincidentes.",
-    won: "¡Has ganado!"
+  "es": {
+    "title": "Mahjong Solitario",
+    "newGame": "Nueva partida",
+    "restart": "Reiniciar",
+    "undo": "Deshacer",
+    "hint": "Pista",
+    "language": "Idioma",
+    "remaining": "Restantes:",
+    "selectMatch": "Selecciona una ficha emparejable.",
+    "notMatch": "Esas fichas no emparejan.",
+    "noHint": "No hay movimientos disponibles.",
+    "won": "¡Has ganado!"
   },
   "zh-Hant": {
-    title: "四川省",
-    newGame: "新遊戲",
-    restart: "重新開始",
-    undo: "悔棋",
-    hint: "提示",
-    language: "語言",
-    remaining: "剩餘：",
-    selectMatch: "請選擇相同的牌。",
-    notMatch: "這兩張牌不相同。",
-    noHint: "沒有可配對的牌。",
-    won: "你贏了！"
+    "title": "四川省",
+    "newGame": "新遊戲",
+    "restart": "重新開始",
+    "undo": "悔棋",
+    "hint": "提示",
+    "language": "語言",
+    "remaining": "剩餘：",
+    "selectMatch": "請揀選一隻相同嘅牌",
+    "notMatch": "呢兩隻牌唔一樣",
+    "noHint": "已經冇牌行喇",
+    "won": "你贏咗喇！"
   }
 };
 

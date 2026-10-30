@@ -84,6 +84,25 @@ const layouts = [
     { id: "l", row: 0, col: 8, length: 2, dir: "v", color: "yellow" },
     { id: "m", row: 4, col: 8, length: 2, dir: "v", color: "green" },
   ],
+  [
+    { id: "target", row: 2, col: 7, length: 2, dir: "h", color: "red", label: "YOU" },
+
+    { id: "a", row: 0, col: 2, length: 3, dir: "v", color: "purple" },
+    { id: "b", row: 0, col: 3, length: 3, dir: "v", color: "orange" },
+    { id: "c", row: 3, col: 7, length: 3, dir: "v", color: "teal" },
+    { id: "d", row: 3, col: 8, length: 3, dir: "v", color: "pink" },
+
+    { id: "e", row: 0, col: 0, length: 2, dir: "h", color: "yellow" },
+    { id: "f", row: 0, col: 4, length: 2, dir: "h", color: "green" },
+    { id: "g", row: 1, col: 4, length: 2, dir: "h", color: "blue" },
+    { id: "h", row: 3, col: 0, length: 2, dir: "h", color: "purple" },
+    { id: "i", row: 3, col: 3, length: 3, dir: "h", color: "orange" },
+
+    { id: "j", row: 4, col: 0, length: 2, dir: "h", color: "teal" },
+    { id: "k", row: 4, col: 3, length: 2, dir: "h", color: "pink" },
+    { id: "l", row: 5, col: 0, length: 2, dir: "h", color: "yellow" },
+    { id: "m", row: 5, col: 3, length: 2, dir: "h", color: "green" },
+  ],
 ];
 
 export function cloneCars(cars) {
