@@ -109,6 +109,12 @@
     document.querySelector(".new-button").addEventListener("click", () => {
       document.getElementById("newButton").click();
     });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js");
+      });
+    }
   </script>
 </body>
 </html>

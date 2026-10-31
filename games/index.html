@@ -317,6 +317,7 @@
       { id: "snake", color: "green", en: "Snake", es: "Serpiente", zh: "貪食蛇" },
       { id: "spin", color: "salmon", en: "Wheel of Decision", es: "La Ruleta de Opciones", zh: "幸運輪" },
       { id: "sudoku", color: "mint", en: "Sudoku", es: "Sudoku", zh: "數獨" },
+      { id: "summer", color: "turquoise", en: "Summer Memories", es: "Suma y sigue", zh: "心中有數" },
       { id: "tangram", color: "cream", en: "Tangram", es: "Tangram", zh: "七巧板" },
       { id: "tetris", color: "blue", en: "Tetris", es: "Tetris", zh: "俄羅斯方塊" },
       { id: "whackamole", color: "pink", en: "Whack-a-Mole", es: "A golpear topos", zh: "扑傻瓜" },
@@ -369,7 +370,7 @@
     for (const page of visiblePages) {
       const link = document.createElement("a");
       link.className = "tile";
-      link.href = `/${encodeURIComponent(page.id)}/${language}`;
+      link.href = `/${encodeURIComponent(page.id)}/?lang=${language}`;
 
       const icon = document.createElement("span");
       icon.className = "icon";
@@ -410,6 +411,13 @@
       message.textContent = text.empty;
       container.append(message);
     }
+    
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js");
+      });
+    }
   </script>
+
 </body>
 </html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Summer Memories</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game-container">
+    <header>
+      <h1 id="gameTitle" data-i18n="title">Summer Memories</h1>
+
+      <div class="language-select-wrapper">
+        <label for="languageSelect" data-i18n="language">Language</label>
+        <select id="languageSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-Hant">中文</option>
+        </select>
+      </div>
+    </header>
+
+    <section class="status-panel" aria-label="Game statistics">
+      <div><span data-i18n="score">Score</span>: <span id="score">0</span></div>
+      <div><span data-i18n="time">Time</span>: <span id="time">60</span></div>
+      <div><span data-i18n="highScore">Best</span>: <span id="highScore">0</span></div>
+    </section>
+
+    <div class="round-panel">
+      <span data-i18n="roundLabel">Round</span>: <span id="round">1</span>
+    </div>
+
+    <svg id="board" class="board-svg" viewBox="0 0 300 300"
+         role="application" aria-label="Number memory game board">
+      <polygon class="hex hex-0" data-index="0"
+        points="150,100 193.3,125 193.3,175 150,200 106.7,175 106.7,125"></polygon>
+      <polygon class="hex hex-1" data-index="1"
+        points="193.3,25 236.6,50 236.6,100 193.3,125 150,100 150,50"></polygon>
+      <polygon class="hex hex-2" data-index="2"
+        points="236.6,100 279.9,125 279.9,175 236.6,200 193.3,175 193.3,125"></polygon>
+      <polygon class="hex hex-3" data-index="3"
+        points="193.3,175 236.6,200 236.6,250 193.3,275 150,250 150,200"></polygon>
+      <polygon class="hex hex-4" data-index="4"
+        points="106.7,175 150,200 150,250 106.7,275 63.4,250 63.4,200"></polygon>
+      <polygon class="hex hex-5" data-index="5"
+        points="63.4,100 106.7,125 106.7,175 63.4,200 20.1,175 20.1,125"></polygon>
+      <polygon class="hex hex-6" data-index="6"
+        points="106.7,25 150,50 150,100 106.7,125 63.4,100 63.4,50"></polygon>
+
+      <text id="centerText" x="150" y="155" text-anchor="middle"
+            dominant-baseline="middle" aria-live="polite"></text>
+      <text class="hex-number" data-number-index="1" x="193.3" y="78"
+            text-anchor="middle" dominant-baseline="middle"></text>
+      <text class="hex-number" data-number-index="2" x="236.6" y="150"
+            text-anchor="middle" dominant-baseline="middle"></text>
+      <text class="hex-number" data-number-index="3" x="193.3" y="225"
+            text-anchor="middle" dominant-baseline="middle"></text>
+      <text class="hex-number" data-number-index="4" x="106.7" y="225"
+            text-anchor="middle" dominant-baseline="middle"></text>
+      <text class="hex-number" data-number-index="5" x="63.4" y="150"
+            text-anchor="middle" dominant-baseline="middle"></text>
+      <text class="hex-number" data-number-index="6" x="106.7" y="78"
+            text-anchor="middle" dominant-baseline="middle"></text>
+    </svg>
+
+    <div id="message" role="status" aria-live="polite">Memorise the numbers</div>
+    <button id="startButton" data-i18n="newGame">New Game</button>
+  </main>
+
+  <div id="instructionOverlay" class="overlay" role="dialog"
+       aria-modal="true" aria-labelledby="overlayTitle">
+    <div class="overlay-card">
+      <h2 id="overlayTitle" data-i18n="title">Summer Memories</h2>
+      <ul id="instructionList">
+        <li data-i18n="instruction1">Memorise the six outer numbers in 10 seconds.</li>
+        <li data-i18n="instruction2">Select numbers that add up to the centre number.</li>
+        <li data-i18n="instruction3">Correct answers earn points equal to the centre number and add 3 seconds.</li>
+        <li data-i18n="instruction4">Incorrect answers cost 1 second.</li>
+      </ul>
+      <button id="overlayStart" data-i18n="start">Start Game</button>
+
+      <div class="overlay-language">
+        <label for="overlayLanguageSelect" data-i18n="language">Language</label>
+        <select id="overlayLanguageSelect" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh-Hant">中文</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js");
+      });
+    }
+  </script>
+
+</body>
+</html>
