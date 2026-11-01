@@ -316,7 +316,7 @@ export function createRenderer(elements, handlers) {
   }
 
   function updateStatus(snapshot) {
-    opponentCountSelect.value = String(snapshot.state.opponentCount);
+    opponentCountSelect.value = `${snapshot.state.opponentCount}-${snapshot.state.aiDifficulty}`;
     opponentCountSelect.disabled = (
       snapshot.state.computerThinking
       || snapshot.state.jumpChainActive

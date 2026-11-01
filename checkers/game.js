@@ -590,6 +590,7 @@ export function createGame({ opponentCount = 1 } = {}) {
 
   const state = {
     opponentCount,
+    aiDifficulty: "easy",
     activePlayerIndex: 0,
     selectedPieceId: null,
     jumpChainActive: false,
@@ -902,6 +903,13 @@ export function createGame({ opponentCount = 1 } = {}) {
     activePlayers = GAME_CONFIGURATIONS[count];
     resetGame();
   }
+  
+  function setAiDifficulty(difficulty) {
+    if (difficulty === "easy" || difficulty === "normal") {
+      state.aiDifficulty = difficulty;
+      emit();
+    }
+  }
 
   function setComputerThinking(value) {
     state.computerThinking = Boolean(value);
@@ -952,6 +960,7 @@ export function createGame({ opponentCount = 1 } = {}) {
     resetCurrentHumanMove,
     resetGame,
     setOpponentCount,
+    setAiDifficulty,
     setComputerThinking,
     endTurn,
   };

@@ -259,19 +259,20 @@ function makePuzzle() {
 
 function chooseTarget() {
   const possibleTargets = new Set();
+  const requiredCount = round <= 3 ? 2 : null;
 
-  // Collect sums made from 2, 3, or 4 distinct ring positions.
   for (let mask = 0; mask < (1 << numbers.length); mask++) {
     const count = mask.toString(2).replace(/0/g, "").length;
 
-    if (count < 2 || count > 4) continue;
+    if (requiredCount !== null && count !== requiredCount) continue;
+    if (requiredCount === null && (count < 2 || count > 4)) continue;
 
     let sum = 0;
     for (let i = 0; i < numbers.length; i++) {
       if (mask & (1 << i)) sum += numbers[i];
     }
 
-    possibleTargets.add(sum);
+    if (sum >= 10) possibleTargets.add(sum);
   }
 
   const alternatives = [...possibleTargets].filter(value => value !== target);
@@ -280,7 +281,6 @@ function chooseTarget() {
   target = choices[Math.floor(Math.random() * choices.length)];
   centerText.textContent = String(target);
 }
-
 
 function clearHexStates() {
   board.querySelectorAll(".hex").forEach(hex => {

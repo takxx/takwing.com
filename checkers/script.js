@@ -115,6 +115,7 @@ function maybeScheduleComputerTurn() {
       activePlayers: currentSnapshot.activePlayers,
       playerIndex: currentSnapshot.state.activePlayerIndex,
       depth: currentSnapshot.activePlayers.length === 2 ? 3 : 2,
+      difficulty: currentSnapshot.state.aiDifficulty,
     });
 
     if (!computerTurn) {
@@ -148,7 +149,10 @@ elements.restartButton.addEventListener("click", () => {
 });
 
 elements.opponentCountSelect.addEventListener("change", (event) => {
-  game.setOpponentCount(Number(event.target.value));
+  const [count, difficulty] = event.target.value.split("-");
+
+  game.setOpponentCount(Number(count));
+  game.setAiDifficulty(difficulty);
 });
 
 document.querySelectorAll(".language-button").forEach((button) => {

@@ -16,6 +16,7 @@ import {
 
 const MAX_JUMP_DEPTH = 4;
 const MAX_SEARCH_CANDIDATES = 20;
+const EASY_MOVE_POOL_SIZE = 8;
 
 function findPieceById(position, pieceId) {
   for (const piece of position.pieces.values()) {
@@ -180,9 +181,9 @@ function generateCandidateTurns(position, board, player) {
       });
     }
 
-    for (const chain of enumerateJumpChains(position, board, piece, player)) {
-      candidates.push(chain);
-    }
+    candidates.push(
+      ...enumerateJumpChains(position, board, piece, player),
+    );
   }
 
   for (const candidate of candidates) {
@@ -197,7 +198,7 @@ function generateCandidateTurns(position, board, player) {
   return candidates;
 }
 
-function applyTurnToPosition(position, board, turn) {
+function applyTurnToPosition(position, turn) {
   const nextPosition = clonePosition(position);
   const piece = findPieceById(nextPosition, turn.pieceId);
 
@@ -284,16 +285,18 @@ function minimax(
 ) {
   const currentPlayer = activePlayers[currentPlayerIndex];
 
-  let anyPlayerHasWon = false;
-
   for (const player of activePlayers) {
     if (playerHasWon(position, board, player)) {
-      anyPlayerHasWon = true;
-      break;
+      return evaluatePosition(
+        position,
+        board,
+        rootPlayerId,
+        activePlayers,
+      );
     }
   }
 
-  if (depth === 0 || anyPlayerHasWon) {
+  if (depth === 0) {
     return evaluatePosition(
       position,
       board,
@@ -310,7 +313,8 @@ function minimax(
     .sort((first, second) => second.quickScore - first.quickScore)
     .slice(0, MAX_SEARCH_CANDIDATES);
 
-  const nextPlayerIndex = (currentPlayerIndex + 1) % activePlayers.length;
+  const nextPlayerIndex =
+    (currentPlayerIndex + 1) % activePlayers.length;
 
   if (candidateTurns.length === 0) {
     return minimax(
@@ -331,7 +335,7 @@ function minimax(
     let bestScore = -Infinity;
 
     for (const turn of candidateTurns) {
-      const nextPosition = applyTurnToPosition(position, board, turn);
+      const nextPosition = applyTurnToPosition(position, turn);
 
       const score = minimax(
         nextPosition,
@@ -358,7 +362,7 @@ function minimax(
   let bestScore = Infinity;
 
   for (const turn of candidateTurns) {
-    const nextPosition = applyTurnToPosition(position, board, turn);
+    const nextPosition = applyTurnToPosition(position, turn);
 
     const score = minimax(
       nextPosition,
@@ -389,20 +393,39 @@ export function chooseComputerTurn({
   activePlayers,
   playerIndex,
   depth = 2,
+  difficulty = "normal",
 }) {
-  const candidateTurns = generateCandidateTurns(position, board, player)
-    .sort((first, second) => second.quickScore - first.quickScore)
-    .slice(0, MAX_SEARCH_CANDIDATES);
+  const candidateTurns = generateCandidateTurns(
+    position,
+    board,
+    player,
+  ).sort((first, second) => second.quickScore - first.quickScore);
 
   if (candidateTurns.length === 0) {
     return null;
   }
 
+  if (difficulty === "easy") {
+    const poolSize = Math.min(
+      EASY_MOVE_POOL_SIZE,
+      candidateTurns.length,
+    );
+
+    return candidateTurns[
+      Math.floor(Math.random() * poolSize)
+    ];
+  }
+
+  const candidates = candidateTurns.slice(
+    0,
+    MAX_SEARCH_CANDIDATES,
+  );
+
   let bestTurn = null;
   let bestScore = -Infinity;
 
-  for (const turn of candidateTurns) {
-    const nextPosition = applyTurnToPosition(position, board, turn);
+  for (const turn of candidates) {
+    const nextPosition = applyTurnToPosition(position, turn);
 
     const score = minimax(
       nextPosition,
