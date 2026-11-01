@@ -28,7 +28,7 @@ const translations = {
     "won": "¡Has ganado!"
   },
   "zh-Hant": {
-    "title": "四川省",
+    "title": "上海",
     "newGame": "新遊戲",
     "restart": "重新開始",
     "undo": "悔棋",
