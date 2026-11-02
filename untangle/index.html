@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Untangle</title>
+<style>
+:root {
+  color-scheme: dark;
+  --gold: #e4c875;
+  --cream: #f5f0dc;
+  --muted: #bdc9b7;
+  --panel: #0b2b22;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px;
+  color: var(--cream);
+  background: radial-gradient(ellipse at center, #1a523e, #123b2e 62%, #0b2b22);
+  font: 16px system-ui, sans-serif;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, min(700px, calc(100vh - 48px))) 220px;
+  align-items: center;
+  gap: 24px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.board-area {
+  width: 100%;
+  min-width: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border: 2px solid #e4c87599;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at center, #26694b88, #06211999);
+  box-shadow: 0 12px 36px #0005;
+  touch-action: none;
+}
+
+.game-info {
+  padding: 22px 18px;
+  border: 1px solid #e4c87555;
+  border-radius: 14px;
+  background: #0b2b22bb;
+  box-shadow: 0 10px 30px #0002;
+}
+
+.game-info h1 {
+  margin: 0 0 24px;
+  color: var(--gold);
+  font-family: Georgia, serif;
+  font-size: clamp(20px, 3vw, 24px);
+  letter-spacing: 2px;
+  overflow-wrap: anywhere;
+}
+
+.hud {
+  display: grid;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.hud strong {
+  float: right;
+  color: var(--cream);
+  font-variant-numeric: tabular-nums;
+}
+
+#timer.low {
+  color: #ff8175;
+}
+
+#status {
+  min-height: 72px;
+  margin: 22px 0 14px;
+  color: var(--gold);
+  line-height: 1.5;
+}
+
+#actionArea {
+  margin-top: 14px;
+}
+
+button {
+  width: 100%;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 11px 16px;
+  color: #183326;
+  background: var(--gold);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f1dc97;
+}
+
+button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #03100cc7;
+}
+
+.dialog {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 34px 24px 24px;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  background: #123b2e;
+  box-shadow: 0 16px 50px #0008;
+  text-align: center;
+}
+
+.dialog h2 {
+  margin: 4px 0 18px;
+  color: var(--gold);
+  font-family: Georgia, serif;
+}
+
+.dialog p {
+  line-height: 1.5;
+}
+
+#languageSelect {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 8px;
+  border: 1px solid #e4c87588;
+  border-radius: 6px;
+  color: var(--cream);
+  background: var(--panel);
+  font: inherit;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 1050px) {
+  body {
+    padding: 16px;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(0, 700px);
+    gap: 14px;
+    width: min(700px, 100%);
+  }
+
+  .game-info {
+    grid-row: 1;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .hud {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .hud strong {
+    float: none;
+  }
+
+  #status {
+    min-height: 24px;
+    margin: 10px 0 0;
+  }
+
+  #actionArea {
+    width: min(260px, 100%);
+    margin: 12px auto 0;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 10px;
+  }
+
+  .game-layout {
+    gap: 10px;
+  }
+
+  .game-info {
+    padding: 12px;
+  }
+
+  .hud {
+    gap: 12px;
+    font-size: 14px;
+  }
+}
+</style>
+</head>
+<body>
+<main class="game-layout">
+  <section class="board-area">
+    <canvas id="game" width="700" height="700" aria-label="Untangle puzzle"></canvas>
+  </section>
+
+  <aside class="game-info">
+    <h1 data-i18n="gameTitle">UNTANGLE</h1>
+
+    <div class="hud">
+      <div><span data-i18n="stage">Stage</span> <strong id="stage">1</strong></div>
+      <div><span data-i18n="best">Best</span> <strong id="best">0</strong></div>
+      <div><span data-i18n="time">Time</span> <strong id="timer">60</strong></div>
+    </div>
+
+    <p id="status" aria-live="polite"></p>
+
+    <div id="actionArea" hidden>
+      <button id="actionButton"></button>
+    </div>
+  </aside>
+</main>
+
+<div id="intro" class="overlay">
+  <div class="dialog">
+    <select id="languageSelect" aria-label="Language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh">中文</option>
+    </select>
+    <h2 data-i18n="instructionsTitle">How to play</h2>
+    <p data-i18n="instruction">Drag the nodes until no lines cross.</p>
+    <p data-i18n="timeLimit">You have 60 seconds.</p>
+    <button id="startButton" data-i18n="start">Start game</button>
+  </div>
+</div>
+
+<script>
+const translations = {
+en: {
+    gameTitle: "UNTANGLE",
+    instructionsTitle: "How to play",
+    instruction: "Drag the nodes until no lines cross.",
+    timeLimit: "You have 60 seconds.",
+    start: "Start game",
+    stage: "Stage",
+    best: "Best",
+    time: "Time",
+    playing: "Drag the nodes to untangle the lines.",
+    won: "Stage complete!",
+    lost: "Time's up! You can still solve the puzzle, but this run won't advance.",
+    solvedAfterTime: "Untangled! Start a new game to continue.",
+    next: "Next stage",
+    newGame: "New game"
+  },
+es: {
+    gameTitle: "DESLÍA",
+    instructionsTitle: "Cómo jugar",
+    instruction: "Arrastra los nodos hasta que no se cruce ninguna línea.",
+    timeLimit: "Dispones de 60 segundos.",
+    start: "Empezar partida",
+    stage: "Nivel",
+    best: "Récord",
+    time: "Tiempo",
+    playing: "Arrastra los nodos para desenredar las líneas.",
+    won: "¡Nivel superado!",
+    lost: "¡Se acabó el tiempo! Puedes terminar el puzle, pero no podrás avanzar.",
+    solvedAfterTime: "¡Desliado! Empieza una nueva partida para continuar.",
+    next: "Siguiente nivel",
+    newGame: "Nueva partida"
+  },
+zh: {
+    gameTitle: "理還亂",
+    instructionsTitle: "點樣玩",
+    instruction: "拉動啲點，直到冇任何線打交叉。",
+    timeLimit: "限時 60 秒。",
+    start: "開始遊戲",
+    stage: "關卡",
+    best: "最高紀錄",
+    time: "時間",
+    playing: "拉動啲點去順返啲線。",
+    won: "順利過關！",
+    lost: "時間到！你仲可以繼續解開佢，不過呢局就唔計數喇。",
+    solvedAfterTime: "順返晒！繼續挑戰下一關。",
+    next: "下一關",
+    newGame: "重新開始"
+},
+};
+
+const canvas = document.querySelector("#game");
+const ctx = canvas.getContext("2d");
+const status = document.querySelector("#status");
+const timerDisplay = document.querySelector("#timer");
+const stageDisplay = document.querySelector("#stage");
+const bestDisplay = document.querySelector("#best");
+const actionArea = document.querySelector("#actionArea");
+const actionButton = document.querySelector("#actionButton");
+const intro = document.querySelector("#intro");
+const languageSelect = document.querySelector("#languageSelect");
+
+function isSupportedLanguage(value) {
+  return ["en", "es", "zh"].includes(value);
+}
+
+const queryLanguage = new URLSearchParams(location.search).get("lang");
+const savedLanguage = localStorage.getItem("untangle-language");
+const browserLanguage = navigator.language.toLowerCase();
+
+let language =
+  isSupportedLanguage(queryLanguage) ? queryLanguage :
+  isSupportedLanguage(savedLanguage) ? savedLanguage :
+  browserLanguage.startsWith("es") ? "es" :
+  browserLanguage.startsWith("zh") ? "zh" : "en";
+
+let bestStage = Number(localStorage.getItem("untangle-best-stage")) || 0;
+let stage = 1;
+let timeLeft = 60;
+let timerId = null;
+let nodes = [];
+let edges = [];
+let draggedNode = null;
+let stageWon = false;
+let stageFailed = false;
+
+const radius = 14;
+
+function text(key) {
+  return translations[language][key];
+}
+
+function updateHud() {
+  stageDisplay.textContent = stage;
+  bestDisplay.textContent = bestStage;
+  timerDisplay.textContent = timeLeft;
+  timerDisplay.classList.toggle("low", timeLeft <= 10);
+}
+
+function applyLanguage() {
+  document.documentElement.lang = language;
+  languageSelect.value = language;
+
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    element.textContent = text(element.dataset.i18n);
+  });
+
+  if (stageWon) {
+    status.textContent = text("won");
+    actionButton.textContent = text("next");
+  } else if (stageFailed) {
+    status.textContent = text("lost");
+    actionButton.textContent = text("newGame");
+  } else {
+    status.textContent = text("playing");
+  }
+
+  updateHud();
+}
+
+languageSelect.addEventListener("change", () => {
+  language = languageSelect.value;
+  localStorage.setItem("untangle-language", language);
+  applyLanguage();
+});
+
+function makeStage() {
+  const totalCount = 7 + stage;
+  const outerCount = Math.max(5, Math.ceil(totalCount * 0.55));
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const outerRadius = Math.min(canvas.width, canvas.height) * 0.38;
+  const solution = [];
+  const faces = [];
+
+  // Start with a convex polygon.
+  for (let i = 0; i < outerCount; i++) {
+    const angle = -Math.PI / 2 + i * Math.PI * 2 / outerCount;
+    solution.push({
+      x: centerX + Math.cos(angle) * outerRadius,
+      y: centerY + Math.sin(angle) * outerRadius
+    });
+  }
+
+  // Triangulate the polygon with a fan.
+  for (let i = 1; i < outerCount - 1; i++) {
+    faces.push([0, i, i + 1]);
+  }
+
+  edges = [];
+
+  // Add the polygon perimeter.
+  for (let i = 0; i < outerCount; i++) {
+    edges.push([i, (i + 1) % outerCount]);
+  }
+
+  // Add interior nodes by splitting a triangle into three.
+  // Each new node connects to three existing nodes.
+  while (solution.length < totalCount) {
+    const faceIndex = Math.floor(Math.random() * faces.length);
+    const [a, b, c] = faces.splice(faceIndex, 1)[0];
+
+    let u = 0.15 + Math.random() * 0.7;
+    let v = 0.15 + Math.random() * 0.7;
+
+    if (u + v > 0.85) {
+      const factor = 0.85 / (u + v);
+      u *= factor;
+      v *= factor;
+    }
+
+    const w = 1 - u - v;
+    const newIndex = solution.length;
+
+    solution.push({
+      x: u * solution[a].x + v * solution[b].x + w * solution[c].x,
+      y: u * solution[a].y + v * solution[b].y + w * solution[c].y
+    });
+
+    edges.push([newIndex, a], [newIndex, b], [newIndex, c]);
+
+    faces.push(
+      [a, b, newIndex],
+      [b, c, newIndex],
+      [c, a, newIndex]
+    );
+  }
+
+  // Randomize node positions. Retry if a scramble happens to have
+  // no crossings, so the stage begins as a puzzle.
+  let attempts = 0;
+  do {
+    nodes = solution.map(() => ({
+      x: radius + Math.random() * (canvas.width - radius * 2),
+      y: radius + Math.random() * (canvas.height - radius * 2)
+    }));
+    attempts++;
+  } while (crossingCount() === 0 && attempts < 30);
+
+  stageWon = false;
+  stageFailed = false;
+  actionArea.hidden = true;
+  status.textContent = text("playing");
+  updateHud();
+  draw();
+}
+
+function orientation(a, b, c) {
+  return (b.x - a.x) * (c.y - a.y) -
+         (b.y - a.y) * (c.x - a.x);
+}
+
+function edgesCross(edgeA, edgeB) {
+  const [a, b] = edgeA;
+  const [c, d] = edgeB;
+
+  // Edges sharing a node do not count as crossing.
+  if (a === c || a === d || b === c || b === d) return false;
+
+  const p1 = nodes[a], p2 = nodes[b];
+  const p3 = nodes[c], p4 = nodes[d];
+
+  return orientation(p1, p2, p3) * orientation(p1, p2, p4) < 0 &&
+         orientation(p3, p4, p1) * orientation(p3, p4, p2) < 0;
+}
+
+function crossingCount() {
+  let count = 0;
+
+  for (let i = 0; i < edges.length; i++) {
+    for (let j = i + 1; j < edges.length; j++) {
+      if (edgesCross(edges[i], edges[j])) count++;
+    }
+  }
+
+  return count;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  edges.forEach(edge => {
+    const [a, b] = edge;
+    const crossing = edges.some(other =>
+      other !== edge && edgesCross(edge, other)
+    );
+
+    ctx.beginPath();
+    ctx.moveTo(nodes[a].x, nodes[a].y);
+    ctx.lineTo(nodes[b].x, nodes[b].y);
+    ctx.strokeStyle = crossing ? "#ff8175" : "#d7c98d";
+    ctx.lineWidth = crossing ? 3 : 2;
+    ctx.stroke();
+  });
+
+  nodes.forEach((node) => {
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#e4c875";
+    ctx.fill();
+    ctx.strokeStyle = "#fff6d7";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+function finishStage(won) {
+  clearInterval(timerId);
+  timerId = null;
+
+  if (won) {
+    stageWon = true;
+    bestStage = Math.max(bestStage, stage);
+    localStorage.setItem("untangle-best-stage", bestStage);
+    status.textContent = text("won");
+    actionButton.textContent = text("next");
+  } else {
+    stageFailed = true;
+    status.textContent = text("lost");
+    actionButton.textContent = text("newGame");
+  }
+
+  updateHud();
+  actionArea.hidden = false;
+}
+
+function startTimer() {
+  clearInterval(timerId);
+
+  timerId = setInterval(() => {
+    if (timeLeft > 0) timeLeft--;
+    updateHud();
+
+    if (timeLeft === 0 && !stageWon && !stageFailed) {
+      finishStage(false);
+    }
+  }, 1000);
+}
+
+function startGame() {
+  intro.hidden = true;
+  stage = 1;
+  timeLeft = 60;
+  makeStage();
+  startTimer();
+}
+
+function nextStage() {
+  if (!stageWon) return;
+
+  const bonusTime = Math.floor(timeLeft / 2);
+  stage++;
+  timeLeft = Math.min(99, 60 + bonusTime);
+  makeStage();
+  startTimer();
+}
+
+function newGame() {
+  stage = 1;
+  timeLeft = 60;
+  makeStage();
+  startTimer();
+}
+
+function pointerPosition(event) {
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: (event.clientX - rect.left) * canvas.width / rect.width,
+    y: (event.clientY - rect.top) * canvas.height / rect.height
+  };
+}
+
+canvas.addEventListener("pointerdown", event => {
+  const point = pointerPosition(event);
+
+  draggedNode = nodes.find(node =>
+    Math.hypot(node.x - point.x, node.y - point.y) <= radius + 7
+  );
+
+  if (draggedNode) {
+    canvas.setPointerCapture(event.pointerId);
+  }
+});
+
+canvas.addEventListener("pointermove", event => {
+  if (!draggedNode) return;
+
+  const point = pointerPosition(event);
+  draggedNode.x = Math.max(radius, Math.min(canvas.width - radius, point.x));
+  draggedNode.y = Math.max(radius, Math.min(canvas.height - radius, point.y));
+
+  draw();
+
+  if (!stageWon && !stageFailed && crossingCount() === 0) {
+    finishStage(true);
+  } else if (stageFailed && crossingCount() === 0) {
+    status.textContent = text("solvedAfterTime");
+  }
+});
+
+canvas.addEventListener("pointerup", () => {
+  draggedNode = null;
+});
+
+canvas.addEventListener("pointercancel", () => {
+  draggedNode = null;
+});
+
+document.querySelector("#startButton").addEventListener("click", startGame);
+
+actionButton.addEventListener("click", () => {
+  if (stageWon) nextStage();
+  else if (stageFailed) newGame();
+});
+
+applyLanguage();
+</script>
+</body>
+</html>

@@ -232,9 +232,9 @@
       // Raised shadow.
       ctx.save();
       ctx.shadowColor = "rgb(0 0 0 / 55%)";
-      ctx.shadowBlur = 7;
-      ctx.shadowOffsetX = 3;
-      ctx.shadowOffsetY = 4;
+      ctx.shadowBlur = 1;
+      ctx.shadowOffsetX = 0.5;
+      ctx.shadowOffsetY = 1;
       ctx.fillStyle = piece.color;
       ctx.fill(piece.path);
       ctx.restore();
@@ -262,20 +262,8 @@
         ctx.moveTo(-worldW, y);
         ctx.lineTo(worldW * 2, y + 2);
         ctx.stroke();
-      }
-  
+      }  
       ctx.restore();
-  
-      // Dark outer edge.
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = darkenHex(piece.color, 0.35);
-      ctx.stroke(piece.path);
-  
-      // Fine highlight just inside the edge.
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgb(255 245 220 / 75%)";
-      ctx.stroke(piece.path);
-  
       ctx.restore();
     }
   }
