@@ -393,7 +393,21 @@ function loadPuzzleImage(id, spriteText) {
     ? [...element.childNodes]
     : [element];
 
-  content.forEach(node => standalone.appendChild(node.cloneNode(true)));
+  const [, , viewBoxWidth] = viewBox.trim().split(/[\s,]+/).map(Number);
+  const artwork = documentXml.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "g"
+  );
+
+  if (Math.random() < 0.5) {
+    artwork.setAttribute(
+      "transform",
+      `translate(${viewBoxWidth} 0) scale(-1 1)`
+    );
+  }
+
+  content.forEach(node => artwork.appendChild(node.cloneNode(true)));
+  standalone.appendChild(artwork);
 
   const svgBlob = new Blob(
     [new XMLSerializer().serializeToString(standalone)],

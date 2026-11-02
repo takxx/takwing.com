@@ -160,12 +160,11 @@ async function findAvailableSvg() {
   const symbol = symbols[Math.floor(Math.random() * symbols.length)];
   const svgNS = "http://www.w3.org/2000/svg";
   const output = spriteDoc.createElementNS(svgNS, "svg");
+  const viewBox = symbol.getAttribute("viewBox") || "0 0 400 400";
+  const [minX, , width] = viewBox.trim().split(/[\s,]+/).map(Number);
 
   output.setAttribute("xmlns", svgNS);
-  output.setAttribute(
-    "viewBox",
-    symbol.getAttribute("viewBox") || "0 0 400 400"
-  );
+  output.setAttribute("viewBox", viewBox);
 
   for (const node of spriteDoc.documentElement.children) {
     if (["defs", "style"].includes(node.localName)) {
@@ -173,9 +172,20 @@ async function findAvailableSvg() {
     }
   }
 
-  for (const child of symbol.children) {
-    output.append(spriteDoc.importNode(child, true));
+  const artwork = spriteDoc.createElementNS(svgNS, "g");
+
+  if (Math.random() < 0.5) {
+    artwork.setAttribute(
+      "transform",
+      `translate(${2 * minX + width} 0) scale(-1 1)`
+    );
   }
+
+  for (const child of symbol.children) {
+    artwork.append(spriteDoc.importNode(child, true));
+  }
+
+  output.append(artwork);
 
   const blob = new Blob(
     [new XMLSerializer().serializeToString(output)],

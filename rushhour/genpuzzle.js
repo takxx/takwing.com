@@ -1,7 +1,7 @@
 import { ROWS, COLS } from "./render.js";
 
-export const MIN_SCRAMBLE_MOVES = 8;
-export const MAX_SCRAMBLE_MOVES = 24;
+export const MIN_SCRAMBLE_MOVES = 12;
+export const MAX_SCRAMBLE_MOVES = 400;
 export const MAX_GENERATION_ATTEMPTS = 40;
 
 // These are solved starting layouts: the target is at the right edge,
@@ -104,6 +104,19 @@ const layouts = [
     { id: "m", row: 5, col: 3, length: 2, dir: "h", color: "green" },
   ],
 ];
+
+const CAR_COLORS = ["yellow", "green", "blue", "purple", "orange", "teal", "pink"];
+
+function randomizeCarColors(cars) {
+  for (const car of cars) {
+    if (car.id === "target") continue;
+
+    car.color = CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
+  }
+
+  return cars;
+}
+
 
 export function cloneCars(cars) {
   return cars.map(car => ({ ...car }));
@@ -251,7 +264,7 @@ export function generatePuzzle() {
     }
 
     if (scrambleMoves >= MIN_SCRAMBLE_MOVES) {
-      return cars;
+      return randomizeCarColors(cars);
     }
   }
 
@@ -259,5 +272,5 @@ export function generatePuzzle() {
   // sliding it back to the right because its exit lane is clear.
   const fallback = cloneCars(layouts[0]);
   fallback.find(car => car.id === "target").col = 0;
-  return fallback;
+  return randomizeCarColors(fallback);
 }
