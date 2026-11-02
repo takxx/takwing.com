@@ -1,7 +1,7 @@
 "use strict";
 
 const translations = {
-en: {
+  en: {
     title: "Summer Memories",
     language: "Language",
     score: "Score",
@@ -12,8 +12,8 @@ en: {
     start: "Start Game",
     instruction1: "Memorise the six outer numbers in 10 seconds.",
     instruction2: "Select numbers that add up to the centre number.",
-    instruction3: "Correct answers earn points equal to the centre number and add 3 seconds.",
-    instruction4: "Incorrect answers cost 1 second.",
+    instruction3: "",
+    instruction4: "",
     memorise: "Memorise the numbers",
     findSum: "Make the centre sum",
     correct: "Correct!",
@@ -33,8 +33,8 @@ en: {
     start: "Empezar",
     instruction1: "Memoriza los seis números exteriores en 10 segundos.",
     instruction2: "Selecciona los números cuya suma dé el número central.",
-    instruction3: "Las respuestas correctas dan puntos equivalentes al número central y añaden 3 segundos.",
-    instruction4: "Las respuestas incorrectas restan 1 segundo.",
+    instruction3: "",
+    instruction4: "",
     memorise: "Memoriza los números",
     findSum: "Haz la suma central",
     correct: "¡Correcto!",
@@ -54,8 +54,8 @@ en: {
     start: "開始遊戲",
     instruction1: "用 10 秒記住外圍嘅六個數字。",
     instruction2: "揀出加埋等於中心數字嘅數字。",
-    instruction3: "答啱可獲得等同中心數字嘅分數，並增加 3 秒。",
-    instruction4: "答錯扣 1 秒。",
+    instruction3: "",
+    instruction4: "",
     memorise: "記住啲數字",
     findSum: "砌出中心總和",
     correct: "答啱！",
