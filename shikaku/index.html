@@ -313,65 +313,65 @@ const translations = {
     documentTitle: "Shikaku",
     size: "Tamaño",
     sizeLabel: "Tamaño",
-    newPuzzle: "Nuevo rompecabezas",
+    newPuzzle: "Nuevo tablero",
     undo: "Deshacer",
     language: "Idioma",
     boardLabel: "Tablero de Shikaku",
     howToPlay: "Cómo jugar:",
     instructionOne:
-      "Haz clic en una esquina y después en la esquina opuesta para colocar un rectángulo.",
+      "Haz clic en una esquina y después en la opuesta para colocar un rectángulo.",
     instructionTwo:
       "Haz doble clic en una celda rellenada para eliminar ese rectángulo.",
     instructionThree:
-      "Rellena el tablero con rectángulos de modo que el rectángulo de cada pista tenga exactamente esa superficie y contenga solo su pista.",
-    solved: "¡Resuelto!",
+      "Rellena el tablero con rectángulos de forma que el área de cada pista coincida exactamente con su número y contenga una sola pista.",
+    solved: "¡Completado!",
     noRectangles: "",
     rectanglesPlaced: (placed, total) =>
       `${placed}/${total} rectángulos colocados.`,
     invalidRectangle:
-      "Rectángulo no válido (superficie, cantidad de pistas o solapamiento).",
+      "Rectángulo no válido (área incorrecta, número de pistas inválido o solapamiento).",
     firstCorner:
       "Primera esquina seleccionada. Haz clic en la esquina opuesta.",
     sameCorner: "",
     invalidNewFirst:
-      "Rectángulo no válido. Esta celda es ahora la primera esquina.",
+      "Rectángulo no válido. Esta celda pasa a ser la primera esquina.",
     nothingToUndo: "No hay nada que deshacer.",
-    lastRectangleRemoved: "Se ha eliminado el último rectángulo.",
+    lastRectangleRemoved: "Último rectángulo eliminado.",
     newPuzzleStatus: count =>
-      `Nuevo rompecabezas: ${count} rectángulos.`
+      `Nuevo tablero: ${count} rectángulos.`
   },
 
   zh: {
     title: "數方",
     documentTitle: "數方",
-    size: "大小",
-    sizeLabel: "大小",
-    newPuzzle: "新題目",
+    size: "尺寸",
+    sizeLabel: "尺寸",
+    newPuzzle: "開新局",
     undo: "還原",
     language: "語言",
     boardLabel: "數方棋盤",
-    howToPlay: "玩法：",
+    howToPlay: "玩法簡介：",
     instructionOne:
-      "先點擊一個角落，再點擊對角的角落來放置矩形。",
+      "先撳一個角，再撳對角嚟劃出矩形。",
     instructionTwo:
-      "在已填色的格子上雙擊，即可移除該矩形。",
+      "喺填咗色嘅格仔度雙擊，就可以刪除該矩形。",
     instructionThree:
-      "用矩形填滿棋盤，讓每個提示數字所在的矩形面積正確，而且每個矩形只包含一個提示數字。",
-    solved: "完成！",
+      "用矩形填滿成個棋盤，確保每個數字嘅矩形面積同數字相符，而且每個矩形只包住一個數字。",
+    solved: "搞掂！",
     noRectangles: "",
     rectanglesPlaced: (placed, total) =>
-      `已放置 ${placed}/${total} 個矩形。`,
+      `已經畫咗 ${placed}/${total} 個矩形。`,
     invalidRectangle:
-      "矩形無效（面積、提示數量或重疊不符合要求）。",
+      "矩形無效（面積唔啱、數字數量錯咗，或者有重疊）。",
     firstCorner:
-      "已選擇第一個角落。請點擊對角的角落。",
+      "已經揀咗第一隻角，請撳對角。",
     sameCorner: "",
     invalidNewFirst:
-      "矩形無效。這個格子現在成為第一個角落。",
-    nothingToUndo: "沒有可復原的操作。",
-    lastRectangleRemoved: "已移除上一個矩形。",
+      "矩形無效。依家呢格變成咗第一個角。",
+    nothingToUndo: "冇得返轉頭喇。",
+    lastRectangleRemoved: "已經刪除上一個矩形。",
     newPuzzleStatus: count =>
-      `新題目：${count} 個矩形。`
+      `新謎題：總共有 ${count} 個矩形。`
   }
 };
 
