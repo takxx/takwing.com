@@ -305,8 +305,8 @@ zh: {
     time: "時間",
     playing: "拉動啲點去順返啲線。",
     won: "順利過關！",
-    lost: "時間到！你仲可以繼續解開佢，不過呢局就唔計數喇。",
-    solvedAfterTime: "順返晒！繼續挑戰下一關。",
+    lost: "夠鐘！你仲可以繼續解開佢，不過呢局就唔計數喇。",
+    solvedAfterTime: "順返晒！重新開始遊戲繼續玩。",
     next: "下一關",
     newGame: "重新開始"
 },
@@ -346,6 +346,7 @@ let edges = [];
 let draggedNode = null;
 let stageWon = false;
 let stageFailed = false;
+let dragOffset = { x: 0, y: 0 };
 
 const radius = 14;
 
@@ -596,13 +597,24 @@ function pointerPosition(event) {
 
 canvas.addEventListener("pointerdown", event => {
   const point = pointerPosition(event);
+  const rect = canvas.getBoundingClientRect();
+  const hitRadius = 32 * canvas.width / rect.width;
 
-  draggedNode = nodes.find(node =>
-    Math.hypot(node.x - point.x, node.y - point.y) <= radius + 7
-  );
+  draggedNode = nodes
+    .map(node => ({
+      node,
+      distance: Math.hypot(node.x - point.x, node.y - point.y)
+    }))
+    .filter(item => item.distance <= hitRadius)
+    .sort((a, b) => a.distance - b.distance)[0]?.node ?? null;
 
   if (draggedNode) {
+    dragOffset = {
+      x: draggedNode.x - point.x,
+      y: draggedNode.y - point.y
+    };
     canvas.setPointerCapture(event.pointerId);
+    draw();
   }
 });
 
@@ -610,20 +622,30 @@ canvas.addEventListener("pointermove", event => {
   if (!draggedNode) return;
 
   const point = pointerPosition(event);
-  draggedNode.x = Math.max(radius, Math.min(canvas.width - radius, point.x));
-  draggedNode.y = Math.max(radius, Math.min(canvas.height - radius, point.y));
+  draggedNode.x = Math.max(
+    radius,
+    Math.min(canvas.width - radius, point.x + dragOffset.x)
+  );
+  draggedNode.y = Math.max(
+    radius,
+    Math.min(canvas.height - radius, point.y + dragOffset.y)
+  );
 
   draw();
-
-  if (!stageWon && !stageFailed && crossingCount() === 0) {
-    finishStage(true);
-  } else if (stageFailed && crossingCount() === 0) {
-    status.textContent = text("solvedAfterTime");
-  }
 });
 
 canvas.addEventListener("pointerup", () => {
+  if (!draggedNode) return;
+
   draggedNode = null;
+
+  if (crossingCount() === 0) {
+    if (!stageWon && !stageFailed) {
+      finishStage(true);
+    } else if (stageFailed) {
+      status.textContent = text("solvedAfterTime");
+    }
+  }
 });
 
 canvas.addEventListener("pointercancel", () => {
