@@ -30,7 +30,7 @@ export const translations = {
     tryAgain: "Try again?"
   },
   es: {
-    gameTitle: "Putas cucarachas",
+    gameTitle: "Caza Cucas",
     language: "Idioma",
     stage: "Fase",
     target: "Objetivo",
