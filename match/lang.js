@@ -77,33 +77,35 @@ export const translations = {
 
   zh: {
     title: "消海鮮",
-    language: "語言",
-    mode: "模式",
-    modeRelaxed: "休閒",
-    modeTimed: "計時",
-    score: "分數",
-    moves: "步數",
-    time: "時間",
-    bestScore: "最佳",
-    hint: "提示",
-    newGame: "重新開始",
-    instructions: "點擊或滑動相鄰動物以作配對",
-    match: count => `成功配對 ${count} 隻動物！`,
-    invalidSwap: "未能配對",
-    reshuffled: "沒有可用步數，棋盤已重新排列！",
-    timeUp: "夠鐘！",
-    noMoves: "遊戲結束！已無動物可配對。",
-    hintMessage: "提示：試試交換這兩隻動物。",
-    dynamiteCleared: count => `轟！消除了 ${count} 隻動物！`,
-    dynamiteHint: "提示：引爆這顆炸藥。",
+    language: "語言",
+    mode: "模式",
+    modeRelaxed: "消閑模式",
+    modeTimed: "限時模式",
+    score: "分數",
+    moves: "步數",
+    time: "時間",
+    bestScore: "最高紀錄",
+    hint: "提示",
+    newGame: "重新開始",
+    instructions: "點擊或滑動相鄰嘅海洋生物嚟進行配對。",
+    match: count => `好嘢！成功消除咗 ${count} 隻生物！`,
+    invalidSwap: "呢個交換配唔到對。",
+    reshuffled: "冇得行喇！棋盤已重新洗牌！",
+    timeUp: "夠鐘！",
+    noMoves: "遊戲結束！已經冇位可以再配對。",
+    hintMessage: "提示：試吓將呢兩隻海洋生物對調。",
+    dynamiteCleared: count => `轟！炸咗 ${count} 隻生物！`,
+    dynamiteHint: "提示：引爆呢個炸藥。",
 
-    introHow: "交換相鄰動物，組成三隻或以上的直線。",
-    howRelaxed:
-      "沒有時間限制；當沒有可配對的動物時，遊戲結束。",
-    howTimed: "快速配對以獲得額外時間，避免時間耗盡。",
-    chooseMode: "選擇遊戲模式",
-    startGame: "開始遊戲"
-  }
+    introHow:
+      "對調相鄰嘅海洋生物，組成三個或以上嘅連線。",
+    howRelaxed:
+      "冇時間限制；玩到冇得行就完局。",
+    howTimed:
+      "鬥快配對賺取額外時間，喺倒數完之前爭取更高分。",
+    chooseMode: "選擇遊戲模式",
+    startGame: "開始遊戲"
+  }
 };
 
 let currentLanguage = "en";
