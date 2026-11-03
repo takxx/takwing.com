@@ -123,22 +123,22 @@ const TRANSLATIONS = {
   zh: {
     htmlLang: "zh-Hant",
 
-    puzzleTitle: "斜線謎題",
+    puzzleTitle: "多多少少又點斜",
     sizeLabel: "棋盤大小：",
-    newButton: "新謎題",
+    newButton: "開新局",
     resetButton: "重設",
-    instruction: "點擊方格以放置或清除斜線。",
-    rulesTitle: "規則",
+    instruction: "點吓啲格仔嚟加斜線或者清走佢。",
+    rulesTitle: "遊戲玩法",
     rulesList: [
-      "每個方格必須畫恰好一條斜線。",
-      "任何斜線都不能形成閉合迴路。",
-      "每個節點的數字表示有幾條斜線連接到該節點。"
+      "每個格仔入面都要畫啱啱好一條斜線。",
+      "所有斜線加埋唔可以形成一個閉合嘅圈。",
+      "每個交叉點上面嘅數字，代表有幾多條斜線連住呢個點。"
     ],
-    languageLabel: "語言：",
-    generating: "正在生成謎題…",
-    solved: "已解開！",
-    hasViolation: "有違規情況。",
-    noViolations: "目前沒有違規。"
+    languageLabel: "語言選擇：",
+    generating: "整緊個謎題出嚟…",
+    solved: "搞掂！",
+    hasViolation: "有位唔啱例喎。",
+    noViolations: "暫時冇犯規。"
   }
 };
 
