@@ -33,11 +33,13 @@
   	</g>
   </g>
 </symbol>
-<symbol id="chromo" viewBox="0 0 36 36">
-  <path fill="#31373d" d="M36 23a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V13a4 4 0 0 1 4-4h28a4 4 0 0 1 4 4z"/>
-  <rect x="3" y="14" width="8" height="8" fill="#77b255"/>
-  <rect x="14" y="14" width="8" height="8" fill="#ffcc4d"/>
-  <rect x="25" y="14" width="8" height="8" fill="#dd2e44"/>
+<symbol id="chromo" viewBox="0 0 32 32">
+  <g transform="rotate(45 16 16)">
+    <rect x="0" y="10" width="32" height="12" rx="3" ry="3" fill="#f8f1dc" />
+    <rect x="2" y="12" width="8" height="8" fill="#77b255" />
+    <rect x="12" y="12" width="8" height="8" fill="#ffcc4d" />
+    <rect x="22" y="12" width="8" height="8" fill="#dd2e44" />
+  </g>
 </symbol>
 <symbol id="connect4" viewBox="0 0 36 36">
   <circle fill="currentColor" cx="6" cy="30" r="4.5"/>
@@ -168,7 +170,7 @@
   </g>
 </symbol>
 <symbol id="mastermind" viewBox="0 0 36 36">
-  <path fill="#31373d" d="M36 23a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V13a4 4 0 0 1 4-4h28a4 4 0 0 1 4 4z"/>
+  <rect fill="#31373d" x="0" y="11.5" width="36" height="13" rx="4" ry="4" />
   <circle fill="#e84c5b" cx="5.25" cy="18" r="3.75"/>
   <circle fill="#f1cd43" cx="13.75" cy="18" r="3.75"/>
   <circle fill="#a66be0" cx="22.25" cy="18" r="3.75"/>
