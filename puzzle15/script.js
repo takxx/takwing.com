@@ -28,9 +28,9 @@ const translations = {
     noImage: "No se ha encontrado ningún archivo SVG en el rango configurado."
   },
   zh: {
-    title: "十五迷陣",
+    title: "謎圖 15",
     newGame: "重新開始",
-    instructions: "點擊或推動空格旁邊嘅磚塊嚟移動。",
+    instructions: "點擊或推動空格旁邊嘅磚塊。",
     language: "語言",
     complete: "完成啦！",
     tile: number => `第 ${number} 號磚塊`,
