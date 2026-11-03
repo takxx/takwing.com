@@ -10,7 +10,7 @@ const URL_LANGUAGE_MAP = {
 
 export const translations = {
   en: {
-    title: "Sea Matches",
+    title: "Sea Match",
     language: "Language",
     mode: "Mode",
     modeRelaxed: "Relaxed",
@@ -42,7 +42,7 @@ export const translations = {
   },
 
   es: {
-    title: "Parejas del Mar",
+    title: "Conexión Marina",
     language: "Idioma",
     mode: "Modo",
     modeRelaxed: "Relajado",
@@ -76,7 +76,7 @@ export const translations = {
   },
 
   zh: {
-    title: "深海群組",
+    title: "消海鮮",
     language: "語言",
     mode: "模式",
     modeRelaxed: "休閒",
