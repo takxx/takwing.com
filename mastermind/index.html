@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mastercolour</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #151821;
+  --panel: #202431;
+  --panel-light: #292e3e;
+  --text: #f4f5fa;
+  --muted: #a9afc0;
+  --accent: #ffc857;
+  --border: #3b4153;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 28px 16px;
+  background: radial-gradient(ellipse at top, #2a3040 0%, var(--bg) 58%);
+  color: var(--text);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+
+main { width: min(620px, 100%); margin: auto; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+}
+
+#language {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.card {
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 32px #0004;
+}
+
+.rules {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-light);
+  color: var(--muted);
+  font-size: .93rem;
+}
+
+.palette, .guess-slots {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.palette { margin: 12px 0 20px; }
+
+.peg {
+  width: 42px;
+  height: 42px;
+  border: 3px solid #ffffff55;
+  border-radius: 50%;
+  box-shadow: inset 0 3px 6px #fff5, inset 0 -5px 8px #0005, 0 3px 8px #0005;
+}
+
+button.peg { cursor: pointer; transition: transform .12s; }
+button.peg:hover { transform: translateY(-3px); }
+
+.slot {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 2px dashed #626a7d;
+  border-radius: 50%;
+  background: #171a23;
+  cursor: pointer;
+}
+
+.slot .peg { width: 38px; height: 38px; }
+
+button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.action {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #211a0c;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.action.secondary {
+  border: 1px solid var(--border);
+  background: var(--panel-light);
+  color: var(--text);
+}
+
+.action:disabled { opacity: .45; cursor: not-allowed; }
+
+#message {
+  min-height: 1.5em;
+  margin: 12px 0 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+#history { display: grid; gap: 9px; margin-top: 20px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-light);
+}
+
+.row-left { display: flex; align-items: center; gap: 12px; }
+.row .peg { width: 28px; height: 28px; border-width: 2px; }
+.row-number { width: 22px; color: var(--muted); font-size: .85rem; }
+.feedback { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.mini-pegs { display: grid; grid-template-columns: repeat(2, 9px); gap: 3px; }
+.mini { width: 9px; height: 9px; border: 1px solid #ffffff55; border-radius: 50%; }
+.mini.exact { background: #f6c344; }
+.mini.misplaced { background: #c0c7d1; }
+
+.footer {
+  margin-top: 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+@media (max-width: 420px) {
+  .card { padding: 16px 12px; }
+  .row { padding: 9px 8px; }
+  .row .peg { width: 25px; height: 25px; }
+  .feedback { gap: 5px; font-size: .9rem; }
+}
+</style>
+</head>
+<body>
+<main>
+<header class="header">
+  <h1 id="title"></h1>
+  <select id="language" aria-label="Language">
+    <option value="en">English</option>
+    <option value="es">Español</option>
+    <option value="zh">中文</option>
+  </select>
+</header>
+<p id="subtitle" class="subtitle"></p>
+
+<section class="card" aria-label="Color code game">
+  <div id="palette" class="palette" aria-label="Color palette"></div>
+  <div id="guessSlots" class="guess-slots" aria-label="Your guess"></div>
+
+  <div class="controls">
+    <button id="submit" class="action"></button>
+    <button id="clear" class="action secondary"></button>
+    <button id="newGame" class="action secondary"></button>
+  </div>
+
+  <p id="message" role="status" aria-live="polite"></p>
+  <div id="history" aria-label="Previous guesses"></div>
+  <div id="footer" class="footer"></div>
+  <p id="rules" class="rules"></p>
+</section>
+</main>
+
+<script>
+const translations = {
+  en: {
+    title: "Mastercolour",
+    subtitle: "Crack the four-colour code.",
+    rules: "Guess the secret four-peg sequence. Colours can repeat. Gold pegs mean the colour and position are correct; silver pegs mean the colour is correct but in the wrong position.",
+    palette: "Colour palette",
+    yourGuess: "Your guess",
+    submit: "Submit guess",
+    clear: "Clear guess",
+    newGame: "New game",
+    footer: "You have 10 attempts.",
+    choose: name => `Choose ${name}`,
+    emptySlot: n => `Empty position ${n}`,
+    removePeg: (name, n) => `Remove ${name} from position ${n}`,
+    exact: "Correct colour and position",
+    misplaced: "Correct colour, wrong position",
+    start: "Select four colours to begin.",
+    guessesLeft: n => `${n} guesses remaining.`,
+    won: n => `Brilliant! You cracked the code in ${n} ${n === 1 ? "guess" : "guesses"}!`,
+    lost: code => `Game over. The secret code was ${code}.`,
+    turn: n => `${n}.`
+  },
+  es: {
+    title: "Criptocolor",
+    subtitle: "Descifra la combinación secreta.",
+    rules: "Averigua la secuencia secreta de cuatro fichas. Los colores se pueden repetir. Las fichas doradas indican acierto total (color y lugar); las plateadas, que el color está pero en otro sitio.",
+    palette: "Paleta de colores",
+    yourGuess: "Tu combinación",
+    submit: "Comprobar",
+    clear: "Borrar",
+    newGame: "Partida nueva",
+    footer: "Dispones de 10 intentos.",
+    choose: name => `Elegir ${name}`,
+    emptySlot: n => `Posición ${n} vacía`,
+    removePeg: (name, n) => `Quitar ${name} de la posición ${n}`,
+    exact: "Color y posición correctos",
+    misplaced: "Color correcto, posición incorrecta",
+    start: "Selecciona cuatro colores para empezar.",
+    guessesLeft: n => `Te quedan ${n} intentos.`,
+    won: n => `¡Enhorabuena! Has descifrado el código en ${n} ${n === 1 ? "intento" : "intentos"}.`,
+    lost: code => `Te has quedado sin intentos. El código era ${code}.`,
+    turn: n => `${n}.`
+  },
+  zh: {
+    title: "七彩解碼",
+    subtitle: "挑戰邏輯極限，智破顏色密碼。",
+    rules: "試下估出四粒棋子嘅秘密組合，顏色可以重複。金色提示代表顏色同位置都啱；銀色提示代表顏色啱，但擺錯咗位置。",
+    palette: "顏色匣",
+    yourGuess: "你嘅心水組合",
+    submit: "確定提交",
+    clear: "重設",
+    newGame: "重新開局",
+    footer: "你有 10 次機會。",
+    choose: name => `揀 ${name}`,
+    emptySlot: n => `第 ${n} 格：未揀`,
+    removePeg: (name, n) => `將第 ${n} 格嘅 ${name} 拎走`,
+    exact: "位置同顏色都啱",
+    misplaced: "顏色啱但位唔啱",
+    start: "揀定四隻顏色就可以開始！",
+    guessesLeft: n => `仲有 ${n} 次機會。`,
+    won: n => `犀利！你用咗 ${n} 次就成功破譯！`,
+    lost: code => `用晒機會嘞。正確答案係：${code}。`,
+    turn: n => `${n}.`
+  }
+};
+
+const colors = [
+  { name: { en: "Ruby", es: "Rojo", zh: "紅色" }, value: "#e84c5b" },
+  { name: { en: "Ocean", es: "Azul", zh: "藍色" }, value: "#3987df" },
+  { name: { en: "Lemon", es: "Amarillo", zh: "黃色" }, value: "#f1cd43" },
+  { name: { en: "Emerald", es: "Verde", zh: "綠色" }, value: "#35b779" },
+  { name: { en: "Violet", es: "Violeta", zh: "紫色" }, value: "#a66be0" },
+  { name: { en: "Tangerine", es: "Naranja", zh: "橙色" }, value: "#f28a3b" },
+  { name: { en: "Rose", es: "Rosa", zh: "粉紅色" }, value: "#ec72b5" }
+];
+
+const CODE_LENGTH = 4;
+const MAX_TURNS = 10;
+const STORAGE_KEY = "colorCodeLanguage";
+const supported = ["en", "es", "zh"];
+
+function detectLanguage() {
+  const queryLanguage =
+    new URLSearchParams(location.search).get("lang")?.toLowerCase();
+
+  if (supported.includes(queryLanguage)) return queryLanguage;
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (supported.includes(stored)) return stored;
+  } catch {}
+
+  const browserLanguages = navigator.languages?.length
+    ? navigator.languages
+    : [navigator.language || ""];
+
+  for (const browserLanguage of browserLanguages) {
+    const code = browserLanguage.toLowerCase().split("-")[0];
+    if (supported.includes(code)) return code;
+  }
+
+  return "en";
+}
+
+let language = detectLanguage();
+let secret = [];
+let guess = [];
+let turns = 0;
+let gameOver = false;
+const gameHistory = [];
+
+const $ = selector => document.querySelector(selector);
+const paletteEl = $("#palette");
+const slotsEl = $("#guessSlots");
+const historyEl = $("#history");
+const messageEl = $("#message");
+const submitBtn = $("#submit");
+const languageSelect = $("#language");
+
+function t() {
+  return translations[language];
+}
+
+function colorName(index) {
+  return colors[index].name[language];
+}
+
+function applyLanguage() {
+  const text = t();
+
+  document.documentElement.lang =
+    language === "zh" ? "zh-Hant-HK" :
+    language === "es" ? "es-ES" : "en-GB";
+
+  $("#title").textContent = text.title;
+  document.title = text.title;
+  $("#subtitle").textContent = text.subtitle;
+  $("#rules").textContent = text.rules;
+  $("#submit").textContent = text.submit;
+  $("#clear").textContent = text.clear;
+  $("#newGame").textContent = text.newGame;
+  $("#footer").textContent = text.footer;
+
+  paletteEl.setAttribute("aria-label", text.palette);
+  slotsEl.setAttribute("aria-label", text.yourGuess);
+  historyEl.setAttribute("aria-label", text.title);
+  languageSelect.value = language;
+
+  drawPalette();
+  drawGuess();
+  drawHistory();
+}
+
+function makePeg(colorIndex, className = "peg") {
+  const peg = document.createElement("span");
+  peg.className = className;
+  peg.style.backgroundColor = colors[colorIndex].value;
+  peg.setAttribute("aria-label", colorName(colorIndex));
+  return peg;
+}
+
+function drawPalette() {
+  paletteEl.replaceChildren();
+
+  colors.forEach((color, index) => {
+    const button = document.createElement("button");
+    button.className = "peg";
+    button.style.backgroundColor = color.value;
+    button.title = colorName(index);
+    button.setAttribute("aria-label", t().choose(colorName(index)));
+    button.addEventListener("click", () => addColor(index));
+    paletteEl.append(button);
+  });
+}
+
+function drawGuess() {
+  slotsEl.replaceChildren();
+
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    const slot = document.createElement("button");
+    slot.className = "slot";
+
+    const label = guess[i] === undefined
+      ? t().emptySlot(i + 1)
+      : t().removePeg(colorName(guess[i]), i + 1);
+
+    slot.title = label;
+    slot.setAttribute("aria-label", label);
+
+    if (guess[i] !== undefined) {
+      slot.append(makePeg(guess[i]));
+    }
+
+    slot.addEventListener("click", () => {
+      guess.splice(i, 1);
+      drawGuess();
+      updateSubmit();
+    });
+
+    slotsEl.append(slot);
+  }
+}
+
+function addColor(index) {
+  if (gameOver || guess.length >= CODE_LENGTH) return;
+  guess.push(index);
+  messageEl.textContent = "";
+  drawGuess();
+  updateSubmit();
+}
+
+function updateSubmit() {
+  submitBtn.disabled = gameOver || guess.length !== CODE_LENGTH;
+}
+
+function scoreGuess(answer, attempt) {
+  let exact = 0;
+  const answerCounts = Array(colors.length).fill(0);
+  const attemptCounts = Array(colors.length).fill(0);
+
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    if (answer[i] === attempt[i]) {
+      exact++;
+    } else {
+      answerCounts[answer[i]]++;
+      attemptCounts[attempt[i]]++;
+    }
+  }
+
+  let misplaced = 0;
+  for (let i = 0; i < colors.length; i++) {
+    misplaced += Math.min(answerCounts[i], attemptCounts[i]);
+  }
+
+  return { exact, misplaced };
+}
+
+function makeHistoryRow(entry) {
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const left = document.createElement("div");
+  left.className = "row-left";
+
+  const number = document.createElement("span");
+  number.className = "row-number";
+  number.textContent = t().turn(entry.turn);
+  left.append(number);
+
+  entry.guess.forEach(color => left.append(makePeg(color)));
+  row.append(left);
+
+  const feedback = document.createElement("div");
+  feedback.className = "feedback";
+
+  const markers = document.createElement("span");
+  markers.className = "mini-pegs";
+
+  for (let i = 0; i < entry.exact; i++) {
+    const marker = document.createElement("span");
+    marker.className = "mini exact";
+    marker.title = t().exact;
+    markers.append(marker);
+  }
+
+  for (let i = 0; i < entry.misplaced; i++) {
+    const marker = document.createElement("span");
+    marker.className = "mini misplaced";
+    marker.title = t().misplaced;
+    markers.append(marker);
+  }
+
+  feedback.append(markers);
+  row.append(feedback);
+  return row;
+}
+
+function drawHistory() {
+  historyEl.replaceChildren();
+  gameHistory.forEach(entry => {
+    historyEl.append(makeHistoryRow(entry));
+  });
+}
+
+function submitGuess() {
+  if (guess.length !== CODE_LENGTH || gameOver) return;
+
+  turns++;
+  const result = scoreGuess(secret, guess);
+
+  gameHistory.unshift({
+    turn: turns,
+    guess: [...guess],
+    exact: result.exact,
+    misplaced: result.misplaced
+  });
+
+  historyEl.prepend(makeHistoryRow(gameHistory[0]));
+
+  if (result.exact === CODE_LENGTH) {
+    gameOver = true;
+    messageEl.textContent = t().won(turns);
+  } else if (turns === MAX_TURNS) {
+    gameOver = true;
+    messageEl.textContent = t().lost(secret.map(colorName).join(", "));
+  } else {
+    messageEl.textContent = t().guessesLeft(MAX_TURNS - turns);
+  }
+
+  guess = [];
+  drawGuess();
+  updateSubmit();
+}
+
+function newGame() {
+  secret = Array.from(
+    { length: CODE_LENGTH },
+    () => Math.floor(Math.random() * colors.length)
+  );
+
+  guess = [];
+  turns = 0;
+  gameOver = false;
+  gameHistory.length = 0;
+  historyEl.replaceChildren();
+  messageEl.textContent = t().start;
+  drawGuess();
+  updateSubmit();
+}
+
+function setLanguage(nextLanguage, updateUrl = true) {
+  if (!supported.includes(nextLanguage)) return;
+  language = nextLanguage;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, language);
+  } catch {}
+
+  if (updateUrl) {
+    const url = new URL(location.href);
+    url.searchParams.set("lang", language);
+    window.history.replaceState(null, "", url);
+  }
+
+  applyLanguage();
+}
+
+submitBtn.addEventListener("click", submitGuess);
+
+$("#clear").addEventListener("click", () => {
+  guess = [];
+  drawGuess();
+  updateSubmit();
+  messageEl.textContent = "";
+});
+
+$("#newGame").addEventListener("click", newGame);
+languageSelect.addEventListener("change", event => {
+  setLanguage(event.target.value);
+});
+
+applyLanguage();
+newGame();
+</script>
+</body>
+</html>
