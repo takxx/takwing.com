@@ -220,15 +220,15 @@
     ctx.stroke(silhouette);
     ctx.restore();
   
-    // Draw each piece in its original painted color, with wood-toy detailing.
+    // Draw each piece in its original painted color, with velvet detailing.
     for (const piece of pieces) {
       const { x: cx, y: cy } = pieceCenter(piece);
-  
+    
       ctx.save();
       ctx.translate(piece.x + cx, piece.y + cy);
       ctx.rotate(piece.rotation);
       ctx.translate(-cx, -cy);
-  
+    
       // Raised shadow.
       ctx.save();
       ctx.shadowColor = "rgb(0 0 0 / 55%)";
@@ -238,31 +238,36 @@
       ctx.fillStyle = piece.color;
       ctx.fill(piece.path);
       ctx.restore();
-  
+    
       // Restrict surface details to the piece itself.
       ctx.save();
       ctx.clip(piece.path);
-  
-      // Substantial painted-surface shading, without replacing the piece color.
-      const shading = ctx.createLinearGradient(0, 0, 0, worldH);
-      shading.addColorStop(0, "rgb(255 255 255 / 35%)");
-      shading.addColorStop(0.18, "rgb(255 255 255 / 12%)");
-      shading.addColorStop(0.55, "rgb(255 255 255 / 0%)");
-      shading.addColorStop(1, "rgb(35 18 5 / 28%)");
+    
+      // Soft velvet-like shading.
+      const shading = ctx.createRadialGradient(
+        piece.bounds.left + (piece.bounds.right - piece.bounds.left) * 0.35,
+        piece.bounds.top + (piece.bounds.bottom - piece.bounds.top) * 0.28,
+        1,
+        piece.bounds.left + (piece.bounds.right - piece.bounds.left) * 0.5,
+        piece.bounds.top + (piece.bounds.bottom - piece.bounds.top) * 0.5,
+        Math.max(
+          piece.bounds.right - piece.bounds.left,
+          piece.bounds.bottom - piece.bounds.top
+        ) * 0.85
+      );
+    
+      shading.addColorStop(0, "rgb(255 255 255 / 22%)");
+      shading.addColorStop(0.45, "rgb(255 255 255 / 6%)");
+      shading.addColorStop(1, "rgb(35 18 5 / 26%)");
+    
       ctx.fillStyle = shading;
-      ctx.fillRect(-worldW, -worldH, worldW * 3, worldH * 3);
-  
-      // Visible fine grain, clipped inside the piece.
-      ctx.globalAlpha = 0.18;
-      ctx.strokeStyle = "#fff3d6";
-      ctx.lineWidth = 1;
-  
-      for (let y = -worldH; y < worldH * 2; y += 5) {
-        ctx.beginPath();
-        ctx.moveTo(-worldW, y);
-        ctx.lineTo(worldW * 2, y + 2);
-        ctx.stroke();
-      }  
+      ctx.fillRect(
+        piece.bounds.left - 2,
+        piece.bounds.top - 2,
+        piece.bounds.right - piece.bounds.left + 4,
+        piece.bounds.bottom - piece.bounds.top + 4
+      );
+    
       ctx.restore();
       ctx.restore();
     }
