@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alquerque</title>
+
+<style>
+:root {
+  color-scheme: dark;
+  --text: #f2e6d2;
+  --muted: #c2ad8c;
+  --gold: #d4b078;
+  --gold-dim: #8e7048;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font: 16px/1.5 Georgia, "Times New Roman", serif;
+  background:
+    radial-gradient(ellipse at top, #563a27 0%, transparent 60%),
+    repeating-linear-gradient(90deg, #21150f 0 5px, #271a12 5px 11px);
+}
+
+button, select { font: inherit; }
+
+.page {
+  width: min(1180px, 100%);
+  margin: auto;
+  padding: 22px;
+}
+
+/* Wide screens: board at left; title and controls at right. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(280px, .9fr);
+  grid-template-areas:
+    "board topbar"
+    "board panel";
+  align-items: start;
+  column-gap: 28px;
+  row-gap: 14px;
+}
+
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+}
+
+h1 {
+  margin: 0;
+  color: #f0d5a5;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  letter-spacing: .08em;
+  text-shadow: 0 2px 5px #100905;
+}
+
+.language {
+  min-width: 118px;
+  padding: 8px 12px;
+  color: var(--text);
+  background: #211710;
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
+}
+
+.board-wrap {
+  grid-area: board;
+  width: 100%;
+  max-width: 620px;
+  margin: auto;
+  padding: 14px;
+  border: 2px solid #765335;
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(4deg, transparent 0 18px, #ffffff08 19px 21px),
+    linear-gradient(135deg, #5c3d27, #352318 45%, #50351f);
+  box-shadow: inset 0 0 24px #140b07, 0 12px 28px #0c0705aa;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid #8c6843;
+  border-radius: 5px;
+  background:
+    radial-gradient(ellipse at 28% 20%, #79553355, transparent 45%),
+    repeating-linear-gradient(0deg, transparent 0 26px, #ffffff08 27px 28px),
+    linear-gradient(135deg, #362317, #20150f);
+}
+
+.board svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.board line {
+  stroke: #cfaa70;
+  stroke-width: 2.2;
+  opacity: .78;
+}
+
+.spot {
+  position: absolute;
+  z-index: 1;
+  width: 11%;
+  height: 11%;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.spot::before {
+  content: "";
+  position: absolute;
+  width: 15%;
+  height: 15%;
+  left: 42.5%;
+  top: 42.5%;
+  border-radius: 50%;
+  background: #d8b77f;
+  box-shadow: 0 0 5px #100905;
+}
+
+.spot.target::before {
+  width: 30%;
+  height: 30%;
+  left: 35%;
+  top: 35%;
+  background: #f3d78e;
+  box-shadow: 0 0 12px #f3d78e;
+}
+
+.piece {
+  position: absolute;
+  inset: 7%;
+  border: 2px solid;
+  border-radius: 50%;
+  box-shadow: inset 0 2px 5px #ffffff66, 0 3px 5px #100905;
+}
+
+.piece.black {
+  background: radial-gradient(circle at 35% 28%, #555, #111 70%);
+  border-color: #aaa;
+}
+
+.piece.white {
+  background: radial-gradient(circle at 35% 28%, #fff, #bbb 70%);
+  border-color: #fff;
+}
+
+.spot.selected .piece {
+  outline: 4px solid #f2d17d;
+  outline-offset: 2px;
+}
+
+.panel {
+  grid-area: panel;
+  padding: 20px;
+  border: 1px solid #765335;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #382519, #21160f);
+  box-shadow: inset 0 0 20px #120b07;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  color: #f0d5a5;
+  font-size: 1.4rem;
+}
+
+.status {
+  min-height: 3.2em;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--gold);
+  background: #160f0bd9;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.controls select,
+.controls button,
+.start-button {
+  padding: 9px 13px;
+  color: var(--text);
+  background: #503722;
+  border: 1px solid #9b754b;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover, select:hover { filter: brightness(1.15); }
+
+button:focus-visible,
+select:focus-visible,
+.spot:focus-visible {
+  outline: 3px solid #f3d78e;
+  outline-offset: 2px;
+}
+
+.instructions {
+  color: var(--muted);
+  white-space: pre-line;
+}
+
+.score {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 14px 0;
+  color: var(--muted);
+}
+
+.swatch {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border-radius: 50%;
+}
+
+.swatch.black {
+  background: #111;
+  border: 1px solid #aaa;
+}
+
+.swatch.white {
+  background: #eee;
+  border: 1px solid #fff;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: #090604dd;
+}
+
+.dialog {
+  position: relative;
+  width: min(600px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 26px;
+  border: 2px solid #876341;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #49311f, #21160f);
+  box-shadow: 0 18px 60px #000b, inset 0 0 25px #130b07;
+}
+
+.dialog h2 {
+  margin: 0 0 12px;
+  color: #f0d5a5;
+}
+
+.dialog .language-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.mode-options {
+  display: grid;
+  gap: 9px;
+  margin: 20px 0;
+}
+
+.mode-options label {
+  padding: 10px 12px;
+  border: 1px solid #765335;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #1a110c80;
+}
+
+.mode-options input { accent-color: #d4b078; }
+
+.start-button {
+  width: 100%;
+  padding: 12px;
+  color: #21160f;
+  font-weight: bold;
+  background: linear-gradient(#e6c78e, #b58a52);
+}
+
+[hidden] { display: none !important; }
+
+@media (max-width: 760px) {
+  .page { padding: 14px; }
+
+  /* Narrow screens: title, board, then game panel. */
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "topbar"
+      "board"
+      "panel";
+    row-gap: 14px;
+  }
+
+  .topbar { justify-content: space-between; }
+
+  .board-wrap { max-width: min(620px, 100%); }
+  .panel { padding: 16px; }
+}
+</style>
+
+</head>
+
+<body>
+<div class="page">
+  <main class="layout">
+    <header class="topbar">
+      <h1 id="pageTitle">Alquerque</h1>
+      <select class="language" id="language" aria-label="Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
+    </header>
+
+    <section class="board-wrap" aria-label="Game board">
+      <div class="board" id="board"></div>
+    </section>
+
+    <aside class="panel">
+      <p class="status" id="status" aria-live="polite"></p>
+      <div class="score" id="score"></div>
+
+      <div class="controls">
+        <select id="mode" aria-label="Game mode"></select>
+        <button id="newGame" type="button"></button>
+      </div>
+
+      <h2 id="instructionsTitle"></h2>
+      <div class="instructions" id="instructions"></div>
+    </aside>
+  </main>
+</div>
+
+<div class="overlay" id="overlay">
+  <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+    <header class="topbar">
+    <h2 id="gameTitle"></h2>
+    <div class="language-row">
+      <select class="language" id="overlayLanguage" aria-label="Language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
+    </header>
+    <h2 id="overlayInstructionsTitle"></h2>
+    <div class="instructions" id="overlayInstructions"></div>
+    <h2 id="dialogTitle"></h2>
+    <div class="mode-options" id="modeOptions"></div>
+    <button class="start-button" id="startButton" type="button"></button>
+  </section>
+</div>
+
+<script>
+const TEXT = {
+  en: {
+    title: "Alquerque",
+    modeHuman: "2 Players",
+    modeCasual: "1 Player vs Easy AI",
+    modeNormal: "1 Player vs Normal AI",
+    newGame: "New game",
+    start: "Start game",
+    instructionsTitle: "How to play",
+    instructions:
+      "Each player has 12 pieces. Move along a line to an adjacent empty point, or jump an opposing piece into an empty point beyond it to capture it. Captures are compulsory; continue jumping with the same piece when possible. Capture all opposing pieces, or leave your opponent with no legal moves, to win.",
+    choose: "Choose a game mode",
+    turn: "Turn: Player {player} ({color})",
+    aiTurn: "Turn: {player} ({color}) — thinking…",
+    won: "{player} ({color}) wins!",
+    black: "Black",
+    white: "White",
+    player: "Player {n}",
+    ai: "AI",
+    blackCount: "Black: {n}",
+    whiteCount: "White: {n}",
+    selectPiece: "Select a piece to move.",
+    gameInProgress: "Select a piece to move."
+  },
+  es: {
+    title: "Alquerque",
+    modeHuman: "2 jugadores",
+    modeCasual: "1 jugador + IA (Fácil)",
+    modeNormal: "1 jugador + IA (Normal)",
+    newGame: "Nueva partida",
+    start: "Empezar partida",
+    instructionsTitle: "Cómo jugar",
+    instructions:
+      "Cada jugador tiene 12 fichas. Muévete por las líneas a una casilla vacía adyacente, o salta por encima de una ficha rival para capturarla. Las capturas son obligatorias; si puedes seguir saltando con la misma ficha, debes hacerlo. Gana quien capture todas las fichas rivales o deje al oponente sin movimientos posibles.",
+    choose: "Elige un modo de juego",
+    turn: "Turno: Jugador {player} ({color})",
+    aiTurn: "Turno: {player} ({color}) — pensando…",
+    won: "¡{player} ({color}) gana!",
+    black: "Negras",
+    white: "Blancas",
+    player: "Jugador {n}",
+    ai: "IA",
+    blackCount: "Negras: {n}",
+    whiteCount: "Blancas: {n}",
+    selectPiece: "Selecciona una ficha para mover.",
+    gameInProgress: "Selecciona una ficha para mover."
+  },
+zh: {
+    title: "元祖跳棋",
+    modeHuman: "雙人對戰",
+    modeCasual: "對戰簡單 AI",
+    modeNormal: "對戰普通 AI",
+    newGame: "重新開始",
+    start: "開始遊戲",
+    instructionsTitle: "點樣玩",
+    instructions:
+      "每位玩家有 12 隻棋。沿住線移動到相鄰嘅空格，或者跳過對方嘅棋嚟食子。食棋係強制性嘅；如果同一隻棋仲可以繼續跳，就要連跳。食晒對方所有棋，或者令到對手無路可行就為之贏。",
+    choose: "選擇遊戲模式",
+    turn: "輪到：玩家 {player}（{color}）",
+    aiTurn: "輪到：{player}（{color}）— 諗緊…", // "諗緊" sounds more natural for "thinking" than "思考緊"
+    won: "{player}（{color}）贏咗！",
+    black: "黑棋",
+    white: "白棋",
+    player: "玩家 {n}",
+    ai: "AI",
+    blackCount: "黑棋：{n}",
+    whiteCount: "白棋：{n}",
+    selectPiece: "請揀一隻棋嚟行。",
+    gameInProgress: "請揀一隻棋嚟行。"
+  }
+};
+
+const boardEl = document.getElementById("board");
+const modeEl = document.getElementById("mode");
+const languageEl = document.getElementById("language");
+const overlayLanguageEl = document.getElementById("overlayLanguage");
+const overlayEl = document.getElementById("overlay");
+
+const AI_THINK_DELAY = 450;
+const AI_MOVE_DELAY = 650;
+
+let lang = chooseLanguage();
+let mode = "casual";
+let board = [];
+let turn = 0;
+
+// These values are also the internal piece identifiers.
+let playerColors = ["black", "white"];
+let aiColors = null;
+
+let selected = null;
+let chain = null;
+let gameOver = false;
+let aiTimer = null;
+let gameNumber = 0;
+
+function chooseLanguage() {
+  const supported = ["en", "es", "zh"];
+  const queryLanguage = new URLSearchParams(location.search).get("lang");
+
+  if (supported.includes(queryLanguage)) return queryLanguage;
+
+  try {
+    const savedLanguage = localStorage.getItem("alquerque-lang");
+    if (supported.includes(savedLanguage)) return savedLanguage;
+  } catch (_) {}
+
+  const preferences = navigator.languages || [navigator.language || "en"];
+
+  for (const preference of preferences) {
+    const value = preference.toLowerCase();
+    if (value.startsWith("zh")) return "zh";
+    if (value.startsWith("es")) return "es";
+    if (value.startsWith("en")) return "en";
+  }
+
+  return "en";
+}
+
+function tr(key, vars = {}) {
+  let result = TEXT[lang][key] || key;
+
+  for (const [name, value] of Object.entries(vars)) {
+    result = result.replaceAll(`{${name}}`, value);
+  }
+
+  return result;
+}
+
+function setLanguage(value) {
+  lang = ["en", "es", "zh"].includes(value) ? value : "en";
+
+  languageEl.value = lang;
+  overlayLanguageEl.value = lang;
+  document.documentElement.lang = lang === "zh" ? "zh-HK" : lang;
+
+  try {
+    localStorage.setItem("alquerque-lang", lang);
+  } catch (_) {}
+
+  renderText();
+  render();
+}
+
+function renderText() {
+  document.getElementById("pageTitle").textContent = tr("title");
+  document.getElementById("gameTitle").textContent = tr("title");
+  document.getElementById("instructionsTitle").textContent = tr("instructionsTitle");
+  document.getElementById("instructions").textContent = tr("instructions");
+
+  document.getElementById("overlayInstructionsTitle").textContent = tr("instructionsTitle");
+  document.getElementById("overlayInstructions").textContent = tr("instructions");
+
+  document.getElementById("dialogTitle").textContent = tr("choose");
+  document.getElementById("newGame").textContent = tr("newGame");
+  document.getElementById("startButton").textContent = tr("start");
+
+  modeEl.innerHTML = "";
+  const modes = [
+    ["human", "modeHuman"],
+    ["casual", "modeCasual"],
+    ["normal", "modeNormal"]
+  ];
+
+  for (const [value, labelKey] of modes) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = tr(labelKey);
+    modeEl.append(option);
+  }
+
+  modeEl.value = mode;
+
+  document.getElementById("modeOptions").innerHTML = modes.map(
+    ([value, labelKey]) =>
+      `<label>
+        <input type="radio" name="startMode" value="${value}"
+          ${value === mode ? "checked" : ""}>
+        ${tr(labelKey)}
+      </label>`
+  ).join("");
+}
+
+function adjacent(a, b) {
+  const r1 = Math.floor(a / 5);
+  const c1 = a % 5;
+  const r2 = Math.floor(b / 5);
+  const c2 = b % 5;
+  const dr = r2 - r1;
+  const dc = c2 - c1;
+
+  if (Math.abs(dr) + Math.abs(dc) === 1) return true;
+  if (Math.abs(dr) !== 1 || Math.abs(dc) !== 1) return false;
+
+  return (
+    (r1 === c1 && r2 === c2) ||
+    (r1 + c1 === 4 && r2 + c2 === 4) ||
+    (r1 + c1 === 2 && r2 + c2 === 2) ||
+    (r1 + c1 === 6 && r2 + c2 === 6) ||
+    (r1 - c1 === 2 && r2 - c2 === 2) ||
+    (r1 - c1 === -2 && r2 - c2 === -2)
+  );
+}
+
+function neighbors(point) {
+  const result = [];
+
+  for (let i = 0; i < 25; i++) {
+    if (adjacent(point, i)) result.push(i);
+  }
+
+  return result;
+}
+
+function capturesFrom(position, color, state) {
+  const found = [];
+  const row = Math.floor(position / 5);
+  const col = position % 5;
+
+  for (const next of neighbors(position)) {
+    if (!state[next] || state[next] === color) continue;
+
+    const nextRow = Math.floor(next / 5);
+    const nextCol = next % 5;
+    const landingRow = nextRow + (nextRow - row);
+    const landingCol = nextCol + (nextCol - col);
+
+    // Prevent a jump from wrapping across a board edge.
+    if (
+      landingRow < 0 || landingRow >= 5 ||
+      landingCol < 0 || landingCol >= 5
+    ) continue;
+
+    const landing = landingRow * 5 + landingCol;
+
+    if (adjacent(next, landing) && !state[landing]) {
+      found.push({ next, landing });
+    }
+  }
+
+  return found;
+}
+
+function captureRoutes(
+  position,
+  color,
+  state,
+  from = position,
+  path = [],
+  taken = []
+) {
+  const jumps = capturesFrom(position, color, state);
+
+  if (!jumps.length) {
+    return path.length
+      ? [{ from, path: [...path], captures: [...taken] }]
+      : [];
+  }
+
+  let routes = [];
+
+  for (const jump of jumps) {
+    const nextState = state.slice();
+    nextState[position] = null;
+    nextState[jump.next] = null;
+    nextState[jump.landing] = color;
+
+    routes = routes.concat(
+      captureRoutes(
+        jump.landing,
+        color,
+        nextState,
+        from,
+        [...path, jump.landing],
+        [...taken, jump.next]
+      )
+    );
+  }
+
+  return routes;
+}
+
+function legalMoves(state, color) {
+  let captures = [];
+
+  for (let i = 0; i < 25; i++) {
+    if (state[i] === color) {
+      captures = captures.concat(captureRoutes(i, color, state));
+    }
+  }
+
+  if (captures.length) return captures;
+
+  const moves = [];
+
+  for (let i = 0; i < 25; i++) {
+    if (state[i] !== color) continue;
+
+    for (const to of neighbors(i)) {
+      if (!state[to]) {
+        moves.push({ from: i, path: [to], captures: [] });
+      }
+    }
+  }
+
+  return moves;
+}
+
+function initialBoard() {
+  const startingBoard = Array(25).fill(null);
+
+  for (let i = 0; i < 25; i++) {
+    const row = Math.floor(i / 5);
+    const col = i % 5;
+
+    if (row <= 1) {
+      // Top side belongs to player 1.
+      startingBoard[i] = playerColors[1];
+    } else if (row >= 3) {
+      // Bottom side belongs to player 0 (the human in AI games).
+      startingBoard[i] = playerColors[0];
+    } else if (row === 2 && col <= 1) {
+      startingBoard[i] = playerColors[1];
+    } else if (row === 2 && col >= 3) {
+      startingBoard[i] = playerColors[0];
+    }
+  }
+
+  return startingBoard;
+}
+
+function beginGame() {
+  clearTimeout(aiTimer);
+
+  const chosenMode = document.querySelector(
+    'input[name="startMode"]:checked'
+  );
+
+  if (chosenMode) mode = chosenMode.value;
+
+  if (mode === "human") {
+    playerColors = ["black", "white"];
+  } else {
+    // Randomize once for the first AI game, then keep those assignments.
+    if (!aiColors) {
+      aiColors = Math.random() < 0.5
+        ? ["black", "white"]
+        : ["white", "black"];
+    }
+    playerColors = [...aiColors];
+  }
+
+  // Alternate who starts each time a new game is started.
+  turn = gameNumber % 2;
+  gameNumber++;
+
+  board = initialBoard();
+  selected = null;
+  chain = null;
+  gameOver = false;
+
+  overlayEl.hidden = true;
+  renderText();
+  render();
+  scheduleAI();
+}
+
+function playerName(index) {
+  if (mode === "human" || index === 0) {
+    return tr("player", { n: index + 1 });
+  }
+
+  return `${tr("player", { n: index + 1 })} (${tr("ai")})`;
+}
+
+function colorName(color) {
+  return color === "black" ? tr("black") : tr("white");
+}
+
+function activeColor() {
+  return playerColors[turn];
+}
+
+function isAITurn() {
+  return mode !== "human" && turn === 1;
+}
+
+function render() {
+  boardEl.innerHTML = "";
+
+  const svg = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg"
+  );
+  svg.setAttribute("viewBox", "0 0 500 500");
+
+  for (let a = 0; a < 25; a++) {
+    for (const b of neighbors(a)) {
+      if (b <= a) continue;
+
+      const line = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line"
+      );
+
+      line.setAttribute("x1", 50 + (a % 5) * 100);
+      line.setAttribute("y1", 50 + Math.floor(a / 5) * 100);
+      line.setAttribute("x2", 50 + (b % 5) * 100);
+      line.setAttribute("y2", 50 + Math.floor(b / 5) * 100);
+      svg.append(line);
+    }
+  }
+
+  boardEl.append(svg);
+
+  const possibleTargets = selected === null
+    ? []
+    : nextStepsForSelection();
+
+  for (let i = 0; i < 25; i++) {
+    const spot = document.createElement("button");
+    spot.type = "button";
+    spot.className = "spot";
+    spot.style.left = `${10 + (i % 5) * 20}%`;
+    spot.style.top = `${10 + Math.floor(i / 5) * 20}%`;
+    spot.setAttribute("aria-label", `Point ${i + 1}`);
+
+    if (possibleTargets.includes(i)) spot.classList.add("target");
+    if (selected === i || (chain && chain.at === i)) {
+      spot.classList.add("selected");
+    }
+
+    if (board[i]) {
+      const piece = document.createElement("span");
+      piece.className = `piece ${board[i]}`;
+      spot.append(piece);
+    }
+
+    spot.addEventListener("click", () => handleSpot(i));
+    boardEl.append(spot);
+  }
+
+  const blackCount = board.filter(piece => piece === "black").length;
+  const whiteCount = board.filter(piece => piece === "white").length;
+
+  document.getElementById("score").innerHTML =
+    `<span><i class="swatch black"></i>${tr("blackCount", { n: blackCount })}</span>` +
+    `<span><i class="swatch white"></i>${tr("whiteCount", { n: whiteCount })}</span>`;
+
+  if (gameOver) return;
+
+  const color = colorName(activeColor());
+  document.getElementById("status").textContent = isAITurn()
+    ? tr("aiTurn", { player: playerName(turn), color })
+    : `${tr("turn", { player: playerName(turn), color })} — ${tr("gameInProgress")}`;
+}
+
+function nextStepsForSelection() {
+  if (chain) {
+    return capturesFrom(chain.at, activeColor(), board)
+      .map(jump => jump.landing);
+  }
+
+  const moves = legalMoves(board, activeColor())
+    .filter(move => move.from === selected);
+
+  return [...new Set(moves.map(move => move.path[0]))];
+}
+
+function handleSpot(point) {
+  if (gameOver || isAITurn()) return;
+
+  if (chain) {
+    const jump = capturesFrom(chain.at, activeColor(), board)
+      .find(candidate => candidate.landing === point);
+
+    if (!jump) return;
+
+    board[chain.at] = null;
+    board[jump.next] = null;
+    board[jump.landing] = activeColor();
+    chain.at = jump.landing;
+
+    if (!capturesFrom(chain.at, activeColor(), board).length) {
+      finishTurn();
+    } else {
+      render();
+    }
+
+    return;
+  }
+
+  const moves = legalMoves(board, activeColor());
+  const selectedMove = selected === null
+    ? null
+    : moves.find(move => move.from === selected && move.path[0] === point);
+
+  if (selectedMove) {
+    const from = selected;
+    const to = selectedMove.path[0];
+
+    if (selectedMove.captures.length) {
+      const jumped = selectedMove.captures[0];
+
+      board[from] = null;
+      board[jumped] = null;
+      board[to] = activeColor();
+      chain = { at: to };
+      selected = null;
+
+      if (!capturesFrom(to, activeColor(), board).length) {
+        finishTurn();
+      } else {
+        render();
+      }
+    } else {
+      board[from] = null;
+      board[to] = activeColor();
+      selected = null;
+      finishTurn();
+    }
+
+    return;
+  }
+
+  if (board[point] === activeColor()) {
+    selected = point;
+    render();
+  }
+}
+
+function finishTurn() {
+  selected = null;
+  chain = null;
+  turn = 1 - turn;
+
+  const nextColor = activeColor();
+
+  if (
+    !board.includes(nextColor) ||
+    legalMoves(board, nextColor).length === 0
+  ) {
+    gameOver = true;
+    const winner = 1 - turn;
+
+    document.getElementById("status").textContent = tr("won", {
+      player: playerName(winner),
+      color: colorName(playerColors[winner])
+    });
+
+    render();
+    return;
+  }
+
+  render();
+  scheduleAI();
+}
+
+function applyMove(state, move, color) {
+  const next = state.slice();
+  let at = move.from;
+
+  for (const to of move.path) {
+    const row1 = Math.floor(at / 5);
+    const col1 = at % 5;
+    const row2 = Math.floor(to / 5);
+    const col2 = to % 5;
+
+    if (Math.abs(row1 - row2) === 2 || Math.abs(col1 - col2) === 2) {
+      const middleRow = (row1 + row2) / 2;
+      const middleCol = (col1 + col2) / 2;
+      next[middleRow * 5 + middleCol] = null;
+    }
+
+    next[at] = null;
+    next[to] = color;
+    at = to;
+  }
+
+  return next;
+}
+
+function scheduleAI() {
+  if (!isAITurn() || gameOver) return;
+
+  aiTimer = setTimeout(() => {
+    const moves = legalMoves(board, activeColor());
+
+    if (!moves.length) {
+      gameOver = true;
+      document.getElementById("status").textContent = tr("won", {
+        player: playerName(0),
+        color: colorName(playerColors[0])
+      });
+      render();
+      return;
+    }
+
+    const move = mode === "casual"
+      ? randomChoice(moves)
+      : chooseNormalMove(moves);
+
+    animateAIMove(move);
+  }, AI_THINK_DELAY);
+}
+
+function animateAIMove(move) {
+  const color = activeColor();
+  let state = board;
+  let at = move.from;
+  let step = 0;
+
+  function applyNextStep() {
+    if (gameOver) return;
+
+    const to = move.path[step];
+
+    state = applySingleMoveStep(state, at, to, color);
+    board = state;
+    at = to;
+    step++;
+
+    render();
+
+    if (step < move.path.length) {
+      aiTimer = setTimeout(applyNextStep, AI_MOVE_DELAY);
+    } else {
+      finishTurn();
+    }
+  }
+
+  aiTimer = setTimeout(applyNextStep, AI_MOVE_DELAY);
+}
+
+function applySingleMoveStep(state, from, to, color) {
+  const next = state.slice();
+  const row1 = Math.floor(from / 5);
+  const col1 = from % 5;
+  const row2 = Math.floor(to / 5);
+  const col2 = to % 5;
+
+  if (Math.abs(row1 - row2) === 2 || Math.abs(col1 - col2) === 2) {
+    const middleRow = (row1 + row2) / 2;
+    const middleCol = (col1 + col2) / 2;
+    next[middleRow * 5 + middleCol] = null;
+  }
+
+  next[from] = null;
+  next[to] = color;
+
+  return next;
+}
+
+function randomChoice(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function evaluate(state, aiColor) {
+  const enemyColor = aiColor === "black" ? "white" : "black";
+  const count = color => state.filter(piece => piece === color).length;
+  const aiPieces = count(aiColor);
+  const enemyPieces = count(enemyColor);
+
+  if (!enemyPieces) return 10000;
+  if (!aiPieces) return -10000;
+
+  const aiMoves = legalMoves(state, aiColor).length;
+  const enemyMoves = legalMoves(state, enemyColor).length;
+
+  return (aiPieces - enemyPieces) * 100 + (aiMoves - enemyMoves) * 2;
+}
+
+function chooseNormalMove(moves) {
+  const aiColor = activeColor();
+  let bestScore = -Infinity;
+  let bestMoves = [];
+
+  for (const move of moves) {
+    const score = minimax(
+      applyMove(board, move, aiColor),
+      1 - turn,
+      2,
+      -Infinity,
+      Infinity,
+      aiColor
+    );
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [move];
+    } else if (score === bestScore) {
+      bestMoves.push(move);
+    }
+  }
+
+  return randomChoice(bestMoves);
+}
+
+function minimax(state, player, depth, alpha, beta, aiColor) {
+  const score = evaluate(state, aiColor);
+
+  if (depth === 0 || Math.abs(score) >= 10000) return score;
+
+  const color = playerColors[player];
+  const moves = legalMoves(state, color);
+
+  if (!moves.length) return color === aiColor ? -9000 : 9000;
+
+  const maximizing = color === aiColor;
+  let value = maximizing ? -Infinity : Infinity;
+
+  for (const move of moves) {
+    const next = applyMove(state, move, color);
+    const result = minimax(
+      next,
+      1 - player,
+      depth - 1,
+      alpha,
+      beta,
+      aiColor
+    );
+
+    if (maximizing) {
+      value = Math.max(value, result);
+      alpha = Math.max(alpha, value);
+    } else {
+      value = Math.min(value, result);
+      beta = Math.min(beta, value);
+    }
+
+    if (beta <= alpha) break;
+  }
+
+  return value;
+}
+
+languageEl.addEventListener("change", event => {
+  setLanguage(event.target.value);
+});
+
+overlayLanguageEl.addEventListener("change", event => {
+  setLanguage(event.target.value);
+});
+
+modeEl.addEventListener("change", event => {
+  mode = event.target.value;
+});
+
+document.getElementById("newGame").addEventListener("click", () => {
+  renderText();
+  overlayEl.hidden = false;
+});
+
+document.getElementById("startButton").addEventListener("click", beginGame);
+
+setLanguage(lang);
+renderText();
+render();
+</script>
+</body>
+</html>
