@@ -389,6 +389,116 @@ select:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+@media (orientation: landscape) {
+  main {
+    /* The second declaration uses the small viewport height
+       where supported; the first is a fallback. */
+    --board-size: min(56vw, calc(100vh - 44px), 640px);
+    --board-size: min(56vw, calc(100svh - 44px), 640px);
+
+    display: grid;
+    grid-template-columns:
+      minmax(0, var(--board-size))
+      minmax(0, 1fr);
+    grid-template-rows: repeat(6, max-content);
+    column-gap: 24px;
+    row-gap: 12px;
+    align-items: start;
+    align-content: start;
+
+    width: min(96vw, 1100px);
+    padding: 22px 0;
+  }
+
+  /* Left column: square board. */
+  .board-wrap {
+    grid-column: 1;
+    grid-row: 1 / 7;
+    width: 100%;
+    min-width: 0;
+    align-self: start;
+  }
+
+  /* Right column: all other content, in its original order. */
+  h1 {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+  }
+
+  .bar {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    margin: 0;
+  }
+
+  #status {
+    grid-column: 2;
+    grid-row: 3;
+    margin: 0;
+  }
+
+  .controls {
+    grid-column: 2;
+    grid-row: 4;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .help {
+    grid-column: 2;
+    grid-row: 5;
+    margin: 0;
+  }
+
+  .language-control {
+    grid-column: 2;
+    grid-row: 6;
+    flex-wrap: wrap;
+    margin: 0;
+  }
+
+  /* Size board text relative to the board, not screen width. */
+  .value {
+    font-size: clamp(18px, calc(var(--board-size) / 15), 30px);
+  }
+
+  .notes {
+    font-size: clamp(7px, calc(var(--board-size) / 45), 10px);
+  }
+}
+
+/* Tighter spacing for phones held sideways. */
+@media (orientation: landscape) and (max-height: 500px) {
+  main {
+    column-gap: 16px;
+    row-gap: 8px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .bar {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .numbers,
+  .actions {
+    gap: 6px;
+  }
+
+  .actions button {
+    padding: 10px 8px;
+  }
+
+  .help {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
 </style>
 </head>
 

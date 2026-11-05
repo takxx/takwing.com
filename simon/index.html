@@ -1,60 +1,601 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Hexagon Simon</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Hexagon Simon</title>
+<style>
+:root {
+--bg-color: #0f172a;
+--card-bg: #1e293b;
+--text-color: #f8fafc;
+--accent-color: #38bdf8;
+--danger-color: #ef4444;
+--success-color: #22c55e;
+}
+
+body {
+font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+background-color: var(--bg-color);
+color: var(--text-color);
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+min-height: 100vh;
+margin: 0;
+padding: 1rem;
+box-sizing: border-box;
+touch-action: manipulation;
+}
+
+.game-container {
+background-color: var(--card-bg);
+padding: 2rem;
+border-radius: 1rem;
+box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+display: flex;
+flex-direction: column;
+align-items: center;
+max-width: 400px;
+width: 100%;
+box-sizing: border-box;
+}
+
+header {
+display: flex;
+justify-content: space-between;
+width: 100%;
+align-items: center;
+margin-bottom: 1.5rem;
+}
+
+.language-select-wrapper {
+display: flex;
+flex-direction: column;
+font-size: 0.85rem;
+}
+
+select {
+background: #334155;
+color: white;
+border: 1px solid #475569;
+padding: 0.3rem 0.5rem;
+border-radius: 0.35rem;
+cursor: pointer;
+}
+
+.status-panel {
+display: flex;
+justify-content: space-between;
+width: 100%;
+margin-bottom: 1rem;
+font-weight: 600;
+font-size: 1.1rem;
+}
+
+/* SVG Board Styling */
+.board-svg {
+width: 100%;
+max-width: 320px;
+height: auto;
+overflow: visible;
+margin: 1rem 0;
+touch-action: none;
+}
+
+/* Hexagons: dim when inactive */
+.hex {
+fill: currentColor;
+fill-opacity: 1;
+cursor: pointer;
+
+stroke: #0f172a;
+stroke-width: 3px;
+stroke-linejoin: round;
+
+filter: brightness(0.65);
+transform: none;
+
+transition:
+filter 90ms ease-out,
+stroke 90ms ease-out;
+}
+
+/* Each hex's color also supplies its glow color */
+.hex-0 { color: #ef4444; } /* Red - Center */
+.hex-1 { color: #3b82f6; } /* Blue */
+.hex-2 { color: #eab308; } /* Yellow */
+.hex-3 { color: #22c55e; } /* Green */
+.hex-4 { color: #a855f7; } /* Purple */
+.hex-5 { color: #ec4899; } /* Pink */
+.hex-6 { color: #06b6d4; } /* Cyan */
+
+
+
+#message {
+height: 1.5rem;
+margin: 1rem 0;
+font-weight: 500;
+text-align: center;
+}
+
+#startButton {
+background-color: var(--accent-color);
+color: #0f172a;
+border: none;
+padding: 0.75rem 1.5rem;
+font-size: 1rem;
+font-weight: 700;
+border-radius: 0.5rem;
+cursor: pointer;
+transition: background-color 0.2s, transform 0.1s;
+width: 100%;
+}
+
+#startButton:hover:not(:disabled) {
+background-color: #0ea5e9;
+}
+
+#startButton:active:not(:disabled) {
+transform: scale(0.98);
+}
+
+#startButton:disabled {
+background-color: #475569;
+color: #94a3b8;
+cursor: not-allowed;
+}
+/* Normal state */
+#board .hex {
+fill: var(--hex-off);
+fill-opacity: 1;
+filter: none;
+transform: none;
+
+stroke: #0f172a;
+stroke-width: 3px;
+
+transition:
+fill 80ms ease-out,
+stroke 80ms ease-out,
+filter 80ms ease-out;
+}
+
+/* Dim base colors + bright illuminated colors */
+#board .hex-0 {
+--hex-off: #992b2b;
+--hex-on: #ffaaaa;
+}
+
+#board .hex-1 {
+--hex-off: #244c99;
+--hex-on: #aaccff;
+}
+
+#board .hex-2 {
+--hex-off: #947006;
+--hex-on: #fff3a3;
+}
+
+#board .hex-3 {
+--hex-off: #167a3b;
+--hex-on: #a0ffc0;
+}
+
+#board .hex-4 {
+--hex-off: #693599;
+--hex-on: #e0b3ff;
+}
+
+#board .hex-5 {
+--hex-off: #942d60;
+--hex-on: #ffb3d9;
+}
+
+#board .hex-6 {
+--hex-off: #087587;
+--hex-on: #a0f5ff;
+}
+
+/* Illuminated state */
+#board .hex.active {
+fill: var(--hex-on);
+fill-opacity: 1;
+transform: none;
+
+filter:
+drop-shadow(0 0 5px var(--hex-on))
+drop-shadow(0 0 12px var(--hex-on));
+}
+
+/* Error state overrides the light */
+#board .hex.wrong {
+fill: #64748b !important;
+stroke: #0f172a;
+filter: none;
+}
+</style>
 </head>
 <body>
 
-  <div class="game-container">
-    <header>
-      <h1 style="font-size: 1.25rem; margin: 0;" data-i18n="title">Hexagon Simon</h1>
-      <div class="language-select-wrapper">
-        <label for="languageSelect" data-i18n="language">Language</label>
-        <select id="languageSelect">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="zh-Hant">中文</option>
-        </select>
-      </div>
-    </header>
-
-    <div class="status-panel">
-      <div><span data-i18n="roundLabel">Round:</span> <span id="round">1</span></div>
+<div class="game-container">
+  <header>
+    <h1 style="font-size: 1.25rem; margin: 0;" data-i18n="title">Hexagon Simon</h1>
+    <div class="language-select-wrapper">
+      <label for="languageSelect" data-i18n="language">Language</label>
+      <select id="languageSelect">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">中文</option>
+      </select>
     </div>
+  </header>
 
-    <!-- Collating Flower Flat-Topped Hexagon Layout (Center = Hex 0) -->
-    <svg id="board" class="board-svg" viewBox="0 0 300 300" role="application" aria-label="Simon game board">
-      <!-- Hex 0: Center -->
-      <polygon class="hex hex-0" data-index="0" points="150,100 193.3,125 193.3,175 150,200 106.7,175 106.7,125"></polygon>
-      <!-- Hex 1: Top-Right -->
-      <polygon class="hex hex-1" data-index="1" points="193.3,25 236.6,50 236.6,100 193.3,125 150,100 150,50"></polygon>
-      <!-- Hex 2: Right -->
-      <polygon class="hex hex-2" data-index="2" points="236.6,100 279.9,125 279.9,175 236.6,200 193.3,175 193.3,125"></polygon>
-      <!-- Hex 3: Bottom-Right -->
-      <polygon class="hex hex-3" data-index="3" points="193.3,175 236.6,200 236.6,250 193.3,275 150,250 150,200"></polygon>
-      <!-- Hex 4: Bottom-Left -->
-      <polygon class="hex hex-4" data-index="4" points="106.7,175 150,200 150,250 106.7,275 63.4,250 63.4,200"></polygon>
-      <!-- Hex 5: Left -->
-      <polygon class="hex hex-5" data-index="5" points="63.4,100 106.7,125 106.7,175 63.4,200 20.1,175 20.1,125"></polygon>
-      <!-- Hex 6: Top-Left -->
-      <polygon class="hex hex-6" data-index="6" points="106.7,25 150,50 150,100 106.7,125 63.4,100 63.4,50"></polygon>
-    </svg>
-
-    <div id="message" role="status" aria-live="polite">Watch the sequence</div>
-
-    <button id="startButton" data-i18n="start">Start Game</button>
+  <div class="status-panel">
+    <div><span data-i18n="roundLabel">Round:</span> <span id="round">1</span></div>
   </div>
 
-  <script src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
-      });
-    }
-  </script>
+  <!-- Collating Flower Flat-Topped Hexagon Layout (Center = Hex 0) -->
+  <svg id="board" class="board-svg" viewBox="0 0 300 300" role="application" aria-label="Simon game board">
+    <!-- Hex 0: Center -->
+    <polygon class="hex hex-0" data-index="0" points="150,100 193.3,125 193.3,175 150,200 106.7,175 106.7,125"></polygon>
+    <!-- Hex 1: Top-Right -->
+    <polygon class="hex hex-1" data-index="1" points="193.3,25 236.6,50 236.6,100 193.3,125 150,100 150,50"></polygon>
+    <!-- Hex 2: Right -->
+    <polygon class="hex hex-2" data-index="2" points="236.6,100 279.9,125 279.9,175 236.6,200 193.3,175 193.3,125"></polygon>
+    <!-- Hex 3: Bottom-Right -->
+    <polygon class="hex hex-3" data-index="3" points="193.3,175 236.6,200 236.6,250 193.3,275 150,250 150,200"></polygon>
+    <!-- Hex 4: Bottom-Left -->
+    <polygon class="hex hex-4" data-index="4" points="106.7,175 150,200 150,250 106.7,275 63.4,250 63.4,200"></polygon>
+    <!-- Hex 5: Left -->
+    <polygon class="hex hex-5" data-index="5" points="63.4,100 106.7,125 106.7,175 63.4,200 20.1,175 20.1,125"></polygon>
+    <!-- Hex 6: Top-Left -->
+    <polygon class="hex hex-6" data-index="6" points="106.7,25 150,50 150,100 106.7,125 63.4,100 63.4,50"></polygon>
+  </svg>
+
+  <div id="message" role="status" aria-live="polite">Watch the sequence</div>
+
+  <button id="startButton" data-i18n="start">Start Game</button>
+</div>
+
+<script>
+"use strict";
+
+/* =================================
+    DOM
+================================= */
+const board = document.getElementById("board");
+const hexagons = [...document.querySelectorAll(".hex")];
+const startButton = document.getElementById("startButton");
+const roundDisplay = document.getElementById("round");
+const message = document.getElementById("message");
+const languageSelect = document.getElementById("languageSelect");
+
+/* =================================
+    Configuration
+================================= */
+const HEX_COUNT = 7;
+const LIGHT_TIME = 430;
+const GAP_TIME = 140;
+const FEEDBACK_TIME = 180;
+const SWIPE_THRESHOLD = 8;
+
+const neighbors = {
+  0: [1, 2, 3, 4, 5, 6],
+  1: [0, 6, 2],
+  2: [0, 1, 3],
+  3: [0, 2, 4],
+  4: [0, 3, 5],
+  5: [0, 4, 6],
+  6: [0, 5, 1]
+};
+
+/* =================================
+    Translations
+================================= */
+const translations = {
+  en: {
+    title: "Hexagon Simon",
+    language: "Language",
+    roundLabel: "Round:",
+    watchSequence: "Watch the sequence",
+    yourTurn: "Your turn",
+    correct: "Correct!",
+    wrongSequence: "Wrong sequence",
+    start: "Start Game",
+    restart: "Restart Game",
+    tryAgain: "Try Again",
+    boardLabel: "Simon game board"
+  },
+  es: {
+    title: "Simón de Hexágonos",
+    language: "Idioma",
+    roundLabel: "Ronda:",
+    watchSequence: "Observa la secuencia",
+    yourTurn: "Tu turno",
+    correct: "¡Correcto!",
+    wrongSequence: "Secuencia incorrecta",
+    start: "Iniciar juego",
+    restart: "Reiniciar juego",
+    tryAgain: "Intentar de nuevo",
+    boardLabel: "Tablero del juego Simón"
+  },
+  "zh-Hant": {
+    title: "六角西門",
+    language: "語言",
+    roundLabel: "回合：",
+    watchSequence: "睇實喇",
+    yourTurn: "輪到你",
+    correct: "順利完成！",
+    wrongSequence: "錯咗喇",
+    start: "開始遊戲",
+    restart: "重新開始",
+    tryAgain: "再試一次",
+    boardLabel: "西門遊戲板"
+  }
+};
+
+let language = "en";
+let text = translations[language];
+
+function applyTranslations() {
+  document.documentElement.lang = language;
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    const key = element.dataset.i18n;
+    if (text[key]) element.textContent = text[key];
+  });
+  board.setAttribute("aria-label", text.boardLabel);
+  hexagons.forEach((hex, index) => {
+    const prefix = language === "zh-Hant" ? "六角形 " : language === "es" ? "Hexágono " : "Hexagon ";
+    hex.setAttribute("aria-label", `${prefix}${index + 1}`);
+  });
+}
+
+function changeLanguage(newLang) {
+  language = translations[newLang] ? newLang : "en";
+  text = translations[language];
+  applyTranslations();
+  if (!gameRunning) setMessage("watchSequence");
+}
+
+/* =================================
+    Audio
+================================= */
+let audioContext = null;
+const frequencies = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88];
+
+function playHexSound(index) {
+  if (!audioContext) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioContext();
+  }
+  if (audioContext.state === "suspended") audioContext.resume();
+
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+
+  oscillator.type = "sine";
+  oscillator.frequency.value = frequencies[index];
+
+  const now = audioContext.currentTime;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+  oscillator.connect(gain);
+  gain.connect(audioContext.destination);
+
+  oscillator.start(now);
+  oscillator.stop(now + 0.4);
+}
+
+/* =================================
+    Game State & Flow
+================================= */
+let sequence = [];
+let playerInput = [];
+let round = 1;
+let gameRunning = false;
+let acceptingInput = false;
+let gameId = 0;
+
+const wait = ms => new Promise(res => setTimeout(res, ms));
+const randomItem = arr => arr[Math.floor(Math.random() * arr.length)];
+const setMessage = key => message.textContent = text[key];
+
+function addNextSequenceItem() {
+  if (sequence.length === 0) {
+    sequence.push(Math.floor(Math.random() * HEX_COUNT));
+    return;
+  }
+  sequence.push(randomItem(neighbors[sequence[sequence.length - 1]]));
+}
+
+async function lightHex(index) {
+  const hex = hexagons[index];
+  if (!hex) return;
+  playHexSound(index);
+  hex.classList.add("active");
+  await wait(LIGHT_TIME);
+  hex.classList.remove("active");
+}
+
+async function playSequence(currentGameId) {
+  acceptingInput = false;
+  setMessage("watchSequence");
+  await wait(500);
+
+  for (const index of sequence) {
+    if (currentGameId !== gameId) return;
+    await lightHex(index);
+    await wait(GAP_TIME);
+  }
+
+  if (currentGameId !== gameId) return;
+  playerInput = [];
+  acceptingInput = true;
+  setMessage("yourTurn");
+}
+
+function createNewGame() {
+  gameId++;
+  hexagons.forEach(h => h.classList.remove("active", "wrong"));
+  sequence = [];
+  playerInput = [];
+  round = 1;
+  gameRunning = true;
+  acceptingInput = false;
+  roundDisplay.textContent = round;
+  startButton.disabled = true;
+  startButton.textContent = text.restart;
+
+  addNextSequenceItem();
+  playSequence(gameId);
+}
+
+function flashHex(index) {
+  const hex = hexagons[index];
+  if (!hex) return;
+  hex.classList.add("active");
+  setTimeout(() => hex.classList.remove("active"), FEEDBACK_TIME);
+}
+
+function gameOver() {
+  acceptingInput = false;
+  gameRunning = false;
+  setMessage("wrongSequence");
+  startButton.disabled = false;
+  startButton.textContent = text.tryAgain;
+
+  hexagons.forEach(h => h.classList.add("wrong"));
+  setTimeout(() => hexagons.forEach(h => h.classList.remove("wrong")), 350);
+}
+
+function roundComplete() {
+  acceptingInput = false;
+  setMessage("correct");
+  round++;
+  roundDisplay.textContent = round;
+  const currentGameId = gameId;
+
+  setTimeout(() => {
+    if (currentGameId !== gameId || !gameRunning) return;
+    addNextSequenceItem();
+    playSequence(currentGameId);
+  }, 700);
+}
+
+function selectHexagon(index) {
+  if (!acceptingInput || !Number.isInteger(index) || !hexagons[index]) return;
+
+  const expectedIndex = playerInput.length;
+  const expectedHex = sequence[expectedIndex];
+
+  playerInput.push(index);
+  playHexSound(index);
+  flashHex(index);
+
+  if (index !== expectedHex) {
+    gameOver();
+    return;
+  }
+
+  if (playerInput.length === sequence.length) {
+    roundComplete();
+  }
+}
+
+/* =================================
+    Pointer & Touch Input Handling
+================================= */
+let activePointerId = null;
+let lastPointerHex = null;
+let pointerStartX = 0;
+let pointerStartY = 0;
+let swipeStarted = false;
+
+function getHexIndex(el) {
+  const hex = el?.closest?.(".hex");
+  if (!hex || !board.contains(hex)) return null;
+  const idx = Number(hex.dataset.index);
+  return Number.isInteger(idx) && idx >= 0 && idx < HEX_COUNT ? idx : null;
+}
+
+function getHexFromPoint(x, y) {
+  const elements = document.elementsFromPoint(x, y);
+  for (const el of elements) {
+    const idx = getHexIndex(el);
+    if (idx !== null) return idx;
+  }
+  return null;
+}
+
+function handlePointerDown(e) {
+  if (!acceptingInput || activePointerId !== null) return;
+  const startingHex = getHexIndex(e.target) ?? getHexFromPoint(e.clientX, e.clientY);
+  if (startingHex === null) return;
+
+  e.preventDefault();
+  activePointerId = e.pointerId;
+  lastPointerHex = startingHex;
+  pointerStartX = e.clientX;
+  pointerStartY = e.clientY;
+  swipeStarted = false;
+
+  if (board.setPointerCapture) board.setPointerCapture(e.pointerId);
+  selectHexagon(startingHex);
+}
+
+function handlePointerMove(e) {
+  if (e.pointerId !== activePointerId) return;
+  if (!acceptingInput) {
+    finishPointer(e);
+    return;
+  }
+
+  e.preventDefault();
+  const distance = Math.hypot(e.clientX - pointerStartX, e.clientY - pointerStartY);
+
+  if (!swipeStarted && distance < SWIPE_THRESHOLD) return;
+
+  const currentHex = getHexFromPoint(e.clientX, e.clientY);
+  if (currentHex === null || currentHex === lastPointerHex) return;
+
+  if (!neighbors[lastPointerHex].includes(currentHex)) return;
+
+  swipeStarted = true;
+  lastPointerHex = currentHex;
+  selectHexagon(currentHex);
+}
+
+function handlePointerUp(e) {
+  if (e.pointerId === activePointerId) finishPointer(e);
+}
+
+function handlePointerCancel(e) {
+  if (e.pointerId === activePointerId) finishPointer(e);
+}
+
+function finishPointer(e) {
+  if (board.releasePointerCapture && board.hasPointerCapture?.(e.pointerId)) {
+    board.releasePointerCapture(e.pointerId);
+  }
+  activePointerId = null;
+  lastPointerHex = null;
+}
+
+/* =================================
+    Event Listeners & Init
+================================= */
+languageSelect.addEventListener("change", e => changeLanguage(e.target.value));
+startButton.addEventListener("click", createNewGame);
+board.addEventListener("pointerdown", handlePointerDown);
+board.addEventListener("pointermove", handlePointerMove);
+board.addEventListener("pointerup", handlePointerUp);
+board.addEventListener("pointercancel", handlePointerCancel);
+
+applyTranslations();
+</script>
 </body>
 </html>

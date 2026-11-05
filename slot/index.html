@@ -1,238 +1,2149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="Ocean Treasures, a colorful 3 by 3 ocean-themed slot game" />
-  <title>Ocean Treasures</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="description" content="Ocean Treasures, a colorful 3 by 3 ocean-themed slot game" />
+<title>Ocean Treasures</title>
+<style>
+:root {
+  --deepest: #031d35;
+  --deep: #063b61;
+  --ocean: #087e9e;
+  --aqua: #19c7c9;
+  --foam: #dffcff;
+  --sand: #f8d889;
+  --coral: #ff806b;
+  --mint: #6af0c4;
+  --white: #ffffff;
+  --shadow: rgba(0, 18, 40, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 12px;
+  overflow-x: hidden;
+  color: var(--white);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(34, 202, 207, 0.32), transparent 24rem),
+    radial-gradient(circle at 85% 25%, rgba(255, 128, 107, 0.18), transparent 20rem),
+    linear-gradient(180deg, #03192d 0%, #064c6e 48%, #021827 100%);
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  opacity: 0.3;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.8) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 0 1px, transparent 2px);
+  background-position: 20px 30px, 100px 120px;
+  background-size: 190px 230px, 270px 320px;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--white);
+  outline-offset: 3px;
+}
+
+.machine {
+  position: relative;
+  isolation: isolate;
+  width: min(94vw, 520px);
+  padding: 24px;
+  overflow: hidden;
+  text-align: center;
+  border: 3px solid rgba(223, 252, 255, 0.8);
+  border-radius: 32px;
+  background:
+    linear-gradient(145deg, rgba(21, 157, 174, 0.95), rgba(3, 42, 72, 0.98) 58%),
+    var(--deep);
+  box-shadow:
+    0 0 0 8px rgba(3, 29, 53, 0.8),
+    0 0 0 11px rgba(248, 216, 137, 0.55),
+    0 28px 70px var(--shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.machine::after {
+  position: absolute;
+  inset: auto -20% -100px;
+  z-index: -1;
+  height: 210px;
+  content: "";
+  opacity: 0.8;
+  background:
+    radial-gradient(ellipse at 15% 40%, rgba(255, 128, 107, 0.7) 0 9%, transparent 10%),
+    radial-gradient(ellipse at 78% 35%, rgba(106, 240, 196, 0.55) 0 8%, transparent 9%),
+    linear-gradient(160deg, transparent 25%, rgba(248, 216, 137, 0.23) 26% 30%, transparent 31%);
+  transform: rotate(-4deg);
+}
+
+.bubble {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgba(223, 252, 255, 0.5);
+  border-radius: 50%;
+  opacity: 0.7;
+  box-shadow: inset 3px 3px 5px rgba(255, 255, 255, 0.3);
+  animation: float 5s ease-in-out infinite;
+}
+
+.bubble-one {
+  top: 82px;
+  right: 28px;
+  width: 18px;
+  height: 18px;
+}
+
+.bubble-two {
+  top: 154px;
+  left: 22px;
+  width: 11px;
+  height: 11px;
+  animation-delay: -2s;
+}
+
+.bubble-three {
+  right: 90px;
+  bottom: 160px;
+  width: 9px;
+  height: 9px;
+  animation-delay: -3s;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: var(--foam);
+  font-size: 0.82rem;
+}
+
+.brand-mark {
+  margin-right: auto;
+  color: var(--sand);
+  font-size: 1.45rem;
+  filter: drop-shadow(0 0 8px rgba(248, 216, 137, 0.6));
+}
+
+#languageSelect {
+  min-width: 94px;
+  padding: 7px 9px;
+  color: var(--white);
+  border: 1px solid rgba(223, 252, 255, 0.65);
+  border-radius: 9px;
+  outline: none;
+  background: rgba(3, 29, 53, 0.6);
+}
+
+.hero {
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--mint);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+h1 {
+  margin: 0;
+  color: var(--sand);
+  font-size: clamp(2rem, 8vw, 3rem);
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-shadow:
+    0 2px 0 #9b6d2a,
+    0 0 18px rgba(248, 216, 137, 0.45);
+}
+
+.subtitle {
+  margin: 10px 0 0;
+  color: var(--foam);
+  opacity: 0.88;
+}
+
+.status {
+  display: flex;
+  gap: 9px;
+  margin: 18px 0;
+}
+
+.status-box {
+  flex: 1;
+  padding: 11px 5px;
+  border: 1px solid rgba(223, 252, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(1, 22, 42, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.status-box span {
+  color: var(--foam);
+  font-size: 0.76rem;
+}
+
+.status-box strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--sand);
+  font-size: 1.45rem;
+  text-shadow: 0 0 9px rgba(248, 216, 137, 0.4);
+}
+
+.board-shell {
+  position: relative;
+  padding: 8px;
+  border: 2px solid rgba(248, 216, 137, 0.8);
+  border-radius: 22px;
+  background: linear-gradient(135deg, #e9bd62, #7f5725 48%, #f8d889);
+  box-shadow:
+    0 8px 0 rgba(42, 29, 11, 0.5),
+    0 0 25px rgba(25, 199, 201, 0.35);
+}
+
+.board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  overflow: hidden;
+  border: 4px solid #032944;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(12, 116, 143, 0.9), rgba(2, 38, 66, 0.98)),
+    #063b61;
+  box-shadow:
+    inset 0 0 22px #011525,
+    inset 0 0 0 2px rgba(223, 252, 255, 0.18);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.board::before,
+.board::after {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  width: 100%;
+  height: 20%;
+  content: "";
+  pointer-events: none;
+}
+
+.board::before {
+  top: 0;
+  background: linear-gradient(rgba(223, 252, 255, 0.18), transparent);
+}
+
+.board::after {
+  bottom: 0;
+  background: linear-gradient(transparent, rgba(1, 21, 37, 0.45));
+}
+
+.board-top-light,
+.board-bottom-light {
+  position: absolute;
+  z-index: 3;
+  left: 14%;
+  width: 72%;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  filter: blur(2px);
+}
+
+.board-top-light {
+  top: 4px;
+}
+
+.board-bottom-light {
+  bottom: 4px;
+  opacity: 0.35;
+}
+
+.cell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  aspect-ratio: 1;
+  min-width: 0;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid rgba(223, 252, 255, 0.35);
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.9), transparent 20%),
+    linear-gradient(145deg, #eaffff, #8bdde0 55%, #328da5);
+  color: #03243b;
+  font-size: clamp(2rem, 13vw, 4rem);
+  line-height: 1;
+  box-shadow:
+    inset 0 0 14px rgba(0, 40, 68, 0.5),
+    0 3px 0 rgba(1, 22, 38, 0.45);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cell.jackpot-symbol {
+  background:
+    radial-gradient(circle at 35% 25%, #fff, transparent 20%),
+    linear-gradient(145deg, #fff4b5, #f8d889 52%, #d88938);
+}
+
+.cell.spinning {
+  animation: shake 0.08s infinite alternate;
+}
+
+.cell.win {
+  z-index: 4;
+  background:
+    radial-gradient(circle, #ffffff 0 13%, transparent 14%),
+    linear-gradient(145deg, var(--mint), #0bb89f);
+  box-shadow:
+    0 0 0 3px rgba(223, 252, 255, 0.8),
+    0 0 24px var(--mint),
+    inset 0 0 14px rgba(255, 255, 255, 0.6);
+  transform: scale(1.06);
+}
+
+.reel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  will-change: transform;
+}
+
+.reel-symbol {
+  display: grid;
+  height: 1em;
+  min-height: 1em;
+  place-items: center;
+}
+
+.reel.up {
+  animation: reelUp 0.35s linear infinite;
+}
+
+.reel.down {
+  animation: reelDown 0.35s linear infinite;
+}
+
+@keyframes reelUp {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes reelDown {
+  from {
+    transform: translateY(-50%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+  from {
+    transform: translateY(-3px);
+  }
+
+  to {
+    transform: translateY(3px);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.payline-indicators {
+  position: absolute;
+  z-index: 0;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  pointer-events: none;
+}
+
+.payline {
+  opacity: 0.2;
+  stroke: var(--foam);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: 0.25s ease;
+}
+
+.payline.active {
+  opacity: 0.7;
+  stroke: var(--sand);
+  stroke-width: 9;
+  filter:
+    drop-shadow(0 0 4px var(--sand))
+    drop-shadow(0 0 8px var(--sand));
+}
+
+.payline.winner {
+  opacity: 0.98;
+  stroke: var(--mint);
+  stroke-width: 11;
+  filter:
+    drop-shadow(0 0 4px var(--mint))
+    drop-shadow(0 0 10px var(--mint));
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 12px;
+  color: var(--foam);
+  font-size: 0.78rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gold-dot {
+  color: var(--sand);
+}
+
+.green-dot {
+  color: var(--mint);
+}
+
+.line-options {
+  margin: 21px 0 13px;
+}
+
+.line-options p {
+  margin: 0 0 10px;
+  color: var(--foam);
+  font-size: 0.88rem;
+}
+
+.line-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.line-button,
+.spin-button,
+.reset-button,
+.sound-button {
+  border: 0;
+  cursor: pointer;
+  font-weight: 800;
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease,
+    background 0.15s ease;
+}
+
+.line-button:hover,
+.spin-button:hover,
+.reset-button:hover,
+.sound-button:hover {
+  filter: brightness(1.12);
+}
+
+.line-button:active,
+.sound-button:active,
+.reset-button:active {
+  transform: translateY(2px);
+}
+
+.line-button {
+  padding: 9px 14px;
+  color: var(--foam);
+  border: 1px solid rgba(223, 252, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(3, 29, 53, 0.65);
+}
+
+.line-button.selected {
+  color: #12334a;
+  border-color: var(--sand);
+  background: var(--sand);
+  box-shadow: 0 0 14px rgba(248, 216, 137, 0.35);
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.sound-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 13px;
+  color: var(--foam);
+  border-radius: 999px;
+  background: rgba(3, 29, 53, 0.72);
+}
+
+.spin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 155px;
+  padding: 15px 24px;
+  color: #12334a;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff1a8, var(--sand));
+  box-shadow:
+    0 5px 0 #9d6b25,
+    0 0 20px rgba(248, 216, 137, 0.4);
+  font-size: 1.05rem;
+}
+
+.spin-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #9d6b25;
+}
+
+.spin-icon {
+  font-size: 1.2rem;
+}
+
+.reset-button {
+  display: block;
+  margin: 15px auto 0;
+  padding: 8px 18px;
+  color: var(--foam);
+  border-radius: 999px;
+  background: rgba(255, 128, 107, 0.8);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.message {
+  min-height: 32px;
+  margin: 18px 0 4px;
+  color: var(--sand);
+  font-size: 1.12rem;
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(248, 216, 137, 0.38);
+}
+
+.paytable,
+.expected-value {
+  margin-top: 17px;
+  padding: 13px;
+  border: 1px solid rgba(223, 252, 255, 0.16);
+  border-radius: 15px;
+  background: rgba(1, 22, 42, 0.36);
+}
+
+.paytable h2,
+.expected-value h2 {
+  margin: 0 0 6px;
+  color: var(--mint);
+  font-size: 0.98rem;
+}
+
+.paytable p {
+  margin: 0 0 9px;
+  color: var(--foam);
+  font-size: 0.84rem;
+}
+
+.payout-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 13px;
+  color: var(--sand);
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
+.expected-value {
+  color: var(--foam);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.expected-value p {
+  margin: 3px 0;
+}
+
+.footer-note {
+  margin-top: 16px;
+  color: rgba(223, 252, 255, 0.68);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 430px) {
+  body {
+    padding: 15px 8px;
+  }
+
+  .machine {
+    padding: 18px 14px;
+    border-radius: 25px;
+  }
+
+  .board {
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .line-buttons {
+    gap: 5px;
+  }
+
+  .line-button {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+
+  .action-row {
+    flex-direction: column-reverse;
+  }
+
+  .sound-button,
+  .spin-button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html,
+body {
+  touch-action: manipulation;
+}
+
+button,
+select,
+.line-button,
+.spin-button,
+.sound-button,
+.reset-button {
+  touch-action: manipulation;
+}
+</style>
 </head>
 
 <body>
-  <main class="machine">
-    <div class="bubble bubble-one" aria-hidden="true"></div>
-    <div class="bubble bubble-two" aria-hidden="true"></div>
-    <div class="bubble bubble-three" aria-hidden="true"></div>
+<main class="machine">
+  <div class="bubble bubble-one" aria-hidden="true"></div>
+  <div class="bubble bubble-two" aria-hidden="true"></div>
+  <div class="bubble bubble-three" aria-hidden="true"></div>
 
-    <header class="top-bar">
-      <div class="brand-mark" aria-hidden="true">🌊</div>
+  <header class="top-bar">
+    <div class="brand-mark" aria-hidden="true">🌊</div>
 
-      <label for="languageSelect" data-i18n="languageLabel">
-        Language
-      </label>
+    <label for="languageSelect" data-i18n="languageLabel">
+      Language
+    </label>
 
-      <select id="languageSelect" aria-label="Language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <option value="zh-Hant">中文</option>
-      </select>
-    </header>
+    <select id="languageSelect" aria-label="Language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh-Hant">中文</option>
+    </select>
+  </header>
 
-    <header class="hero">
-      <p class="eyebrow" data-i18n="eyebrow">UNDERWATER ADVENTURE</p>
-      <h1 data-i18n="title">OCEAN TREASURES</h1>
-      <p class="subtitle" data-i18n="subtitle">
-        Dive in and discover your lucky catch!
-      </p>
-    </header>
+  <header class="hero">
+    <p class="eyebrow" data-i18n="eyebrow">UNDERWATER ADVENTURE</p>
+    <h1 data-i18n="title">OCEAN TREASURES</h1>
+    <p class="subtitle" data-i18n="subtitle">
+      Dive in and discover your lucky catch!
+    </p>
+  </header>
 
-    <section class="status" aria-label="Game status">
-      <div class="status-box">
-        <span data-i18n="credits">Credits</span>
-        <strong id="credits">100</strong>
-      </div>
-
-      <div class="status-box">
-        <span data-i18n="lines">Lines</span>
-        <strong id="selectedLines">1</strong>
-      </div>
-
-      <div class="status-box">
-        <span data-i18n="lastWin">Last Win</span>
-        <strong id="lastWin">0</strong>
-      </div>
-    </section>
-
-    <section
-      class="board-shell"
-      aria-label="Ocean Treasures slot machine board"
-    >
-      <div class="board-top-light" aria-hidden="true"></div>
-
-      <div
-        class="board"
-        id="board"
-        role="grid"
-        aria-label="Slot machine symbols"
-      >
-        <svg
-          class="payline-indicators"
-          viewBox="0 0 300 300"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <line class="payline line-top" x1="-12" y1="50" x2="312" y2="50" />
-          <line class="payline line-centre" x1="-12" y1="150" x2="312" y2="150" />
-          <line class="payline line-bottom" x1="-12" y1="250" x2="312" y2="250" />
-          <line
-            class="payline line-diagonal-down"
-            x1="-12"
-            y1="-12"
-            x2="312"
-            y2="312"
-          />
-          <line
-            class="payline line-diagonal-up"
-            x1="-12"
-            y1="312"
-            x2="312"
-            y2="-12"
-          />
-        </svg>
-
-        <div class="cell" role="gridcell" aria-label="Symbol 1">🐚</div>
-        <div class="cell" role="gridcell" aria-label="Symbol 2">🐠</div>
-        <div class="cell" role="gridcell" aria-label="Symbol 3">🪸</div>
-
-        <div class="cell" role="gridcell" aria-label="Symbol 4">🦑</div>
-        <div class="cell jackpot-symbol" role="gridcell" aria-label="Symbol 5">
-          🪎
-        </div>
-        <div class="cell" role="gridcell" aria-label="Symbol 6">🐚</div>
-
-        <div class="cell" role="gridcell" aria-label="Symbol 7">🐠</div>
-        <div class="cell" role="gridcell" aria-label="Symbol 8">🪸</div>
-        <div class="cell" role="gridcell" aria-label="Symbol 9">🐢</div>
-      </div>
-
-      <div class="board-bottom-light" aria-hidden="true"></div>
-    </section>
-
-    <div class="legend">
-      <span class="legend-item">
-        <span class="gold-dot" aria-hidden="true">●</span>
-        <span data-i18n="selectedLine">Selected line</span>
-      </span>
-
-      <span class="legend-item">
-        <span class="green-dot" aria-hidden="true">●</span>
-        <span data-i18n="winningLine">Winning line</span>
-      </span>
+  <section class="status" aria-label="Game status">
+    <div class="status-box">
+      <span data-i18n="credits">Credits</span>
+      <strong id="credits">100</strong>
     </div>
 
-    <section class="line-options" aria-labelledby="lineOptionsTitle">
-      <p id="lineOptionsTitle" data-i18n="lineCost">
-        Choose paylines — 1 credit per line
-      </p>
-
-      <div class="line-buttons">
-        <button
-          class="line-button selected"
-          type="button"
-          data-lines="1"
-          aria-pressed="true"
-        >
-          <span data-line-count="1">1 Line</span>
-        </button>
-
-        <button
-          class="line-button"
-          type="button"
-          data-lines="3"
-          aria-pressed="false"
-        >
-          <span data-line-count="3">3 Lines</span>
-        </button>
-
-        <button
-          class="line-button"
-          type="button"
-          data-lines="5"
-          aria-pressed="false"
-        >
-          <span data-line-count="5">5 Lines</span>
-        </button>
-      </div>
-    </section>
-
-    <div class="action-row">
-      <button
-        class="sound-button"
-        id="soundButton"
-        type="button"
-        aria-pressed="true"
-      >
-        <span class="sound-icon" aria-hidden="true">🔊</span>
-        <span class="sound-label" data-i18n="soundOn">Sound on</span>
-      </button>
-
-      <button
-        class="spin-button"
-        id="spinButton"
-        type="button"
-      >
-        <span class="spin-icon" aria-hidden="true">⚓</span>
-        <span data-i18n="spin">DIVE IN</span>
-      </button>
+    <div class="status-box">
+      <span data-i18n="lines">Lines</span>
+      <strong id="selectedLines">1</strong>
     </div>
 
-    <button
-      class="reset-button"
-      id="resetButton"
-      type="button"
-    >
-      <span data-i18n="reset">Reset Credits</span>
-    </button>
+    <div class="status-box">
+      <span data-i18n="lastWin">Last Win</span>
+      <strong id="lastWin">0</strong>
+    </div>
+  </section>
+
+  <section
+    class="board-shell"
+    aria-label="Ocean Treasures slot machine board"
+  >
+    <div class="board-top-light" aria-hidden="true"></div>
 
     <div
-      class="message"
-      id="message"
-      aria-live="polite"
-      aria-atomic="true"
+      class="board"
+      id="board"
+      role="grid"
+      aria-label="Slot machine symbols"
     >
-      <span data-i18n="goodLuck">Good luck, explorer!</span>
+      <svg
+        class="payline-indicators"
+        viewBox="0 0 300 300"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <line class="payline line-top" x1="-12" y1="50" x2="312" y2="50" />
+        <line class="payline line-centre" x1="-12" y1="150" x2="312" y2="150" />
+        <line class="payline line-bottom" x1="-12" y1="250" x2="312" y2="250" />
+        <line
+          class="payline line-diagonal-down"
+          x1="-12"
+          y1="-12"
+          x2="312"
+          y2="312"
+        />
+        <line
+          class="payline line-diagonal-up"
+          x1="-12"
+          y1="312"
+          x2="312"
+          y2="-12"
+        />
+      </svg>
+
+      <div class="cell" role="gridcell" aria-label="Symbol 1">🐚</div>
+      <div class="cell" role="gridcell" aria-label="Symbol 2">🐠</div>
+      <div class="cell" role="gridcell" aria-label="Symbol 3">🪸</div>
+
+      <div class="cell" role="gridcell" aria-label="Symbol 4">🦑</div>
+      <div class="cell jackpot-symbol" role="gridcell" aria-label="Symbol 5">
+        🪎
+      </div>
+      <div class="cell" role="gridcell" aria-label="Symbol 6">🐚</div>
+
+      <div class="cell" role="gridcell" aria-label="Symbol 7">🐠</div>
+      <div class="cell" role="gridcell" aria-label="Symbol 8">🪸</div>
+      <div class="cell" role="gridcell" aria-label="Symbol 9">🐢</div>
     </div>
 
-    <section class="paytable" aria-labelledby="paytableTitle">
-      <h2 id="paytableTitle" data-i18n="paytableTitle">
-        Treasure map
-      </h2>
+    <div class="board-bottom-light" aria-hidden="true"></div>
+  </section>
 
-      <p data-i18n="paytableIntro">
-        Three matching treasures on a line pays:
-      </p>
+  <div class="legend">
+    <span class="legend-item">
+      <span class="gold-dot" aria-hidden="true">●</span>
+      <span data-i18n="selectedLine">Selected line</span>
+    </span>
 
-      <div class="payout-list">
-	      <span>🐚 x5</span>
-        <span>🦑 ×8</span>
-        <span>🐠 ×18</span>
-        <span>🪸 ×28</span>
-        <span>🐢 ×38</span>
-        <span>🪎 ×88</span>
-      </div>
-    </section>
+    <span class="legend-item">
+      <span class="green-dot" aria-hidden="true">●</span>
+      <span data-i18n="winningLine">Winning line</span>
+    </span>
+  </div>
 
-    <!--<section class="expected-value" aria-labelledby="expectedValueTitle">
-      <h2 id="expectedValueTitle" data-i18n="expectedValueTitle">
-        Current dive statistics
-      </h2>
+  <section class="line-options" aria-labelledby="lineOptionsTitle">
+    <p id="lineOptionsTitle" data-i18n="lineCost">
+      Choose paylines — 1 credit per line
+    </p>
 
-      <p id="expectedWin"></p>
-      <p id="expectedNet"></p>
-    </section>-->
+    <div class="line-buttons">
+      <button
+        class="line-button selected"
+        type="button"
+        data-lines="1"
+        aria-pressed="true"
+      >
+        <span data-line-count="1">1 Line</span>
+      </button>
 
-    <footer class="footer-note" data-i18n="footerNote">
-      A relaxing ocean game of chance
-    </footer>
-  </main>
+      <button
+        class="line-button"
+        type="button"
+        data-lines="3"
+        aria-pressed="false"
+      >
+        <span data-line-count="3">3 Lines</span>
+      </button>
 
-  <script src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
+      <button
+        class="line-button"
+        type="button"
+        data-lines="5"
+        aria-pressed="false"
+      >
+        <span data-line-count="5">5 Lines</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="action-row">
+    <button
+      class="sound-button"
+      id="soundButton"
+      type="button"
+      aria-pressed="true"
+    >
+      <span class="sound-icon" aria-hidden="true">🔊</span>
+      <span class="sound-label" data-i18n="soundOn">Sound on</span>
+    </button>
+
+    <button
+      class="spin-button"
+      id="spinButton"
+      type="button"
+    >
+      <span class="spin-icon" aria-hidden="true">⚓</span>
+      <span data-i18n="spin">DIVE IN</span>
+    </button>
+  </div>
+
+  <button
+    class="reset-button"
+    id="resetButton"
+    type="button"
+  >
+    <span data-i18n="reset">Reset Credits</span>
+  </button>
+
+  <div
+    class="message"
+    id="message"
+    aria-live="polite"
+    aria-atomic="true"
+  >
+    <span data-i18n="goodLuck">Good luck, explorer!</span>
+  </div>
+
+  <section class="paytable" aria-labelledby="paytableTitle">
+    <h2 id="paytableTitle" data-i18n="paytableTitle">
+      Treasure map
+    </h2>
+
+    <p data-i18n="paytableIntro">
+      Three matching treasures on a line pays:
+    </p>
+
+    <div class="payout-list">
+      <span>🐚 x5</span>
+      <span>🦑 ×8</span>
+      <span>🐠 ×18</span>
+      <span>🪸 ×28</span>
+      <span>🐢 ×38</span>
+      <span>🪎 ×88</span>
+    </div>
+  </section>
+
+  <!--<section class="expected-value" aria-labelledby="expectedValueTitle">
+    <h2 id="expectedValueTitle" data-i18n="expectedValueTitle">
+      Current dive statistics
+    </h2>
+
+    <p id="expectedWin"></p>
+    <p id="expectedNet"></p>
+  </section>-->
+
+  <footer class="footer-note" data-i18n="footerNote">
+    A relaxing ocean game of chance
+  </footer>
+</main>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------
+   Constants
+------------------------------------------------------------------ */
+
+const STARTING_CREDITS = 100;
+
+const SUPPORTED_LANGUAGES = [
+  "en",
+  "es",
+  "zh-Hant"
+];
+
+const URL_LANGUAGE_MAP = {
+  en: "en",
+  es: "es",
+  zh: "zh-Hant"
+};
+
+const LANGUAGE_STORAGE_KEY =
+  "ocean-treasures-language";
+
+const CREDITS_STORAGE_KEY =
+  "ocean-treasures-credits";
+
+const symbols = [
+  { icon: "🐚", payout: 5, name: "shell" },
+  { icon: "🦑", payout: 8, name: "cuttlefish" },
+  { icon: "🐠", payout: 18, name: "fish" },
+  { icon: "🪸", payout: 28, name: "coral" },
+  { icon: "🐢", payout: 38, name: "turtle" },
+  { icon: "🪎", payout: 88, name: "treasure" }
+];
+
+const paylines = {
+  1: [[3, 4, 5]],
+
+  3: [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8]
+  ],
+
+  5: [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 4, 8],
+    [6, 4, 2]
+  ]
+};
+
+const activeLines = {
+  1: [".line-centre"],
+
+  3: [
+    ".line-top",
+    ".line-centre",
+    ".line-bottom"
+  ],
+
+  5: [
+    ".line-top",
+    ".line-centre",
+    ".line-bottom",
+    ".line-diagonal-down",
+    ".line-diagonal-up"
+  ]
+};
+
+/* ------------------------------------------------------------------
+   Translations
+------------------------------------------------------------------ */
+
+const translations = {
+  en: {
+    languageLabel: "Language",
+    eyebrow: "UNDERWATER ADVENTURE",
+    title: "OCEAN TREASURES",
+    subtitle: "Dive in and discover your lucky catch!",
+    credits: "Credits",
+    lines: "Lines",
+    lastWin: "Last Win",
+    selectedLine: "Selected line",
+    winningLine: "Winning line",
+    lineCost: "Choose paylines — 1 credit per line",
+    spin: "DIVE IN",
+    reset: "Reset Credits",
+    goodLuck: "Good luck, explorer!",
+    soundOn: "Sound on",
+    soundOff: "Sound off",
+    paytableTitle: "Treasure map",
+    paytableIntro: "Three matching treasures on a line pays:",
+    expectedValueTitle: "Current dive statistics",
+
+    expectedWin: value =>
+      `Expected gross win: ${value} credits per spin`,
+
+    expectedNet: value =>
+      `Expected net result: ${value} credits per spin`,
+
+    insufficientCredits:
+      "Not enough credits for this dive!",
+
+    spinning:
+      "Searching the depths...",
+
+    won: value =>
+      `🎉 You found ${value} credits!`,
+
+    noWin:
+      "No treasure this time. Dive again!",
+
+    linesSelected: value =>
+      `${value} payline${value === 1 ? "" : "s"} selected`,
+
+    creditsReset:
+      "Credits restored!",
+
+    line: value =>
+      `${value} Line${value === 1 ? "" : "s"}`,
+
+    footerNote:
+      "A relaxing ocean game of chance"
+  },
+
+  es: {
+    languageLabel: "Idioma",
+    eyebrow: "AVENTURA SUBMARINA",
+    title: "TESOROS DEL OCÉANO",
+    subtitle: "¡Sumérgete y descubre tu captura de la suerte!",
+    credits: "Créditos",
+    lines: "Líneas",
+    lastWin: "Última ganancia",
+    selectedLine: "Línea seleccionada",
+    winningLine: "Línea ganadora",
+    lineCost: "Elige líneas de pago — 1 crédito por línea",
+    spin: "SUMÉRGETE",
+    reset: "Restablecer créditos",
+    goodLuck: "¡Buena suerte, explorador!",
+    soundOn: "Sonido activado",
+    soundOff: "Sonido desactivado",
+    paytableTitle: "Mapa del tesoro",
+    paytableIntro: "Tres tesoros iguales en una línea pagan:",
+    expectedValueTitle: "Estadísticas de la inmersión",
+
+    expectedWin: value =>
+      `Ganancia bruta esperada: ${value} créditos por giro`,
+
+    expectedNet: value =>
+      `Resultado neto esperado: ${value} créditos por giro`,
+
+    insufficientCredits:
+      "¡No tienes créditos suficientes para bucear!",
+
+    spinning:
+      "Buscando en las profundidades...",
+
+    won: value =>
+      `🎉 ¡Has encontrado ${value} créditos!`,
+
+    noWin:
+      "No hay tesoro esta vez. ¡Vuelve a bucear!",
+
+    linesSelected: value =>
+      `${value} línea${value === 1 ? "" : "s"} seleccionada${value === 1 ? "" : "s"}`,
+
+    creditsReset:
+      "¡Créditos restaurados!",
+
+    line: value =>
+      `${value} línea${value === 1 ? "" : "s"}`,
+
+    footerNote:
+      "Un relajante juego de azar oceánico"
+  },
+
+  "zh-Hant": {
+    languageLabel: "語言",
+    eyebrow: "深海探險",
+    title: "海洋寶藏",
+    subtitle: "潛入深海，尋找你的幸運寶藏！",
+    credits: "點數",
+    lines: "線數",
+    lastWin: "上次獎金",
+    selectedLine: "已選線",
+    winningLine: "中獎線",
+    lineCost: "選擇賠付線 — 每條線 1 點",
+    spin: "潛入深海",
+    reset: "重設點數",
+    goodLuck: "祝你好運，探險家！",
+    soundOn: "音效開啟",
+    soundOff: "音效關閉",
+    paytableTitle: "寶藏地圖",
+    paytableIntro: "同一條線上有三個相同寶藏可得：",
+    expectedValueTitle: "本次潛水統計",
+
+    expectedWin: value =>
+      `每次旋轉的期望總獎金：${value} 點`,
+
+    expectedNet: value =>
+      `每次旋轉的期望淨結果：${value} 點`,
+
+    insufficientCredits:
+      "點數不足，無法潛水！",
+
+    spinning:
+      "正在探索深海……",
+
+    won: value =>
+      `🎉 你找到 ${value} 點寶藏！`,
+
+    noWin:
+      "這次沒有找到寶藏，再潛一次吧！",
+
+    linesSelected: value =>
+      `已選擇 ${value} 條賠付線`,
+
+    creditsReset:
+      "點數已恢復！",
+
+    line: value =>
+      `${value} 條線`,
+
+    footerNote:
+      "輕鬆愉快的海洋機會遊戲"
+  }
+};
+
+/* ------------------------------------------------------------------
+   Safe localStorage helpers
+------------------------------------------------------------------ */
+
+function readStorage(key, fallback = null) {
+  try {
+    const value = localStorage.getItem(key);
+
+    return value === null
+      ? fallback
+      : value;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    localStorage.setItem(
+      key,
+      String(value)
+    );
+  } catch {
+    /*
+      The game still works during the current page
+      session if storage is unavailable.
+    */
+  }
+}
+
+function loadCredits() {
+  const savedCredits = Number(
+    readStorage(
+      CREDITS_STORAGE_KEY,
+      STARTING_CREDITS
+    )
+  );
+
+  if (
+    !Number.isFinite(savedCredits) ||
+    savedCredits < 0
+  ) {
+    return STARTING_CREDITS;
+  }
+
+  return Math.floor(savedCredits);
+}
+
+function saveCredits() {
+  writeStorage(
+    CREDITS_STORAGE_KEY,
+    credits
+  );
+}
+
+/* ------------------------------------------------------------------
+   Language functions
+------------------------------------------------------------------ */
+
+function detectQueryLanguage() {
+  const params = new URLSearchParams(
+    window.location.search
+  );
+
+  const requestedLanguage =
+    params.get("lang")?.toLowerCase();
+
+  return URL_LANGUAGE_MAP[requestedLanguage]
+    || null;
+}
+
+function detectSavedLanguage() {
+  const savedLanguage = readStorage(
+    LANGUAGE_STORAGE_KEY
+  );
+
+  return SUPPORTED_LANGUAGES.includes(savedLanguage)
+    ? savedLanguage
+    : null;
+}
+
+function detectBrowserLanguage() {
+  const languages =
+    navigator.languages?.length
+      ? navigator.languages
+      : [navigator.language];
+
+  for (const language of languages) {
+    const normalized = String(language)
+      .toLowerCase()
+      .replace("_", "-");
+
+    if (normalized.startsWith("zh")) {
+      return "zh-Hant";
+    }
+
+    if (normalized.startsWith("es")) {
+      return "es";
+    }
+
+    if (normalized.startsWith("en")) {
+      return "en";
+    }
+  }
+
+  return "en";
+}
+
+function detectInitialLanguage() {
+  return (
+    detectQueryLanguage() ||
+    detectSavedLanguage() ||
+    detectBrowserLanguage() ||
+    "en"
+  );
+}
+
+function saveLanguage(language) {
+  writeStorage(
+    LANGUAGE_STORAGE_KEY,
+    language
+  );
+}
+
+/* ------------------------------------------------------------------
+   DOM references
+------------------------------------------------------------------ */
+
+const cells = [
+  ...document.querySelectorAll(".cell")
+];
+
+const lineButtons = [
+  ...document.querySelectorAll(".line-button")
+];
+
+const paylineElements = [
+  ...document.querySelectorAll(".payline")
+];
+
+const creditsDisplay =
+  document.getElementById("credits");
+
+const selectedLinesDisplay =
+  document.getElementById("selectedLines");
+
+const lastWinDisplay =
+  document.getElementById("lastWin");
+
+const message =
+  document.getElementById("message");
+
+const spinButton =
+  document.getElementById("spinButton");
+
+const resetButton =
+  document.getElementById("resetButton");
+
+const soundButton =
+  document.getElementById("soundButton");
+
+const languageSelect =
+  document.getElementById("languageSelect");
+
+const soundIcon =
+  soundButton?.querySelector(".sound-icon");
+
+const soundLabel =
+  soundButton?.querySelector(".sound-label");
+
+const expectedWinDisplay =
+  document.getElementById("expectedWin");
+
+const expectedNetDisplay =
+  document.getElementById("expectedNet");
+
+/* ------------------------------------------------------------------
+   State
+------------------------------------------------------------------ */
+
+let credits = loadCredits();
+let selectedLines = 1;
+let isSpinning = false;
+let currentLanguage = detectInitialLanguage();
+
+let audioContext = null;
+let masterGain = null;
+let soundEnabled = true;
+
+/* ------------------------------------------------------------------
+   Translation functions
+------------------------------------------------------------------ */
+
+function t(key, value) {
+  const language =
+    translations[currentLanguage] ||
+    translations.en;
+
+  const translation = language[key];
+
+  return typeof translation === "function"
+    ? translation(value)
+    : translation ?? key;
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat(
+    currentLanguage
+  ).format(value);
+}
+
+function applyTranslations() {
+  document.documentElement.lang =
+    currentLanguage;
+
+  if (languageSelect) {
+    languageSelect.value =
+      currentLanguage;
+  }
+
+  document
+    .querySelectorAll("[data-i18n]")
+    .forEach(element => {
+      element.textContent =
+        t(element.dataset.i18n);
+    });
+
+  document
+    .querySelectorAll("[data-line-count]")
+    .forEach(element => {
+      const count =
+        Number(element.dataset.lineCount);
+
+      element.textContent =
+        t("line", count);
+    });
+
+  updateSoundButton();
+  updateExpectedValue();
+  updateDisplays();
+
+  if (isSpinning && message) {
+    message.textContent =
+      t("spinning");
+  }
+}
+
+function setLanguage(language) {
+  currentLanguage =
+    SUPPORTED_LANGUAGES.includes(language)
+      ? language
+      : "en";
+
+  saveLanguage(currentLanguage);
+  applyTranslations();
+}
+
+/* ------------------------------------------------------------------
+   Display and payline functions
+------------------------------------------------------------------ */
+
+function updateDisplays() {
+  if (creditsDisplay) {
+    creditsDisplay.textContent =
+      formatNumber(credits);
+  }
+
+  if (selectedLinesDisplay) {
+    selectedLinesDisplay.textContent =
+      formatNumber(selectedLines);
+  }
+}
+
+function updateSoundButton() {
+  if (!soundButton) {
+    return;
+  }
+
+  if (soundIcon) {
+    soundIcon.textContent =
+      soundEnabled
+        ? "🔊"
+        : "🔇";
+  }
+
+  if (soundLabel) {
+    soundLabel.textContent =
+      soundEnabled
+        ? t("soundOn")
+        : t("soundOff");
+  }
+
+  soundButton.setAttribute(
+    "aria-pressed",
+    String(soundEnabled)
+  );
+}
+
+function updatePaylineIndicators() {
+  paylineElements.forEach(line => {
+    line.classList.remove(
+      "active",
+      "winner"
+    );
+  });
+
+  activeLines[selectedLines].forEach(
+    selector => {
+      const line =
+        document.querySelector(selector);
+
+      if (line) {
+        line.classList.add("active");
+      }
+    }
+  );
+}
+
+function clearWinningCells() {
+  cells.forEach(cell => {
+    cell.classList.remove("win");
+  });
+
+  paylineElements.forEach(line => {
+    line.classList.remove("winner");
+  });
+
+  updatePaylineIndicators();
+}
+
+/* ------------------------------------------------------------------
+   Game logic
+------------------------------------------------------------------ */
+
+function randomSymbol() {
+  const index = Math.floor(
+    Math.random() * symbols.length
+  );
+
+  return symbols[index];
+}
+
+function findWinningLines(results) {
+  const winningLines = [];
+
+  paylines[selectedLines].forEach(line => {
+    const [a, b, c] = line;
+
+    const matching =
+      results[a].icon === results[b].icon &&
+      results[b].icon === results[c].icon;
+
+    if (matching) {
+      winningLines.push({
+        line,
+        payout: results[a].payout,
+        symbol: results[a].icon
       });
     }
-  </script>
+  });
+
+  return winningLines;
+}
+
+function highlightWinningLine(line) {
+  line.forEach(index => {
+    cells[index].classList.add("win");
+  });
+
+  const lineSelectors = {
+    "0,1,2": ".line-top",
+    "3,4,5": ".line-centre",
+    "6,7,8": ".line-bottom",
+    "0,4,8": ".line-diagonal-down",
+    "6,4,2": ".line-diagonal-up"
+  };
+
+  const selector =
+    lineSelectors[line.join(",")];
+
+  if (!selector) {
+    return;
+  }
+
+  const lineElement =
+    document.querySelector(selector);
+
+  if (lineElement) {
+    lineElement.classList.remove("active");
+    lineElement.classList.add("winner");
+  }
+}
+
+/* ------------------------------------------------------------------
+   Expected value
+------------------------------------------------------------------ */
+
+function calculateExpectedValue(lineCount) {
+  const expectedWinPerLine =
+    symbols.reduce((sum, symbol) => {
+      return sum + symbol.payout;
+    }, 0) / Math.pow(symbols.length, 3);
+
+  const gross =
+    expectedWinPerLine * lineCount;
+
+  const net =
+    gross - lineCount;
+
+  return { gross, net };
+}
+
+function updateExpectedValue() {
+  if (
+    !expectedWinDisplay ||
+    !expectedNetDisplay
+  ) {
+    return;
+  }
+
+  const expected =
+    calculateExpectedValue(selectedLines);
+
+  expectedWinDisplay.textContent =
+    t(
+      "expectedWin",
+      formatNumber(expected.gross)
+    );
+
+  expectedNetDisplay.textContent =
+    t(
+      "expectedNet",
+      formatNumber(expected.net)
+    );
+}
+
+/* ------------------------------------------------------------------
+   Audio
+------------------------------------------------------------------ */
+
+function getAudioContext() {
+  if (!audioContext) {
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      console.warn(
+        "Web Audio API is not supported."
+      );
+
+      return null;
+    }
+
+    audioContext =
+      new AudioContextClass();
+
+    masterGain =
+      audioContext.createGain();
+
+    masterGain.gain.value = 0.8;
+    masterGain.connect(
+      audioContext.destination
+    );
+  }
+
+  return audioContext;
+}
+
+function resumeAudio() {
+  const context =
+    getAudioContext();
+
+  if (!context) {
+    return null;
+  }
+
+  if (context.state === "suspended") {
+    context.resume().catch(error => {
+      console.warn(
+        "Unable to resume audio:",
+        error
+      );
+    });
+  }
+
+  return context;
+}
+
+function createTone({
+  frequency,
+  endFrequency = frequency,
+  duration = 0.15,
+  type = "sine",
+  volume = 0.08,
+  startTime = null,
+  attack = 0.01,
+  release = 0.08
+}) {
+  const context =
+    resumeAudio();
+
+  if (!context || !masterGain) {
+    return;
+  }
+
+  const now =
+    startTime ?? context.currentTime;
+
+  const oscillator =
+    context.createOscillator();
+
+  const gain =
+    context.createGain();
+
+  oscillator.type = type;
+
+  oscillator.frequency.setValueAtTime(
+    frequency,
+    now
+  );
+
+  if (endFrequency !== frequency) {
+    oscillator.frequency
+      .exponentialRampToValueAtTime(
+        Math.max(20, endFrequency),
+        now + duration
+      );
+  }
+
+  gain.gain.setValueAtTime(
+    0.001,
+    now
+  );
+
+  gain.gain.linearRampToValueAtTime(
+    volume,
+    now + attack
+  );
+
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    now + duration + release
+  );
+
+  oscillator.connect(gain);
+  gain.connect(masterGain);
+
+  oscillator.start(now);
+  oscillator.stop(
+    now + duration + release
+  );
+}
+
+function playSound(type) {
+  if (!soundEnabled) {
+    return;
+  }
+
+  const context =
+    resumeAudio();
+
+  if (!context) {
+    return;
+  }
+
+  const now =
+    context.currentTime;
+
+  if (type === "spin") {
+    createTone({
+      frequency: 220,
+      endFrequency: 120,
+      duration: 0.12,
+      type: "triangle",
+      volume: 0.08,
+      startTime: now
+    });
+
+    return;
+  }
+
+  if (type === "stop") {
+    createTone({
+      frequency: 420,
+      endFrequency: 240,
+      duration: 0.16,
+      type: "sine",
+      volume: 0.1,
+      startTime: now
+    });
+
+    return;
+  }
+
+  if (type === "win") {
+    const notes = [
+      { frequency: 392, delay: 0 },
+      { frequency: 494, delay: 0.13 },
+      { frequency: 587, delay: 0.26 },
+      { frequency: 784, delay: 0.4 }
+    ];
+
+    notes.forEach(note => {
+      createTone({
+        frequency: note.frequency,
+        duration: 0.22,
+        type: "sine",
+        volume: 0.14,
+        startTime:
+          now + note.delay,
+        attack: 0.015,
+        release: 0.12
+      });
+    });
+
+    return;
+  }
+
+  if (type === "bigWin") {
+    const notes = [
+      { frequency: 392, delay: 0 },
+      { frequency: 494, delay: 0.12 },
+      { frequency: 587, delay: 0.24 },
+      { frequency: 784, delay: 0.38 },
+      { frequency: 988, delay: 0.54 }
+    ];
+
+    notes.forEach(note => {
+      createTone({
+        frequency: note.frequency,
+        duration: 0.28,
+        type: "sine",
+        volume: 0.16,
+        startTime:
+          now + note.delay,
+        attack: 0.015,
+        release: 0.14
+      });
+    });
+
+    return;
+  }
+
+  if (type === "lose") {
+    createTone({
+      frequency: 220,
+      endFrequency: 110,
+      duration: 0.35,
+      type: "triangle",
+      volume: 0.09,
+      startTime: now
+    });
+  }
+}
+
+/* ------------------------------------------------------------------
+   Reel animation
+------------------------------------------------------------------ */
+
+function spinCell(cell, duration, index) {
+  return new Promise(resolve => {
+    cell.classList.add("spinning");
+
+    const column = index % 3;
+
+    const direction =
+      column === 1
+        ? "down"
+        : "up";
+
+    const reelSymbols = [
+      ...symbols,
+      ...symbols
+    ];
+
+    const reel =
+      document.createElement("div");
+
+    reel.className =
+      `reel ${direction}`;
+
+    reel.innerHTML =
+      reelSymbols
+        .map(symbol => {
+          return `
+            <div
+              class="reel-symbol"
+              aria-hidden="true"
+            >
+              ${symbol.icon}
+            </div>
+          `;
+        })
+        .join("");
+
+    cell.replaceChildren(reel);
+
+    const soundInterval =
+      setInterval(() => {
+        playSound("spin");
+      }, 180);
+
+    setTimeout(() => {
+      clearInterval(soundInterval);
+
+      const result =
+        randomSymbol();
+
+      cell.replaceChildren(
+        document.createTextNode(
+          result.icon
+        )
+      );
+
+      cell.classList.remove("spinning");
+
+      playSound("stop");
+      resolve(result);
+    }, duration);
+  });
+}
+
+/* ------------------------------------------------------------------
+   Spin
+------------------------------------------------------------------ */
+
+async function spin() {
+  if (isSpinning) {
+    return;
+  }
+
+  resumeAudio();
+
+  const spinCost =
+    selectedLines;
+
+  if (credits < spinCost) {
+    message.textContent =
+      t("insufficientCredits");
+
+    playSound("lose");
+    return;
+  }
+
+  isSpinning = true;
+
+  spinButton.disabled = true;
+  resetButton.disabled = true;
+
+  lineButtons.forEach(button => {
+    button.disabled = true;
+  });
+
+  clearWinningCells();
+
+  // Deduct and immediately persist the spin cost.
+  credits -= spinCost;
+  saveCredits();
+
+  lastWinDisplay.textContent = "0";
+
+  updateDisplays();
+
+  message.textContent =
+    t("spinning");
+
+  const columnDurations = [
+    1100,
+    1550,
+    2000
+  ];
+
+  const results = [];
+
+  for (
+    let column = 0;
+    column < 3;
+    column += 1
+  ) {
+    const columnResults =
+      await Promise.all(
+        cells
+          .map((cell, index) => ({
+            cell,
+            index
+          }))
+          .filter(({ index }) => {
+            return index % 3 === column;
+          })
+          .map(({ cell, index }) => {
+            return spinCell(
+              cell,
+              columnDurations[column],
+              index
+            );
+          })
+      );
+
+    columnResults.forEach(
+      (result, row) => {
+        results[row * 3 + column] =
+          result;
+      }
+    );
+  }
+
+  const winningLines =
+    findWinningLines(results);
+
+  const totalWin =
+    winningLines.reduce(
+      (sum, winningLine) => {
+        return sum + winningLine.payout;
+      },
+      0
+    );
+
+  winningLines.forEach(
+    winningLine => {
+      highlightWinningLine(
+        winningLine.line
+      );
+    }
+  );
+
+  if (totalWin > 0) {
+    credits += totalWin;
+
+    // Persist winnings when the spin is complete.
+    saveCredits();
+
+    lastWinDisplay.textContent =
+      formatNumber(totalWin);
+
+    message.textContent =
+      t(
+        "won",
+        formatNumber(totalWin)
+      );
+
+    playSound(
+      totalWin >= 50
+        ? "bigWin"
+        : "win"
+    );
+  } else {
+    lastWinDisplay.textContent = "0";
+
+    message.textContent =
+      t("noWin");
+
+    playSound("lose");
+  }
+
+  // This also covers a losing spin.
+  saveCredits();
+  updateDisplays();
+
+  spinButton.disabled = false;
+  resetButton.disabled = false;
+
+  lineButtons.forEach(button => {
+    button.disabled = false;
+  });
+
+  isSpinning = false;
+}
+
+/* ------------------------------------------------------------------
+   Event listeners
+------------------------------------------------------------------ */
+
+lineButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    if (isSpinning) {
+      return;
+    }
+
+    lineButtons.forEach(item => {
+      item.classList.remove("selected");
+      item.setAttribute(
+        "aria-pressed",
+        "false"
+      );
+    });
+
+    button.classList.add("selected");
+    button.setAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    selectedLines =
+      Number(button.dataset.lines);
+
+    clearWinningCells();
+    updateDisplays();
+    updateExpectedValue();
+
+    message.textContent =
+      t(
+        "linesSelected",
+        selectedLines
+      );
+  });
+});
+
+if (languageSelect) {
+  languageSelect.addEventListener(
+    "change",
+    event => {
+      setLanguage(
+        event.target.value
+      );
+    }
+  );
+}
+
+if (soundButton) {
+  soundButton.addEventListener(
+    "click",
+    () => {
+      resumeAudio();
+
+      soundEnabled =
+        !soundEnabled;
+
+      updateSoundButton();
+
+      if (soundEnabled) {
+        playSound("stop");
+      }
+    }
+  );
+}
+
+if (resetButton) {
+  resetButton.addEventListener(
+    "click",
+    () => {
+      if (isSpinning) {
+        return;
+      }
+
+      credits =
+        STARTING_CREDITS;
+
+      // Persist the reset balance.
+      saveCredits();
+
+      lastWinDisplay.textContent =
+        "0";
+
+      clearWinningCells();
+      updateDisplays();
+
+      message.textContent =
+        t("creditsReset");
+    }
+  );
+}
+
+if (spinButton) {
+  spinButton.addEventListener(
+    "click",
+    spin
+  );
+}
+
+document.addEventListener(
+  "keydown",
+  event => {
+    const target =
+      event.target;
+
+    const typing =
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement;
+
+    if (
+      event.code === "Space" &&
+      !typing
+    ) {
+      event.preventDefault();
+      spin();
+    }
+  }
+);
+
+/* ------------------------------------------------------------------
+   Initialization
+------------------------------------------------------------------ */
+
+applyTranslations();
+updateDisplays();
+updatePaylineIndicators();
+</script>
 </body>
 </html>

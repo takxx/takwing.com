@@ -1,121 +1,1411 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Dope Wars: Canary Market</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Dope Wars: Canary Market</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --panel: #171d27;
+  --panel2: #222b38;
+  --border: #344052;
+  --text: #f1f5f9;
+  --muted: #9ba8b8;
+  --green: #70f19a;
+  --red: #ff6875;
+  --yellow: #ffd166;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  min-width: 0;
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, #263b59 0, transparent 35%),
+    linear-gradient(135deg, #0d1117, #171d27);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select {
+  max-width: 100%;
+  color: var(--text);
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--green);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primary {
+  color: #06110a;
+  background: var(--green);
+  border-color: var(--green);
+  font-weight: 800;
+}
+
+.container {
+  width: min(1120px, calc(100% - 28px));
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 28px 0 50px;
+}
+
+header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+  margin-bottom: 22px;
+}
+
+header > * {
+  min-width: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.05;
+  letter-spacing: -2px;
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin-top: 6px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.header-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-actions label {
+  min-width: 0;
+}
+
+.new-game {
+  white-space: nowrap;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.stat,
+.panel {
+  min-width: 0;
+  background: rgba(23, 29, 39, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.2);
+}
+
+.stat {
+  padding: 14px;
+  overflow-wrap: anywhere;
+}
+
+.stat small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.stat strong {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  gap: 16px;
+  min-width: 0;
+}
+
+.layout > *,
+aside,
+.panel {
+  min-width: 0;
+}
+
+.panel {
+  padding: 18px;
+}
+
+.panel h2 {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+}
+
+.market {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 11px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+th:last-child,
+td:last-child {
+  text-align: right;
+}
+
+.item-name {
+  font-weight: 800;
+}
+
+.owned {
+  color: var(--yellow);
+}
+
+.trade {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.trade input {
+  width: 70px;
+  padding: 8px;
+}
+
+.trade button {
+  padding: 8px 10px;
+  font-size: 0.83rem;
+}
+
+.controls {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  display: block;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+label select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 5px;
+}
+
+.travel {
+  width: 100%;
+}
+
+.inventory {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.inventory-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  color: var(--muted);
+}
+
+.inventory-row b {
+  color: var(--text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.log {
+  width: 100%;
+  height: 300px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #0a0e14;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.83rem;
+  overflow-wrap: anywhere;
+}
+
+.log p {
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+.good {
+  color: var(--green);
+}
+
+.bad {
+  color: var(--red);
+}
+
+.notice {
+  color: var(--yellow);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 10;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-card {
+  width: min(470px, 100%);
+  max-width: 100%;
+  padding: 25px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.modal-card h2 {
+  margin-top: 0;
+  font-size: 2rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 820px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-actions label,
+  .new-game {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    width: min(100% - 20px, 1120px);
+    padding-top: 18px;
+    padding-bottom: 30px;
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 12vw, 3rem);
+  }
+
+  .stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat {
+    padding: 11px;
+  }
+
+  .stat strong {
+    font-size: 1rem;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .trade {
+    flex-wrap: wrap;
+  }
+
+  .trade input {
+    width: 64px;
+  }
+}
+
+@media (max-width: 600px) {
+  .market {
+    overflow-x: visible;
+  }
+
+  .market table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 0.8rem;
+  }
+
+  .market th,
+  .market td {
+    padding: 8px 4px;
+    vertical-align: middle;
+  }
+
+  /*
+   * Column widths:
+   * Product | Price | Owned | Trade
+   */
+  .market th:nth-child(1),
+  .market td:nth-child(1) {
+    width: 25%;
+  }
+
+  .market th:nth-child(2),
+  .market td:nth-child(2) {
+    width: 17%;
+  }
+
+  .market th:nth-child(3),
+  .market td:nth-child(3) {
+    width: 15%;
+  }
+
+  .market th:nth-child(4),
+  .market td:nth-child(4) {
+    width: 43%;
+  }
+
+  .trade {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    width: 100%;
+  }
+
+  .trade input,
+  .trade button {
+    width: 100%;
+    min-height: 40px;
+    padding: 6px 4px;
+  }
+
+  .trade input {
+    min-width: 0;
+    font-size: 0.9rem;
+  }
+
+  .trade button {
+    font-size: 0.75rem;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 600px) {
+  .market {
+    overflow-x: visible;
+  }
+
+  .market table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 0.8rem;
+  }
+
+  .market th,
+  .market td {
+    padding: 6px 3px;
+    vertical-align: middle;
+  }
+
+  /* Column widths: Product | Price | Owned | Trade */
+  .market th:nth-child(1),
+  .market td:nth-child(1) {
+    width: 28%;
+  }
+
+  .market th:nth-child(2),
+  .market td:nth-child(2) {
+    width: 16%;
+  }
+
+  .market th:nth-child(3),
+  .market td:nth-child(3) {
+    width: 14%;
+  }
+
+  .market th:nth-child(4),
+  .market td:nth-child(4) {
+    width: 42%;
+  }
+
+  .trade {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .trade input {
+    width: 52px;
+    min-width: 0;
+    padding: 4px 3px;
+    font-size: 0.8rem;
+    min-height: 32px;
+  }
+
+  .trade button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 4px 3px;
+    font-size: 0.68rem;
+    min-height: 32px;
+    white-space: nowrap;
+  }
+
+  /* If even tighter, make buttons slightly smaller */
+  @media (max-width: 380px) {
+    .trade input {
+      width: 44px;
+      font-size: 0.75rem;
+    }
+
+    .trade button {
+      font-size: 0.62rem;
+      padding: 3px 2px;
+    }
+  }
+}
+</style>
 </head>
 
 <body>
-  <main class="container">
-    <header>
-      <div>
-        <h1 id="gameTitle"></h1>
-        <div id="subtitle" class="subtitle"></div>
-      </div>
-
-      <div class="header-actions">
-        <label>
-          <span id="languageLabel"></span>
-          <select id="languageSelect">
-            <option value="en">English</option>
-            <option value="es">Español</option>
-          </select>
-        </label>
-
-        <button id="newGameButton" class="new-game"></button>
-      </div>
-    </header>
-
-    <section class="stats">
-      <div class="stat">
-        <small id="dayLabel"></small>
-        <strong id="dayStat"></strong>
-      </div>
-
-      <div class="stat">
-        <small id="cashLabel"></small>
-        <strong id="cashStat"></strong>
-      </div>
-
-      <div class="stat">
-        <small id="debtLabel"></small>
-        <strong id="debtStat"></strong>
-      </div>
-
-      <div class="stat">
-        <small id="capacityLabel"></small>
-        <strong id="spaceStat"></strong>
-      </div>
-
-      <div class="stat">
-        <small id="islandLabel"></small>
-        <strong id="locationStat"></strong>
-      </div>
-    </section>
-
-    <section class="layout">
-      <div class="panel">
-        <h2 id="marketTitle"></h2>
-
-        <div class="market">
-          <table>
-            <thead>
-              <tr>
-                <th id="productHeader"></th>
-                <th id="priceHeader"></th>
-                <th id="ownedHeader"></th>
-                <th id="tradeHeader"></th>
-              </tr>
-            </thead>
-            <tbody id="marketBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <aside>
-        <div class="panel">
-          <h2 id="travelTitle"></h2>
-
-          <div class="controls">
-            <label>
-              <span id="destinationLabel"></span>
-              <select id="destinationSelect"></select>
-            </label>
-
-            <button id="travelButton" class="travel primary"></button>
-          </div>
-        </div>
-
-        <div class="panel" style="margin-top: 16px">
-          <h2 id="inventoryTitle"></h2>
-          <div id="inventory" class="inventory"></div>
-        </div>
-
-        <div class="panel" style="margin-top: 16px">
-          <h2 id="logTitle"></h2>
-          <div id="log" class="log"></div>
-        </div>
-      </aside>
-    </section>
-  </main>
-
-  <div id="modal" class="modal hidden">
-    <div class="modal-card">
-      <h2 id="modalTitle"></h2>
-      <p id="modalText"></p>
-      <button id="modalButton" class="primary"></button>
+<main class="container">
+  <header>
+    <div>
+      <h1 id="gameTitle"></h1>
+      <div id="subtitle" class="subtitle"></div>
     </div>
-  </div>
 
-  <script src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
-      });
+    <div class="header-actions">
+      <label>
+        <span id="languageLabel"></span>
+        <select id="languageSelect">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </label>
+
+      <button id="newGameButton" class="new-game"></button>
+    </div>
+  </header>
+
+  <section class="stats">
+    <div class="stat">
+      <small id="dayLabel"></small>
+      <strong id="dayStat"></strong>
+    </div>
+
+    <div class="stat">
+      <small id="cashLabel"></small>
+      <strong id="cashStat"></strong>
+    </div>
+
+    <div class="stat">
+      <small id="debtLabel"></small>
+      <strong id="debtStat"></strong>
+    </div>
+
+    <div class="stat">
+      <small id="capacityLabel"></small>
+      <strong id="spaceStat"></strong>
+    </div>
+
+    <div class="stat">
+      <small id="islandLabel"></small>
+      <strong id="locationStat"></strong>
+    </div>
+  </section>
+
+  <section class="layout">
+    <div class="panel">
+      <h2 id="marketTitle"></h2>
+
+      <div class="market">
+        <table>
+          <thead>
+            <tr>
+              <th id="productHeader"></th>
+              <th id="priceHeader"></th>
+              <th id="ownedHeader"></th>
+              <th id="tradeHeader"></th>
+            </tr>
+          </thead>
+          <tbody id="marketBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <aside>
+      <div class="panel">
+        <h2 id="travelTitle"></h2>
+
+        <div class="controls">
+          <label>
+            <span id="destinationLabel"></span>
+            <select id="destinationSelect"></select>
+          </label>
+
+          <button id="travelButton" class="travel primary"></button>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 16px">
+        <h2 id="inventoryTitle"></h2>
+        <div id="inventory" class="inventory"></div>
+      </div>
+
+      <div class="panel" style="margin-top: 16px">
+        <h2 id="logTitle"></h2>
+        <div id="log" class="log"></div>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="modalTitle"></h2>
+    <p id="modalText"></p>
+    <button id="modalButton" class="primary"></button>
+  </div>
+</div>
+
+<script>
+const TOTAL_DAYS = 30;
+const CAPACITY = 100;
+const STARTING_CASH = 2000;
+const STARTING_DEBT = 5500;
+const WIN_CASH = 25000;
+
+const SUPPORTED_LANGUAGES = ["en", "es"];
+const LANGUAGE_STORAGE_KEY = "canaryMarketLanguage";
+
+const URL_LANGUAGE_MAP = {
+  en: "en",
+  es: "es"
+};
+
+let state;
+let language = getInitialLanguage();
+
+const $ = id => document.getElementById(id);
+
+/* ------------------------------------------------------------------
+   Language detection with URL priority
+------------------------------------------------------------------ */
+
+function getLangFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const lang = params.get("lang");
+
+  if (!lang) return null;
+
+  const normalized = lang.toLowerCase();
+
+  if (SUPPORTED_LANGUAGES.includes(normalized)) {
+    return normalized;
+  }
+
+  // Accept "en-GB", "es-AR", etc.
+  const base = normalized.split("-")[0];
+
+  if (SUPPORTED_LANGUAGES.includes(base)) {
+    return base;
+  }
+
+  return null;
+}
+
+function getBrowserLanguage() {
+  const browserLanguages = [
+    ...(navigator.languages || []),
+    navigator.language
+  ];
+
+  for (const browserLanguage of browserLanguages) {
+    const baseLanguage = browserLanguage
+      ?.toLowerCase()
+      .split("-")[0];
+
+    if (SUPPORTED_LANGUAGES.includes(baseLanguage)) {
+      return baseLanguage;
     }
-  </script>
+  }
+
+  return "en";
+}
+
+function getSavedLanguage() {
+  try {
+    const savedLanguage = localStorage.getItem(
+      LANGUAGE_STORAGE_KEY
+    );
+
+    if (SUPPORTED_LANGUAGES.includes(savedLanguage)) {
+      return savedLanguage;
+    }
+  } catch {
+    // Storage may be unavailable.
+  }
+
+  return null;
+}
+
+function getInitialLanguage() {
+  // Priority: URL → saved → browser → English
+  return (
+    getLangFromUrl() ||
+    getSavedLanguage() ||
+    getBrowserLanguage() ||
+    "en"
+  );
+}
+
+function saveLanguage(selectedLanguage) {
+  try {
+    localStorage.setItem(
+      LANGUAGE_STORAGE_KEY,
+      selectedLanguage
+    );
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+/* ------------------------------------------------------------------
+   Localization helpers
+------------------------------------------------------------------ */
+
+function getLocale() {
+  return language === "es" ? "es-ES" : "en-US";
+}
+
+function money(value) {
+  return new Intl.NumberFormat(getLocale(), {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0
+  }).format(Math.max(0, Math.round(value)));
+}
+
+function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function randomItem(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+const products = {
+  Ludes: { base: 140, volatility: 0.30 },
+  Speed: { base: 450, volatility: 0.40 },
+  Cocaine: { base: 900, volatility: 0.50 },
+  Heroin: { base: 1300, volatility: 0.58 },
+  Ecstasy: { base: 650, volatility: 0.44 },
+  Mushrooms: { base: 260, volatility: 0.38 },
+  Ketamine: { base: 780, volatility: 0.50 }
+};
+
+const islands = {
+  Tenerife: { modifier: 1.00, risk: 0.08 },
+  "Gran Canaria": { modifier: 1.18, risk: 0.12 },
+  Lanzarote: { modifier: 0.86, risk: 0.09 },
+  Fuerteventura: { modifier: 0.76, risk: 0.07 },
+  "La Palma": { modifier: 0.94, risk: 0.06 },
+  "La Gomera": { modifier: 0.70, risk: 0.05 },
+  "El Hierro": { modifier: 1.30, risk: 0.15 }
+};
+
+const text = {
+  en: {
+    title: "Dope Wars: Canary Market",
+    subtitle:
+      "Trade across the seven islands, clear your debt, and build a fortune.",
+    language: "Language",
+    day: "Day",
+    cash: "Cash",
+    debt: "Debt",
+    capacity: "Carrying",
+    island: "Island",
+    market: "Today's Market",
+    product: "Product",
+    price: "Price",
+    owned: "Owned",
+    trade: "Trade",
+    travel: "Travel Between Islands",
+    destination: "Destination",
+    travelButton: "Travel — Advance One Day",
+    inventory: "Inventory",
+    log: "Street Log",
+    buy: "Buy",
+    sell: "Sell",
+    payDebt: "Pay Debt",
+    newGame: "New Game",
+    continue: "Continue",
+    welcome:
+      "Welcome to the Canary Market. Clear your debt and reach €25,000.",
+    positive: "Enter a positive quantity.",
+    noSpace: "You do not have enough carrying space.",
+    cannotAfford: "You cannot afford that purchase.",
+    bought: (n, p, v) => `Bought ${n} ${p} for ${money(v)}.`,
+    onlyHave: (n, p) => `You only have ${n} ${p}.`,
+    sold: (n, p, v) => `Sold ${n} ${p} for ${money(v)}.`,
+    already: "You are already on that island.",
+    arrived: island => `You arrived in ${island}.`,
+    searchEmpty: "You were searched, but your bags were empty.",
+    search: (n, v) =>
+      `A search cost you ${n} units and a ${money(v)} fine.`,
+    demand: product => `${product} is suddenly in high demand here.`,
+    crash: product =>
+      `${product} flooded the market and prices crashed.`,
+    found: value => `You found ${money(value)} in an old travel bag.`,
+    noDebtCash: "You do not have enough cash to pay the debt.",
+    paid: value => `Paid ${money(value)} toward your debt.`,
+    timeUp: (cash, debt) =>
+      `You finished with ${money(cash)} cash and ${money(debt)} debt.`,
+    madeIt: "You Made It!",
+    timeTitle: "Time's Up",
+    winText: () =>
+      `You cleared your debt and reached ${money(WIN_CASH)} cash.`
+  },
+
+  es: {
+    title: "Dope Wars: Mercado Canario",
+    subtitle:
+      "Compra y vende entre las siete islas, paga tus deudas y haz fortuna.",
+    language: "Idioma",
+    day: "Día",
+    cash: "Dinero",
+    debt: "Deuda",
+    capacity: "Carga",
+    island: "Isla",
+    market: "Mercado de Hoy",
+    product: "Producto",
+    price: "Precio",
+    owned: "Tienes",
+    trade: "Comercio",
+    travel: "Viajar entre Islas",
+    destination: "Destino",
+    travelButton: "Viajar — Avanzar un Día",
+    inventory: "Inventario",
+    log: "Registro",
+    buy: "Comprar",
+    sell: "Vender",
+    payDebt: "Pagar Deuda",
+    newGame: "Nueva Partida",
+    continue: "Continuar",
+    welcome:
+      "Bienvenido al Mercado Canario. Paga tu deuda y consigue 25.000 €.",
+    positive: "Introduce una cantidad positiva.",
+    noSpace: "No tienes suficiente espacio de carga.",
+    cannotAfford: "No puedes permitirte esa compra.",
+    bought: (n, p, v) => `Compraste ${n} ${p} por ${money(v)}.`,
+    onlyHave: (n, p) => `Solo tienes ${n} ${p}.`,
+    sold: (n, p, v) => `Vendiste ${n} ${p} por ${money(v)}.`,
+    already: "Ya estás en esa isla.",
+    arrived: island => `Has llegado a ${island}.`,
+    searchEmpty: "Te registraron, pero no encontraron nada.",
+    search: (n, v) =>
+      `Un registro te costó ${n} unidades y una multa de ${money(v)}.`,
+    demand: product => `${product} tiene mucha demanda en esta isla.`,
+    crash: product =>
+      `El mercado se inundó de ${product} y los precios se desplomaron.`,
+    found: value =>
+      `Encontraste ${money(value)} en una vieja bolsa de viaje.`,
+    noDebtCash: "No tienes suficiente dinero para pagar la deuda.",
+    paid: value => `Pagaste ${money(value)} de tu deuda.`,
+    timeUp: (cash, debt) =>
+      `Terminaste con ${money(cash)} y una deuda de ${money(debt)}.`,
+    madeIt: "¡Lo Conseguiste!",
+    timeTitle: "Se Acabó el Tiempo",
+    winText: () =>
+      `Pagaste tu deuda y conseguiste ${money(WIN_CASH)}.`
+  }
+};
+
+const productNames = {
+  en: {
+    Ludes: "Ludes",
+    Speed: "Speed",
+    Cocaine: "Cocaine",
+    Heroin: "Heroin",
+    Ecstasy: "Ecstasy",
+    Mushrooms: "Mushrooms",
+    Ketamine: "Ketamine"
+  },
+
+  es: {
+    Ludes: "Ludes",
+    Speed: "Anfetamina",
+    Cocaine: "Cocaína",
+    Heroin: "Heroína",
+    Ecstasy: "Éxtasis",
+    Mushrooms: "Hongos",
+    Ketamine: "Ketamina"
+  }
+};
+
+const islandNames = {
+  en: {
+    Tenerife: "Tenerife",
+    "Gran Canaria": "Gran Canaria",
+    Lanzarote: "Lanzarote",
+    Fuerteventura: "Fuerteventura",
+    "La Palma": "La Palma",
+    "La Gomera": "La Gomera",
+    "El Hierro": "El Hierro"
+  },
+
+  es: {
+    Tenerife: "Tenerife",
+    "Gran Canaria": "Gran Canaria",
+    Lanzarote: "Lanzarote",
+    Fuerteventura: "Fuerteventura",
+    "La Palma": "La Palma",
+    "La Gomera": "La Gomera",
+    "El Hierro": "El Hierro"
+  }
+};
+
+function currentText() {
+  return text[language];
+}
+
+function productLabel(product) {
+  return productNames[language][product];
+}
+
+function islandLabel(island) {
+  return islandNames[language][island];
+}
+
+/* ------------------------------------------------------------------
+   Game logic
+------------------------------------------------------------------ */
+
+function createGame() {
+  const inventory = {};
+
+  Object.keys(products).forEach(product => {
+    inventory[product] = 0;
+  });
+
+  state = {
+    day: 1,
+    cash: STARTING_CASH,
+    debt: STARTING_DEBT,
+    location: "Tenerife",
+    prices: {},
+    inventory,
+    gameOver: false
+  };
+
+  $("modal").classList.add("hidden");
+  $("log").innerHTML = "";
+
+  generatePrices();
+  writeLog(currentText().welcome, "notice");
+  render();
+}
+
+function generatePrices() {
+  const island = islands[state.location];
+
+  Object.entries(products).forEach(([product, data]) => {
+    const fluctuation = randomBetween(
+      1 - data.volatility,
+      1 + data.volatility
+    );
+
+    state.prices[product] = Math.max(
+      20,
+      Math.round(data.base * island.modifier * fluctuation)
+    );
+  });
+}
+
+function usedCapacity() {
+  return Object.values(state.inventory).reduce(
+    (sum, amount) => sum + amount,
+    0
+  );
+}
+
+function getAmount(product) {
+  const input = document.querySelector(
+    `[data-product="${CSS.escape(product)}"]`
+  );
+
+  return Math.floor(Number(input?.value));
+}
+
+function buy(product) {
+  if (state.gameOver) return;
+
+  const t = currentText();
+  const amount = getAmount(product);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    writeLog(t.positive, "bad");
+    return;
+  }
+
+  const cost = amount * state.prices[product];
+
+  if (usedCapacity() + amount > CAPACITY) {
+    writeLog(t.noSpace, "bad");
+    return;
+  }
+
+  if (cost > state.cash) {
+    writeLog(t.cannotAfford, "bad");
+    return;
+  }
+
+  state.cash -= cost;
+  state.inventory[product] += amount;
+
+  writeLog(
+    t.bought(amount, productLabel(product), cost),
+    "good"
+  );
+
+  render();
+}
+
+function sell(product) {
+  if (state.gameOver) return;
+
+  const t = currentText();
+  const amount = getAmount(product);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    writeLog(t.positive, "bad");
+    return;
+  }
+
+  if (amount > state.inventory[product]) {
+    writeLog(
+      t.onlyHave(
+        state.inventory[product],
+        productLabel(product)
+      ),
+      "bad"
+    );
+    return;
+  }
+
+  const revenue = amount * state.prices[product];
+
+  state.inventory[product] -= amount;
+  state.cash += revenue;
+
+  writeLog(
+    t.sold(amount, productLabel(product), revenue),
+    "good"
+  );
+
+  checkWin();
+  render();
+}
+
+function travel() {
+  if (state.gameOver) return;
+
+  const t = currentText();
+  const destination = $("destinationSelect").value;
+
+  if (!destination || destination === state.location) {
+    writeLog(t.already, "bad");
+    return;
+  }
+
+  state.location = destination;
+  state.day++;
+  state.debt = Math.round(state.debt * 1.035);
+
+  generatePrices();
+
+  writeLog(t.arrived(islandLabel(destination)), "notice");
+  randomEvent();
+
+  if (state.day > TOTAL_DAYS && !state.gameOver) {
+    endGame(
+      t.timeTitle,
+      t.timeUp(state.cash, state.debt)
+    );
+  }
+
+  render();
+}
+
+function randomEvent() {
+  const t = currentText();
+  const island = islands[state.location];
+  const roll = Math.random();
+
+  if (Math.random() < island.risk) {
+    const total = usedCapacity();
+
+    if (total > 0) {
+      const confiscated = Math.max(
+        1,
+        Math.floor(total * randomBetween(0.2, 0.7))
+      );
+
+      let remaining = confiscated;
+
+      Object.keys(state.inventory).forEach(product => {
+        if (remaining <= 0) return;
+
+        const taken = Math.min(
+          state.inventory[product],
+          Math.ceil(remaining * randomBetween(0.2, 0.65))
+        );
+
+        state.inventory[product] -= taken;
+        remaining -= taken;
+      });
+
+      const fine = Math.min(
+        state.cash,
+        Math.round(randomBetween(100, 600))
+      );
+
+      state.cash -= fine;
+
+      writeLog(t.search(confiscated, fine), "bad");
+    } else {
+      writeLog(t.searchEmpty, "notice");
+    }
+  }
+
+  if (roll < 0.14) {
+    const product = randomItem(Object.keys(products));
+
+    state.prices[product] = Math.round(
+      state.prices[product] * randomBetween(1.7, 2.8)
+    );
+
+    writeLog(t.demand(productLabel(product)), "good");
+  } else if (roll < 0.28) {
+    const product = randomItem(Object.keys(products));
+
+    state.prices[product] = Math.max(
+      20,
+      Math.round(
+        state.prices[product] * randomBetween(0.25, 0.6)
+      )
+    );
+
+    writeLog(t.crash(productLabel(product)), "notice");
+  } else if (roll < 0.38) {
+    const found = Math.round(randomBetween(100, 500));
+
+    state.cash += found;
+    writeLog(t.found(found), "good");
+  }
+}
+
+function payDebt() {
+  if (state.gameOver) return;
+
+  const t = currentText();
+  const payment = Math.min(state.cash, state.debt);
+
+  if (payment <= 0) {
+    writeLog(t.noDebtCash, "bad");
+    return;
+  }
+
+  state.cash -= payment;
+  state.debt -= payment;
+
+  writeLog(t.paid(payment), "good");
+
+  checkWin();
+  render();
+}
+
+function checkWin() {
+  if (state.cash >= WIN_CASH && state.debt <= 0) {
+    endGame(
+      currentText().madeIt,
+      currentText().winText()
+    );
+  }
+}
+
+function endGame(title, message) {
+  state.gameOver = true;
+
+  $("modalTitle").textContent = title;
+  $("modalText").textContent = message;
+  $("modalButton").textContent = currentText().continue;
+  $("modal").classList.remove("hidden");
+
+  render();
+}
+
+function writeLog(message, type = "") {
+  const entry = document.createElement("p");
+
+  entry.className = type;
+  entry.textContent =
+    `[${currentText().day} ${state.day}] ${message}`;
+
+  $("log").prepend(entry);
+}
+
+/* ------------------------------------------------------------------
+   Rendering and events
+------------------------------------------------------------------ */
+
+function render() {
+  const t = currentText();
+
+  document.documentElement.lang = language;
+  document.title = t.title;
+
+  $("gameTitle").textContent = t.title;
+  $("subtitle").textContent = t.subtitle;
+  $("languageLabel").textContent = t.language;
+  $("dayLabel").textContent = t.day;
+  $("cashLabel").textContent = t.cash;
+  $("debtLabel").textContent = t.debt;
+  $("capacityLabel").textContent = t.capacity;
+  $("islandLabel").textContent = t.island;
+  $("marketTitle").textContent = t.market;
+  $("productHeader").textContent = t.product;
+  $("priceHeader").textContent = t.price;
+  $("ownedHeader").textContent = t.owned;
+  $("tradeHeader").textContent = t.trade;
+  $("travelTitle").textContent = t.travel;
+  $("destinationLabel").textContent = t.destination;
+  $("travelButton").textContent = t.travelButton;
+  $("inventoryTitle").textContent = t.inventory;
+  $("logTitle").textContent = t.log;
+  $("newGameButton").textContent = t.newGame;
+
+  $("dayStat").textContent =
+    `${Math.min(state.day, TOTAL_DAYS)} / ${TOTAL_DAYS}`;
+
+  $("cashStat").textContent = money(state.cash);
+  $("debtStat").textContent = money(state.debt);
+  $("spaceStat").textContent =
+    `${usedCapacity()} / ${CAPACITY}`;
+  $("locationStat").textContent =
+    islandLabel(state.location);
+
+  $("destinationSelect").innerHTML =
+    Object.keys(islands)
+      .filter(island => island !== state.location)
+      .map(island => `
+        <option value="${island}">
+          ${islandLabel(island)}
+        </option>
+      `)
+      .join("");
+
+  $("marketBody").innerHTML =
+    Object.keys(products)
+      .map(product => `
+        <tr>
+          <td class="item-name">
+            ${productLabel(product)}
+          </td>
+
+          <td>
+            ${money(state.prices[product])}
+          </td>
+
+          <td class="owned">
+            ${state.inventory[product]}
+          </td>
+
+          <td>
+            <div class="trade">
+              <input
+                data-product="${product}"
+                type="number"
+                min="1"
+                value="1"
+                aria-label="${productLabel(product)} quantity"
+              >
+
+              <button
+                type="button"
+                data-action="buy"
+                data-product="${product}"
+              >
+                ${t.buy}
+              </button>
+
+              <button
+                type="button"
+                data-action="sell"
+                data-product="${product}"
+              >
+                ${t.sell}
+              </button>
+            </div>
+          </td>
+        </tr>
+      `)
+      .join("");
+
+  $("inventory").innerHTML =
+    Object.entries(state.inventory)
+      .map(([product, amount]) => `
+        <div class="inventory-row">
+          <span>${productLabel(product)}</span>
+          <b>${amount}</b>
+        </div>
+      `)
+      .join("") +
+    `
+      <button
+        id="payDebtButton"
+        type="button"
+        style="width: 100%; margin-top: 10px"
+      >
+        ${t.payDebt}
+      </button>
+    `;
+
+  $("travelButton").disabled = state.gameOver;
+  $("destinationSelect").disabled = state.gameOver;
+
+  const payDebtButton = $("payDebtButton");
+
+  payDebtButton.disabled =
+    state.gameOver || state.cash <= 0;
+
+  payDebtButton.addEventListener("click", payDebt);
+
+  $("languageSelect").value = language;
+}
+
+/* ------------------------------------------------------------------
+   Event listeners and startup
+------------------------------------------------------------------ */
+
+$("languageSelect").value = language;
+
+$("languageSelect").addEventListener("change", event => {
+  const selectedLanguage = event.target.value;
+
+  language = SUPPORTED_LANGUAGES.includes(selectedLanguage)
+    ? selectedLanguage
+    : "en";
+
+  saveLanguage(language);
+  render();
+});
+
+$("travelButton").addEventListener("click", travel);
+$("newGameButton").addEventListener("click", createGame);
+
+$("modalButton").addEventListener("click", () => {
+  $("modal").classList.add("hidden");
+});
+
+$("marketBody").addEventListener("click", event => {
+  const button = event.target.closest(
+    "button[data-action]"
+  );
+
+  if (!button) return;
+
+  const product = button.dataset.product;
+  const action = button.dataset.action;
+
+  if (action === "buy") {
+    buy(product);
+  }
+
+  if (action === "sell") {
+    sell(product);
+  }
+});
+
+createGame();
+</script>
 </body>
 </html>
