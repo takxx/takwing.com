@@ -1097,45 +1097,58 @@
       );
     }
 
-    function drawDisplays() {
-      const base = Math.min(width, height);
-      const scoreSize = base * 0.16;
-      const timerSize = base * 0.09;
-      const time = String(game.secondsRemaining).padStart(2, "0");
-    
-      /*
-        Blue score: displayed in front of the top goal.
-      */
-      drawDigitalText(
-        game.topScore,
-        centerX,
-        height * 0.14,
-        scoreSize,
-        0
-      );
-    
-      /*
-        Red score: displayed in front of the bottom goal.
-      */
-      drawDigitalText(
-        game.bottomScore,
-        centerX,
-        height * 0.86,
-        scoreSize,
-        0
-      );
-    
-      /*
-        Timer remains in the middle of the table.
-      */
-      drawDigitalText(
-        time,
-        centerX,
-        centerY,
-        timerSize,
-        0
-      );
-    }
+function drawDisplays() {
+  const base = Math.min(width, height);
+  const scoreSize = base * 0.16;
+  const timerSize = base * 0.09;
+  const time = String(game.secondsRemaining).padStart(2, "0");
+
+  /*
+    Blue score: positioned in front of the top goal,
+    rotated 180 degrees so it faces upward toward the blue player.
+  */
+  drawDigitalText(
+    game.topScore,
+    centerX,
+    height * 0.14,
+    scoreSize,
+    Math.PI
+  );
+
+  /*
+    Red score: remains facing downward toward the red player.
+  */
+  drawDigitalText(
+    game.bottomScore,
+    centerX,
+    height * 0.86,
+    scoreSize,
+    0
+  );
+
+  /*
+    Timer: one on each side, rotated inward.
+    The left timer reads toward the right;
+    the right timer reads toward the left.
+  */
+  const timerOffset = base * 0.075;
+
+  drawDigitalText(
+    time,
+    timerOffset,
+    centerY,
+    timerSize,
+    Math.PI / 2
+  );
+
+  drawDigitalText(
+    time,
+    width - timerOffset,
+    centerY,
+    timerSize,
+    -Math.PI / 2
+  );
+}
     function drawPaddle(
       paddle,
       fillColor,
