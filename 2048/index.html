@@ -37,10 +37,22 @@ html, body {
   touch-action: manipulation;
 }
 
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+}
+
 main {
   width: min(92vw, 820px);
   margin: 0 auto;
   padding: 20px 0 35px;
+  position: relative;
+  z-index: 1;
 }
 
 h1 {
@@ -255,9 +267,23 @@ button:focus-visible, select:focus-visible {
 @media (max-width: 420px) {
   main { padding-top: 14px; }
 }
+
+h1,
+#game,
+#intro,
+.instructions {
+  width: min(100%, 480px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.instructions {
+  margin-top: 12px;
+}
 </style>
 </head>
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main>
   <h1>2048</h1>
 
@@ -517,6 +543,30 @@ const colors = {
     move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
   });
   boardEl.addEventListener("pointercancel", () => { touchStart = null; });
+
+  function drawMosaicBackground() {
+    const canvas = $("mosaic-bg");
+    const context = canvas.getContext("2d");
+    const pixelSize = 4;
+    const browns = ["#24170f", "#2c1b11", "#302015", "#3a2619"];
+    const scale = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+  
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+  
+    for (let y = 0; y < height; y += pixelSize) {
+      for (let x = 0; x < width; x += pixelSize) {
+        context.fillStyle = browns[Math.floor(Math.random() * browns.length)];
+        context.fillRect(x, y, pixelSize, pixelSize);
+      }
+    }
+  }
+  
+  drawMosaicBackground();
+  window.addEventListener("resize", drawMosaicBackground);
 
   renderLanguage();
 })();

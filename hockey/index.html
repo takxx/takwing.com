@@ -5,7 +5,20 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    content="
+      width=device-width,
+      initial-scale=1,
+      maximum-scale=1,
+      user-scalable=no,
+      viewport-fit=cover
+    "
+  />
+
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent"
   />
 
   <title>Touch Air Hockey</title>
@@ -14,11 +27,11 @@
     @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap");
 
     :root {
-      --left-background: #ccefff;
-      --right-background: #ffcccc;
+      --top-background: #ccefff;
+      --bottom-background: #ffcccc;
       --line-color: #5d6875;
-      --left-player: #18bde9;
-      --right-player: #ef4040;
+      --top-player: #18bde9;
+      --bottom-player: #ef4040;
     }
 
     * {
@@ -30,12 +43,29 @@
       width: 100%;
       height: 100%;
       margin: 0;
+      padding: 0;
       overflow: hidden;
       background: #111;
       touch-action: none;
+      overscroll-behavior: none;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
       font-family: "Orbitron", monospace;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+
+      height: 100vh;
+      height: 100dvh;
+
+      padding:
+        env(safe-area-inset-top)
+        env(safe-area-inset-right)
+        env(safe-area-inset-bottom)
+        env(safe-area-inset-left);
     }
 
     canvas {
@@ -55,29 +85,35 @@
       align-items: center;
       justify-content: center;
 
-      padding: 24px;
+      padding:
+        max(24px, env(safe-area-inset-top))
+        max(24px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom))
+        max(24px, env(safe-area-inset-left));
+
       color: white;
       text-align: center;
-      background: rgba(0, 0, 0, 0.78);
+      background: rgba(0, 0, 0, 0.82);
       font-family: system-ui, sans-serif;
     }
 
     #overlay h1 {
       margin: 0 0 14px;
-      font-size: 30px;
+      font-size: clamp(24px, 7vw, 34px);
     }
 
     #overlay p {
-      margin: 4px 0;
-      font-size: 16px;
+      margin: 5px 0;
+      font-size: clamp(14px, 4vw, 17px);
+      max-width: 34ch;
     }
 
     #overlay button {
-      min-width: 150px;
-      margin-top: 20px;
-      padding: 13px 25px;
+      min-width: 170px;
+      margin-top: 22px;
+      padding: 14px 26px;
       border: 0;
-      border-radius: 9px;
+      border-radius: 10px;
       background: #25bdf2;
       color: #03202d;
       font-size: 17px;
@@ -90,14 +126,13 @@
     }
   </style>
 </head>
-
 <body>
   <canvas id="game"></canvas>
 
   <div id="overlay">
     <h1 id="overlayTitle"></h1>
-    <p id="overlayInstructionLeft"></p>
-    <p id="overlayInstructionRight"></p>
+    <p id="overlayInstructionTop"></p>
+    <p id="overlayInstructionBottom"></p>
     <p id="overlayInstructionTime"></p>
     <button id="startButton"></button>
   </div>
@@ -124,13 +159,13 @@
     const translations = {
       en: {
         title: "Touch Air Hockey",
-        leftInstruction: "Blue player uses the blue half.",
-        rightInstruction: "Red player uses the red half.",
+        topInstruction: "Blue player uses the top half.",
+        bottomInstruction: "Red player uses the bottom half.",
         timeInstruction: "Most goals after 99 seconds wins.",
         start: "Start Game",
         timeUp: "Time's Up!",
-        leftWins: "Blue player wins!",
-        rightWins: "Red player wins!",
+        topWins: "Blue player wins!",
+        bottomWins: "Red player wins!",
         draw: "It's a draw!",
         finalScore: "Final score",
         newGame: "New Game"
@@ -138,13 +173,13 @@
 
       es: {
         title: "Air Hockey Táctil",
-        leftInstruction: "El jugador azul usa la mitad azul.",
-        rightInstruction: "El jugador rojo usa la mitad rojo.",
+        topInstruction: "El jugador azul usa la mitad superior.",
+        bottomInstruction: "El jugador rojo usa la mitad inferior.",
         timeInstruction: "Gana quien marque más goles en 99 segundos.",
         start: "Comenzar partida",
         timeUp: "¡Se acabó el tiempo!",
-        leftWins: "¡Gana el jugador azul!",
-        rightWins: "¡Gana el jugador rojo!",
+        topWins: "¡Gana el jugador azul!",
+        bottomWins: "¡Gana el jugador rojo!",
         draw: "¡Empate!",
         finalScore: "Puntuación final",
         newGame: "Nueva partida"
@@ -152,13 +187,13 @@
 
       zh: {
         title: "觸控空氣曲棍球",
-        leftInstruction: "藍隊負責藍色半場。",
-        rightInstruction: "紅隊負責紅色半場。",
-        timeInstruction: "99 秒之後，邊個入波多就贏。",
+        topInstruction: "藍隊負責上方半場。",
+        bottomInstruction: "紅隊負責下方半場。",
+        timeInstruction: "99 秒後，入波多嘅一方贏。",
         start: "開始遊戲",
         timeUp: "夠鐘！",
-        leftWins: "藍隊贏！",
-        rightWins: "紅隊贏！",
+        topWins: "藍隊贏！",
+        bottomWins: "紅隊贏！",
         draw: "打和！",
         finalScore: "最終比數",
         newGame: "再嚟一局"
@@ -214,14 +249,22 @@
       document.documentElement.lang =
         language === "zh" ? "zh-Hant" : language;
 
-      document.getElementById("overlayTitle").textContent = text.title;
-      document.getElementById("overlayInstructionLeft").textContent =
-        text.leftInstruction;
-      document.getElementById("overlayInstructionRight").textContent =
-        text.rightInstruction;
-      document.getElementById("overlayInstructionTime").textContent =
-        text.timeInstruction;
-      document.getElementById("startButton").textContent = text.start;
+      document.getElementById("overlayTitle").textContent =
+        text.title;
+
+      document.getElementById("overlayInstructionTop").textContent =
+        text.topInstruction;
+
+      document.getElementById(
+        "overlayInstructionBottom"
+      ).textContent = text.bottomInstruction;
+
+      document.getElementById(
+        "overlayInstructionTime"
+      ).textContent = text.timeInstruction;
+
+      document.getElementById("startButton").textContent =
+        text.start;
     }
 
     applyTranslations();
@@ -236,8 +279,8 @@
     let height = 0;
     let centerX = 0;
     let centerY = 0;
-    let goalTop = 0;
-    let goalBottom = 0;
+    let goalLeft = 0;
+    let goalRight = 0;
 
     /*
       ------------------------------------------------------------
@@ -248,8 +291,8 @@
     const game = {
       running: false,
       secondsRemaining: 99,
-      leftScore: 0,
-      rightScore: 0,
+      topScore: 0,
+      bottomScore: 0,
       timerId: null
     };
 
@@ -261,7 +304,7 @@
       radius: 0
     };
 
-    const leftPaddle = {
+    const topPaddle = {
       x: 0,
       y: 0,
       radius: 0,
@@ -271,7 +314,7 @@
       velocityY: 0
     };
 
-    const rightPaddle = {
+    const bottomPaddle = {
       x: 0,
       y: 0,
       radius: 0,
@@ -459,12 +502,61 @@
 
     /*
       ------------------------------------------------------------
+      Fullscreen and portrait orientation
+      ------------------------------------------------------------
+    */
+
+    function requestFullscreen(element) {
+      if (element.requestFullscreen) {
+        return element.requestFullscreen();
+      }
+
+      if (element.webkitRequestFullscreen) {
+        return element.webkitRequestFullscreen();
+      }
+
+      return Promise.reject(
+        new Error("Fullscreen is not supported.")
+      );
+    }
+
+    function lockPortraitOrientation() {
+      const orientation = screen.orientation;
+
+      if (!orientation || typeof orientation.lock !== "function") {
+        return Promise.resolve(false);
+      }
+
+      return orientation
+        .lock("portrait")
+        .then(() => true)
+        .catch(() => false);
+    }
+
+    async function enterPortraitFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          await requestFullscreen(document.documentElement);
+        }
+
+        await lockPortraitOrientation();
+      } catch {
+        // The user may deny fullscreen, or the browser/device
+        // may not support fullscreen or orientation locking.
+      }
+    }
+
+    /*
+      ------------------------------------------------------------
       Canvas setup
       ------------------------------------------------------------
     */
 
     function resizeCanvas() {
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      const pixelRatio = Math.min(
+        window.devicePixelRatio || 1,
+        2
+      );
 
       width = window.innerWidth;
       height = window.innerHeight;
@@ -494,25 +586,25 @@
 
       const base = Math.min(width, height);
 
-      puck.radius = base * 0.025;
-      leftPaddle.radius = base * 0.045;
-      rightPaddle.radius = base * 0.045;
+      puck.radius = base * 0.028;
+      topPaddle.radius = base * 0.05;
+      bottomPaddle.radius = base * 0.05;
 
-      physics.maxPuckSpeed = base * 0.08;
+      physics.maxPuckSpeed = base * 0.09;
 
-      const goalHeight = height * 0.36;
+      const goalWidth = width * 0.38;
 
-      goalTop = centerY - goalHeight / 2;
-      goalBottom = centerY + goalHeight / 2;
+      goalLeft = centerX - goalWidth / 2;
+      goalRight = centerX + goalWidth / 2;
     }
 
     function clamp(value, minimum, maximum) {
       return Math.max(minimum, Math.min(maximum, value));
     }
 
-    function resetPaddle(paddle, x) {
-      paddle.x = x;
-      paddle.y = centerY;
+    function resetPaddle(paddle, y) {
+      paddle.x = centerX;
+      paddle.y = y;
       paddle.active = false;
       paddle.pointerId = null;
       paddle.velocityX = 0;
@@ -520,10 +612,10 @@
     }
 
     function resetPositions() {
-      const edgeOffset = Math.min(width, height) * 0.15;
+      const edgeOffset = Math.min(width, height) * 0.18;
 
-      resetPaddle(leftPaddle, edgeOffset);
-      resetPaddle(rightPaddle, width - edgeOffset);
+      resetPaddle(topPaddle, edgeOffset);
+      resetPaddle(bottomPaddle, height - edgeOffset);
 
       puck.x = centerX;
       puck.y = centerY;
@@ -543,8 +635,8 @@
 
       game.running = true;
       game.secondsRemaining = 99;
-      game.leftScore = 0;
-      game.rightScore = 0;
+      game.topScore = 0;
+      game.bottomScore = 0;
 
       resetPositions();
 
@@ -573,16 +665,16 @@
 
       let winnerText = text.draw;
 
-      if (game.leftScore > game.rightScore) {
-        winnerText = text.leftWins;
-      } else if (game.rightScore > game.leftScore) {
-        winnerText = text.rightWins;
+      if (game.topScore > game.bottomScore) {
+        winnerText = text.topWins;
+      } else if (game.bottomScore > game.topScore) {
+        winnerText = text.bottomWins;
       }
 
       overlay.innerHTML = `
         <h1>${text.timeUp}</h1>
         <p>${winnerText}</p>
-        <p>${text.finalScore}: ${game.leftScore} - ${game.rightScore}</p>
+        <p>${text.finalScore}: ${game.topScore} - ${game.bottomScore}</p>
         <button id="restartButton">${text.newGame}</button>
       `;
 
@@ -590,7 +682,9 @@
 
       document
         .getElementById("restartButton")
-        .addEventListener("click", () => {
+        .addEventListener("click", async () => {
+          await enterPortraitFullscreen();
+
           overlay.style.display = "none";
           startGame();
         });
@@ -619,39 +713,45 @@
       const position = getPointerPosition(event);
       const pointerId = event.pointerId;
 
-      if (position.x < centerX && !leftPaddle.active) {
-        leftPaddle.active = true;
-        leftPaddle.pointerId = pointerId;
+      if (
+        position.y < centerY &&
+        !topPaddle.active
+      ) {
+        topPaddle.active = true;
+        topPaddle.pointerId = pointerId;
 
-        leftPaddle.x = clamp(
+        topPaddle.x = clamp(
           position.x,
-          leftPaddle.radius,
-          centerX - leftPaddle.radius
+          topPaddle.radius,
+          width - topPaddle.radius
         );
 
-        leftPaddle.y = clamp(
+        topPaddle.y = clamp(
           position.y,
-          leftPaddle.radius,
-          height - leftPaddle.radius
+          topPaddle.radius,
+          centerY - topPaddle.radius
         );
 
         canvas.setPointerCapture?.(pointerId);
       }
 
-      if (position.x > centerX && !rightPaddle.active) {
-        rightPaddle.active = true;
-        rightPaddle.pointerId = pointerId;
+      if (
+        position.y > centerY &&
+        !bottomPaddle.active
+      ) {
+        bottomPaddle.active = true;
+        bottomPaddle.pointerId = pointerId;
 
-        rightPaddle.x = clamp(
+        bottomPaddle.x = clamp(
           position.x,
-          centerX + rightPaddle.radius,
-          width - rightPaddle.radius
+          bottomPaddle.radius,
+          width - bottomPaddle.radius
         );
 
-        rightPaddle.y = clamp(
+        bottomPaddle.y = clamp(
           position.y,
-          rightPaddle.radius,
-          height - rightPaddle.radius
+          centerY + bottomPaddle.radius,
+          height - bottomPaddle.radius
         );
 
         canvas.setPointerCapture?.(pointerId);
@@ -667,67 +767,67 @@
       const pointerId = event.pointerId;
 
       if (
-        leftPaddle.active &&
-        leftPaddle.pointerId === pointerId
+        topPaddle.active &&
+        topPaddle.pointerId === pointerId
       ) {
         const newX = clamp(
           position.x,
-          leftPaddle.radius,
-          centerX - leftPaddle.radius
+          topPaddle.radius,
+          width - topPaddle.radius
         );
 
         const newY = clamp(
           position.y,
-          leftPaddle.radius,
-          height - leftPaddle.radius
+          topPaddle.radius,
+          centerY - topPaddle.radius
         );
 
-        leftPaddle.velocityX = newX - leftPaddle.x;
-        leftPaddle.velocityY = newY - leftPaddle.y;
+        topPaddle.velocityX = newX - topPaddle.x;
+        topPaddle.velocityY = newY - topPaddle.y;
 
-        leftPaddle.x = newX;
-        leftPaddle.y = newY;
+        topPaddle.x = newX;
+        topPaddle.y = newY;
       }
 
       if (
-        rightPaddle.active &&
-        rightPaddle.pointerId === pointerId
+        bottomPaddle.active &&
+        bottomPaddle.pointerId === pointerId
       ) {
         const newX = clamp(
           position.x,
-          centerX + rightPaddle.radius,
-          width - rightPaddle.radius
+          bottomPaddle.radius,
+          width - bottomPaddle.radius
         );
 
         const newY = clamp(
           position.y,
-          rightPaddle.radius,
-          height - rightPaddle.radius
+          centerY + bottomPaddle.radius,
+          height - bottomPaddle.radius
         );
 
-        rightPaddle.velocityX = newX - rightPaddle.x;
-        rightPaddle.velocityY = newY - rightPaddle.y;
+        bottomPaddle.velocityX = newX - bottomPaddle.x;
+        bottomPaddle.velocityY = newY - bottomPaddle.y;
 
-        rightPaddle.x = newX;
-        rightPaddle.y = newY;
+        bottomPaddle.x = newX;
+        bottomPaddle.y = newY;
       }
     }
 
     function endPointer(event) {
       const pointerId = event.pointerId;
 
-      if (leftPaddle.pointerId === pointerId) {
-        leftPaddle.active = false;
-        leftPaddle.pointerId = null;
-        leftPaddle.velocityX = 0;
-        leftPaddle.velocityY = 0;
+      if (topPaddle.pointerId === pointerId) {
+        topPaddle.active = false;
+        topPaddle.pointerId = null;
+        topPaddle.velocityX = 0;
+        topPaddle.velocityY = 0;
       }
 
-      if (rightPaddle.pointerId === pointerId) {
-        rightPaddle.active = false;
-        rightPaddle.pointerId = null;
-        rightPaddle.velocityX = 0;
-        rightPaddle.velocityY = 0;
+      if (bottomPaddle.pointerId === pointerId) {
+        bottomPaddle.active = false;
+        bottomPaddle.pointerId = null;
+        bottomPaddle.velocityX = 0;
+        bottomPaddle.velocityY = 0;
       }
     }
 
@@ -754,42 +854,42 @@
     */
 
     function isInsideGoalOpening() {
-      return puck.y > goalTop && puck.y < goalBottom;
+      return puck.x > goalLeft && puck.x < goalRight;
     }
 
     function handleWalls() {
-      if (puck.y - puck.radius < 0) {
-        puck.y = puck.radius;
-        puck.velocityY =
-          Math.abs(puck.velocityY) * physics.wallBounce;
+      if (puck.x - puck.radius < 0) {
+        puck.x = puck.radius;
+        puck.velocityX =
+          Math.abs(puck.velocityX) * physics.wallBounce;
 
         playWallSound();
         vibratePuckHit();
       }
 
-      if (puck.y + puck.radius > height) {
-        puck.y = height - puck.radius;
-        puck.velocityY =
-          -Math.abs(puck.velocityY) * physics.wallBounce;
+      if (puck.x + puck.radius > width) {
+        puck.x = width - puck.radius;
+        puck.velocityX =
+          -Math.abs(puck.velocityX) * physics.wallBounce;
 
         playWallSound();
         vibratePuckHit();
       }
 
       if (!isInsideGoalOpening()) {
-        if (puck.x - puck.radius < 0) {
-          puck.x = puck.radius;
-          puck.velocityX =
-            Math.abs(puck.velocityX) * physics.wallBounce;
+        if (puck.y - puck.radius < 0) {
+          puck.y = puck.radius;
+          puck.velocityY =
+            Math.abs(puck.velocityY) * physics.wallBounce;
 
           playWallSound();
           vibrateGoal();
         }
 
-        if (puck.x + puck.radius > width) {
-          puck.x = width - puck.radius;
-          puck.velocityX =
-            -Math.abs(puck.velocityX) * physics.wallBounce;
+        if (puck.y + puck.radius > height) {
+          puck.y = height - puck.radius;
+          puck.velocityY =
+            -Math.abs(puck.velocityY) * physics.wallBounce;
 
           playWallSound();
           vibrateGoal();
@@ -854,15 +954,15 @@
 
     function checkGoals() {
       /*
-        Left goal:
-        right player scores.
+        Top goal:
+        bottom player scores.
 
-        Right goal:
-        left player scores.
+        Bottom goal:
+        top player scores.
       */
 
-      if (puck.x + puck.radius < 0) {
-        game.rightScore++;
+      if (puck.y + puck.radius < 0) {
+        game.bottomScore++;
 
         playGoalSound();
         vibrateGoal();
@@ -871,8 +971,8 @@
         return true;
       }
 
-      if (puck.x - puck.radius > width) {
-        game.leftScore++;
+      if (puck.y - puck.radius > height) {
+        game.topScore++;
 
         playGoalSound();
         vibrateGoal();
@@ -893,16 +993,14 @@
       puck.x += puck.velocityX;
       puck.y += puck.velocityY;
 
-      // Check goals immediately after moving the puck.
-      // If a goal is scored, reset and skip wall/paddle collisions this frame.
       if (checkGoals()) {
         return;
       }
 
       handleWalls();
 
-      collidePuckWithPaddle(leftPaddle);
-      collidePuckWithPaddle(rightPaddle);
+      collidePuckWithPaddle(topPaddle);
+      collidePuckWithPaddle(bottomPaddle);
 
       const speed = Math.hypot(
         puck.velocityX,
@@ -950,10 +1048,10 @@
 
     function drawTable() {
       context.fillStyle = "#ccefff";
-      context.fillRect(0, 0, centerX, height);
+      context.fillRect(0, 0, width, centerY);
 
       context.fillStyle = "#ffcccc";
-      context.fillRect(centerX, 0, width - centerX, height);
+      context.fillRect(0, centerY, width, height - centerY);
 
       context.strokeStyle = "#5d6875";
       context.lineWidth = Math.max(
@@ -961,10 +1059,10 @@
         Math.min(width, height) * 0.005
       );
 
-      /* Centre line. */
+      /* Horizontal centre line. */
       context.beginPath();
-      context.moveTo(centerX, 0);
-      context.lineTo(centerX, height);
+      context.moveTo(0, centerY);
+      context.lineTo(width, centerY);
       context.stroke();
 
       /* Centre circle. */
@@ -979,79 +1077,65 @@
       context.stroke();
 
       /*
-        Goals are on the left and right edges,
-        centred vertically.
+        Goals are at the top and bottom edges,
+        centred horizontally.
       */
       context.fillStyle = "#71808c";
 
       context.fillRect(
+        goalLeft,
         0,
-        goalTop,
-        12,
-        goalBottom - goalTop
+        goalRight - goalLeft,
+        12
       );
 
       context.fillRect(
-        width - 12,
-        goalTop,
-        12,
-        goalBottom - goalTop
+        goalLeft,
+        height - 12,
+        goalRight - goalLeft,
+        12
       );
     }
 
     function drawDisplays() {
       const base = Math.min(width, height);
-      const scoreSize = base * 0.34;
-      const timerSize = base * 0.08;
+      const scoreSize = base * 0.16;
+      const timerSize = base * 0.09;
       const time = String(game.secondsRemaining).padStart(2, "0");
-
+    
       /*
-        Scores face outward.
-
-        On a canvas:
-        - positive rotation is clockwise;
-        - negative rotation is counterclockwise.
-
-        Therefore:
-        - left score: +90 degrees;
-        - right score: -90 degrees.
+        Blue score: displayed in front of the top goal.
       */
       drawDigitalText(
-        game.leftScore,
-        width * 0.12,
-        centerY,
+        game.topScore,
+        centerX,
+        height * 0.14,
         scoreSize,
-        Math.PI / 2
+        0
       );
-
-      drawDigitalText(
-        game.rightScore,
-        width * 0.88,
-        centerY,
-        scoreSize,
-        -Math.PI / 2
-      );
-
+    
       /*
-        Clocks stay at the top and bottom.
+        Red score: displayed in front of the bottom goal.
+      */
+      drawDigitalText(
+        game.bottomScore,
+        centerX,
+        height * 0.86,
+        scoreSize,
+        0
+      );
+    
+      /*
+        Timer remains in the middle of the table.
       */
       drawDigitalText(
         time,
         centerX,
-        height * 0.07,
+        centerY,
         timerSize,
         0
       );
-
-      drawDigitalText(
-        time,
-        centerX,
-        height * 0.93,
-        timerSize,
-        Math.PI
-      );
     }
-
     function drawPaddle(
       paddle,
       fillColor,
@@ -1105,13 +1189,13 @@
       drawDisplays();
 
       drawPaddle(
-        leftPaddle,
+        topPaddle,
         "#18bde9",
         "#006688"
       );
 
       drawPaddle(
-        rightPaddle,
+        bottomPaddle,
         "#ef4040",
         "#880000"
       );
@@ -1139,12 +1223,51 @@
 
     document
       .getElementById("startButton")
-      .addEventListener("click", () => {
+      .addEventListener("click", async () => {
+        /*
+          This must happen synchronously in the click handler,
+          before awaiting anything else, so the browser treats it
+          as a valid user gesture and can show its fullscreen
+          permission prompt.
+        */
+
+        const fullscreenRequest = requestFullscreen(
+          document.documentElement
+        );
+
+        /*
+          Start the game immediately. Do not wait for fullscreen
+          to resolve first; otherwise some mobile browsers may
+          consider the user activation expired.
+        */
+
         overlay.style.display = "none";
         startGame();
+
+        try {
+          await fullscreenRequest;
+          await lockPortraitOrientation();
+        } catch {
+          // Fullscreen or orientation lock may be unavailable.
+        }
       });
 
-    window.addEventListener("resize", resizeCanvas);
+    function handleViewportChange() {
+      resizeCanvas();
+    }
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener(
+      "orientationchange",
+      handleViewportChange
+    );
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener(
+        "resize",
+        handleViewportChange
+      );
+    }
 
     resizeCanvas();
     gameLoop();
