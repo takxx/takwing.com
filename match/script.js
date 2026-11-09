@@ -83,9 +83,23 @@ function wireControls() {
     /* The actual mode is applied when Start Game is pressed. */
   });
 
+  async function startGameFromIntroWithFullscreen() {
+    const root = document.documentElement;
+  
+    try {
+      if (root.requestFullscreen) {
+        await root.requestFullscreen();
+      }
+    } catch (error) {
+      console.warn("Fullscreen request was denied:", error);
+    }
+  
+    startGameFromIntro();
+  }
+  
   startGameButton?.addEventListener(
     "click",
-    startGameFromIntro
+    startGameFromIntroWithFullscreen
   );
 
   hintButton?.addEventListener("click", showHint);
