@@ -876,26 +876,23 @@ select {
 
     if (a === BOMB && b === BOMB) {
       playSound("bomb");
+    
       const count = board.filter(Boolean).length;
       board.fill(null);
       addScore(count - 2);
+    
       render();
       await wait(180);
-
-      if (mode === "timed") {
-        endGame(copy[lang].over);
-        return;
-      }
-
-      for (let index = 0; index < board.length; index++) {
-        board[index] = queuedBombs > 0
-          ? (queuedBombs--, BOMB)
-          : randomAnimal();
-        fallingCells.add(index);
-      }
-
+    
+      dropAndRefill();
+      render();
+      await wait(250);
+    
+      await resolveMatches(matchesIn(board), 1);
+    
       busy = false;
       render();
+      checkNoMoves();
       return;
     }
 
