@@ -1,128 +1,1149 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
-  <title>Sea Match</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sea Match</title>
+<style>
+:root {
+  color-scheme: dark;
+
+  --bg-1: #02101d;
+  --bg-2: #062c44;
+  --bg-3: #0b4a5e;
+
+  --surface: #08283d;
+  --surface-2: #0d3a52;
+  --surface-3: #124b64;
+
+  --text: #eafaff;
+  --text-muted: #9fc4d2;
+
+  --accent: #43e0c8;
+  --accent-strong: #6ff2d8;
+  --accent-soft: #43e0c822;
+
+  --gold: #ffd166;
+  --coral: #ff7a7a;
+  --violet: #a78bfa;
+
+  --line: #ffffff14;
+  --radius-lg: 24px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  /* Uses each platform's native UI font; no web font is downloaded. */
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Noto Sans", Ubuntu, Cantarell, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 20px 14px;
+  color: var(--text);
+  font-family: var(--font-ui);
+  background:
+    radial-gradient(720px 480px at 15% 5%, #1a7f8f4d, transparent 65%),
+    radial-gradient(680px 520px at 90% 90%, #0b6d9450, transparent 68%),
+    linear-gradient(155deg, var(--bg-1), var(--bg-2) 55%, var(--bg-1));
+}
+
+.font-ui {
+  font-family: var(--font-ui);
+}
+
+button,
+select {
+  color: inherit;
+  font: inherit;
+}
+
+/* App container */
+.app {
+  width: min(100%, 430px);
+  padding: 22px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(165deg, #0a3a5188, #04182799);
+  box-shadow:
+    0 24px 70px #0008,
+    inset 0 1px #ffffff14;
+  backdrop-filter: blur(18px);
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.65rem, 6vw, 2.15rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  text-shadow: 0 2px 18px #43e0c830;
+}
+
+/* Toolbar and stats */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pill strong,
+#score,
+#time {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+#modeText {
+  color: var(--violet);
+  font-weight: 650;
+}
+
+/* High scores */
+.high-scores {
+  display: flex;
+  justify-content: flex-start;
+  gap: 18px;
+  width: 100%;
+  margin: -2px 0 16px;
+}
+
+.high-scores .pill span:last-child {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* Controls */
+button,
+select {
+  padding: 10px 15px;
+  border: 1px solid #7fe9dd2e;
+  border-radius: var(--radius-md);
+  background: linear-gradient(160deg, #14536a, #0b3a4e);
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+button {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover:not(:disabled) {
+  border-color: #7fe9dd66;
+  background: linear-gradient(160deg, #1a647f, #0d4358);
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+select {
+  cursor: pointer;
+}
+
+/* Game board */
+#board {
+  display: grid;
+  width: 100%;
+  gap: clamp(3px, 1vw, 7px);
+  padding: clamp(8px, 2vw, 13px);
+  border: 1px solid #7fe9dd26;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 50% 0%, #6ce5d51f, transparent 62%),
+    repeating-linear-gradient(
+      170deg,
+      #0a4a64,
+      #0a4a64 18px,
+      #083e57 19px,
+      #083e57 38px
+    );
+  box-shadow:
+    0 20px 55px #0007,
+    inset 0 1px #ffffff10;
+  touch-action: none;
+  user-select: none;
+}
+
+.cell {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: clamp(8px, 1.6vw, 13px);
+  background: linear-gradient(150deg, #7de8e42e, #062b43bb);
+  box-shadow: inset 0 1px #ffffff16;
+  font-size: clamp(17px, 6vw, 42px);
+  cursor: pointer;
+  transition:
+    transform 0.13s ease,
+    background 0.13s ease;
+}
+
+.cell:hover {
+  background: linear-gradient(150deg, #7de8e44d, #0a3b55bb);
+}
+
+.cell.selected {
+  outline: 3px solid var(--gold);
+  background: #f6d76b55;
+  transform: scale(0.92);
+}
+
+.cell.hint {
+  outline: 3px solid #dcff92;
+  background: #d9ff8a55;
+  animation: pulse 0.7s ease-in-out infinite alternate;
+}
+
+.cell.falling {
+  animation: fall-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes pulse {
+  to {
+    transform: scale(0.9);
+  }
+}
+
+@keyframes fall-in {
+  from {
+    opacity: 0.25;
+    transform: translateY(-45px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Help text */
+.help {
+  margin: 14px 2px 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+/* Overlays and dialogs */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #020d16d9;
+  backdrop-filter: blur(7px);
+}
+
+.dialog {
+  width: min(100%, 390px);
+  padding: 26px;
+  border: 1px solid #7fe9dd33;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, #0d4358, #062840);
+  box-shadow: 0 28px 80px #000a;
+}
+
+.dialog h2 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.dialog p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.dialog ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.dialog li::marker {
+  color: var(--accent);
+}
+
+.dialog label {
+  display: block;
+  margin: 18px 0 7px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.dialog select {
+  width: 100%;
+}
+
+.dialog button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 13px;
+  border-color: #7fe9dd55;
+  background: linear-gradient(160deg, #17b39a, #0e7a72);
+  color: #03161d;
+  font-weight: 750;
+}
+
+.dialog button:hover {
+  border-color: #7fe9dd88;
+  background: linear-gradient(160deg, #1fcaa9, #108a7e);
+}
+
+[hidden] {
+  display: none !important;
+}
+</style>
 </head>
 <body>
-  <div id="introOverlay" class="intro-overlay" hidden>
-    <div class="intro-card">
-      <h1 data-i18n="title">Sea Match</h1>
-
-      <p class="intro-description" data-i18n="introHow">
-        Swap neighbouring animals to make lines of three or more.
-      </p>
-
-      <div class="mode-explanations">
-        <p>
-          <strong data-i18n="modeRelaxed">Relaxed</strong>
-          <span data-i18n="howRelaxed">
-            Play without a timer; the game ends when no moves remain.
-          </span>
-        </p>
-
-        <p>
-          <strong data-i18n="modeTimed">Timed</strong>
-          <span data-i18n="howTimed">
-            Match quickly to earn extra time before time runs out.
-          </span>
-        </p>
-      </div>
-
-      <div class="intro-controls">
-        <div class="mode-toggle">
-          <span class="mode-toggle-label" data-i18n="chooseMode">
-            Choose game mode
-          </span>
-
-          <div class="toggle-row">
-            <span data-i18n="modeRelaxed">Relaxed</span>
-
-            <label class="toggle-track">
-              <input type="checkbox" id="modeToggle" />
-              <span class="toggle-slider"></span>
-              <span class="visually-hidden">Timed mode</span>
-            </label>
-
-            <span data-i18n="modeTimed">Timed</span>
-          </div>
-        </div>
-
-        <label class="language-control">
-          <span data-i18n="language">Language</span>
-
-          <select id="introLanguageSelect" aria-label="Language">
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="zh">中文</option>
-          </select>
-        </label>
-
-        <button type="button" id="startGame" data-i18n="startGame">
-          Start Game
-        </button>
-      </div>
+<main class="app">
+  <header>
+    <h1 id="title">Sea Match</h1>
+    <button id="restart" type="button" hidden>New game</button>
+  </header>
+  <section class="toolbar" aria-label="Game controls">
+    <div class="status">
+      <span class="pill"><span id="scoreLabel">Score</span>: <span id="score">0</span></span>
+      <span class="pill" id="timePill" hidden><span id="timeLabel">Time</span>: <span id="time">80</span>s</span>
+      <span class="pill"><span id="modeText"></span></span>
     </div>
-  </div>
-
-  <main class="game">
-    <header class="topbar">
-
-      <h1 data-i18n="title">Sea Matches</h1>
-
-      <div class="topbar-spacer" aria-hidden="true"></div>
-      <button type="button" id="newGame" data-i18n="newGame">
-        New Game
-      </button>
-    </header>
-
-    <section class="stats" aria-label="Game statistics">
-      <div class="stat score-stat">
-        <span class="stat-label" data-i18n="score">Score</span>
-        <span class="stat-value" id="score">0</span>
-      </div>
-
-      <div class="stat moves-stat">
-        <span class="stat-label" data-i18n="moves">Moves</span>
-        <span class="stat-value" id="moves">0</span>
-      </div>
-
-      <div class="stat timer-stat" id="timerWrap" hidden>
-        <span class="stat-label" data-i18n="time">Time</span>
-        <span class="stat-value" id="timer">80</span>
-      </div>
-
-      <div class="stat best-stat">
-        <span class="stat-label" data-i18n="bestScore">Best</span>
-        <span class="stat-value" id="bestScore">0</span>
-      </div>
-    </section>
-
-    <div id="board" aria-label="Animal match game board"></div>
-
-    <p id="message" data-i18n="instructions">
-      Click or swipe neighbouring animals to match them.
-    </p>
-
-    <div class="controls">
-      <button type="button" id="hintButton" data-i18n="hint">
-        Hint
-      </button>
+    <div>
+      <button id="hint" type="button" disabled>Hint</button>
     </div>
-  </main>
+  </section>
+  <div id="board" role="grid" aria-label="Match-three game board"></div>
+  <p class="help" id="instructions"></p>
+</main>
 
-  <script type="module" src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
-      });
+<div class="overlay" id="startOverlay">
+  <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+    <h2 id="dialogTitle">Sea Match</h2>
+    <p id="intro"></p>
+    <label id="languageLabel" for="language">Language</label>
+    <select id="language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh">中文</option>
+    </select>
+    <label id="modeLabel" for="mode">Game mode</label>
+    <select id="mode">
+      <option value="relaxed">Relaxed</option>
+      <option value="timed">Timed</option>
+    </select>
+    <button id="start" type="button">Start game</button>
+  </section>
+</div>
+
+<div class="overlay" id="endOverlay" hidden>
+  <section class="dialog" role="dialog" aria-modal="true">
+    <h2 id="endTitle"></h2>
+    <p id="finalScore"></p>
+    <button id="playAgain" type="button"></button>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const animals = ["🐙", "🪼", "🦪", "🦀", "🐢", "🐋", "🐡"];
+  const BOMB = "🧨";
+  const $ = id => document.getElementById(id);
+  const boardEl = $("board");
+
+  const copy = {
+    en: {
+      title: "Sea Match",
+      intro: "Swap adjacent sea creatures to match 3+.",
+      steps: [
+        "Swap adjacent creatures to match 3+.",
+        "Tap dynamite to blast pieces, or swap it to clear matches.",
+        "Matches and chain reactions score points.",
+        "Relaxed ends with no moves. Timed starts at 80s."
+      ],
+      language: "Language", mode: "Game mode", relaxed: "Relaxed", timed: "Timed",
+      start: "Start game", newGame: "New game", score: "Score", time: "Time",
+      hint: "Hint", best: "Best",
+      over: "Game over", noMoves: "No moves left", final: "Final score",
+      again: "Play again", modeRelaxed: "Relaxed", modeTimed: "Timed"
+    },
+    es: {
+      title: "Conexión Marina",
+      intro: "Intercambia criaturas vecinas para alinear 3+.",
+      steps: [
+        "Intercambia criaturas para alinear 3+.",
+        "Toca la dinamita para destruir fichas, o intercámbiala para limpiar iguales.",
+        "Combina y haz reacciones en cadena para sumar.",
+        "Modo relajado sin movimientos. Contrarreloj desde 80s."
+      ],
+      language: "Idioma", mode: "Modo de juego", relaxed: "Relajado", timed: "Contrarreloj",
+      start: "Empezar partida", newGame: "Nueva partida", score: "Puntuación", time: "Tiempo",
+      hint: "Pista", best: "Mejor",
+      over: "Fin de la partida", noMoves: "No quedan movimientos", final: "Puntuación final",
+      again: "Jugar de nuevo", modeRelaxed: "Relajado", modeTimed: "Contrarreloj"
+    },
+    zh: {
+      title: "消海鮮",
+      intro: "移動相鄰海洋生物，連線3個或以上即可消除。",
+      steps: [
+        "移動相鄰生物，連線3個或以上即可消除。",
+        "點擊炸彈炸毀周圍，或交換炸彈清除相同圖示。",
+        "消除與觸發連鎖反應來獲得分數。",
+        "悠閒模式無步數時結束；限時模式由80秒起倒數。"
+      ],
+      language: "語言", mode: "遊戲模式", relaxed: "悠閒模式", timed: "限時模式",
+      start: "開始遊戲", newGame: "重新開始", score: "分數", time: "時間",
+      hint: "提示", best: "最高記錄",
+      over: "遊戲結束", noMoves: "沒有可移動步數", final: "最終得分",
+      again: "再玩一次", modeRelaxed: "悠閒模式", modeTimed: "限時模式"
     }
-  </script>
+  };
+
+  let lang = "en";
+  let mode = "relaxed";
+  let rows = 10;
+  let cols = 7;
+  let board = [];
+  let score = 0;
+  let timeLeft = 80;
+  let timer = null;
+  let busy = false;
+  let selected = null;
+  let hintCells = [];
+  let queuedBombs = 0;
+  let started = false;
+  let pointerStart = null;
+  let audioCtx = null;
+  let fallingCells = new Set();
+
+  // Add the high-score display in its own row below the toolbar.
+  const highScores = document.createElement("div");
+  highScores.className = "high-scores";
+  highScores.innerHTML = `
+    <span class="pill" id="relaxedBest">
+      <span class="bestLabel"></span>: <span id="relaxedHigh">0</span>
+    </span>
+    <span class="pill" id="timedBest">
+      <span class="bestLabel"></span>: <span id="timedHigh">0</span>
+    </span>
+  `;
+  document.querySelector(".toolbar").after(highScores);
+
+  function preferredLanguage() {
+    const query = new URLSearchParams(location.search).get("lang");
+    if (["en", "es", "zh"].includes(query)) return query;
+
+    try {
+      const saved = localStorage.getItem("seaMatchLanguage");
+      if (["en", "es", "zh"].includes(saved)) return saved;
+    } catch (_) {}
+
+    const preferences = (navigator.languages || [navigator.language || "en"])
+      .map(value => value.toLowerCase());
+
+    if (preferences.some(value => value.startsWith("zh"))) return "zh";
+    if (preferences.some(value => value.startsWith("es"))) return "es";
+    return "en";
+  }
+
+  function setLanguage(value) {
+    lang = copy[value] ? value : "en";
+    const text = copy[lang];
+
+    document.documentElement.lang =
+      lang === "zh" ? "zh-HK" : lang === "es" ? "es-ES" : "en-GB";
+    document.title = text.title;
+
+    $("title").textContent = text.title;
+    $("dialogTitle").textContent = text.title;
+    $("instructions").textContent = text.intro;
+    $("intro").innerHTML =
+      `<ul>${text.steps.map(step => `<li>${step}</li>`).join("")}</ul>`;
+
+    $("languageLabel").textContent = text.language;
+    $("modeLabel").textContent = text.mode;
+    $("start").textContent = text.start;
+    $("restart").textContent = text.newGame;
+    $("scoreLabel").textContent = text.score;
+    $("timeLabel").textContent = text.time;
+    $("hint").textContent = text.hint;
+    $("endTitle").textContent = text.over;
+    $("playAgain").textContent = text.again;
+
+    $("mode").options[0].text = text.relaxed;
+    $("mode").options[1].text = text.timed;
+
+    document.querySelectorAll(".bestLabel").forEach(el => {
+      el.textContent = text.best;
+    });
+
+    updateModeLabel();
+  }
+
+  function updateModeLabel() {
+    const text = copy[lang];
+    $("modeText").textContent =
+      mode === "timed" ? text.modeTimed : text.modeRelaxed;
+    $("timePill").hidden = mode !== "timed";
+  }
+
+  function getHighScore(gameMode) {
+    try {
+      return Number(localStorage.getItem(`seaMatchHigh_${gameMode}`)) || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function saveHighScore() {
+    if (score <= getHighScore(mode)) return;
+    try {
+      localStorage.setItem(`seaMatchHigh_${mode}`, String(score));
+    } catch (_) {}
+  }
+
+  function playSound(kind, intensity = 1) {
+    try {
+      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+
+      const settings = {
+        match: {
+          frequency: 380 + Math.min(intensity, 25) * 38,
+          duration: 0.12,
+          wave: "sine"
+        },
+        bomb: { frequency: 120, duration: 0.38, wave: "sawtooth" },
+        over: { frequency: 330, duration: 0.45, wave: "triangle" },
+        hint: { frequency: 720, duration: 0.10, wave: "sine" }
+      }[kind];
+
+      const now = audioCtx.currentTime;
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      oscillator.type = settings.wave;
+      oscillator.frequency.setValueAtTime(settings.frequency, now);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        kind === "bomb" ? 45 : settings.frequency * 0.68,
+        now + settings.duration
+      );
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.14, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + settings.duration);
+
+      oscillator.connect(gain).connect(audioCtx.destination);
+      oscillator.start(now);
+      oscillator.stop(now + settings.duration);
+    } catch (_) {}
+  }
+
+  function at(row, col) {
+    return row * cols + col;
+  }
+
+  function randomAnimal() {
+    return animals[Math.floor(Math.random() * animals.length)];
+  }
+
+  function matchesIn(cells) {
+    const found = new Set();
+
+    for (let row = 0; row < rows; row++) {
+      let col = 0;
+      while (col < cols) {
+        const piece = cells[at(row, col)];
+        if (!piece || piece === BOMB) {
+          col++;
+          continue;
+        }
+
+        let end = col + 1;
+        while (end < cols && cells[at(row, end)] === piece) end++;
+        if (end - col >= 3) {
+          for (let x = col; x < end; x++) found.add(at(row, x));
+        }
+        col = end;
+      }
+    }
+
+    for (let col = 0; col < cols; col++) {
+      let row = 0;
+      while (row < rows) {
+        const piece = cells[at(row, col)];
+        if (!piece || piece === BOMB) {
+          row++;
+          continue;
+        }
+
+        let end = row + 1;
+        while (end < rows && cells[at(end, col)] === piece) end++;
+        if (end - row >= 3) {
+          for (let y = row; y < end; y++) found.add(at(y, col));
+        }
+        row = end;
+      }
+    }
+
+    return found;
+  }
+
+  function hasMatchAvailable() {
+    if (board.includes(BOMB)) return true;
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const i = at(row, col);
+
+        for (const [dr, dc] of [[0, 1], [1, 0]]) {
+          const nextRow = row + dr;
+          const nextCol = col + dc;
+          if (nextRow >= rows || nextCol >= cols) continue;
+
+          const j = at(nextRow, nextCol);
+          [board[i], board[j]] = [board[j], board[i]];
+          const valid = matchesIn(board).size > 0;
+          [board[i], board[j]] = [board[j], board[i]];
+
+          if (valid) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function render() {
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+    boardEl.style.width = "100%";
+    boardEl.style.maxWidth = "none";
+    boardEl.replaceChildren();
+
+    board.forEach((piece, index) => {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.setAttribute("role", "gridcell");
+      cell.setAttribute("aria-label", piece === BOMB ? "Dynamite" : piece || "Empty");
+      cell.textContent = piece || "";
+
+      if (selected === index) cell.classList.add("selected");
+      if (hintCells.includes(index)) cell.classList.add("hint");
+
+      if (fallingCells.has(index)) {
+        cell.animate(
+          [
+            { transform: "translateY(-45px)", opacity: 0.25 },
+            { transform: "translateY(0)", opacity: 1 }
+          ],
+          { duration: 240, easing: "cubic-bezier(.2,.8,.3,1)" }
+        );
+      }
+
+      cell.addEventListener("pointerdown", onPointerDown);
+      boardEl.append(cell);
+    });
+
+    fallingCells.clear();
+
+    $("score").textContent = score;
+    $("time").textContent = Math.ceil(timeLeft);
+    $("hint").disabled = busy || !started;
+
+    $("relaxedHigh").textContent = getHighScore("relaxed");
+    $("timedHigh").textContent = getHighScore("timed");
+    $("relaxedBest").hidden = mode !== "relaxed";
+    $("timedBest").hidden = mode !== "timed";
+  }
+
+  function startGame() {
+    mode = $("mode").value;
+    updateModeLabel();
+
+    // Always 7 columns wide × 10 rows tall.
+    rows = 10;
+    cols = 7;
+
+    score = 0;
+    timeLeft = 80;
+    queuedBombs = 0;
+    selected = null;
+    hintCells = [];
+    fallingCells.clear();
+    busy = false;
+    started = true;
+    board = Array(rows * cols).fill(null);
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        let piece;
+        do {
+          piece = randomAnimal();
+        } while (
+          (col >= 2 &&
+            board[at(row, col - 1)] === piece &&
+            board[at(row, col - 2)] === piece) ||
+          (row >= 2 &&
+            board[at(row - 1, col)] === piece &&
+            board[at(row - 2, col)] === piece)
+        );
+        board[at(row, col)] = piece;
+      }
+    }
+
+    $("startOverlay").hidden = true;
+    $("endOverlay").hidden = true;
+    $("restart").hidden = false;
+
+    if (timer) clearInterval(timer);
+    timer = null;
+
+    if (mode === "timed") {
+      timer = setInterval(() => {
+        if (!started) return;
+        timeLeft = Math.max(0, timeLeft - 0.1);
+        if (timeLeft <= 0) endGame(copy[lang].over);
+        render();
+      }, 100);
+    }
+
+    render();
+  }
+
+  function addScore(points) {
+    if (points <= 0) return;
+
+    score += points;
+    if (mode === "timed") timeLeft = Math.min(99, timeLeft + points / 3);
+
+    const threshold = mode === "timed" ? 100 : 500;
+    const earned =
+      Math.floor(score / threshold) -
+      Math.floor((score - points) / threshold);
+
+    queuedBombs += Math.max(0, earned);
+  }
+
+  function dropAndRefill() {
+    fallingCells = new Set();
+
+    for (let col = 0; col < cols; col++) {
+      const kept = [];
+
+      for (let row = rows - 1; row >= 0; row--) {
+        const piece = board[at(row, col)];
+        if (piece) kept.push(piece);
+      }
+
+      const firstSourceRow = rows - kept.length;
+
+      for (let row = rows - 1; row >= 0; row--) {
+        const index = at(row, col);
+
+        if (kept.length) {
+          board[index] = kept.shift();
+          if (row < firstSourceRow) fallingCells.add(index);
+        } else {
+          board[index] = queuedBombs > 0
+            ? (queuedBombs--, BOMB)
+            : randomAnimal();
+          fallingCells.add(index);
+        }
+      }
+    }
+  }
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function resolveMatches(initial, chain = 1) {
+    let current = initial;
+
+    while (current.size) {
+      const count = current.size;
+      playSound("match", count * chain);
+      addScore((count - 2) * chain);
+
+      if (chain >= 5) queuedBombs++;
+
+      for (const index of current) board[index] = null;
+      render();
+      await wait(130);
+
+      dropAndRefill();
+      render();
+      await wait(250);
+
+      current = matchesIn(board);
+      chain++;
+    }
+  }
+
+  function endGame(message) {
+    if (!started) return;
+
+    started = false;
+    busy = false;
+    if (timer) clearInterval(timer);
+    timer = null;
+
+    saveHighScore();
+    playSound("over");
+
+    $("endTitle").textContent = message;
+    $("finalScore").textContent = `${copy[lang].final}: ${score}`;
+    $("endOverlay").hidden = false;
+    render();
+  }
+
+  async function swap(i, j) {
+    if (busy || !started) return;
+
+    busy = true;
+    selected = null;
+    hintCells = [];
+
+    const a = board[i];
+    const b = board[j];
+
+    if (a === BOMB && b === BOMB) {
+      playSound("bomb");
+      const count = board.filter(Boolean).length;
+      board.fill(null);
+      addScore(count - 2);
+      render();
+      await wait(180);
+
+      if (mode === "timed") {
+        endGame(copy[lang].over);
+        return;
+      }
+
+      for (let index = 0; index < board.length; index++) {
+        board[index] = queuedBombs > 0
+          ? (queuedBombs--, BOMB)
+          : randomAnimal();
+        fallingCells.add(index);
+      }
+
+      busy = false;
+      render();
+      return;
+    }
+
+    if (a === BOMB || b === BOMB) {
+      playSound("bomb");
+
+      const bombIndex = a === BOMB ? i : j;
+      const otherPiece = a === BOMB ? b : a;
+      const clear = new Set([bombIndex]);
+
+      board.forEach((piece, index) => {
+        if (piece === otherPiece) clear.add(index);
+      });
+
+      const count = clear.size;
+      for (const index of clear) board[index] = null;
+      addScore(count - 2);
+
+      dropAndRefill();
+      render();
+      await wait(250);
+      await resolveMatches(matchesIn(board), 1);
+
+      busy = false;
+      render();
+      checkNoMoves();
+      return;
+    }
+
+    [board[i], board[j]] = [board[j], board[i]];
+    render();
+
+    const matches = matchesIn(board);
+    if (!matches.size) {
+      await wait(130);
+      [board[i], board[j]] = [board[j], board[i]];
+      busy = false;
+      render();
+      return;
+    }
+
+    await resolveMatches(matches, 1);
+    busy = false;
+    render();
+    checkNoMoves();
+  }
+
+  async function detonate(index) {
+    if (busy || !started || board[index] !== BOMB) return;
+
+    busy = true;
+    hintCells = [];
+    selected = null;
+    playSound("bomb");
+
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+    const clear = new Set();
+
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = row + dr;
+        const c = col + dc;
+        if (r >= 0 && r < rows && c >= 0 && c < cols) {
+          clear.add(at(r, c));
+        }
+      }
+    }
+
+    const count = clear.size;
+    for (const cellIndex of clear) board[cellIndex] = null;
+    addScore(count - 2);
+
+    render();
+    await wait(160);
+    dropAndRefill();
+    render();
+    await wait(250);
+    await resolveMatches(matchesIn(board), 1);
+
+    busy = false;
+    render();
+    checkNoMoves();
+  }
+
+  function checkNoMoves() {
+    if (started && mode === "relaxed" && !hasMatchAvailable()) {
+      endGame(copy[lang].noMoves);
+    }
+  }
+
+  function onPointerDown(event) {
+    if (busy || !started) return;
+
+    const index = [...boardEl.children].indexOf(event.currentTarget);
+    pointerStart = { index, x: event.clientX, y: event.clientY };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+
+  boardEl.addEventListener("pointerup", event => {
+    if (!pointerStart || busy || !started) {
+      pointerStart = null;
+      return;
+    }
+
+    const { index, x, y } = pointerStart;
+    pointerStart = null;
+
+    const dx = event.clientX - x;
+    const dy = event.clientY - y;
+
+    if (Math.max(Math.abs(dx), Math.abs(dy)) > 20) {
+      let next;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        next = index + (dx > 0 ? 1 : -1);
+      } else {
+        next = index + (dy > 0 ? cols : -cols);
+      }
+
+      if (
+        next < 0 ||
+        next >= board.length ||
+        (Math.abs(next - index) === 1 &&
+          Math.floor(next / cols) !== Math.floor(index / cols))
+      ) return;
+
+      swap(index, next);
+      return;
+    }
+
+    if (board[index] === BOMB) {
+      detonate(index);
+      return;
+    }
+
+    if (selected === null || selected === index) {
+      selected = selected === index ? null : index;
+      render();
+      return;
+    }
+
+    const adjacent =
+      Math.abs(Math.floor(selected / cols) - Math.floor(index / cols)) +
+      Math.abs((selected % cols) - (index % cols)) === 1;
+
+    if (adjacent) {
+      swap(selected, index);
+    } else {
+      selected = index;
+      render();
+    }
+  });
+
+  $("hint").addEventListener("click", () => {
+    if (!started || busy) return;
+
+    playSound("hint");
+    const bombIndex = board.indexOf(BOMB);
+
+    if (bombIndex >= 0) {
+      const row = Math.floor(bombIndex / cols);
+      const col = bombIndex % cols;
+      const neighbour = [
+        [row, col + 1],
+        [row + 1, col],
+        [row, col - 1],
+        [row - 1, col]
+      ].find(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols);
+
+      hintCells = neighbour ? [bombIndex, at(...neighbour)] : [bombIndex];
+      render();
+      return;
+    }
+
+    hintCells = [];
+
+    for (let row = 0; row < rows && !hintCells.length; row++) {
+      for (let col = 0; col < cols && !hintCells.length; col++) {
+        const i = at(row, col);
+
+        for (const [dr, dc] of [[0, 1], [1, 0]]) {
+          const nextRow = row + dr;
+          const nextCol = col + dc;
+          if (nextRow >= rows || nextCol >= cols) continue;
+
+          const j = at(nextRow, nextCol);
+          [board[i], board[j]] = [board[j], board[i]];
+          const valid = matchesIn(board).size > 0;
+          [board[i], board[j]] = [board[j], board[i]];
+
+          if (valid) {
+            hintCells = [i, j];
+            break;
+          }
+        }
+      }
+    }
+
+    render();
+  });
+
+  $("language").value = preferredLanguage();
+  setLanguage($("language").value);
+
+  $("language").addEventListener("change", () => {
+    setLanguage($("language").value);
+  });
+
+  $("start").addEventListener("click", () => {
+    setLanguage($("language").value);
+    try {
+      localStorage.setItem("seaMatchLanguage", lang);
+    } catch (_) {}
+    startGame();
+  });
+
+  $("restart").addEventListener("click", () => {
+    if (timer) clearInterval(timer);
+    timer = null;
+    started = false;
+    busy = false;
+    $("mode").value = mode;
+    $("startOverlay").hidden = false;
+  });
+
+  $("playAgain").addEventListener("click", () => {
+    $("endOverlay").hidden = true;
+    $("mode").value = mode;
+    startGame();
+  });
+  // Prevent double-tap zoom and pinch zoom on the game page.
+  document.addEventListener("dblclick", event => {
+    event.preventDefault();
+  }, { passive: false });
+  
+  document.addEventListener("gesturestart", event => {
+    event.preventDefault();
+  }, { passive: false });
+  
+  document.addEventListener("gesturechange", event => {
+    event.preventDefault();
+  }, { passive: false });
+  
+  document.addEventListener("gestureend", event => {
+    event.preventDefault();
+  }, { passive: false });
+})();
+</script>
 </body>
 </html>
