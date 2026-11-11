@@ -372,7 +372,7 @@ select {
   <section class="toolbar" aria-label="Game controls">
     <div class="status">
       <span class="pill"><span id="scoreLabel">Score</span>: <span id="score">0</span></span>
-      <span class="pill" id="timePill" hidden><span id="timeLabel">Time</span>: <span id="time">80</span>s</span>
+      <span class="pill" id="timePill" hidden><span id="timeLabel">Time</span>: <span id="time">80</span></span>
       <span class="pill"><span id="modeText"></span></span>
     </div>
     <div>
@@ -981,8 +981,27 @@ select {
     checkNoMoves();
   }
 
+  function shuffleBoard() {
+    const pieces = [...board];
+  
+    do {
+      for (let i = pieces.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+      }
+      board = [...pieces];
+    } while (matchesIn(board).size > 0 || !hasMatchAvailable());
+  
+    timeLeft += 2;
+    render();
+  }
+  
   function checkNoMoves() {
-    if (started && mode === "relaxed" && !hasMatchAvailable()) {
+    if (!started || hasMatchAvailable()) return;
+  
+    if (mode === "timed") {
+      shuffleBoard();
+    } else {
       endGame(copy[lang].noMoves);
     }
   }
