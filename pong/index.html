@@ -1,24 +1,514 @@
 <!doctype html>
-<html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <style>
-         html, body, #jsdos {
-             width: 100%;
-             height: 100%;
-             margin: 0;
-             padding: 0;
-         }
-        </style>
-        <script src="/util/js-dos/v7.5.0/js-dos.js"></script>
-        <link href="/util/js-dos/v7.5.0/js-dos.css" rel="stylesheet">
-    </head>
-    <body>
-        <div id="jsdos" />
-        <script>
-         emulators.pathPrefix = "/util/js-dos/v7.5.0/";
-         Dos(document.getElementById("jsdos"))
-             .run("breakout.jsdos");
-        </script>
-    </body>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pocket Paddle</title>
+<style>
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.04em;
+  touch-action: none;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 90%);
+  text-align: center;
+}
+
+#overlay.result-yellow {
+  background: rgb(255 212 0 / 94%);
+  color: #111;
+}
+
+#overlay.result-blue {
+  background: rgb(55 170 220 / 94%);
+  color: #111;
+}
+
+#overlay.result-draw {
+  background: rgb(100 100 100 / 95%);
+  color: #fff;
+}
+
+#panel {
+  max-width: 440px;
+  transform: rotate(90deg);
+}
+
+#language {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 8px;
+  border: 1px solid #777;
+  border-radius: 6px;
+  background: #222;
+  color: #fff;
+  font: 16px system-ui, sans-serif;
+  letter-spacing: normal;
+  transform: rotate(90deg);
+}
+
+h1, button {
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.06em;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(32px, 8vw, 52px);
+}
+
+p {
+  font: 17px/1.5 system-ui, sans-serif;
+  letter-spacing: normal;
+}
+
+#finalScore {
+  margin: 14px 0;
+  font: bold clamp(48px, 14vw, 84px) Impact, Haettenschweiler, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+button {
+  padding: 12px 26px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font-size: 20px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="overlay">
+<select id="language" aria-label="Language">
+  <option value="en">English</option>
+  <option value="es">Español</option>
+  <option value="zh">中文</option>
+</select>
+
+<div id="panel">
+  <h1 id="title"></h1>
+  <p id="instructions"></p>
+  <div id="finalScore" hidden></div>
+  <button id="start"></button>
+</div>
+</div>
+
+<script>
+(() => {
+  const text = {
+    en: {
+      title: "Pocket Paddle",
+      instructions: "Touch and drag in the top or bottom 10% of the screen to move your paddle. The top player serves first. After each point, the player who lost serves. The game lasts 99 seconds; the highest score wins.",
+      start: "Start Game",
+      yellowWins: "Yellow wins!",
+      blueWins: "Blue wins!",
+      draw: "It's a draw!",
+      finalScore: "Final Score"
+    },
+    es: {
+      title: "Minipala",
+      instructions: "Toca y arrastra por el 10% superior o inferior de la pantalla para mover tu pala. Saca primero el jugador de arriba. Tras cada punto, saca el que haya perdido. La partida dura 99 segundos; gana quien tenga más puntos.",
+      start: "Empezar",
+      yellowWins: "¡Gana el amarillo!",
+      blueWins: "¡Gana el azul!",
+      draw: "¡Empate!",
+      finalScore: "Resultado final"
+    },
+    zh: {
+      title: "指尖乒乓",
+      instructions: "喺畫面頂部或底部 10% 範圍內按住並拖動嚟移動球拍。上方玩家先發球；每失一分後由輸嗰一方發球。比賽限時 99 秒，完場時分數高者勝！",
+      start: "開始遊戲",
+      yellowWins: "黃隊勝出！",
+      blueWins: "藍隊勝出！",
+      draw: "打和！",
+      finalScore: "最終比分"
+    }
+  };
+
+  const validLanguages = ["en", "es", "zh"];
+  const params = new URLSearchParams(location.search);
+  const storedLanguage = localStorage.getItem("pong-language");
+  const browserLanguages = (navigator.languages || [navigator.language || "en"])
+    .map(value => value.toLowerCase());
+
+  let language = params.get("lang");
+  if (!validLanguages.includes(language)) {
+    language = validLanguages.includes(storedLanguage) ? storedLanguage : null;
+  }
+  if (!language) {
+    language = browserLanguages.some(value => value.startsWith("zh")) ? "zh"
+      : browserLanguages.some(value => value.startsWith("es")) ? "es"
+      : "en";
+  }
+
+  const canvas = document.querySelector("#game");
+  const ctx = canvas.getContext("2d");
+  const overlay = document.querySelector("#overlay");
+  const languageSelect = document.querySelector("#language");
+  const finalScore = document.querySelector("#finalScore");
+
+  let audioContext;
+  
+  function playBounce(speed, type) {
+    if (!audioContext) return;
+  
+    const now = audioContext.currentTime;
+    const speedLevel = Math.max(0, Math.min(1, (speed - 4) / 12));
+  
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+  
+    oscillator.type = type === "paddle" ? "triangle" : "sine";
+  
+    const baseFrequency = type === "paddle" ? 280 : 180;
+    const frequency = baseFrequency + speedLevel * (type === "paddle" ? 420 : 260);
+  
+    oscillator.frequency.setValueAtTime(frequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.65, now + 0.08);
+  
+    gain.gain.setValueAtTime(0.04 + speedLevel * 0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+  
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.1);
+  }
+  
+  function playScore() {
+    if (!audioContext) return;
+  
+    const now = audioContext.currentTime;
+  
+    [660, 880].forEach((frequency, index) => {
+      const start = now + index * 0.12;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+  
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, start);
+  
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.12, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
+  
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(start);
+      oscillator.stop(start + 0.2);
+    });
+  }
+
+  let width, height, dpr;
+
+  const game = {
+    paddleWidth: 110,
+    paddleHeight: 12,
+    ballRadius: 7,
+    topX: 0,
+    bottomX: 0,
+    ballX: 0,
+    ballY: 0,
+    vx: 0,
+    vy: 0,
+    scores: [0, 0],
+    elapsed: 0,
+    running: false,
+    lastFrame: 0,
+    servingPlayer: 0
+  };
+
+  function applyLanguage(value, persist = true) {
+    language = value;
+    const words = text[language];
+
+    document.documentElement.lang =
+      language === "zh" ? "zh-Hant-HK" :
+      language === "es" ? "es-ES" : "en-GB";
+
+    document.querySelector("#title").textContent = words.title;
+    document.querySelector("#instructions").textContent = words.instructions;
+    document.querySelector("#start").textContent = words.start;
+
+    if (persist) localStorage.setItem("pong-language", language);
+  }
+
+  languageSelect.value = language;
+  applyLanguage(language, false);
+  languageSelect.addEventListener("change", () => {
+    applyLanguage(languageSelect.value);
+  });
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    game.paddleWidth = Math.min(110, width * 0.28);
+    game.topX = game.bottomX = width / 2;
+
+    if (!game.running) resetBall();
+    draw();
+  }
+
+  function resetBall() {
+    game.ballX = width / 2;
+    game.ballY = height / 2;
+    game.vx = 0;
+    // Top player serves toward the bottom; bottom player serves upward.
+    game.vy = game.servingPlayer === 0 ? 8 : -8;
+  }
+
+  function clampPaddle(x) {
+    return Math.max(
+      game.paddleWidth / 2,
+      Math.min(width - game.paddleWidth / 2, x)
+    );
+  }
+
+  function movePaddle(event) {
+    // Only touch input in the outer 10% strips controls a paddle.
+    if (event.pointerType !== "touch") return;
+
+    if (event.clientY <= height * 0.1) {
+      game.topX = clampPaddle(event.clientX);
+    } else if (event.clientY >= height * 0.9) {
+      game.bottomX = clampPaddle(event.clientX);
+    }
+  }
+
+  canvas.addEventListener("pointerdown", event => {
+    canvas.setPointerCapture(event.pointerId);
+    movePaddle(event);
+  });
+  canvas.addEventListener("pointermove", movePaddle);
+  window.addEventListener("resize", resize);
+
+  function draw() {
+    if (!width || !height) return;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, width, height);
+
+    // Center line.
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 10]);
+    ctx.beginPath();
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Two-digit timer only: no label or suffix.
+    const secondsLeft = Math.max(0, 99 - Math.floor(game.elapsed));
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "bold 64px Impact, Haettenschweiler, sans-serif";
+
+    ctx.save();
+    ctx.translate(40, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(String(secondsLeft).padStart(2, "0"), 0, 0);
+    ctx.restore();
+
+    // Scores face inward and use each player's colour.
+    ctx.font = "bold 64px Impact, Haettenschweiler, sans-serif";
+    ctx.save();
+    ctx.translate(width - 40, height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillStyle = "#ffd400";
+    ctx.fillText(String(game.scores[0]), -32, 0);
+    ctx.fillStyle = "#55cfff";
+    ctx.fillText(String(game.scores[1]), 32, 0);
+    ctx.restore();
+
+    const topPaddleY = height * 0.1 - game.paddleHeight / 2;
+    const bottomPaddleY = height * 0.9 - game.paddleHeight / 2;
+
+    ctx.fillStyle = "#ffd400";
+    ctx.fillRect(
+      game.topX - game.paddleWidth / 2,
+      topPaddleY,
+      game.paddleWidth,
+      game.paddleHeight
+    );
+
+    ctx.fillStyle = "#55cfff";
+    ctx.fillRect(
+      game.bottomX - game.paddleWidth / 2,
+      bottomPaddleY,
+      game.paddleWidth,
+      game.paddleHeight
+    );
+
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(game.ballX, game.ballY, game.ballRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function awardPoint(losingPlayer) {
+    game.scores[1 - losingPlayer]++;
+    playScore();
+    game.servingPlayer = losingPlayer;
+    resetBall();
+  }
+
+  function finishGame() {
+    game.running = false;
+    const words = text[language];
+
+    const resultClass =
+      game.scores[0] === game.scores[1] ? "result-draw" :
+      game.scores[0] > game.scores[1] ? "result-yellow" :
+      "result-blue";
+
+    overlay.classList.remove("result-yellow", "result-blue", "result-draw");
+    overlay.classList.add(resultClass);
+
+    document.querySelector("#title").textContent =
+      game.scores[0] === game.scores[1] ? words.draw :
+      game.scores[0] > game.scores[1] ? words.yellowWins :
+      words.blueWins;
+
+    document.querySelector("#instructions").textContent = words.finalScore;
+    finalScore.textContent = `${game.scores[0]} : ${game.scores[1]}`;
+    finalScore.hidden = false;
+    document.querySelector("#start").textContent = words.start;
+
+    overlay.style.display = "grid";
+    draw();
+  }
+
+  function frame(now) {
+    if (!game.running) return;
+
+    const delta = Math.min((now - game.lastFrame) / 1000, 0.05);
+    game.lastFrame = now;
+    game.elapsed += delta;
+
+    if (game.elapsed >= 99) {
+      finishGame();
+      return;
+    }
+
+    const movement = delta * 60;
+    game.ballX += game.vx * movement;
+    game.ballY += game.vy * movement;
+
+    if (game.ballX < game.ballRadius) {
+      playBounce(Math.hypot(game.vx, game.vy), "wall");
+      game.ballX = game.ballRadius;
+      game.vx = Math.abs(game.vx);
+    } else if (game.ballX > width - game.ballRadius) {
+      playBounce(Math.hypot(game.vx, game.vy), "wall");
+      game.ballX = width - game.ballRadius;
+      game.vx = -Math.abs(game.vx);
+    }
+
+    const topPaddleBottom = height * 0.1 + game.paddleHeight / 2;
+    const bottomPaddleTop = height * 0.9 - game.paddleHeight / 2;
+
+    if (
+      game.vy < 0 &&
+      game.ballY - game.ballRadius <= topPaddleBottom &&
+      game.ballX >= game.topX - game.paddleWidth / 2 &&
+      game.ballX <= game.topX + game.paddleWidth / 2
+    ) {
+      playBounce(Math.hypot(game.vx, game.vy), "paddle");
+      game.ballY = topPaddleBottom + game.ballRadius;
+      game.vy = Math.abs(game.vy);
+      game.vx += (game.ballX - game.topX) * 0.06;
+      game.vx *= 1.04;
+      game.vy *= 1.04;
+    }
+
+    if (
+      game.vy > 0 &&
+      game.ballY + game.ballRadius >= bottomPaddleTop &&
+      game.ballX >= game.bottomX - game.paddleWidth / 2 &&
+      game.ballX <= game.bottomX + game.paddleWidth / 2
+    ) {
+      playBounce(Math.hypot(game.vx, game.vy), "paddle");
+      game.ballY = bottomPaddleTop - game.ballRadius;
+      game.vy = -Math.abs(game.vy);
+      game.vx += (game.ballX - game.bottomX) * 0.06;
+      game.vx *= 1.04;
+      game.vy *= 1.04;
+    }
+
+    if (game.ballY < -game.ballRadius) awardPoint(0);
+    if (game.ballY > height + game.ballRadius) awardPoint(1);
+
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  document.querySelector("#start").addEventListener("click", async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (_) {
+      // The game can still run if fullscreen is unavailable.
+    }
+    
+    try {
+      audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === "suspended") await audioContext.resume();
+    } catch (_) {
+      // The game still works if audio is unavailable.
+    }
+
+    overlay.classList.remove("result-yellow", "result-blue", "result-draw");
+    finalScore.hidden = true;
+    overlay.style.display = "none";
+
+    game.elapsed = 0;
+    game.scores = [0, 0];
+    game.servingPlayer = 0;
+    resetBall();
+    game.running = true;
+    game.lastFrame = performance.now();
+    requestAnimationFrame(frame);
+  });
+
+  resize();
+})();
+</script>
+</body>
 </html>

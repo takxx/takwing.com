@@ -215,6 +215,12 @@ canvas {
   }
 
   function startOrRestart() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {
+        // Fullscreen may be unsupported or denied; the game still works.
+      });
+    }
+  
     if (gameOver) resetGame();
     running = true;
   }
