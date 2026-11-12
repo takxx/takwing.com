@@ -8,31 +8,28 @@
 :root {
   color-scheme: dark;
 
-  --bg-1: #02101d;
-  --bg-2: #062c44;
-  --bg-3: #0b4a5e;
+  --bg-deep: #00152e;
+  --bg-mid: #004c76;
+  --bg-bright: #008b9e;
 
-  --surface: #08283d;
-  --surface-2: #0d3a52;
-  --surface-3: #124b64;
+  --surface: #063956;
+  --surface-raised: #075575;
+  --surface-bright: #0a7890;
 
-  --text: #eafaff;
-  --text-muted: #9fc4d2;
+  --text: #f2ffff;
+  --text-muted: #b5dce8;
 
-  --accent: #43e0c8;
-  --accent-strong: #6ff2d8;
-  --accent-soft: #43e0c822;
+  --aqua: #43f5dc;
+  --aqua-bright: #9affed;
+  --gold: #ffe16b;
+  --coral: #ff819e;
+  --violet: #c2a3ff;
 
-  --gold: #ffd166;
-  --coral: #ff7a7a;
-  --violet: #a78bfa;
-
-  --line: #ffffff14;
+  --line: #c5ffff35;
   --radius-lg: 24px;
   --radius-md: 14px;
   --radius-sm: 10px;
 
-  /* Uses each platform's native UI font; no web font is downloaded. */
   --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, "Noto Sans", Ubuntu, Cantarell, sans-serif;
 }
@@ -56,9 +53,8 @@ body {
   color: var(--text);
   font-family: var(--font-ui);
   background:
-    radial-gradient(720px 480px at 15% 5%, #1a7f8f4d, transparent 65%),
-    radial-gradient(680px 520px at 90% 90%, #0b6d9450, transparent 68%),
-    linear-gradient(155deg, var(--bg-1), var(--bg-2) 55%, var(--bg-1));
+    radial-gradient(ellipse 75% 65% at 15% 10%, #31877f 0%, transparent 70%),
+    linear-gradient(145deg, #155e61, #124e5c 55%, #123d55);
 }
 
 .font-ui {
@@ -75,12 +71,10 @@ select {
 .app {
   width: min(100%, 430px);
   padding: 22px 18px;
-  border: 1px solid var(--line);
+  border: 1px solid #d8fff04a;
   border-radius: var(--radius-lg);
-  background: linear-gradient(165deg, #0a3a5188, #04182799);
-  box-shadow:
-    0 24px 70px #0008,
-    inset 0 1px #ffffff14;
+  background: linear-gradient(155deg, #07566bd9, #073e59ed);
+  box-shadow: 0 18px 50px #124f5555, inset 0 1px #ffffff25;
   backdrop-filter: blur(18px);
 }
 
@@ -99,7 +93,9 @@ h1 {
   font-size: clamp(1.65rem, 6vw, 2.15rem);
   font-weight: 750;
   letter-spacing: -0.035em;
-  text-shadow: 0 2px 18px #43e0c830;
+  text-shadow:
+    0 0 12px #42ffe077,
+    0 0 34px #23cfff66;
 }
 
 /* Toolbar and stats */
@@ -137,7 +133,7 @@ h1 {
 .pill strong,
 #score,
 #time {
-  color: var(--accent-strong);
+  color: var(--aqua-bright);
   font-weight: 700;
 }
 
@@ -164,12 +160,14 @@ h1 {
 button,
 select {
   padding: 10px 15px;
-  border: 1px solid #7fe9dd2e;
+  border: 1px solid #55ffe066;
   border-radius: var(--radius-md);
-  background: linear-gradient(160deg, #14536a, #0b3a4e);
+  background: linear-gradient(145deg, #0b91a5, #07527c);
+  box-shadow: inset 0 1px #ffffff30;
   transition:
     background 0.16s ease,
     border-color 0.16s ease,
+    box-shadow 0.16s ease,
     transform 0.16s ease;
 }
 
@@ -179,8 +177,9 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: #7fe9dd66;
-  background: linear-gradient(160deg, #1a647f, #0d4358);
+  border-color: #8fffff;
+  background: linear-gradient(145deg, #12b7bd, #086b99);
+  box-shadow: 0 0 18px #36ffe044, inset 0 1px #ffffff45;
   transform: translateY(-1px);
 }
 
@@ -203,20 +202,10 @@ select {
   width: 100%;
   gap: clamp(3px, 1vw, 7px);
   padding: clamp(8px, 2vw, 13px);
-  border: 1px solid #7fe9dd26;
+  border: 1px solid #a9e2d733;
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 50% 0%, #6ce5d51f, transparent 62%),
-    repeating-linear-gradient(
-      170deg,
-      #0a4a64,
-      #0a4a64 18px,
-      #083e57 19px,
-      #083e57 38px
-    );
-  box-shadow:
-    0 20px 55px #0007,
-    inset 0 1px #ffffff10;
+  background: linear-gradient(145deg, #175e6d, #194f61);
+  box-shadow: 0 12px 30px #06374755, inset 0 1px #ffffff14;
   touch-action: none;
   user-select: none;
 }
@@ -228,28 +217,32 @@ select {
   aspect-ratio: 1;
   border: 0;
   border-radius: clamp(8px, 1.6vw, 13px);
-  background: linear-gradient(150deg, #7de8e42e, #062b43bb);
-  box-shadow: inset 0 1px #ffffff16;
+  background: linear-gradient(145deg, #a3fff044, #075b7acc);
+  box-shadow: inset 0 1px #ffffff35, 0 3px 8px #00152d55;
   font-size: clamp(17px, 6vw, 42px);
   cursor: pointer;
   transition:
     transform 0.13s ease,
-    background 0.13s ease;
+    background 0.13s ease,
+    box-shadow 0.13s ease;
 }
 
 .cell:hover {
-  background: linear-gradient(150deg, #7de8e44d, #0a3b55bb);
+  background: linear-gradient(145deg, #c0fff477, #087fa0dd);
+  box-shadow: 0 0 15px #55ffe055, inset 0 1px #ffffff55;
 }
 
 .cell.selected {
   outline: 3px solid var(--gold);
-  background: #f6d76b55;
+  background: linear-gradient(145deg, #ffe66b99, #ff9f4388);
+  box-shadow: 0 0 22px #ffe66b88;
   transform: scale(0.92);
 }
 
 .cell.hint {
-  outline: 3px solid #dcff92;
-  background: #d9ff8a55;
+  outline: 3px solid #baff74;
+  background: #baff7466;
+  box-shadow: 0 0 20px #baff7488;
   animation: pulse 0.7s ease-in-out infinite alternate;
 }
 
@@ -298,10 +291,12 @@ select {
 .dialog {
   width: min(100%, 390px);
   padding: 26px;
-  border: 1px solid #7fe9dd33;
+  border: 1px solid #72fff277;
   border-radius: var(--radius-lg);
-  background: linear-gradient(160deg, #0d4358, #062840);
-  box-shadow: 0 28px 80px #000a;
+  background: linear-gradient(150deg, #087b8f, #064d76 65%, #06345c);
+  box-shadow:
+    0 28px 80px #00102dcc,
+    0 0 30px #24ffe033;
 }
 
 .dialog h2 {
@@ -326,7 +321,7 @@ select {
 }
 
 .dialog li::marker {
-  color: var(--accent);
+  color: var(--aqua);
 }
 
 .dialog label {
@@ -347,19 +342,31 @@ select {
   width: 100%;
   margin-top: 20px;
   padding: 13px;
-  border-color: #7fe9dd55;
-  background: linear-gradient(160deg, #17b39a, #0e7a72);
-  color: #03161d;
+  border-color: #83fff2;
+  background: linear-gradient(145deg, #49ffe0, #00b8cf);
+  color: #002b45;
   font-weight: 750;
+  box-shadow: 0 0 20px #36ffe055;
 }
 
 .dialog button:hover {
-  border-color: #7fe9dd88;
-  background: linear-gradient(160deg, #1fcaa9, #108a7e);
+  border-color: #b1fff4;
+  background: linear-gradient(145deg, #9affeb, #25dce0);
 }
 
 [hidden] {
   display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>
 </head>
@@ -574,36 +581,85 @@ select {
     try {
       audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
-
-      const settings = {
-        match: {
-          frequency: 380 + Math.min(intensity, 25) * 38,
-          duration: 0.12,
-          wave: "sine"
-        },
-        bomb: { frequency: 120, duration: 0.38, wave: "sawtooth" },
-        over: { frequency: 330, duration: 0.45, wave: "triangle" },
-        hint: { frequency: 720, duration: 0.10, wave: "sine" }
-      }[kind];
-
+  
       const now = audioCtx.currentTime;
-      const oscillator = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      oscillator.type = settings.wave;
-      oscillator.frequency.setValueAtTime(settings.frequency, now);
-      oscillator.frequency.exponentialRampToValueAtTime(
-        kind === "bomb" ? 45 : settings.frequency * 0.68,
-        now + settings.duration
-      );
-
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.14, now + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + settings.duration);
-
-      oscillator.connect(gain).connect(audioCtx.destination);
-      oscillator.start(now);
-      oscillator.stop(now + settings.duration);
+  
+      function tone({ start, duration, from, to, wave, peak, end = 0.0001 }) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+  
+        osc.type = wave;
+        osc.frequency.setValueAtTime(from, start);
+        osc.frequency.exponentialRampToValueAtTime(to, start + duration);
+  
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(peak, start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(end, start + duration);
+  
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(start);
+        osc.stop(start + duration);
+      }
+  
+      if (kind === "match") {
+        // Two soft, rising-and-falling bubbles; intensity changes their pitch.
+        const pitch = 1 + Math.min(Math.max(intensity, 0), 25) * 0.012;
+  
+        tone({
+          start: now,
+          duration: 0.11,
+          from: 240 * pitch,
+          to: 620 * pitch,
+          wave: "sine",
+          peak: 0.12
+        });
+        tone({
+          start: now + 0.075,
+          duration: 0.14,
+          from: 330 * pitch,
+          to: 760 * pitch,
+          wave: "sine",
+          peak: 0.09
+        });
+        return;
+      }
+  
+      if (kind === "hint") {
+        // A distinct, sustained two-note chime rather than a high-pitched blip.
+        tone({
+          start: now,
+          duration: 0.32,
+          from: 440,
+          to: 440,
+          wave: "triangle",
+          peak: 0.10
+        });
+        tone({
+          start: now + 0.12,
+          duration: 0.42,
+          from: 660,
+          to: 660,
+          wave: "sine",
+          peak: 0.08
+        });
+        return;
+      }
+  
+      const settings = {
+        bomb: { frequency: 120, duration: 0.38, wave: "sawtooth" },
+        over: { frequency: 330, duration: 0.45, wave: "triangle" }
+      }[kind];
+  
+      if (!settings) return;
+  
+      tone({
+        start: now,
+        duration: settings.duration,
+        from: settings.frequency,
+        to: kind === "bomb" ? 45 : settings.frequency * 0.68,
+        wave: settings.wave,
+        peak: 0.14
+      });
     } catch (_) {}
   }
 
@@ -1139,9 +1195,17 @@ select {
   });
 
   $("playAgain").addEventListener("click", () => {
+    if (timer) clearInterval(timer);
+    timer = null;
+  
+    started = false;
+    busy = false;
+    selected = null;
+    hintCells = [];
+  
     $("endOverlay").hidden = true;
     $("mode").value = mode;
-    startGame();
+    $("startOverlay").hidden = false;
   });
   // Prevent double-tap zoom and pinch zoom on the game page.
   document.addEventListener("dblclick", event => {
