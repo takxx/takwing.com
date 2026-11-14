@@ -58,16 +58,20 @@ canvas {
 
 #language {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  padding: 8px;
-  border: 1px solid #777;
-  border-radius: 6px;
-  background: #222;
-  color: #fff;
-  font: 16px system-ui, sans-serif;
-  letter-spacing: normal;
-  transform: rotate(90deg);
+  top: 50%;
+  left: 32px;
+  transform: translate(-50%, -50%) rotate(90deg);
+  white-space: nowrap;
+}
+
+#language a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#language a:hover,
+#language a:focus-visible {
+  text-decoration: underline;
 }
 
 h1, button {
@@ -100,24 +104,41 @@ button {
   font-size: 20px;
   cursor: pointer;
 }
+
+#language button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+#language button:hover,
+#language button:focus-visible {
+  text-decoration: underline;
+}
+
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 
 <div id="overlay">
-<select id="language" aria-label="Language">
-  <option value="en">English</option>
-  <option value="es">Español</option>
-  <option value="zh">中文</option>
-</select>
+  <nav id="language" aria-label="Language">
+    <button type="button" data-language="en">English</button>
+    <span aria-hidden="true"> | </span>
+    <button type="button" data-language="es">Español</button>
+    <span aria-hidden="true"> | </span>
+    <button type="button" data-language="zh">中文</button>
+  </nav>
 
-<div id="panel">
-  <h1 id="title"></h1>
-  <p id="instructions"></p>
-  <div id="finalScore" hidden></div>
-  <button id="start"></button>
-</div>
+  <div id="panel">
+    <h1 id="title"></h1>
+    <p id="instructions"></p>
+    <div id="finalScore" hidden></div>
+    <button id="start"></button>
+  </div>
 </div>
 
 <script>
@@ -171,54 +192,53 @@ button {
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
   const overlay = document.querySelector("#overlay");
-  const languageSelect = document.querySelector("#language");
   const finalScore = document.querySelector("#finalScore");
 
   let audioContext;
-  
+
   function playBounce(speed, type) {
     if (!audioContext) return;
-  
+
     const now = audioContext.currentTime;
     const speedLevel = Math.max(0, Math.min(1, (speed - 4) / 12));
-  
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
-  
+
     oscillator.type = type === "paddle" ? "triangle" : "sine";
-  
+
     const baseFrequency = type === "paddle" ? 280 : 180;
-    const frequency = baseFrequency + speedLevel * (type === "paddle" ? 420 : 260);
-  
+    const frequency =
+      baseFrequency + speedLevel * (type === "paddle" ? 420 : 260);
+
     oscillator.frequency.setValueAtTime(frequency, now);
     oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.65, now + 0.08);
-  
+
     gain.gain.setValueAtTime(0.04 + speedLevel * 0.12, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-  
+
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
     oscillator.start(now);
     oscillator.stop(now + 0.1);
   }
-  
+
   function playScore() {
     if (!audioContext) return;
-  
+
     const now = audioContext.currentTime;
-  
+
     [660, 880].forEach((frequency, index) => {
       const start = now + index * 0.12;
       const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
-  
+
       oscillator.type = "sine";
       oscillator.frequency.setValueAtTime(frequency, start);
-  
+
       gain.gain.setValueAtTime(0.001, start);
       gain.gain.linearRampToValueAtTime(0.12, start + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
-  
+
       oscillator.connect(gain);
       gain.connect(audioContext.destination);
       oscillator.start(start);
@@ -260,11 +280,14 @@ button {
     if (persist) localStorage.setItem("pong-language", language);
   }
 
-  languageSelect.value = language;
   applyLanguage(language, false);
-  languageSelect.addEventListener("change", () => {
-    applyLanguage(languageSelect.value);
+  document.querySelector("#language").addEventListener("click", event => {
+    const button = event.target.closest("[data-language]");
+    if (!button) return;
+  
+    applyLanguage(button.dataset.language);
   });
+
 
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -286,7 +309,6 @@ button {
     game.ballX = width / 2;
     game.ballY = height / 2;
     game.vx = 0;
-    // Top player serves toward the bottom; bottom player serves upward.
     game.vy = game.servingPlayer === 0 ? 8 : -8;
   }
 
@@ -298,7 +320,6 @@ button {
   }
 
   function movePaddle(event) {
-    // Only touch input in the outer 10% strips controls a paddle.
     if (event.pointerType !== "touch") return;
 
     if (event.clientY <= height * 0.1) {
@@ -312,6 +333,7 @@ button {
     canvas.setPointerCapture(event.pointerId);
     movePaddle(event);
   });
+
   canvas.addEventListener("pointermove", movePaddle);
   window.addEventListener("resize", resize);
 
@@ -322,7 +344,6 @@ button {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, width, height);
 
-    // Center line.
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 10]);
@@ -332,8 +353,8 @@ button {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Two-digit timer only: no label or suffix.
     const secondsLeft = Math.max(0, 99 - Math.floor(game.elapsed));
+
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -345,7 +366,6 @@ button {
     ctx.fillText(String(secondsLeft).padStart(2, "0"), 0, 0);
     ctx.restore();
 
-    // Scores face inward and use each player's colour.
     ctx.font = "bold 64px Impact, Haettenschweiler, sans-serif";
     ctx.save();
     ctx.translate(width - 40, height / 2);
@@ -486,7 +506,7 @@ button {
     } catch (_) {
       // The game can still run if fullscreen is unavailable.
     }
-    
+
     try {
       audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
       if (audioContext.state === "suspended") await audioContext.resume();
