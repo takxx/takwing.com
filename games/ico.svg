@@ -357,7 +357,27 @@
   <path fill="#fff" d="M20.276 20.898c0 1.641-.596 2.974-1.337 2.974c-.737 0-1.336-1.333-1.336-2.974s.6-2.969 1.336-2.969c.741 0 1.337 1.328 1.337 2.969m23.854 0c0 1.641-.596 2.974-1.337 2.974c-.737 0-1.337-1.333-1.337-2.974s.6-2.969 1.337-2.969c.741 0 1.337 1.328 1.337 2.969" />
 </symbol>
 <symbol id="pachinko" viewBox="0 0 36 36">
-  <circle fill="#E6E7E8" cx="18" cy="18" r="18"/>
+  <circle fill="currentColor" cx="3" cy="4" r="1.5"/>
+  <circle fill="currentColor" cx="13" cy="4" r="1.5"/>
+  <circle fill="currentColor" cx="23" cy="4" r="1.5"/>
+  <circle fill="currentColor" cx="33" cy="4" r="1.5"/>
+  <circle fill="currentColor" cx="8" cy="11" r="1.5"/>
+  <circle fill="currentColor" cx="18" cy="11" r="1.5"/>
+  <circle fill="currentColor" cx="28" cy="11" r="1.5"/>
+  <circle fill="currentColor" cx="3" cy="18" r="1.5"/>
+  <circle fill="currentColor" cx="13" cy="18" r="1.5"/>
+  <circle fill="currentColor" cx="23" cy="18" r="1.5"/>
+  <circle fill="currentColor" cx="33" cy="18" r="1.5"/>
+  <circle fill="currentColor" cx="8" cy="25" r="1.5"/>
+  <circle fill="currentColor" cx="18" cy="25" r="1.5"/>
+  <circle fill="currentColor" cx="28" cy="25" r="1.5"/>
+  <circle fill="currentColor" cx="3" cy="32" r="1.5"/>
+  <circle fill="currentColor" cx="13" cy="32" r="1.5"/>
+  <circle fill="currentColor" cx="23" cy="32" r="1.5"/>
+  <circle fill="currentColor" cx="33" cy="32" r="1.5"/>
+  <circle fill="#E6E7E8" cx="28" cy="3.5" r="3.5"/>
+  <circle fill="#E6E7E8" cx="5" cy="14.5" r="3.5"/>
+  <circle fill="#E6E7E8" cx="18" cy="32.5" r="3.5"/>
 </symbol>
 <symbol id="palabeja" viewBox="0 0 36 36">
   <path fill="#31373d" d="M27.816 23.464c.299-1.148.465-2.318.465-3.464c0-4.161-2.122-6.779-5.258-8.035c.417-1.008.665-2.108.665-3.2c0-1.581-.495-2.498-1.315-3.032c1.091-.482 2.517-1.5 3.027-2.011c.781-.781.94-1.889.354-2.475s-1.693-.428-2.475.354c-.611.611-1.948 2.53-2.223 3.619C20.172 5.025 19.126 5 18 5c-1.125 0-2.172.025-3.055.219c-.275-1.089-1.612-3.007-2.223-3.619c-.781-.781-1.889-.94-2.475-.354c-.585.587-.427 1.694.354 2.476c.511.511 1.937 1.529 3.027 2.011c-.821.533-1.316 1.451-1.316 3.032c0 1.093.248 2.192.665 3.2C9.841 13.221 7.719 15.839 7.719 20c0 1.146.167 2.317.465 3.464v.023l.006-.003c1.209 4.621 4.643 8.847 8.812 9.44L17 33c0 1.657.448 3 1 3c.553 0 1-1.343 1-3q0-.037-.003-.075c4.169-.593 7.604-4.819 8.813-9.44l.006.003z"/>
