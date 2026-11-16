@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bingo Pachinko</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:12px;background:radial-gradient(ellipse at top,#433064,#171529 55%,#090a12);color:#fff2c8;font:14px system-ui,sans-serif}
+.cabinet{width:min(96vw,510px);padding:14px;border:4px solid #ffd96a;border-radius:22px;background:linear-gradient(145deg,#421d59,#18182e 48%,#401b48);box-shadow:0 0 26px #ff4fbd66,0 0 65px #703bff44}
+header{text-align:center;margin-bottom:8px}
+.eyebrow{color:#75f7ff;font-size:10px;font-weight:900;letter-spacing:.3em}
+h1{margin:2px 0;color:#ffe577;font-size:clamp(25px,8vw,38px);line-height:1;letter-spacing:.07em;text-shadow:0 0 10px #ff8a33,0 0 23px #ff309b}
+.hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 2px;color:#bafff9;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.hud strong{color:#fff0a4;font-size:17px}
+.languages{display:flex;align-items:center;gap:6px;letter-spacing:0;text-transform:none}
+.languages a{color:#bafff9;text-decoration:none;padding:2px 4px;border-radius:4px}
+.languages a.selected{color:#fff0a4;background:#ffffff20;cursor:default}
+.languages .separator{color:#857ca9}
+svg{display:block;width:100%;height:auto;border:3px solid #ffe477;border-radius:13px;background:#10152b;box-shadow:0 0 20px #47eafa55;touch-action:manipulation;cursor:crosshair}
+.controls{display:flex;gap:10px;margin-top:10px}
+button{flex:1;padding:11px;border:2px solid #fff0a4;border-radius:10px;background:linear-gradient(#ffdc66,#ff8e45);color:#38163f;font:900 14px system-ui,sans-serif;letter-spacing:.08em;cursor:pointer}
+button.secondary{flex:0 0 95px;background:linear-gradient(#75f8ed,#3bb7e9);border-color:#b8ffff}
+#mute{flex:0 0 58px;background:linear-gradient(#75f8ed,#3bb7e9);border-color:#b8ffff}
+.hint{margin:8px 0 0;text-align:center;color:#c3b7e5;font-size:12px}
+</style>
+</head>
+<body>
+<main class="cabinet">
+  <header>
+    <div class="eyebrow" data-i18n="eyebrow">★ SUPER LUCKY PARLOR ★</div>
+    <h1 id="gameTitle">NEON BINGO</h1>
+  </header>
+
+  <div class="hud">
+    <span><span data-i18n="balls">Balls</span> <strong id="ballsLeft">100</strong></span>
+    <nav class="languages" aria-label="Language">
+      <a href="?lang=en" data-language="en">EN</a>
+      <span class="separator">|</span>
+      <a href="?lang=es" data-language="es">ES</a>
+      <span class="separator">|</span>
+      <a href="?lang=zh" data-language="zh">中</a>
+    </nav>
+  </div>
+
+  <svg id="board" viewBox="0 0 460 800" role="img"
+       aria-label="Neon Bingo Pachinko game" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#191c43"/>
+        <stop offset=".65" stop-color="#25234b"/>
+        <stop offset="1" stop-color="#15162c"/>
+      </linearGradient>
+      <radialGradient id="ballFill">
+        <stop offset="0" stop-color="#fff"/>
+        <stop offset=".45" stop-color="#bafff2"/>
+        <stop offset="1" stop-color="#19bdcf"/>
+      </radialGradient>
+      <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="460" height="800" fill="url(#bg)"/>
+    <g id="stars"></g>
+    <rect x="9" y="24" width="5" height="756" fill="#ff56bc"/>
+    <rect x="446" y="24" width="5" height="756" fill="#48efff"/>
+    <rect x="22" y="20" width="416" height="50" fill="#49175e" stroke="#ffd96a" stroke-width="2"/>
+    <text id="boardTitle" x="230" y="41" text-anchor="middle" fill="#fff09a" font-size="15" font-weight="bold">★ 16 POCKET BINGO ★</text>
+    <text id="status" x="230" y="58" text-anchor="middle" fill="#70faff" font-size="10" font-weight="bold">CHOOSE A LAUNCH SPOT</text>
+    <line id="aim" x1="230" y1="76" x2="230" y2="103" stroke="#ffffff99" stroke-dasharray="4 5"/>
+    <g id="diamonds"></g><g id="pegs"></g><g id="pin"></g>
+    <g id="pockets"></g><g id="balls"></g><g id="sparks"></g>
+  </svg>
+
+  <div class="controls">
+    <button id="mute" class="secondary" aria-label="Mute sound" title="Mute sound">🔊</button>
+    <button id="launch" data-i18n="launch">✦ LAUNCH ✦</button>
+    <button id="reset" class="secondary" data-i18n="reset">RESET</button>
+  </div>
+  <p class="hint" data-i18n="hint">Tap the board to choose a launch spot. Make an exact line of 4 diamonds for +10 balls.</p>
+</main>
+
+<script>
+(() => {
+  const translations = {
+    en: {
+      pageTitle: "Bingo Pachinko",
+      gameTitle: "BINGO PACHINKO",
+      eyebrow: "★ SUPER LUCKY PARLOUR ★",
+      balls: "Balls",
+      boardTitle: "★ 16 DIAMONDS ★",
+      choose: "CHOOSE A LAUNCH SPOT",
+      launch: "✦ LAUNCH ✦",
+      reset: "RESET",
+      hint: "Tap the board to choose a launch spot. Complete an exact line of 4 diamonds for a bonus (8), or form a 3×3 diamond pattern to win a jackpot (288).",
+      goodLuck: "GOOD LUCK!",
+      pinHit: "BINGO PIN HIT! +1 BALL",
+      pocket: (p, n, on) => `POCKET ${p} · DIAMOND ${n} ${on ? "ON" : "OFF"}`,
+      line: "BINGO LINE!",
+      jackpot: (name, total) => `${name}! +${total} BALLS`,
+      allBonus: "ALL 16 DIAMONDS BONUS! +288 BALLS",
+      roundOver: "ROUND OVER",
+      jackpotNames: [
+        "CHECKERBOARD JACKPOT",
+        "REVERSE CHECKERBOARD JACKPOT",
+        "DIAMOND JACKPOT",
+        "CROSSROADS JACKPOT"
+      ],
+      aria: "Bingo Pachinko game"
+    },
+
+    es: {
+      pageTitle: "Bingo Pachinko",
+      gameTitle: "BINGO PACHINKO",
+      eyebrow: "★ SALÓN DE LA SUERTE ★",
+      balls: "Bolas",
+      boardTitle: "★ 16 DIAMANTES ★",
+      choose: "ELIGE UN PUNTO DE LANZAMIENTO",
+      launch: "✦ LANZAR ✦",
+      reset: "REINICIAR",
+      hint: "Toca el tablero para elegir dónde lanzar. Completa una línea exacta de 4 diamantes para llevarte un bono (8), o forma un patrón de 3×3 para ganar el bote (288).",
+      goodLuck: "¡BUENA SUERTE!",
+      pinHit: "¡PIN DE BINGO! +1 BOLA",
+      pocket: (p, n, on) => `CASILLA ${p} · DIAMANTE ${n} ${on ? "ENCENDIDO" : "APAGADO"}`,
+      line: "¡LÍNEA DE BINGO!",
+      jackpot: (name, total) => `¡${name}! +${total} BOLAS`,
+      allBonus: "¡PLENO DE 16 DIAMANTES! +288 BOLAS",
+      roundOver: "FIN DE LA PARTIDA",
+      jackpotNames: [
+        "BOTE DE DAMERO",
+        "BOTE DE DAMERO INVERSO",
+        "BOTE DE DIAMANTES",
+        "BOTE DE CRUCE"
+      ],
+      aria: "Juego de Bingo Pachinko"
+    },
+
+    zh: {
+      pageTitle: "柏青哥波子機",
+      gameTitle: "柏青哥波子機",
+      eyebrow: "★ 超級好運波子館 ★",
+      balls: "波子",
+      boardTitle: "★ 16 粒鑽石 ★",
+      choose: "揀選發射位置",
+      launch: "✦ 發射 ✦",
+      reset: "重設",
+      hint: "輕觸遊戲板揀選發射位置。連成一條剛好 4 粒鑽石嘅直線即可獲獎（8）；砌出 3×3 鑽石圖案更可贏得大獎（288）！",
+      goodLuck: "祝你好運！",
+      pinHit: "撞中賓果釘！+1 粒波子",
+      pocket: (p, n, on) => `第 ${p} 格 · 鑽石 ${n} ${on ? "著燈" : "熄燈"}`,
+      line: "BINGO 連線！",
+      jackpot: (name, total) => `${name}！+${total} 粒波子`,
+      allBonus: "全亮大滿貫！點亮全部 16 粒鑽石 +288 粒波子",
+      roundOver: "回合結束",
+      jackpotNames: [
+        "棋盤大獎",
+        "反向棋盤大獎",
+        "鑽石大獎",
+        "十字大獎"
+      ],
+      aria: "柏青哥波子機遊戲"
+    }
+  };
+
+  const validLanguages = ["en", "es", "zh"];
+
+  function getInitialLanguage() {
+    const query = new URLSearchParams(location.search).get("lang");
+    if (validLanguages.includes(query)) return query;
+
+    try {
+      const saved = localStorage.getItem("neonBingoLanguage");
+      if (validLanguages.includes(saved)) return saved;
+    } catch {}
+
+    const preferred = (navigator.languages || [navigator.language || "en"])
+      .join(",")
+      .toLowerCase();
+
+    if (preferred.includes("zh")) return "zh";
+    if (preferred.includes("es")) return "es";
+    return "en";
+  }
+
+  let language = getInitialLanguage();
+
+  const ballsDisplay = document.querySelector("#ballsLeft");
+  const statusDisplay = document.querySelector("#status");
+  const aim = document.querySelector("#aim");
+  const board = document.querySelector("#board");
+  const muteButton = document.querySelector("#mute");
+
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 460;
+  const pocketW = W / 16;
+
+  const layer = {
+    stars: document.querySelector("#stars"),
+    diamonds: document.querySelector("#diamonds"),
+    pegs: document.querySelector("#pegs"),
+    pin: document.querySelector("#pin"),
+    pockets: document.querySelector("#pockets"),
+    balls: document.querySelector("#balls"),
+    sparks: document.querySelector("#sparks")
+  };
+
+  const colors = [
+    "#ff6b9b", "#ff9d57", "#ffe45c", "#63eeb5",
+    "#55e9ff", "#a88bff", "#ff72df", "#ffe45c"
+  ];
+
+  const pegSpacing = 54;
+  const halfWidth = 27;
+  const halfHeight = halfWidth * Math.sqrt(3);
+  const rowSpacing = pegSpacing * Math.sqrt(3) / 2;
+  const latticePoint = (q, r) => ({
+    x: 230 + (q + r / 2) * pegSpacing,
+    y: 260 + r * rowSpacing
+  });
+
+  const rowCounts = [1, 2, 3, 4, 3, 2, 1];
+  const cells = [];
+
+  let nextNumber = 1;
+  let ballsLeft = 100;
+  let launchX = 230;
+  let gameOver = false;
+  let previousTime = 0;
+  let audioContext;
+  let lastClink = 0;
+  let soundEnabled = true;
+
+  let goldenNumbers = new Set();
+  let goldenTimer;
+
+  rowCounts.forEach((count, row) => {
+    const y = 305 + row * halfHeight;
+    const centerX = 230 - (count - 1) * halfWidth;
+
+    for (let col = 0; col < count; col++) {
+      cells.push({
+        n: nextNumber++,
+        row,
+        col,
+        x: centerX + col * 2 * halfWidth,
+        y,
+        on: false
+      });
+    }
+  });
+
+  const P = latticePoint(-2, 4);
+  const diamonds = [];
+  const pegs = [];
+  const balls = [];
+  const sparks = [];
+
+  const bingoLines = [
+    [1, 2, 4, 7], [3, 5, 8, 11], [6, 9, 12, 14], [10, 13, 15, 16],
+    [1, 3, 6, 10], [2, 5, 9, 13], [4, 8, 12, 15], [7, 11, 14, 16],
+    [1, 5, 12, 16], [7, 8, 9, 10]
+  ];
+
+  const jackpotPatterns = [
+    { nameIndex: 0, numbers: [1,2,3,4,5,6,8,9,12] },
+    { nameIndex: 1, numbers: [2,4,5,7,8,9,11,12,14] },
+    { nameIndex: 2, numbers: [3,5,6,8,9,10,12,13,15] },
+    { nameIndex: 3, numbers: [5,8,9,11,12,13,14,15,16] }
+  ];
+
+  const jackpotPaid = new Set();
+  const pocketRects = [];
+  const pocketStates = [];
+
+  function t() {
+    return translations[language];
+  }
+
+  function svg(name, attrs = {}) {
+    const node = document.createElementNS(NS, name);
+    for (const [key, value] of Object.entries(attrs)) {
+      node.setAttribute(key, value);
+    }
+    return node;
+  }
+
+  function setStatus(text) {
+    statusDisplay.textContent = text;
+  }
+
+  function playNotes(notes, duration = 0.12, type = "sine") {
+    if (!soundEnabled) return;
+
+    try {
+      audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === "suspended") audioContext.resume();
+
+      const now = audioContext.currentTime;
+
+      notes.forEach((frequency, i) => {
+        const start = now + i * duration * 0.85;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.18, start + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.02);
+      });
+    } catch {}
+  }
+  
+  function playBell(frequencies, duration = 0.35, volume = 0.18) {
+    if (!soundEnabled) return;
+  
+    try {
+      audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === "suspended") audioContext.resume();
+  
+      const now = audioContext.currentTime;
+  
+      frequencies.forEach((frequency, i) => {
+        const start = now + i * 0.075;
+  
+        // Fundamental bell tone
+        const fundamental = audioContext.createOscillator();
+        const fundamentalGain = audioContext.createGain();
+  
+        fundamental.type = "triangle";
+        fundamental.frequency.setValueAtTime(frequency, start);
+  
+        fundamentalGain.gain.setValueAtTime(0.0001, start);
+        fundamentalGain.gain.exponentialRampToValueAtTime(
+          volume,
+          start + 0.008
+        );
+        fundamentalGain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + duration
+        );
+  
+        fundamental.connect(fundamentalGain);
+        fundamentalGain.connect(audioContext.destination);
+        fundamental.start(start);
+        fundamental.stop(start + duration + 0.05);
+  
+        // Metallic upper partial
+        const partial = audioContext.createOscillator();
+        const partialGain = audioContext.createGain();
+  
+        partial.type = "sine";
+        partial.frequency.setValueAtTime(frequency * 2.76, start);
+  
+        partialGain.gain.setValueAtTime(0.0001, start);
+        partialGain.gain.exponentialRampToValueAtTime(
+          volume * 0.35,
+          start + 0.005
+        );
+        partialGain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + duration * 0.55
+        );
+  
+        partial.connect(partialGain);
+        partialGain.connect(audioContext.destination);
+        partial.start(start);
+        partial.stop(start + duration * 0.55 + 0.05);
+      });
+    } catch {}
+  }  
+
+  function clink(frequency = 1050) {
+    const now = performance.now();
+    if (now - lastClink < 45) return;
+    lastClink = now;
+    playNotes([frequency], 0.055, "triangle");
+  }
+
+  function vertices(cell) {
+    return [
+      { x: cell.x, y: cell.y - halfHeight },
+      { x: cell.x + halfWidth, y: cell.y },
+      { x: cell.x, y: cell.y + halfHeight },
+      { x: cell.x - halfWidth, y: cell.y }
+    ];
+  }
+
+  function isOn(number) {
+    return diamonds[number - 1].on;
+  }
+
+  function patternMatchesExactly(numbers) {
+    const target = new Set(numbers);
+    return diamonds.every(cell => cell.on === target.has(cell.n));
+  }
+
+  function newlyCompletedLines(number) {
+    return bingoLines.filter(line => line.includes(number) && line.every(isOn));
+  }
+
+  function checkJackpots() {
+    const matches = [];
+
+    jackpotPatterns.forEach((pattern, index) => {
+      if (!jackpotPaid.has(index) && patternMatchesExactly(pattern.numbers)) {
+        jackpotPaid.add(index);
+        matches.push(t().jackpotNames[pattern.nameIndex]);
+      }
+    });
+
+    return matches;
+  }
+
+  function setGolden(numbers, duration) {
+    clearTimeout(goldenTimer);
+    goldenNumbers = new Set(numbers);
+
+    refresh();
+
+    goldenTimer = setTimeout(() => {
+      turnGoldenDiamondsOff();
+    }, duration);
+  }
+
+  function turnGoldenDiamondsOff() {
+    clearTimeout(goldenTimer);
+    goldenTimer = undefined;
+
+    goldenNumbers.forEach(number => {
+      diamonds[number - 1].on = false;
+    });
+
+    goldenNumbers.clear();
+    refresh();
+  }
+
+  function setLanguage(next) {
+    if (!validLanguages.includes(next)) {
+      return;
+    }
+
+    const showingChoose = statusDisplay.textContent === t().choose;
+    language = next;
+
+    document.title = t().pageTitle;
+    document.querySelector("#gameTitle").textContent = t().gameTitle;
+    document.documentElement.lang =
+      language === "zh" ? "zh-HK" : language === "es" ? "es-ES" : "en-GB";
+
+    document.querySelectorAll("[data-i18n]").forEach(element => {
+      const key = element.dataset.i18n;
+      element.textContent = t()[key];
+    });
+
+    document.querySelector("#boardTitle").textContent = t().boardTitle;
+    board.setAttribute("aria-label", t().aria);
+
+    document.querySelectorAll(".languages a").forEach(link => {
+      const selected = link.dataset.language === language;
+      link.classList.toggle("selected", selected);
+
+      if (selected) {
+        link.setAttribute("aria-current", "true");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+
+      link.setAttribute("aria-disabled", String(selected));
+      link.tabIndex = selected ? -1 : 0;
+    });
+
+    if (showingChoose) {
+      setStatus(t().choose);
+    }
+
+    try {
+      localStorage.setItem("neonBingoLanguage", language);
+    } catch {}
+  }
+
+  for (let r = -2; r <= 9; r++) {
+    for (let q = -7; q <= 7; q++) {
+      const point = latticePoint(q, r);
+
+      if (
+        point.x > 20 &&
+        point.x < W - 20 &&
+        point.y > 95 &&
+        point.y < 700 &&
+        Math.hypot(point.x - P.x, point.y - P.y) > 1
+      ) {
+        pegs.push({ x: point.x, y: point.y, r: 5 });
+      }
+    }
+  }
+
+  for (const cell of cells) {
+    const polygon = svg("polygon", {
+      points: vertices(cell).map(point => `${point.x},${point.y}`).join(" "),
+      fill: "rgba(152,117,255,.32)",
+      stroke: "#e1d0ff",
+      "stroke-width": "3",
+      filter: "url(#glow)"
+    });
+
+    const label = svg("text", {
+      x: cell.x,
+      y: cell.y + 5,
+      "text-anchor": "middle",
+      fill: "#fff",
+      "font-size": "15",
+      "font-weight": "bold",
+      stroke: "#21163c",
+      "stroke-width": "2",
+      "paint-order": "stroke"
+    });
+
+    label.textContent = cell.n;
+    layer.diamonds.append(polygon, label);
+    diamonds.push({ ...cell, polygon, label });
+  }
+
+  pegs.forEach((peg, i) => {
+    layer.pegs.appendChild(svg("circle", {
+      cx: peg.x,
+      cy: peg.y,
+      r: peg.r,
+      fill: ["#fff0a0", "#8ffaff", "#ff9de1"][i % 3],
+      stroke: "#fff7d3",
+      "stroke-width": "1.5",
+      filter: "url(#glow)"
+    }));
+  });
+
+  layer.pin.appendChild(svg("circle", {
+    cx: P.x,
+    cy: P.y,
+    r: 11,
+    fill: "#a43c79",
+    stroke: "#fff2a1",
+    "stroke-width": "3",
+    filter: "url(#glow)"
+  }));
+
+  const pinLabel = svg("text", {
+    x: P.x,
+    y: P.y + 3,
+    "text-anchor": "middle",
+    fill: "#fff6c7",
+    "font-size": "8",
+    "font-weight": "bold"
+  });
+
+  pinLabel.textContent = "B";
+  layer.pin.appendChild(pinLabel);
+
+  for (let i = 0; i < 16; i++) {
+    const x = i * pocketW;
+    const rect = svg("rect", {
+      x: x + 1,
+      y: 720,
+      width: pocketW - 2,
+      height: 48,
+      fill: "#20233d",
+      stroke: colors[i % colors.length],
+      "stroke-width": "2"
+    });
+
+    const numberLabel = svg("text", {
+      x: x + pocketW / 2,
+      y: 740,
+      "text-anchor": "middle",
+      fill: "#fff3ca",
+      "font-size": "10",
+      "font-weight": "bold"
+    });
+
+    numberLabel.textContent = String(i + 1).padStart(2, "0");
+
+    const state = svg("text", {
+      x: x + pocketW / 2,
+      y: 755,
+      "text-anchor": "middle",
+      fill: "#aafff5",
+      "font-size": "8",
+      "font-weight": "bold"
+    });
+
+    state.textContent = "OFF";
+    layer.pockets.append(rect, numberLabel, state);
+    pocketRects.push(rect);
+    pocketStates.push(state);
+  }
+
+  for (let i = 0; i <= 16; i++) {
+    layer.pockets.appendChild(svg("line", {
+      x1: i * pocketW,
+      y1: 704,
+      x2: i * pocketW,
+      y2: 770,
+      stroke: "#fff1ba",
+      "stroke-width": "2"
+    }));
+  }
+
+  for (let i = 0; i < 45; i++) {
+    layer.stars.appendChild(svg("circle", {
+      cx: (i * 83 + 17) % W,
+      cy: (i * 137 + 25) % 700,
+      r: 1.5,
+      fill: "#78e6ff",
+      opacity: 0.45
+    }));
+  }
+
+  function refresh() {
+    ballsDisplay.textContent = ballsLeft;
+
+    diamonds.forEach((cell, i) => {
+      const golden = goldenNumbers.has(cell.n);
+
+      cell.polygon.setAttribute(
+        "fill",
+        golden
+          ? "rgba(255,205,64,.8)"
+          : cell.on
+            ? "rgba(36,255,223,.55)"
+            : "rgba(152,117,255,.32)"
+      );
+
+      cell.polygon.setAttribute(
+        "stroke",
+        golden ? "#ffd54a" : cell.on ? "#6affed" : "#e1d0ff"
+      );
+
+      cell.label.setAttribute(
+        "fill",
+        golden ? "#fff2ae" : cell.on ? "#eafffb" : "#fff"
+      );
+
+      pocketRects[i].setAttribute(
+        "fill",
+        golden ? "#876316" : cell.on ? "#176d67" : "#20233d"
+      );
+
+      pocketStates[i].textContent = cell.on ? "ON" : "OFF";
+    });
+  }
+
+  function launch(x = launchX) {
+    if (ballsLeft <= 0 || gameOver) return;
+
+    launchX = Math.max(24, Math.min(W - 24, x));
+    aim.setAttribute("x1", launchX);
+    aim.setAttribute("x2", launchX);
+
+    ballsLeft--;
+    refresh();
+    setStatus(t().goodLuck);
+
+    const node = svg("circle", {
+      cx: launchX,
+      cy: 83,
+      r: 7,
+      fill: "url(#ballFill)",
+      stroke: "#d5ffff",
+      "stroke-width": "1",
+      filter: "url(#glow)"
+    });
+
+    layer.balls.appendChild(node);
+    balls.push({
+      x: launchX,
+      y: 83,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: 1.5,
+      r: 7,
+      hitPin: false,
+      node
+    });
+  }
+
+  function collide(ball, peg, kick = 0.55) {
+    const dx = ball.x - peg.x;
+    const dy = ball.y - peg.y;
+    const distance = Math.hypot(dx, dy);
+    const minimumDistance = ball.r + peg.r;
+
+    if (distance >= minimumDistance || distance === 0) return false;
+
+    const nx = dx / distance;
+    const ny = dy / distance;
+
+    ball.x = peg.x + nx * minimumDistance;
+    ball.y = peg.y + ny * minimumDistance;
+
+    const dot = ball.vx * nx + ball.vy * ny;
+
+    if (dot < 0) {
+      ball.vx -= 1.8 * dot * nx;
+      ball.vy -= 1.8 * dot * ny;
+    }
+
+    ball.vx += nx * kick + (Math.random() - 0.5) * 0.7;
+    ball.vy += ny * kick;
+
+    clink(peg.r === 11 ? 1250 : 1050);
+    return true;
+  }
+
+  function burst(x, y, color) {
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 2.5;
+      const node = svg("circle", { cx: x, cy: y, r: 2.5, fill: color });
+
+      layer.sparks.appendChild(node);
+      sparks.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 25,
+        node
+      });
+    }
+  }
+
+  function finishRound() {
+    gameOver = true;
+    const bonus = diamonds.every(cell => cell.on) ? 200 : 0;
+
+    if (bonus) ballsLeft += bonus;
+
+    refresh();
+    setStatus(bonus ? t().allBonus : t().roundOver);
+  }
+
+  function update() {
+    for (let i = balls.length - 1; i >= 0; i--) {
+      const ball = balls[i];
+
+      ball.vy += 0.11;
+      ball.vx *= 0.999;
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      if (ball.x < 18) {
+        ball.x = 18;
+        ball.vx = Math.abs(ball.vx) * 0.82;
+        clink(850);
+      }
+
+      if (ball.x > W - 18) {
+        ball.x = W - 18;
+        ball.vx = -Math.abs(ball.vx) * 0.82;
+        clink(850);
+      }
+
+      for (const peg of pegs) collide(ball, peg);
+
+      if (!ball.hitPin && collide(ball, { x: P.x, y: P.y, r: 11 }, 2.2)) {
+        ball.hitPin = true;
+        ballsLeft++;
+        refresh();
+        setStatus(t().pinHit);
+        playNotes([880, 1175], 0.09);
+        burst(P.x, P.y, "#fff06a");
+      }
+
+      ball.node.setAttribute("cx", ball.x);
+      ball.node.setAttribute("cy", ball.y);
+
+      if (ball.y >= 710) {
+        const pocket = Math.max(0, Math.min(15, Math.floor(ball.x / pocketW)));
+        const cell = diamonds[pocket];
+
+        const enteredGoldenPocket = goldenNumbers.has(cell.n);
+
+        turnGoldenDiamondsOff();
+
+        if (enteredGoldenPocket) {
+          cell.on = true;
+        } else {
+          cell.on = !cell.on;
+        }
+
+        let message = t().pocket(pocket + 1, cell.n, cell.on);
+
+        playNotes([659, 880], 0.07, "triangle");
+
+        if (cell.on) {
+          const jackpots = checkJackpots();
+
+          if (jackpots.length) {
+            const awarded = jackpots.length * 288;
+            ballsLeft += awarded;
+            playBell([1046.5, 1318.5, 1568, 2093, 2637],1.6,0.36);
+            playNotes([784, 988, 1175, 1568],0.14,"triangle");
+            message = t().jackpot(jackpots.join(" + "), awarded);
+
+            const jackpotNumbers = jackpotPatterns
+              .filter((_, index) => jackpotPaid.has(index))
+              .filter(pattern => patternMatchesExactly(pattern.numbers))
+              .flatMap(pattern => pattern.numbers);
+
+            setGolden(jackpotNumbers, 5000);
+            burst(cell.x, cell.y, "#fff06a");
+          } else if (!enteredGoldenPocket) {
+            const completedLines = newlyCompletedLines(cell.n);
+
+            if (completedLines.length) {
+              ballsLeft += completedLines.length * 8;
+              setGolden(completedLines.flat(), 1000);
+              message = t().line;
+              refresh();
+            
+              playBell([1046.5, 1318.5, 1568],0.65,0.32);
+            }
+          }
+        }
+
+        refresh();
+        setStatus(message);
+        burst(cell.x, cell.y, cell.on ? "#63fff0" : "#ff70c8");
+        ball.node.remove();
+        balls.splice(i, 1);
+      }
+    }
+
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const spark = sparks[i];
+
+      spark.x += spark.vx;
+      spark.y += spark.vy;
+      spark.vy += 0.04;
+      spark.life--;
+
+      spark.node.setAttribute("cx", spark.x);
+      spark.node.setAttribute("cy", spark.y);
+      spark.node.setAttribute("opacity", Math.max(0, spark.life / 25));
+
+      if (spark.life <= 0) {
+        spark.node.remove();
+        sparks.splice(i, 1);
+      }
+    }
+
+    if (!gameOver && ballsLeft === 0 && balls.length === 0) {
+      finishRound();
+    }
+  }
+
+  function animate(time) {
+    if (time - previousTime >= 16) {
+      update();
+      previousTime = time;
+    }
+    requestAnimationFrame(animate);
+  }
+
+  document.querySelectorAll(".languages a").forEach(link => {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      if (link.dataset.language !== language) {
+        setLanguage(link.dataset.language);
+      }
+    });
+  });
+
+  board.addEventListener("pointerdown", event => {
+    const rect = board.getBoundingClientRect();
+    launch((event.clientX - rect.left) * W / rect.width);
+  });
+
+  document.querySelector("#launch").addEventListener("click", () => {
+    launch(launchX);
+  });
+
+  document.querySelector("#reset").addEventListener("click", () => {
+    balls.forEach(ball => ball.node.remove());
+    sparks.forEach(spark => spark.node.remove());
+
+    balls.length = 0;
+    sparks.length = 0;
+
+    clearTimeout(goldenTimer);
+    goldenTimer = undefined;
+    goldenNumbers.clear();
+
+    diamonds.forEach(cell => {
+      cell.on = false;
+    });
+
+    jackpotPaid.clear();
+    ballsLeft = 100;
+    gameOver = false;
+    launchX = 230;
+
+    aim.setAttribute("x1", launchX);
+    aim.setAttribute("x2", launchX);
+
+    refresh();
+    setStatus(t().choose);
+  });
+
+  muteButton.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    muteButton.textContent = soundEnabled ? "🔊" : "🔇";
+    muteButton.setAttribute(
+      "aria-label",
+      soundEnabled ? "Mute sound" : "Unmute sound"
+    );
+    muteButton.title = soundEnabled ? "Mute sound" : "Unmute sound";
+  });
+
+  window.addEventListener("keydown", event => {
+    if (event.code === "Space") {
+      event.preventDefault();
+      launch(launchX);
+    }
+  });
+
+  setLanguage(language);
+  refresh();
+  setStatus(t().choose);
+  requestAnimationFrame(animate);
+})();
+
+</script>
+</body>
+</html>
