@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#18221b">
+<title>Lights Out</title>
+<style>
+:root {
+  color-scheme: dark;
+  font-family: "Courier New", Courier, monospace, system-ui, sans-serif;
+  background: #09090e;
+  color: #00f0ff;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background:
+    radial-gradient(ellipse at 50% 30%, #1a0b2e 0, transparent 70%),
+    repeating-linear-gradient(0deg, #000 0 2px, #0b0b14 2px 4px);
+}
+
+.game {
+  width: min(100%, 510px);
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 .35rem;
+  font-size: clamp(2rem, 8vw, 3rem);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #ff007f;
+  text-shadow: 
+    0 0 5px #ff007f,
+    0 0 15px #ff007faa,
+    0 0 30px #ff007f55;
+}
+
+.hint {
+  min-height: 1.6em;
+  margin: 0 0 1.15rem;
+  color: #00f0ff;
+  text-shadow: 0 0 8px #00f0ff88;
+  letter-spacing: .05em;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(7px, 2vw, 12px);
+  width: min(100%, 460px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  padding: clamp(10px, 3vw, 17px);
+  border: 2px solid #00f0ff;
+  border-radius: 6px;
+  background: #050508;
+  box-shadow: 
+    inset 0 0 20px #000000,
+    0 0 20px #00f0ff44,
+    0 0 40px #ff007f22;
+}
+
+.cell {
+  --light: #ff007f;
+  min-width: 0;
+  border: 1px solid #334;
+  border-radius: 4px;
+  background: linear-gradient(145deg, #13131d, #0d0d14);
+  box-shadow: inset 0 2px 5px #000a, 0 1px 3px #0005;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background .14s, box-shadow .14s, transform .08s, border-color .14s;
+}
+
+.cell:hover {
+  border-color: #00f0ff55;
+}
+
+.cell:active { transform: scale(.92); }
+
+.cell.on {
+  --light: #00f0ff;
+  border-color: color-mix(in srgb, var(--light) 90%, white);
+  background: radial-gradient(
+    circle at 35% 30%,
+    #ffffff 0,
+    var(--light) 25%,
+    color-mix(in srgb, var(--light) 40%, #0d0d14) 80%
+  );
+  box-shadow:
+    0 0 10px var(--light),
+    0 0 25px var(--light),
+    0 0 40px color-mix(in srgb, var(--light) 60%, transparent),
+    inset 0 0 10px #ffffffaa;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: .75rem;
+  margin-top: 1.1rem;
+}
+
+button, select {
+  min-height: 46px;
+  border: 1px solid #ff007f88;
+  border-radius: 4px;
+  background: #13131d;
+  color: #ff007f;
+  font: inherit;
+  font-weight: bold;
+  letter-spacing: .05em;
+  text-shadow: 0 0 5px #ff007f55;
+  box-shadow: 0 0 10px #ff007f11;
+}
+
+button:focus-visible, select:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 3px;
+}
+
+.controls button, .dialog button {
+  padding: .65rem 1.1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:hover { 
+  background: #1f132b; 
+  border-color: #ff007f;
+  box-shadow: 0 0 15px #ff007f44;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  background: #050508cc;
+  backdrop-filter: blur(8px);
+}
+
+.overlay[hidden] { display: none; }
+
+.dialog {
+  width: min(100%, 420px);
+  padding: 1.5rem;
+  border: 2px solid #00f0ff;
+  border-radius: 6px;
+  background: #0b0b14;
+  box-shadow: 
+    0 0 30px #00f0ff44,
+    inset 0 0 20px #000;
+  text-align: center;
+}
+
+.dialog h2 { 
+  margin: 0 0 .7rem; 
+  color: #00f0ff; 
+  text-shadow: 0 0 10px #00f0ffaa;
+  letter-spacing: .08em;
+}
+
+.dialog p { 
+  line-height: 1.55; 
+  color: #b0b0c0; 
+}
+
+.language {
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  color: #00f0ff88;
+  font-size: .92rem;
+}
+
+select { 
+  padding: .4rem .6rem; 
+  color: #00f0ff;
+  border-color: #00f0ff88;
+  background: #13131d;
+  box-shadow: 0 0 10px #00f0ff11;
+}
+
+select:hover {
+  border-color: #00f0ff;
+  box-shadow: 0 0 15px #00f0ff44;
+}
+
+.victory .dialog { 
+  background: #0b0b14; 
+  border-color: #ff007f;
+  box-shadow: 0 0 40px #ff007f66;
+}
+
+.victory .dialog h2 {
+  color: #ff007f;
+  text-shadow: 0 0 10px #ff007faa;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<main class="game">
+  <h1 id="title">Lights Out</h1>
+  <p class="hint" id="hint"></p>
+
+  <div class="board" id="board" role="group" aria-label="5 by 5 game board"></div>
+
+  <div class="controls">
+    <button id="newGame" type="button"></button>
+    <button id="reset" type="button"></button>
+  </div>
+</main>
+
+<section
+  class="overlay"
+  id="instructions"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="dialogTitle"
+>
+  <div class="dialog">
+    <h2 id="dialogTitle"></h2>
+    <p id="instructionsText"></p>
+
+    <label class="language">
+      <span id="languageLabel"></span>
+      <select id="language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">繁體中文</option>
+      </select>
+    </label>
+
+    <p>
+      <button id="start" type="button"></button>
+    </p>
+  </div>
+</section>
+
+<section
+  class="overlay victory"
+  id="victory"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="victoryTitle"
+  hidden
+>
+  <div class="dialog">
+    <h2 id="victoryTitle"></h2>
+    <p id="victoryText"></p>
+    <button id="playAgain" type="button"></button>
+  </div>
+</section>
+
+<script>
+(() => {
+  const copy = {
+    en: {
+      title: "Lights Out",
+      hint: "Turn off every light to win.",
+      instructionsTitle: "How to play",
+      instructions: "Tap a tile to toggle it and the tiles directly above, below, left and right. Turn off all the lights to win.",
+      start: "Start game",
+      newGame: "New Game",
+      reset: "Reset",
+      language: "Language",
+      victoryTitle: "You did it!",
+      victory: steps => `Solved in ${steps} moves!`,
+      playAgain: "Play again",
+      cell: (r, c, on) => `Row ${r}, column ${c}, ${on ? "on" : "off"}`
+    },
+    es: {
+      title: "Apaga las luces",
+      hint: "Apaga todas las luces para ganar.",
+      instructionsTitle: "Cómo jugar",
+      instructions: "Toca una casilla para cambiar su estado y el de las casillas contiguas de arriba, abajo, izquierda y derecha. Apaga todas las luces para ganar.",
+      start: "Empezar",
+      newGame: "Nueva partida",
+      reset: "Reiniciar",
+      language: "Idioma",
+      victoryTitle: "¡Lo has conseguido!",
+      victory: steps => `¡Resuelto en ${steps} movimientos!`,
+      playAgain: "Jugar otra vez",
+      cell: (r, c, on) => `Fila ${r}, columna ${c}, ${on ? "encendida" : "apagada"}`
+    },
+    zh: {
+      title: "熄燈遊戲",
+      hint: "熄晒所有燈就贏喇。",
+      instructionsTitle: "玩法",
+      instructions: "撳一格會切換嗰格，同埋上下左右相鄰格嘅燈狀態。熄晒所有燈就贏喇。",
+      start: "開始遊戲",
+      newGame: "新遊戲",
+      reset: "重設",
+      language: "語言",
+      victoryTitle: "贏咗！",
+      victory: steps => `用咗 ${steps} 步完成！`,
+      playAgain: "再玩一次",
+      cell: (r, c, on) => `第${r}行第${c}列，${on ? "着燈" : "熄燈"}`
+    }
+  };
+
+  const supported = ["en", "es", "zh"];
+  const params = new URLSearchParams(location.search);
+  const requestedLanguage = params.get("lang");
+
+  function getBrowserLanguage() {
+    const browserLanguages = navigator.languages || [navigator.language || "en"];
+
+    for (const language of browserLanguages) {
+      const normalized = language.toLowerCase();
+      if (normalized.startsWith("zh")) return "zh";
+      if (normalized.startsWith("es")) return "es";
+      if (normalized.startsWith("en")) return "en";
+    }
+
+    return "en";
+  }
+
+  function getInitialLanguage() {
+    if (supported.includes(requestedLanguage)) return requestedLanguage;
+
+    const savedLanguage = localStorage.getItem("lightsOutLanguage");
+    if (supported.includes(savedLanguage)) return savedLanguage;
+
+    return getBrowserLanguage();
+  }
+
+  let lang = getInitialLanguage();
+  let cells = [];
+  let original = [];
+  let solutionMoves = [];
+  let steps = 0;
+
+  const $ = id => document.getElementById(id);
+  const board = $("board");
+  const colors = ["#75f5b4", "#ff6de5", "#5ee8ff", "#f9ed70", "#ff8d5e"];
+
+  function setLanguage(next) {
+    lang = supported.includes(next) ? next : "en";
+    localStorage.setItem("lightsOutLanguage", lang);
+
+    document.documentElement.lang =
+      lang === "zh" ? "zh-HK" : lang === "es" ? "es-ES" : "en-GB";
+
+    const text = copy[lang];
+    $("title").textContent = text.title;
+    document.title = text.title;
+    $("hint").textContent = text.hint;
+    $("dialogTitle").textContent = text.instructionsTitle;
+    $("instructionsText").textContent = text.instructions;
+    $("start").textContent = text.start;
+    $("newGame").textContent = text.newGame;
+    $("reset").textContent = text.reset;
+    $("languageLabel").textContent = text.language;
+    $("victoryTitle").textContent = text.victoryTitle;
+    $("victoryText").textContent = text.victory(steps);
+    $("playAgain").textContent = text.playAgain;
+    $("language").value = lang;
+
+    render();
+  }
+
+  function toggle(r, c) {
+    if (r >= 0 && r < 5 && c >= 0 && c < 5) {
+      cells[r][c] = !cells[r][c];
+    }
+  }
+
+  function applyMove(r, c) {
+    toggle(r, c);
+    toggle(r - 1, c);
+    toggle(r + 1, c);
+    toggle(r, c - 1);
+    toggle(r, c + 1);
+  }
+
+  function play(r, c) {
+    if ($("victory").hidden === false) return;
+
+    steps++;
+    applyMove(r, c);
+    render();
+
+    if (cells.every(row => row.every(isOn => !isOn))) {
+      $("victoryText").textContent = copy[lang].victory(steps);
+      $("victory").hidden = false;
+    }
+  }
+
+  function render() {
+    board.replaceChildren();
+    const text = copy[lang];
+
+    cells.forEach((row, r) => {
+      row.forEach((isOn, c) => {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = `cell${isOn ? " on" : ""}`;
+        cell.style.setProperty("--light", colors[(r * 3 + c * 2) % colors.length]);
+        cell.setAttribute("aria-label", text.cell(r + 1, c + 1, isOn));
+        cell.setAttribute("aria-pressed", String(isOn));
+        cell.addEventListener("click", () => play(r, c));
+        board.append(cell);
+      });
+    });
+  }
+
+  function newGame() {
+    steps = 0;
+    cells = Array.from({ length: 5 }, () => Array(5).fill(false));
+
+    // Store a sequence of moves that will solve this puzzle.
+    solutionMoves = [];
+    const moveCount = 12 + Math.floor(Math.random() * 14);
+
+    for (let i = 0; i < moveCount; i++) {
+      solutionMoves.push({
+        r: Math.floor(Math.random() * 5),
+        c: Math.floor(Math.random() * 5)
+      });
+    }
+
+    // Apply the solution moves to a solved board to create a solvable puzzle.
+    for (const move of solutionMoves) {
+      applyMove(move.r, move.c);
+    }
+
+    original = cells.map(row => [...row]);
+    render();
+  }
+
+  $("language").addEventListener("change", event => {
+    setLanguage(event.target.value);
+  });
+
+  $("start").addEventListener("click", () => {
+    $("instructions").hidden = true;
+  });
+
+  $("newGame").addEventListener("click", () => {
+    newGame();
+    $("victory").hidden = true;
+    $("instructions").hidden = false;
+  });
+
+  $("reset").addEventListener("click", () => {
+    steps = 0;
+    cells = original.map(row => [...row]);
+    $("victory").hidden = true;
+    render();
+  });
+
+  $("playAgain").addEventListener("click", () => {
+    newGame();
+    $("victory").hidden = true;
+    $("instructions").hidden = false;
+  });
+
+  newGame();
+  setLanguage(lang);
+})();
+</script>
+</body>
+</html>
