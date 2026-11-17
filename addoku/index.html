@@ -12,7 +12,7 @@
   --cell: #20272f;
   --cell-border: rgba(148,163,184,.35);
   --box-border: rgba(203,213,225,.65);
-  --cage: #206040;
+  --cage: #309060;
   --cage-error: #b91c1c;
   --text: #e5e7eb;
   --muted: #9ca3af;
@@ -246,12 +246,13 @@ const SIZE = 9;
 const BOX = 3;
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const MAX_HISTORY = 200;
-
-const ATTEMPT_SOLVER_LIMIT = 25000;
-const SOLVER_LIMIT = 120000;
-const GENERATION_DEADLINE_MS = 8000;
-
 const LANGUAGE_KEY = "killer-sudoku-language";
+
+// Cooperative generation: short work slices keep the UI responsive.
+const GENERATION_SLICE_MS = 18;
+const GENERATION_DEADLINE_MS = 30000;
+const MAX_GENERATION_ATTEMPTS = 250;
+const SOLVER_NODE_LIMIT = 250000;
 
 const boardEl = document.getElementById("board");
 const boardWrap = document.getElementById("boardWrap");
@@ -376,27 +377,26 @@ const translations = {
     generationFailed: "無法生成獨一解嘅拼圖，請再試一次。"
   }
 };
+
+// Difficulty is based on cage size plus a logical-deduction score.
 const difficultySettings = {
   easy: {
-    attempts: [
-      { minSize: 2, maxSize: 3 },
-      { minSize: 2, maxSize: 3 },
-      { minSize: 2, maxSize: 4 }
-    ]
+    minCage: 2,
+    maxCage: 3,
+    minScore: 0,
+    maxScore: 30
   },
   medium: {
-    attempts: [
-      { minSize: 2, maxSize: 4 },
-      { minSize: 3, maxSize: 4 },
-      { minSize: 2, maxSize: 4 }
-    ]
+    minCage: 2,
+    maxCage: 4,
+    minScore: 20,
+    maxScore: 180
   },
   hard: {
-    attempts: [
-      { minSize: 3, maxSize: 5 },
-      { minSize: 3, maxSize: 4 },
-      { minSize: 2, maxSize: 4 }
-    ]
+    minCage: 2,
+    maxCage: 5,
+    minScore: 120,
+    maxScore: Number.POSITIVE_INFINITY
   }
 };
 
@@ -412,6 +412,7 @@ let selectedCells = new Set();
 let noteMode = false;
 let generating = false;
 let isDraggingSelection = false;
+let generationToken = 0;
 
 function normalizeLanguage(value) {
   if (!value) return null;
@@ -534,30 +535,48 @@ function baseCandidates(grid, row, column) {
   return NUMBERS.filter(value => !used.has(value));
 }
 
+// MRV backtracking is much faster than scanning cells in fixed order.
 function generateSolution(grid) {
+  let bestCell = null;
+  let bestOptions = null;
+
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
       if (grid[r][c]) continue;
 
-      for (const value of shuffle(baseCandidates(grid, r, c))) {
-        grid[r][c] = value;
+      const options = baseCandidates(grid, r, c);
 
-        if (generateSolution(grid)) return true;
+      if (!bestOptions || options.length < bestOptions.length) {
+        bestCell = [r, c];
+        bestOptions = options;
 
-        grid[r][c] = 0;
+        if (options.length <= 1) break;
       }
-
-      return false;
     }
+
+    if (bestOptions?.length <= 1) break;
   }
 
-  return true;
+  if (!bestCell) return true;
+  if (!bestOptions.length) return false;
+
+  const [row, column] = bestCell;
+
+  for (const value of shuffle(bestOptions)) {
+    grid[row][column] = value;
+
+    if (generateSolution(grid)) return true;
+
+    grid[row][column] = 0;
+  }
+
+  return false;
 }
 
-function partitionIntoCages(minSize, maxSize) {
+function partitionIntoCages(minSize, maxSize, solvedGrid) {
   const cageId = Array.from({ length: SIZE }, () => Array(SIZE).fill(-1));
-  const sizes = new Map();
-  const cells = shuffle(
+  const sizes = [];
+  const positions = shuffle(
     Array.from({ length: SIZE * SIZE }, (_, index) => [
       Math.floor(index / SIZE),
       index % SIZE
@@ -566,78 +585,119 @@ function partitionIntoCages(minSize, maxSize) {
 
   let nextId = 0;
 
-  function setId(r, c, id) {
-    const oldId = cageId[r][c];
-
-    if (oldId !== -1) {
-      sizes.set(oldId, (sizes.get(oldId) ?? 1) - 1);
-    }
-
-    cageId[r][c] = id;
-    sizes.set(id, (sizes.get(id) ?? 0) + 1);
-  }
-
-  for (const [startRow, startColumn] of cells) {
+  for (const [startRow, startColumn] of positions) {
     if (cageId[startRow][startColumn] !== -1) continue;
 
     const id = nextId++;
-    setId(startRow, startColumn, id);
+    sizes[id] = 1;
+    cageId[startRow][startColumn] = id;
 
     const targetSize =
       minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
 
-    while (sizes.get(id) < targetSize) {
+    while (sizes[id] < targetSize) {
       const frontier = [];
 
       for (let r = 0; r < SIZE; r++) {
         for (let c = 0; c < SIZE; c++) {
           if (cageId[r][c] !== id) continue;
 
-          for (const [nr, nc] of neighbors(r, c)) {
-            if (cageId[nr][nc] === -1) frontier.push([nr, nc]);
+          for (const [neighborRow, neighborColumn] of neighbors(r, c)) {
+            if (cageId[neighborRow][neighborColumn] === -1) {
+              frontier.push([neighborRow, neighborColumn]);
+            }
           }
         }
       }
 
       if (!frontier.length) break;
 
-      const [newRow, newColumn] =
-        frontier[Math.floor(Math.random() * frontier.length)];
+      // Avoid two equal solution digits in the same cage.
+      const usable = frontier.filter(([r, c]) => {
+        for (let rr = 0; rr < SIZE; rr++) {
+          for (let cc = 0; cc < SIZE; cc++) {
+            if (
+              cageId[rr][cc] === id &&
+              solvedGrid[rr][cc] === solvedGrid[r][c]
+            ) {
+              return false;
+            }
+          }
+        }
+        return true;
+      });
 
-      setId(newRow, newColumn, id);
+      if (!usable.length) break;
+
+      const [newRow, newColumn] =
+        usable[Math.floor(Math.random() * usable.length)];
+
+      cageId[newRow][newColumn] = id;
+      sizes[id]++;
     }
   }
 
+  // Merge any remaining one-cell cage into a suitable neighbour.
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
-      if (sizes.get(cageId[r][c]) !== 1) continue;
+      const id = cageId[r][c];
 
-      const adjacentIds = neighbors(r, c)
-        .map(([nr, nc]) => cageId[nr][nc])
-        .filter(id => id !== cageId[r][c]);
+      if (sizes[id] !== 1) continue;
 
-      if (adjacentIds.length) {
+      const targetIds = [...new Set(
+        neighbors(r, c)
+          .map(([nr, nc]) => cageId[nr][nc])
+          .filter(otherId =>
+            otherId !== id &&
+            sizes[otherId] < maxSize &&
+            !hasDuplicateSolutionDigit(cageId, solvedGrid, otherId, r, c)
+          )
+      )];
+
+      if (targetIds.length) {
         const targetId =
-          adjacentIds[Math.floor(Math.random() * adjacentIds.length)];
+          targetIds[Math.floor(Math.random() * targetIds.length)];
 
-        setId(r, c, targetId);
+        cageId[r][c] = targetId;
+        sizes[targetId]++;
+        sizes[id] = 0;
       }
     }
   }
 
-  const usedIds = [...new Set(cageId.flat())];
-  const remap = new Map(usedIds.map((oldId, newId) => [oldId, newId]));
+  // Compact IDs after merging.
+  const remap = new Map();
+  let next = 0;
 
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
-      cageId[r][c] = remap.get(cageId[r][c]);
+      const oldId = cageId[r][c];
+
+      if (!remap.has(oldId)) remap.set(oldId, next++);
+
+      cageId[r][c] = remap.get(oldId);
     }
   }
 
   return cageId;
 }
 
-function cagesFromIdGrid(idGrid) {
+function hasDuplicateSolutionDigit(cageId, solvedGrid, cageIdToTest, newR, newC) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (
+        cageId[r][c] === cageIdToTest &&
+        solvedGrid[r][c] === solvedGrid[newR][newC]
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function cagesFromIdGrid(idGrid, solvedGrid) {
   const list = [];
 
   for (let r = 0; r < SIZE; r++) {
@@ -647,7 +707,7 @@ function cagesFromIdGrid(idGrid) {
       if (!list[id]) list[id] = { cells: [], sum: 0 };
 
       list[id].cells.push([r, c]);
-      list[id].sum += solution[r][c];
+      list[id].sum += solvedGrid[r][c];
     }
   }
 
@@ -707,11 +767,12 @@ function getPossibleCageDigits(sum, size) {
   return possibleDigitsMask;
 }
 
+// Returns 0..solutionLimit, or -1 if the solver node budget is exceeded.
 function countSolutions(
   cageList,
   cageIndexGrid,
   solutionLimit = 2,
-  nodeLimit = ATTEMPT_SOLVER_LIMIT
+  nodeLimit = SOLVER_NODE_LIMIT
 ) {
   let nodes = 0;
 
@@ -765,7 +826,7 @@ function countSolutions(
 
         const options = candidates(r, c);
 
-        if (!bestCell || options.length < bestOptions.length) {
+        if (!bestOptions || options.length < bestOptions.length) {
           bestCell = [r, c];
           bestOptions = options;
 
@@ -792,7 +853,7 @@ function countSolutions(
       cageRemainingSum[cage] -= value;
       cageRemainingCells[cage]--;
 
-      total += search();
+      const result = search();
 
       grid[r][c] = 0;
       rowMask[r] &= ~bit;
@@ -802,7 +863,11 @@ function countSolutions(
       cageRemainingSum[cage] += value;
       cageRemainingCells[cage]++;
 
-      if (total >= solutionLimit || total === -1) return total;
+      if (result === -1) return -1;
+
+      total += result;
+
+      if (total >= solutionLimit) return total;
     }
 
     return total;
@@ -811,51 +876,280 @@ function countSolutions(
   return search();
 }
 
-async function generatePuzzle() {
+// Approximate human-style difficulty:
+// 1 point per forced single, 3 per hidden single,
+// 8 per naked pair, 20 per naked triple,
+// plus 12 per cell still requiring search at the end.
+function ratePuzzle(cageList, cageIndexGrid) {
+  const grid = emptyGrid();
+  let score = 0;
+  let progress = true;
+
+  const standardUnits = [];
+
+  for (let r = 0; r < SIZE; r++) {
+    standardUnits.push(Array.from({ length: SIZE }, (_, c) => [r, c]));
+  }
+
+  for (let c = 0; c < SIZE; c++) {
+    standardUnits.push(Array.from({ length: SIZE }, (_, r) => [r, c]));
+  }
+
+  for (let boxRow = 0; boxRow < SIZE; boxRow += BOX) {
+    for (let boxColumn = 0; boxColumn < SIZE; boxColumn += BOX) {
+      const cells = [];
+
+      for (let r = boxRow; r < boxRow + BOX; r++) {
+        for (let c = boxColumn; c < boxColumn + BOX; c++) {
+          cells.push([r, c]);
+        }
+      }
+
+      standardUnits.push(cells);
+    }
+  }
+
+  while (progress) {
+    progress = false;
+
+    const candidates = Array.from({ length: SIZE }, () => Array(SIZE));
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (grid[r][c]) continue;
+
+        const used = new Set();
+
+        for (let i = 0; i < SIZE; i++) {
+          if (grid[r][i]) used.add(grid[r][i]);
+          if (grid[i][c]) used.add(grid[i][c]);
+        }
+
+        const boxRow = Math.floor(r / BOX) * BOX;
+        const boxColumn = Math.floor(c / BOX) * BOX;
+
+        for (let rr = boxRow; rr < boxRow + BOX; rr++) {
+          for (let cc = boxColumn; cc < boxColumn + BOX; cc++) {
+            if (grid[rr][cc]) used.add(grid[rr][cc]);
+          }
+        }
+
+        const cage = cageList[cageIndexGrid[r][c]];
+        const cageUsed = new Set();
+        let remainingSum = cage.sum;
+        let remainingCells = 0;
+
+        for (const [cr, cc] of cage.cells) {
+          if (grid[cr][cc]) {
+            cageUsed.add(grid[cr][cc]);
+            remainingSum -= grid[cr][cc];
+          } else {
+            remainingCells++;
+          }
+        }
+
+        const cageMask = getPossibleCageDigits(remainingSum, remainingCells);
+
+        candidates[r][c] = NUMBERS.filter(value =>
+          !used.has(value) &&
+          !cageUsed.has(value) &&
+          (cageMask & (1 << value))
+        );
+      }
+    }
+
+    const forced = [];
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (!grid[r][c] && candidates[r][c].length === 1) {
+          forced.push([r, c, candidates[r][c][0]]);
+        }
+      }
+    }
+
+    if (forced.length) {
+      for (const [r, c, value] of forced) {
+        if (grid[r][c]) continue;
+
+        grid[r][c] = value;
+        score += 1;
+        progress = true;
+      }
+
+      continue;
+    }
+
+    // Hidden singles across rows, columns, boxes and cages.
+    const groups = [...standardUnits, ...cageList.map(cage => cage.cells)];
+    let hidden = null;
+
+    for (const group of groups) {
+      for (let value = 1; value <= 9 && !hidden; value++) {
+        const places = group.filter(([r, c]) =>
+          !grid[r][c] && candidates[r][c].includes(value)
+        );
+
+        if (places.length === 1) {
+          hidden = [places[0][0], places[0][1], value];
+        }
+      }
+
+      if (hidden) break;
+    }
+
+    if (hidden) {
+      const [r, c, value] = hidden;
+
+      grid[r][c] = value;
+      score += 3;
+      progress = true;
+      continue;
+    }
+
+    // Naked pairs and triples in standard Sudoku units.
+    let subsetFound = false;
+
+    for (const unit of standardUnits) {
+      const open = unit.filter(([r, c]) => !grid[r][c]);
+
+      for (let subsetSize = 2; subsetSize <= 3 && !subsetFound; subsetSize++) {
+        const combinations = [];
+
+        function choose(start, picked) {
+          if (picked.length === subsetSize) {
+            combinations.push(picked);
+            return;
+          }
+
+          for (let i = start; i < open.length; i++) {
+            choose(i + 1, [...picked, open[i]]);
+          }
+        }
+
+        choose(0, []);
+
+        for (const combination of combinations) {
+          const union = new Set();
+
+          for (const [r, c] of combination) {
+            for (const value of candidates[r][c]) union.add(value);
+          }
+
+          if (union.size !== subsetSize) continue;
+
+          const combinationKeys = new Set(
+            combination.map(([r, c]) => key(r, c))
+          );
+
+          let changed = false;
+
+          for (const [r, c] of open) {
+            if (combinationKeys.has(key(r, c))) continue;
+
+            const filtered = candidates[r][c].filter(
+              value => !union.has(value)
+            );
+
+            if (filtered.length !== candidates[r][c].length) {
+              candidates[r][c] = filtered;
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            score += subsetSize === 2 ? 8 : 20;
+            subsetFound = true;
+            break;
+          }
+        }
+
+        if (subsetFound) break;
+      }
+
+      if (subsetFound) break;
+    }
+
+    if (subsetFound) continue;
+
+    // No modeled logical technique applies: estimate remaining search work.
+    const remaining = grid.flat().filter(value => !value).length;
+    score += remaining * 12;
+    break;
+  }
+
+  return score;
+}
+
+function yieldToBrowser() {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+async function generatePuzzle(token) {
   const settings =
     difficultySettings[difficultyEl.value] ??
     difficultySettings.medium;
 
   const deadline = performance.now() + GENERATION_DEADLINE_MS;
+  let sliceStart = performance.now();
 
-  const strategies = [
-    ...settings.attempts,
-    { minSize: 2, maxSize: 3 },
-    { minSize: 2, maxSize: 2 }
-  ];
+  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+    if (token !== generationToken || performance.now() >= deadline) {
+      return false;
+    }
 
-  for (const { minSize, maxSize } of strategies) {
-    for (let attempt = 0; attempt < 20; attempt++) {
-      if (performance.now() > deadline) return false;
+    const candidateSolution = emptyGrid();
 
-      solution = emptyGrid();
-      generateSolution(solution);
+    if (!generateSolution(candidateSolution)) continue;
 
-      const idGrid = partitionIntoCages(minSize, maxSize);
-      const cageList = cagesFromIdGrid(idGrid);
+    // Try several cage layouts for the same completed grid before starting over.
+    for (let partition = 0; partition < 5; partition++) {
+      if (token !== generationToken || performance.now() >= deadline) {
+        return false;
+      }
+
+      const idGrid = partitionIntoCages(
+        settings.minCage,
+        settings.maxCage,
+        candidateSolution
+      );
+
+      const cageList = cagesFromIdGrid(idGrid, candidateSolution);
 
       if (
-        cageList.length !== 81 / 2 &&
-        cageList.some(cage => cage.cells.length < 2)
+        cageList.some(cage =>
+          cage.cells.length < 2 ||
+          cage.cells.length > settings.maxCage
+        )
       ) {
         continue;
       }
 
       const cageIndexGrid = buildCageIndex(cageList);
+
       const result = countSolutions(
         cageList,
         cageIndexGrid,
         2,
-        ATTEMPT_SOLVER_LIMIT
+        SOLVER_NODE_LIMIT
       );
 
-      if (result === 1) {
-        cages = cageList;
-        cellCage = cageIndexGrid;
-        return true;
-      }
+      if (result !== 1) continue;
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      const score = ratePuzzle(cageList, cageIndexGrid);
+
+      if (score < settings.minScore || score > settings.maxScore) continue;
+
+      solution = candidateSolution;
+      cages = cageList;
+      cellCage = cageIndexGrid;
+
+      return true;
+    }
+
+    if (performance.now() - sliceStart >= GENERATION_SLICE_MS) {
+      await yieldToBrowser();
+      sliceStart = performance.now();
     }
   }
 
@@ -865,13 +1159,16 @@ async function generatePuzzle() {
 async function newGame() {
   if (generating) return;
 
+  const token = ++generationToken;
+
   generating = true;
   newButton.disabled = true;
   setStatus(t("generating"));
-  await new Promise(resolve => setTimeout(resolve, 20));
+  await yieldToBrowser();
 
   cages = [];
   cellCage = [];
+  solution = null;
   current = emptyGrid();
   notes = emptyNotes();
   history = [];
@@ -881,7 +1178,9 @@ async function newGame() {
 
   render();
 
-  const generated = await generatePuzzle();
+  const generated = await generatePuzzle(token);
+
+  if (token !== generationToken) return;
 
   generating = false;
   newButton.disabled = false;
@@ -889,6 +1188,7 @@ async function newGame() {
   if (!generated) {
     cages = [];
     cellCage = [];
+    solution = null;
     render();
     setStatus(t("generationFailed"), "error");
     return;
@@ -1035,8 +1335,10 @@ function updateSelectionSum() {
   }
 
   const boardRect = boardWrap.getBoundingClientRect();
-  const firstCellRect = boardEl.children[key(minRow, minColumn)].getBoundingClientRect();
-  const lastCellRect = boardEl.children[key(maxRow, maxColumn)].getBoundingClientRect();
+  const firstCellRect =
+    boardEl.children[key(minRow, minColumn)].getBoundingClientRect();
+  const lastCellRect =
+    boardEl.children[key(maxRow, maxColumn)].getBoundingClientRect();
 
   const left = firstCellRect.left - boardRect.left;
   const top = firstCellRect.top - boardRect.top;
@@ -1072,7 +1374,6 @@ function updateMode() {
 function toggleNotes() {
   noteMode = !noteMode;
 
-  // When leaving Notes mode, keep only the active cell selected.
   if (!noteMode && selected) {
     selectedCells = new Set([key(selected[0], selected[1])]);
   }
@@ -1191,6 +1492,7 @@ function getConflictingCells() {
 
     for (const [r, c] of cells) {
       const value = current[r][c];
+
       if (!value) continue;
 
       if (!positionsByValue.has(value)) positionsByValue.set(value, []);
@@ -1200,39 +1502,29 @@ function getConflictingCells() {
     for (const positions of positionsByValue.values()) {
       if (positions.length < 2) continue;
 
-      for (const [r, c] of positions) {
-        conflicts.add(key(r, c));
-      }
+      for (const [r, c] of positions) conflicts.add(key(r, c));
     }
   }
 
   for (let r = 0; r < SIZE; r++) {
-    const rowCells = [];
-
-    for (let c = 0; c < SIZE; c++) rowCells.push([r, c]);
-
-    markGroup(rowCells);
+    markGroup(Array.from({ length: SIZE }, (_, c) => [r, c]));
   }
 
   for (let c = 0; c < SIZE; c++) {
-    const columnCells = [];
-
-    for (let r = 0; r < SIZE; r++) columnCells.push([r, c]);
-
-    markGroup(columnCells);
+    markGroup(Array.from({ length: SIZE }, (_, r) => [r, c]));
   }
 
   for (let boxRow = 0; boxRow < SIZE; boxRow += BOX) {
     for (let boxColumn = 0; boxColumn < SIZE; boxColumn += BOX) {
-      const boxCells = [];
+      const cells = [];
 
       for (let r = boxRow; r < boxRow + BOX; r++) {
         for (let c = boxColumn; c < boxColumn + BOX; c++) {
-          boxCells.push([r, c]);
+          cells.push([r, c]);
         }
       }
 
-      markGroup(boxCells);
+      markGroup(cells);
     }
   }
 
@@ -1275,9 +1567,7 @@ function countErrorsAgainstSolution() {
 
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
-      if (current[r][c] && current[r][c] !== solution[r][c]) {
-        errors++;
-      }
+      if (current[r][c] && current[r][c] !== solution[r][c]) errors++;
     }
   }
 
@@ -1290,10 +1580,8 @@ function check() {
   const errors = countErrorsAgainstSolution();
 
   if (errors > 0) {
-    if (errors >1){
-    setStatus(`${errors} ${t("incorrectEntries")}.`, "error");
-    }else{
-    setStatus(`${errors} ${t("incorrectEntry")}.`, "error");}
+    const label = errors === 1 ? t("incorrectEntry") : t("incorrectEntries");
+    setStatus(`${errors} ${label}.`, "error");
     return;
   }
 
