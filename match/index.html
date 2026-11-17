@@ -537,8 +537,8 @@
   let pointerStart = null;
   let audioCtx = null;
   let fallingCells = new Set();
+  let lastCountdownSecond = null;
 
-  // Add the high-score display in its own row below the toolbar.
   const highScores = document.createElement("div");
   highScores.className = "high-scores";
   highScores.innerHTML = `
@@ -628,30 +628,31 @@
     try {
       audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
-  
+
       const now = audioCtx.currentTime;
-  
+
       function tone({ start, duration, from, to, wave, peak, end = 0.0001 }) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-  
+
         osc.type = wave;
         osc.frequency.setValueAtTime(from, start);
-        osc.frequency.exponentialRampToValueAtTime(to, start + duration);
-  
+        if (to !== from) {
+          osc.frequency.exponentialRampToValueAtTime(to, start + duration);
+        }
+
         gain.gain.setValueAtTime(0.0001, start);
         gain.gain.exponentialRampToValueAtTime(peak, start + 0.008);
         gain.gain.exponentialRampToValueAtTime(end, start + duration);
-  
+
         osc.connect(gain).connect(audioCtx.destination);
         osc.start(start);
         osc.stop(start + duration);
       }
-  
+
       if (kind === "match") {
-        // Two soft, rising-and-falling bubbles; intensity changes their pitch.
         const pitch = 1 + Math.min(Math.max(intensity, 0), 25) * 0.012;
-  
+
         tone({
           start: now,
           duration: 0.11,
@@ -670,9 +671,8 @@
         });
         return;
       }
-  
+
       if (kind === "hint") {
-        // A distinct, sustained two-note chime rather than a high-pitched blip.
         tone({
           start: now,
           duration: 0.32,
@@ -691,14 +691,51 @@
         });
         return;
       }
-  
+
+      if (kind === "countdown") {
+        // Urgent two-tone pulse; the last few seconds get progressively higher and louder.
+        const urgency = Math.max(0, Math.min(10, intensity));
+        const pitch = 1 + (10 - urgency) * 0.035;
+        const peak = 0.09 + (10 - urgency) * 0.008;
+        const duration = urgency <= 3 ? 0.18 : 0.12;
+
+        tone({
+          start: now,
+          duration,
+          from: 520 * pitch,
+          to: 780 * pitch,
+          wave: "square",
+          peak
+        });
+        tone({
+          start: now + 0.09,
+          duration: duration + 0.02,
+          from: 390 * pitch,
+          to: 620 * pitch,
+          wave: "triangle",
+          peak: peak * 0.8
+        });
+
+        if (urgency <= 3) {
+          tone({
+            start: now + 0.2,
+            duration: 0.22,
+            from: 880 * pitch,
+            to: 660 * pitch,
+            wave: "sawtooth",
+            peak: peak * 0.55
+          });
+        }
+        return;
+      }
+
       const settings = {
         bomb: { frequency: 120, duration: 0.38, wave: "sawtooth" },
         over: { frequency: 330, duration: 0.45, wave: "triangle" }
       }[kind];
-  
+
       if (!settings) return;
-  
+
       tone({
         start: now,
         duration: settings.duration,
@@ -708,6 +745,14 @@
         peak: 0.14
       });
     } catch (_) {}
+  }
+
+  function playCountdownForSecond(second) {
+    if (mode !== "timed" || second > 10 || second < 1) return;
+    if (lastCountdownSecond === second) return;
+
+    lastCountdownSecond = second;
+    playSound("countdown", second);
   }
 
   function at(row, col) {
@@ -830,12 +875,12 @@
     mode = $("mode").value;
     updateModeLabel();
 
-    // Always 7 columns wide × 10 rows tall.
     rows = 10;
     cols = 7;
 
     score = 0;
     timeLeft = 80;
+    lastCountdownSecond = null;
     queuedBombs = 0;
     selected = null;
     hintCells = [];
@@ -871,8 +916,15 @@
     if (mode === "timed") {
       timer = setInterval(() => {
         if (!started) return;
+
         timeLeft = Math.max(0, timeLeft - 0.1);
-        if (timeLeft <= 0) endGame(copy[lang].over);
+
+        if (timeLeft <= 0) {
+          endGame(copy[lang].over);
+          return;
+        }
+
+        playCountdownForSecond(Math.ceil(timeLeft));
         render();
       }, 100);
     }
@@ -884,7 +936,10 @@
     if (points <= 0) return;
 
     score += points;
-    if (mode === "timed") timeLeft = Math.min(99, timeLeft + points / 3);
+    if (mode === "timed") {
+      // Keep the existing time bonus, capped at 99 seconds.
+      timeLeft = Math.min(99, timeLeft + points / 3);
+    }
 
     const threshold = mode === "timed" ? 100 : 500;
     const earned =
@@ -979,20 +1034,20 @@
 
     if (a === BOMB && b === BOMB) {
       playSound("bomb");
-    
+
       const count = board.filter(Boolean).length;
       board.fill(null);
       addScore(count - 2);
-    
+
       render();
       await wait(180);
-    
+
       dropAndRefill();
       render();
       await wait(250);
-    
+
       await resolveMatches(matchesIn(board), 1);
-    
+
       busy = false;
       render();
       checkNoMoves();
@@ -1083,7 +1138,7 @@
 
   function shuffleBoard() {
     const pieces = [...board];
-  
+
     do {
       for (let i = pieces.length - 1; i > 0; i -= 1) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -1091,14 +1146,19 @@
       }
       board = [...pieces];
     } while (matchesIn(board).size > 0 || !hasMatchAvailable());
-  
-    timeLeft += 2;
+
+    // Preserve the existing +2-second timed-mode shuffle bonus.
+    if (mode === "timed") {
+      timeLeft = Math.min(99, timeLeft + 2);
+      lastCountdownSecond = null;
+    }
+
     render();
   }
-  
+
   function checkNoMoves() {
     if (!started || hasMatchAvailable()) return;
-  
+
     if (mode === "timed") {
       shuffleBoard();
     } else {
@@ -1129,26 +1189,26 @@
     if (Math.max(Math.abs(dx), Math.abs(dy)) > 20) {
       selected = null;
       hintCells = [];
-    
+
       let next;
-    
+
       if (Math.abs(dx) > Math.abs(dy)) {
         next = index + (dx > 0 ? 1 : -1);
       } else {
         next = index + (dy > 0 ? cols : -cols);
       }
-    
+
       const sameRow =
         Math.floor(next / cols) === Math.floor(index / cols);
       const valid =
         next >= 0 &&
         next < board.length &&
         (Math.abs(next - index) === cols || sameRow);
-    
+
       render();
-    
+
       if (!valid) return;
-    
+
       swap(index, next);
       return;
     }
@@ -1244,6 +1304,7 @@
     timer = null;
     started = false;
     busy = false;
+    lastCountdownSecond = null;
     $("mode").value = mode;
     $("startOverlay").hidden = false;
   });
@@ -1251,29 +1312,30 @@
   $("playAgain").addEventListener("click", () => {
     if (timer) clearInterval(timer);
     timer = null;
-  
+
     started = false;
     busy = false;
     selected = null;
     hintCells = [];
-  
+    lastCountdownSecond = null;
+
     $("endOverlay").hidden = true;
     $("mode").value = mode;
     $("startOverlay").hidden = false;
   });
-  // Prevent double-tap zoom and pinch zoom on the game page.
+
   document.addEventListener("dblclick", event => {
     event.preventDefault();
   }, { passive: false });
-  
+
   document.addEventListener("gesturestart", event => {
     event.preventDefault();
   }, { passive: false });
-  
+
   document.addEventListener("gesturechange", event => {
     event.preventDefault();
   }, { passive: false });
-  
+
   document.addEventListener("gestureend", event => {
     event.preventDefault();
   }, { passive: false });
