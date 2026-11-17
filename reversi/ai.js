@@ -20,7 +20,6 @@ function getLegalMoves(boardDefinition, board, color) {
 
 function applyMove(boardDefinition, board, move, color) {
   const nextBoard = cloneBoard(board);
-
   nextBoard.set(move.id, color);
 
   for (const flipId of move.flips) {
@@ -43,35 +42,31 @@ function countPieces(board) {
 }
 
 function isFrontier(boardDefinition, board, cellId) {
-  return boardDefinition.neighbours
-    .get(cellId)
-    .some(neighbourId => board.get(neighbourId) === EMPTY);
+  const neighbours = boardDefinition.neighbours.get(cellId) ?? [];
+  return neighbours.some(id => board.get(id) === EMPTY);
 }
 
+// Scores the board from the given player's perspective.
 function evaluateBoard(boardDefinition, board, perspective) {
-  const counts = countPieces(board);
-  const ownCount = perspective === BLACK ? counts.black : counts.white;
-  const opponentCount = perspective === BLACK ? counts.white : counts.black;
-
-  const ownMoves = getLegalMoves(boardDefinition, board, perspective).length;
-  const opponentMoves = getLegalMoves(boardDefinition, board, -perspective).length;
-
-  let positionScore = 0;
-  let corners = 0;
+  let score = 0;
   let ownFrontier = 0;
   let opponentFrontier = 0;
+  let ownPieces = 0;
+  let opponentPieces = 0;
 
   for (const cell of boardDefinition.cells) {
     const value = board.get(cell.id);
 
     if (value === perspective) {
-      positionScore += boardDefinition.getWeight(cell.id);
+      ownPieces += 1;
+      score += boardDefinition.getWeight(cell.id);
 
       if (isFrontier(boardDefinition, board, cell.id)) {
         ownFrontier += 1;
       }
     } else if (value === -perspective) {
-      positionScore -= boardDefinition.getWeight(cell.id);
+      opponentPieces += 1;
+      score -= boardDefinition.getWeight(cell.id);
 
       if (isFrontier(boardDefinition, board, cell.id)) {
         opponentFrontier += 1;
@@ -79,94 +74,93 @@ function evaluateBoard(boardDefinition, board, perspective) {
     }
   }
 
+  let cornerScore = 0;
+
   for (const cornerId of boardDefinition.corners) {
     const value = board.get(cornerId);
-
-    if (value === perspective) corners += 1;
-    if (value === -perspective) corners -= 1;
+    if (value === perspective) cornerScore += 1;
+    if (value === -perspective) cornerScore -= 1;
   }
 
-  const occupied = ownCount + opponentCount;
-  const endgameWeight = occupied > boardDefinition.cells.length * 0.68 ? 4 : 1;
+  const ownMobility = getLegalMoves(boardDefinition, board, perspective).length;
+  const opponentMobility = getLegalMoves(boardDefinition, board, -perspective).length;
+
+  const occupied = ownPieces + opponentPieces;
+  const total = boardDefinition.cells.length;
+  const endgameWeight = occupied > total * 0.68 ? 4 : 1;
 
   return (
-    positionScore +
-    (ownMoves - opponentMoves) * 12 +
-    corners * 180 +
+    score +
+    (ownMobility - opponentMobility) * 12 +
+    cornerScore * 180 +
     (opponentFrontier - ownFrontier) * 4 +
-    (ownCount - opponentCount) * endgameWeight * 2
+    (ownPieces - opponentPieces) * endgameWeight * 2
   );
 }
 
 function terminalScore(board, perspective) {
-  const counts = countPieces(board);
-  const ownCount = perspective === BLACK ? counts.black : counts.white;
-  const opponentCount = perspective === BLACK ? counts.white : counts.black;
+  const { black, white } = countPieces(board);
+  const ownCount = perspective === BLACK ? black : white;
+  const opponentCount = perspective === BLACK ? white : black;
+  const difference = ownCount - opponentCount;
 
-  if (ownCount > opponentCount) {
-    return 100000 + (ownCount - opponentCount) * 100;
-  }
-
-  if (ownCount < opponentCount) {
-    return -100000 + (ownCount - opponentCount) * 100;
-  }
-
+  if (difference > 0) return 100000 + difference * 100;
+  if (difference < 0) return -100000 + difference * 100;
   return 0;
 }
 
-function quickMoveScore(boardDefinition, board, move, color) {
-  const nextBoard = applyMove(boardDefinition, board, move, color);
-  const opponentMobility = getLegalMoves(boardDefinition, nextBoard, -color).length;
+// Cheap ordering: avoid recalculating opponent legal moves for every candidate.
+function orderMoves(boardDefinition, moves) {
+  return [...moves].sort((a, b) => {
+    const aCorner = boardDefinition.corners.includes(a.id) ? 1 : 0;
+    const bCorner = boardDefinition.corners.includes(b.id) ? 1 : 0;
 
-  return (
-    boardDefinition.getWeight(move.id) +
-    move.flips.length * 2 -
-    opponentMobility * 4 +
-    (boardDefinition.corners.includes(move.id) ? 1000 : 0)
-  );
+    const aScore =
+      aCorner * 10000 +
+      boardDefinition.getWeight(a.id) +
+      a.flips.length;
+
+    const bScore =
+      bCorner * 10000 +
+      boardDefinition.getWeight(b.id) +
+      b.flips.length;
+
+    return bScore - aScore;
+  });
 }
 
-function orderMoves(boardDefinition, board, moves, color) {
-  return [...moves].sort(
-    (first, second) =>
-      quickMoveScore(boardDefinition, board, second, color) -
-      quickMoveScore(boardDefinition, board, first, color)
-  );
-}
-
-function negamax(boardDefinition, board, playerToMove, depth, alpha, beta, rootColor, passed) {
+function negamax(boardDefinition, board, playerToMove, depth, alpha, beta) {
   const moves = getLegalMoves(boardDefinition, board, playerToMove);
-
-  if (depth <= 0) {
-    return evaluateBoard(boardDefinition, board, rootColor);
-  }
 
   if (moves.length === 0) {
     const opponentMoves = getLegalMoves(boardDefinition, board, -playerToMove);
 
     if (opponentMoves.length === 0) {
-      return terminalScore(board, rootColor);
+      return terminalScore(board, playerToMove);
     }
 
-    if (passed) {
-      return evaluateBoard(boardDefinition, board, rootColor);
+    if (depth <= 0) {
+      return evaluateBoard(boardDefinition, board, playerToMove);
     }
 
+    // Passing does not change the board, but changes whose perspective is used.
     return -negamax(
       boardDefinition,
       board,
       -playerToMove,
       depth - 1,
       -beta,
-      -alpha,
-      rootColor,
-      true
+      -alpha
     );
+  }
+
+  if (depth <= 0) {
+    return evaluateBoard(boardDefinition, board, playerToMove);
   }
 
   let best = -Infinity;
 
-  for (const move of orderMoves(boardDefinition, board, moves, playerToMove)) {
+  for (const move of orderMoves(boardDefinition, moves)) {
     const nextBoard = applyMove(boardDefinition, board, move, playerToMove);
     const score = -negamax(
       boardDefinition,
@@ -174,44 +168,43 @@ function negamax(boardDefinition, board, playerToMove, depth, alpha, beta, rootC
       -playerToMove,
       depth - 1,
       -beta,
-      -alpha,
-      rootColor,
-      false
+      -alpha
     );
 
     best = Math.max(best, score);
     alpha = Math.max(alpha, score);
 
-    if (alpha >= beta) {
-      break;
-    }
+    if (alpha >= beta) break;
   }
 
   return best;
 }
 
 function chooseDepth(boardDefinition, board) {
-  const counts = countPieces(board);
-  const empty = boardDefinition.cells.length - counts.black - counts.white;
+  const { black, white } = countPieces(board);
+  const empty = boardDefinition.cells.length - black - white;
 
-  if (empty <= 10) return 8;
-  if (empty <= 18) return 6;
-  if (empty <= 32) return 5;
-  return 4;
+  // Conservative defaults to help keep searches shorter on the main thread.
+  if (empty <= 8) return 5;
+  if (empty <= 16) return 4;
+  if (empty <= 32) return 3;
+  return 2;
 }
 
 export function findBestMove(boardDefinition, board, color, depth = null) {
   const moves = getLegalMoves(boardDefinition, board, color);
 
-  if (moves.length === 0) {
-    return null;
-  }
+  if (moves.length === 0) return null;
 
-  const searchDepth = depth ?? chooseDepth(boardDefinition, board);
+  const searchDepth = Math.max(
+    1,
+    depth ?? chooseDepth(boardDefinition, board)
+  );
+
   let bestScore = -Infinity;
   let bestMoves = [];
 
-  for (const move of orderMoves(boardDefinition, board, moves, color)) {
+  for (const move of orderMoves(boardDefinition, moves)) {
     const nextBoard = applyMove(boardDefinition, board, move, color);
     const score = -negamax(
       boardDefinition,
@@ -219,9 +212,7 @@ export function findBestMove(boardDefinition, board, color, depth = null) {
       -color,
       searchDepth - 1,
       -Infinity,
-      Infinity,
-      color,
-      true
+      Infinity
     );
 
     if (score > bestScore) {
