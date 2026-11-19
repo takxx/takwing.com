@@ -1,3 +1,637 @@
+<!doctype html>
+<html lang="en">
 <head>
-  <meta http-equiv='refresh' content='0; URL=https://takk.uk/'>
+<meta charset="utf-8">
+<meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#101813">
+<title>Snake</title>
+<style>
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #172019;
+  color: #f1f5f2;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+#hud {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  z-index: 1;
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+  font-weight: 650;
+  text-shadow: 0 1px 4px #000;
+  pointer-events: none;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(5 10 7 / 70%);
+}
+
+#overlay[hidden] { display: none; }
+
+.panel {
+  width: min(100%, 420px);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid #455448;
+  border-radius: 18px;
+  background: #18231c;
+  box-shadow: 0 16px 60px rgb(0 0 0 / 45%);
+  touch-action: pan-y;
+}
+
+h1 {
+  margin: 0 0 14px;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+ul {
+  margin: 0 0 20px;
+  padding-left: 22px;
+  color: #d0dbd2;
+  line-height: 1.6;
+}
+
+#result {
+  margin: 0 0 18px;
+  color: #d0dbd2;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.settings {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 20px;
+}
+
+.setting-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #b9c8bd;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button, select {
+  min-height: 42px;
+  border: 1px solid #536458;
+  border-radius: 10px;
+  background: #243329;
+  color: #f1f5f2;
+  font: inherit;
+}
+
+.choices button {
+  flex: 1;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.choices button[aria-pressed="true"] {
+  border-color: #9be678;
+  background: #344c35;
+  box-shadow: inset 0 0 0 1px #9be678;
+}
+
+select {
+  width: 100%;
+  padding: 8px 10px;
+}
+
+#start {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  background: #9be678;
+  color: #142015;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+#start:active { transform: scale(.99); }
+button:focus-visible, select:focus-visible {
+  outline: 3px solid #c7ffa9;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+</style>
 </head>
+<body>
+<canvas id="game" aria-label="Snake game board"></canvas>
+
+<div id="hud" hidden>
+  <span id="score"></span>
+  <span id="best"></span>
+</div>
+
+<section id="overlay" role="dialog" aria-modal="true" aria-labelledby="title">
+  <div class="panel">
+    <h1 id="title"></h1>
+    <p id="result" hidden></p>
+    <ul id="instructions"></ul>
+
+    <div class="settings">
+      <div>
+        <span class="setting-label" id="speed-label"></span>
+        <div class="choices" id="speed-choices"></div>
+      </div>
+      <div>
+        <label class="setting-label" for="language" id="language-label"></label>
+        <select id="language"></select>
+      </div>
+    </div>
+
+    <button id="start" type="button"></button>     
+  </div>
+</section>
+
+<script>
+(() => {
+  "use strict";
+
+  const STRINGS = {
+    en: {
+      title: "Snake",
+      instructions: [
+        "Use the arrow keys or WASD to steer.",
+        "Swipe in any direction to steer on touch screens.",
+        "Eat the food to grow. Don’t hit the walls or yourself."
+      ],
+      speed: "Speed",
+      speeds: { relaxed: "Relaxed", normal: "Normal", hungry: "Hungry" },
+      language: "Language",
+      languages: { en: "English", es: "Español", zh: "中文" },
+      start: "Start game",
+      restart: "Play again",
+      score: "Score",
+      high: "High score",
+      gameOver: "Game over",
+      paused: "Paused",
+      resume: "Tap or press a key to resume",
+      finalScore: "Final score",
+      newGame: "New game"
+    },
+    es: {
+      title: "La serpiente",
+      instructions: [
+        "Usa las flechas o WASD para moverte.",
+        "Desliza el dedo en cualquier dirección para controlar la serpiente.",
+        "Come la comida para crecer. No choques contra las paredes ni contigo misma."
+      ],
+      speed: "Velocidad",
+      speeds: { relaxed: "Tranquila", normal: "Normal", hungry: "Hambrienta" },
+      language: "Idioma",
+      languages: { en: "English", es: "Español", zh: "中文" },
+      start: "Empezar",
+      restart: "Jugar otra vez",
+      score: "Puntuación",
+      high: "Récord",
+      gameOver: "Fin de la partida",
+      paused: "En pausa",
+      resume: "Toca o pulsa una tecla para continuar",
+      finalScore: "Puntuación final",
+      newGame: "Nueva partida"
+    },
+    zh: {
+      title: "貪食蛇",
+      instructions: [
+        "用方向鍵或 WASD 控制方向。",
+        "喺屏幕上向任何方向掃動嚟轉向。",
+        "食嘢會變長；唔好撞牆或者撞到自己。"
+      ],
+      speed: "速度",
+      speeds: { relaxed: "慢條斯理", normal: "不徐不疾", hungry: "飢腸轆轆" },
+      language: "語言",
+      languages: { en: "English", es: "Español", zh: "中文" },
+      start: "開始遊戲",
+      restart: "再玩一次",
+      score: "分數",
+      high: "紀錄",
+      gameOver: "遊戲結束",
+      paused: "已暫停",
+      resume: "點一下或按任何鍵繼續",
+      finalScore: "最終分數",
+      newGame: "開始新遊戲",
+    }
+  };
+
+  const SPEEDS = { relaxed: 155, normal: 105, hungry: 70 };
+  const STORAGE_LANGUAGE = "snake-language";
+  const HIGH_SCORE_PREFIX = "snake-high-score-";
+
+  const canvas = document.querySelector("#game");
+  const ctx = canvas.getContext("2d");
+  const overlay = document.querySelector("#overlay");
+  const panel = document.querySelector(".panel");
+  const hud = document.querySelector("#hud");
+  const scoreEl = document.querySelector("#score");
+  const bestEl = document.querySelector("#best");
+  const titleEl = document.querySelector("#title");
+  const instructionsEl = document.querySelector("#instructions");
+  const speedChoices = document.querySelector("#speed-choices");
+  const languageSelect = document.querySelector("#language");
+  const startButton = document.querySelector("#start");
+
+  let language = chooseInitialLanguage();
+  let speed = "relaxed";
+  let snake = [];
+  let food = null;
+  let direction = { x: 1, y: 0 };
+  let nextDirection = { x: 1, y: 0 };
+  let score = 0;
+  let state = "menu";
+  let lastTick = 0;
+  let accumulator = 0;
+  let cell = 20;
+  let columns = 1;
+  let rows = 1;
+  let dpr = 1;
+  let touchStart = null;
+
+  function chooseInitialLanguage() {
+    const query = new URLSearchParams(location.search).get("lang");
+    if (["en", "es", "zh"].includes(query)) return query;
+
+    try {
+      const saved = localStorage.getItem(STORAGE_LANGUAGE);
+      if (["en", "es", "zh"].includes(saved)) return saved;
+    } catch (_) {}
+
+    const prefs = navigator.languages?.length
+      ? navigator.languages
+      : [navigator.language || "en"];
+
+    for (const pref of prefs) {
+      const tag = pref.toLowerCase();
+      if (tag.startsWith("zh")) return "zh";
+      if (tag.startsWith("es")) return "es";
+      if (tag.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  function save(key, value) {
+    try { localStorage.setItem(key, String(value)); } catch (_) {}
+  }
+
+  function readHighScore(level) {
+    try {
+      return Number(localStorage.getItem(HIGH_SCORE_PREFIX + level)) || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function strings() { return STRINGS[language]; }
+
+  function renderMenu() {
+    const t = strings();
+    const resultEl = document.querySelector("#result");
+    document.documentElement.lang =
+      language === "zh" ? "zh-HK" : language === "es" ? "es-ES" : "en";
+
+    titleEl.textContent = state === "over" ? t.gameOver : t.title;
+    
+    resultEl.hidden = state !== "over";
+    resultEl.textContent = state === "over"
+      ? `${t.finalScore}: ${score} · ${t.high}: ${readHighScore(speed)}`
+      : "";
+    
+    startButton.textContent = state === "over" ? t.newGame : t.start;
+    instructionsEl.replaceChildren(...t.instructions.map(text => {
+      const li = document.createElement("li");
+      li.textContent = text;
+      return li;
+    }));
+
+    document.querySelector("#speed-label").textContent = t.speed;
+    document.querySelector("#language-label").textContent = t.language;
+
+    speedChoices.replaceChildren();
+    for (const level of Object.keys(SPEEDS)) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = t.speeds[level];
+      button.setAttribute("aria-pressed", String(speed === level));
+      button.addEventListener("click", () => {
+        speed = level;
+        renderMenu();
+      });
+      speedChoices.append(button);
+    }
+
+    languageSelect.replaceChildren();
+    for (const code of ["en", "es", "zh"]) {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = t.languages[code];
+      languageSelect.append(option);
+    }
+    languageSelect.value = language;
+    startButton.textContent = state === "over" ? t.restart : t.start;
+  }
+
+  function resize() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    cell = Math.max(12, Math.floor(Math.min(width, height) / 28));
+    columns = Math.max(8, Math.floor(width / cell));
+    rows = Math.max(8, Math.floor(height / cell));
+
+    if (snake.length) {
+      snake = snake.map(p => ({
+        x: Math.min(columns - 1, p.x),
+        y: Math.min(rows - 1, p.y)
+      }));
+      placeFood();
+    }
+    draw();
+  }
+
+  function placeFood() {
+    const empty = [];
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < columns; x++) {
+        if (!snake.some(p => p.x === x && p.y === y)) empty.push({ x, y });
+      }
+    }
+    food = empty.length ? empty[Math.floor(Math.random() * empty.length)] : null;
+  }
+
+  function startGame() {
+    const cx = Math.floor(columns / 2);
+    const cy = Math.floor(rows / 2);
+    snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+    direction = { x: 1, y: 0 };
+    nextDirection = { x: 1, y: 0 };
+    score = 0;
+    placeFood();
+    state = "playing";
+    accumulator = 0;
+    lastTick = performance.now();
+    overlay.hidden = true;
+    hud.hidden = false;
+    updateHud();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function updateHud() {
+    const t = strings();
+    scoreEl.textContent = `${t.score}: ${score}`;
+    bestEl.textContent = `${t.high}: ${readHighScore(speed)}`;
+  }
+
+  function endGame() {
+    state = "over";
+    const best = Math.max(score, readHighScore(speed));
+    save(HIGH_SCORE_PREFIX + speed, best);
+    hud.hidden = true;
+    overlay.hidden = false;
+    renderMenu();
+    draw();
+  }    
+
+  function tick() {
+    direction = nextDirection;
+    const head = {
+      x: snake[0].x + direction.x,
+      y: snake[0].y + direction.y
+    };
+
+    const eating = food && head.x === food.x && head.y === food.y;
+    const bodyToCheck = eating ? snake : snake.slice(0, -1);
+
+    if (
+      head.x < 0 || head.y < 0 ||
+      head.x >= columns || head.y >= rows ||
+      bodyToCheck.some(p => p.x === head.x && p.y === head.y)
+    ) {
+      endGame();
+      return;
+    }
+
+    snake.unshift(head);
+    if (eating) {
+      score++;
+      placeFood();
+      updateHud();
+      if (!food) endGame();
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function loop(now) {
+    if (state !== "playing") return;
+    accumulator += Math.min(now - lastTick, 250);
+    lastTick = now;
+    const interval = SPEEDS[speed];
+
+    while (accumulator >= interval && state === "playing") {
+      tick();
+      accumulator -= interval;
+    }
+    if (state === "playing") requestAnimationFrame(loop);
+  }
+
+  function draw() {
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
+    ctx.fillStyle = "#172019";
+    ctx.fillRect(0, 0, width, height);
+
+    // Subtle board grid.
+    ctx.strokeStyle = "rgba(190, 220, 195, 0.045)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= columns; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * cell, 0);
+      ctx.lineTo(x * cell, rows * cell);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= rows; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * cell);
+      ctx.lineTo(columns * cell, y * cell);
+      ctx.stroke();
+    }
+
+    if (food) {
+      ctx.fillStyle = "#ff6b6b";
+      ctx.beginPath();
+      ctx.arc((food.x + .5) * cell, (food.y + .5) * cell, cell * .34, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    snake.forEach((part, index) => {
+      const inset = Math.max(1, cell * .07);
+      ctx.fillStyle = index === 0 ? "#b7ff91" : "#70ca61";
+      ctx.beginPath();
+      ctx.roundRect(
+        part.x * cell + inset,
+        part.y * cell + inset,
+        cell - inset * 2,
+        cell - inset * 2,
+        cell * .22
+      );
+      ctx.fill();
+    });
+
+    if (state === "paused") {
+      ctx.fillStyle = "rgba(0, 0, 0, .42)";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#f1f5f2";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "700 22px system-ui, sans-serif";
+      ctx.fillText(strings().paused, width / 2, height / 2 - 14);
+      ctx.font = "15px system-ui, sans-serif";
+      ctx.fillText(strings().resume, width / 2, height / 2 + 18);
+    }
+  }
+
+  function setDirection(x, y) {
+    if (state === "paused") {
+      state = "playing";
+      lastTick = performance.now();
+      requestAnimationFrame(loop);
+    }
+    if (state !== "playing") return;
+    if (x === -direction.x && y === -direction.y) return;
+    nextDirection = { x, y };
+  }
+
+  function handleKey(event) {
+    const keys = {
+      ArrowUp: [0, -1], w: [0, -1], W: [0, -1],
+      ArrowDown: [0, 1], s: [0, 1], S: [0, 1],
+      ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0],
+      ArrowRight: [1, 0], d: [1, 0], D: [1, 0]
+    };
+    if (keys[event.key]) {
+      event.preventDefault();
+      if (state === "menu" || state === "over") startGame();
+      setDirection(...keys[event.key]);
+    } else if (event.key === " " || event.key === "Escape") {
+      event.preventDefault();
+      if (state === "playing") {
+        state = "paused";
+        draw();
+      } else if (state === "paused") {
+        state = "playing";
+        lastTick = performance.now();
+        requestAnimationFrame(loop);
+      }
+    }
+  }
+
+  languageSelect.addEventListener("change", () => {
+    language = languageSelect.value;
+    save(STORAGE_LANGUAGE, language);
+    renderMenu();
+    updateHud();
+  });
+
+  startButton.addEventListener("click", startGame);
+
+  canvas.addEventListener("pointerdown", event => {
+    if (state === "paused") {
+      state = "playing";
+      lastTick = performance.now();
+      requestAnimationFrame(loop);
+      return;
+    }
+    if (state === "playing") {
+      touchStart = { x: event.clientX, y: event.clientY };
+    }
+  }, { passive: true });
+
+  canvas.addEventListener("pointerup", event => {
+    if (!touchStart || state !== "playing") return;
+    const dx = event.clientX - touchStart.x;
+    const dy = event.clientY - touchStart.y;
+    touchStart = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDirection(dx > 0 ? 1 : -1, 0);
+    } else {
+      setDirection(0, dy > 0 ? 1 : -1);
+    }
+  }, { passive: true });
+
+  canvas.addEventListener("pointercancel", () => { touchStart = null; });
+
+  // Prevent browser zoom gestures, including double-tap zoom on iOS.
+  document.addEventListener("gesturestart", event => event.preventDefault(), { passive: false });
+  document.addEventListener("gesturechange", event => event.preventDefault(), { passive: false });
+  document.addEventListener("gestureend", event => event.preventDefault(), { passive: false });
+  document.addEventListener("dblclick", event => event.preventDefault(), { passive: false });
+  document.addEventListener("keydown", handleKey);
+
+  // Let the menu scroll if needed, but prevent touch gestures on the board.
+  panel.addEventListener("touchmove", event => event.stopPropagation(), { passive: true });
+
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", resize);
+
+  resize();
+  renderMenu();
+})();
+</script>
+</body>
+</html>
