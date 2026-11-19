@@ -292,6 +292,44 @@ select {
   background: #465066;
 }
 
+.intro-panel {
+  text-align: left;
+}
+
+.intro-panel h2 {
+  margin: 0 0 16px;
+  font-size: 24px;
+  text-align: center;
+}
+
+.intro-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.intro-controls select {
+  width: 100%;
+}
+
+.intro-controls button {
+  width: 100%;
+}
+
+.intro-instructions {
+  margin: 0 0 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+#intro-start {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 44px;
+  font-weight: 700;
+}
+
 /* Custom, non-blocking game-over dialog */
 .game-over-dialog {
   position: fixed;
@@ -337,6 +375,18 @@ select {
 
 .game-over-panel button {
   min-width: 150px;
+}
+
+.game-over-stats {
+  margin: 0 0 20px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(41, 49, 38, 0.7);
+}
+
+.game-over-stats .stat {
+  margin: 6px 0;
 }
 
 @keyframes dialog-in {
@@ -470,6 +520,48 @@ select {
   </section>
 </main>
 
+<!-- Pre-game instructions overlay -->
+<div id="intro-dialog" class="game-over-dialog" hidden>
+  <div
+    class="game-over-panel intro-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="intro-title"
+  >
+    <h2 id="intro-title" data-i18n="title">Tetris</h2>
+
+    <div class="intro-controls">
+      <label for="intro-lang" data-i18n="language">Language</label>
+
+      <select id="intro-lang">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-TW">中文</option>
+      </select>
+
+      <button id="intro-mute" type="button" aria-pressed="true">
+        🔇 <span data-i18n="soundOff">Sound Off</span>
+      </button>
+    </div>
+
+    <p class="intro-instructions">
+      <small data-i18n="keysHint">
+        Keys: ← → ↓ rotate: X/Z or ↑ • Space hard drop • P pause
+      </small>
+    </p>
+
+    <p class="intro-instructions">
+      <small data-i18n="ctrlTouch">
+        Touch: swipe left/right to move • tap to rotate • tap+hold to soft drop
+      </small>
+    </p>
+
+    <button id="intro-start" type="button" data-i18n="startGame">
+      Start Game
+    </button>
+  </div>
+</div>
+
 <!-- Game over dialog -->
 <div id="game-over-dialog" class="game-over-dialog" hidden>
   <div
@@ -479,6 +571,24 @@ select {
     aria-labelledby="game-over-message"
   >
     <p id="game-over-message"></p>
+
+    <div class="game-over-stats">
+      <div class="stat">
+        <span data-i18n="score">Score</span>
+        <strong id="final-score">0</strong>
+      </div>
+
+      <div class="stat">
+        <span data-i18n="level">Level</span>
+        <strong id="final-level">1</strong>
+      </div>
+
+      <div class="stat">
+        <span data-i18n="lines">Lines</span>
+        <strong id="final-lines">0</strong>
+      </div>
+    </div>
+
     <button id="game-over-restart" type="button"></button>
   </div>
 </div>
@@ -511,6 +621,15 @@ select {
   const gameOverDialog = document.getElementById("game-over-dialog");
   const gameOverMessage = document.getElementById("game-over-message");
   const gameOverRestart = document.getElementById("game-over-restart");
+  
+  const introDialog = document.getElementById("intro-dialog");
+  const introLang = document.getElementById("intro-lang");
+  const introMute = document.getElementById("intro-mute");
+  const introStart = document.getElementById("intro-start");
+  
+  const finalScore = document.getElementById("final-score");
+  const finalLevel = document.getElementById("final-level");
+  const finalLines = document.getElementById("final-lines");
 
   // =========================
   // Audio settings
@@ -572,17 +691,17 @@ select {
 
   function updateMuteButtonText() {
     const t = translations[currentLang] || translations.en;
-
-    if (!muteBtn) {
-      return;
+  
+    if (muteBtn) {
+      muteBtn.innerHTML = isMuted
+        ? `🔇 <span>${t.soundOff}</span>`
+        : `🔊 <span>${t.soundOn}</span>`;
+  
+      muteBtn.classList.toggle("muted", isMuted);
+      muteBtn.setAttribute("aria-pressed", String(!isMuted));
     }
-
-    muteBtn.innerHTML = isMuted
-      ? `🔇 <span>${t.soundOff}</span>`
-      : `🔊 <span>${t.soundOn}</span>`;
-
-    muteBtn.classList.toggle("muted", isMuted);
-    muteBtn.setAttribute("aria-pressed", String(!isMuted));
+  
+    updateIntroMuteButtonText();
   }
 
   function ensureBGMPlaying() {
@@ -742,7 +861,9 @@ select {
       language: "Language",
       soundOn: "Sound On",
       soundOff: "Sound Off",
-      gameOver: "Game Over"
+      startGame: "Start Game",
+      gameOver: "Game Over",
+      backToStart: "Play Again"
     },
 
     es: {
@@ -760,7 +881,9 @@ select {
       language: "Idioma",
       soundOn: "Sonido activado",
       soundOff: "Sonido desactivado",
-      gameOver: "Fin de la partida"
+      startGame: "Empezar",
+      gameOver: "Fin de la partida",
+      backToStart: "Jugar otra vez"
     },
 
     "zh-TW": {
@@ -777,7 +900,9 @@ select {
       language: "語言",
       soundOn: "聲音開啟",
       soundOff: "聲音關閉",
-      gameOver: "遊戲結束"
+      gameOver: "遊戲結束",
+      startGame: "開始遊戲",
+      backToStart: "再玩一次"
     }
   };
 
@@ -1140,9 +1265,49 @@ function detectLanguage() {
   // Dialog and pause controls
   // =========================
 
+  function showIntroDialog() {
+    if (!introDialog) {
+      return;
+    }
+  
+    introLang.value = currentLang;
+    updateMuteButtonText();
+    updateIntroMuteButtonText();
+  
+    introDialog.hidden = false;
+    introStart.focus();
+  }
+  
+  function hideIntroDialog() {
+    if (introDialog) {
+      introDialog.hidden = true;
+    }
+  }
+  
+  function updateIntroMuteButtonText() {
+    if (!introMute) {
+      return;
+    }
+  
+    const t = translations[currentLang] || translations.en;
+  
+    introMute.innerHTML = isMuted
+      ? `🔇 <span>${t.soundOff}</span>`
+      : `🔊 <span>${t.soundOn}</span>`;
+  
+    introMute.classList.toggle("muted", isMuted);
+    introMute.setAttribute("aria-pressed", String(!isMuted));
+  }
+
   function showGameOverDialog() {
     gameOverMessage.textContent = getTranslation("gameOver");
-    gameOverRestart.textContent = getTranslation("startRestart");
+  
+    finalScore.textContent = String(score);
+    finalLevel.textContent = String(level);
+    finalLines.textContent = String(lines);
+  
+    gameOverRestart.textContent = getTranslation("backToStart");
+  
     gameOverDialog.hidden = false;
     gameOverRestart.focus();
   }
@@ -1179,7 +1344,7 @@ function detectLanguage() {
   if (gameOverRestart) {
     gameOverRestart.addEventListener("click", () => {
       hideGameOverDialog();
-      startGame().catch(() => {});
+      showIntroDialog();
     });
   }
 
@@ -1191,6 +1356,28 @@ function detectLanguage() {
 
   if (pauseBtn) {
     pauseBtn.addEventListener("click", togglePause);
+  }
+
+  if (introLang) {
+    introLang.addEventListener("change", () => {
+      applyLanguage(introLang.value);
+      langSelect.value = currentLang;
+    });
+  }
+  
+  if (introMute) {
+    introMute.addEventListener("click", async () => {
+      initAudio();
+      await ensureAudioReady();
+      setMuted(!isMuted);
+    });
+  }
+  
+  if (introStart) {
+    introStart.addEventListener("click", () => {
+      hideIntroDialog();
+      startGame().catch(() => {});
+    });
   }
 
   // =========================
@@ -1728,9 +1915,11 @@ function detectLanguage() {
 
   langSelect.value = currentLang;
   applyLanguage(currentLang);
-
+  
   next = randomPiece();
-  spawn().catch(() => {});
+  resizeBoardForViewport();
+  
+  showIntroDialog();
 
   resizeBoardForViewport();
 

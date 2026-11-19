@@ -510,6 +510,15 @@ function playGoalSound() {
   });
 }
 
+function playCountdownSound(seconds) {
+  playTone({
+    frequency: seconds === 1 ? 880 : 660,
+    duration: 0.12,
+    type: "triangle",
+    volume: 0.1
+  });
+}
+
 function playTimeUpSound() {
   playTone({
     frequency: 440,
@@ -703,9 +712,13 @@ function startGame() {
 
   game.timerId = setInterval(() => {
     if (!game.running) return;
-
+  
     game.secondsRemaining--;
-
+  
+    if (game.secondsRemaining >= 1 && game.secondsRemaining <= 5) {
+      playCountdownSound(game.secondsRemaining);
+    }
+  
     if (game.secondsRemaining <= 0) {
       game.secondsRemaining = 0;
       finishGame();

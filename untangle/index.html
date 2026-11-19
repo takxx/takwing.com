@@ -347,6 +347,53 @@ let draggedNode = null;
 let stageWon = false;
 let stageFailed = false;
 let dragOffset = { x: 0, y: 0 };
+let audioContext = null;
+
+function playCountdownBeep() {
+  // Create/resume audio after a user gesture (the Start button).
+  audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+  if (audioContext.state === "suspended") audioContext.resume();
+
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+
+  oscillator.type = "sine";
+  oscillator.frequency.value = 880;
+  gain.gain.setValueAtTime(0.12, audioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.08);
+
+  oscillator.connect(gain);
+  gain.connect(audioContext.destination);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.08);
+}
+
+function playCelebrationSound() {
+  audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+  if (audioContext.state === "suspended") audioContext.resume();
+
+  const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+  const startTime = audioContext.currentTime;
+
+  notes.forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const noteStart = startTime + index * 0.09;
+
+    oscillator.type = "triangle";
+    oscillator.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(0.0001, noteStart);
+    gain.gain.exponentialRampToValueAtTime(0.14, noteStart + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.18);
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start(noteStart);
+    oscillator.stop(noteStart + 0.2);
+  });
+}
 
 const radius = 14;
 
@@ -536,6 +583,7 @@ function finishStage(won) {
     stageWon = true;
     bestStage = Math.max(bestStage, stage);
     localStorage.setItem("untangle-best-stage", bestStage);
+    playCelebrationSound();
     status.textContent = text("won");
     actionButton.textContent = text("next");
   } else {
@@ -553,6 +601,7 @@ function startTimer() {
 
   timerId = setInterval(() => {
     if (timeLeft > 0) timeLeft--;
+    if (timeLeft >= 1 && timeLeft <= 10) playCountdownBeep();
     updateHud();
 
     if (timeLeft === 0 && !stageWon && !stageFailed) {
