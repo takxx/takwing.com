@@ -1,9 +1,7 @@
-const CACHE_NAME = "tetris-261031";
+const CACHE_NAME = "tetris-261119";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
-  "./style.css",
-  "./script.js",  
   "./tetris-theme.mp3",  
 ];
 
