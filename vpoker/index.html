@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Poker</title>
+<style>
+:root {
+  color-scheme: dark;
+  --gold: #ffd65c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 18px;
+  color: #fff;
+  background: radial-gradient(ellipse at center, #108253, #075b3a 75%);
+  font-family: system-ui, sans-serif;
+}
+
+.game { width: min(100%, 1080px); margin: 0 auto; }
+
+h1 {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: clamp(1.5rem, 4vw, 2.3rem);
+}
+
+.layout { display: grid; gap: 16px; }
+
+.paytable {
+  order: -1;
+  display: block;
+  padding: 14px;
+  border: 1px solid #ffffff45;
+  border-radius: 14px;
+  background: #033b2acc;
+}
+
+.paytable h2 { margin: 0 0 8px; font-size: 1.1rem; }
+
+.paytable table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+
+.paytable th, .paytable td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #ffffff2e;
+}
+
+.paytable th:first-child, .paytable td:first-child { text-align: left; }
+.paytable th:last-child, .paytable td:last-child { text-align: right; }
+.paytable tr:last-child td { border-bottom: 0; }
+
+.active-row {
+  color: var(--gold);
+  font-weight: 800;
+  background: #ffffff12;
+  outline: 1px solid #ffd65c88;
+  outline-offset: -1px;
+}
+
+.play-area {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #ffffff45;
+  border-radius: 18px;
+  background: #034a31bb;
+  box-shadow: 0 12px 30px #00271955;
+}
+
+.status {
+  min-height: 2.2em;
+  margin: 0 0 12px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.status.win { color: var(--gold); }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(5px, 2vw, 14px);
+  max-width: 700px;
+  margin: 0 auto 12px;
+}
+
+.card-slot { min-width: 0; text-align: center; }
+
+.card-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.card-button:disabled { cursor: default; }
+
+.card {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: .70;
+  overflow: hidden;
+  border: 3px solid #fff;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fafaf6, #d6dfd9);
+  box-shadow: 0 5px 10px #001b1280;
+  user-select: none;
+  container-type: size;
+}
+
+.card.red { color: #d92736; }
+.card.black { color: #202a30; }
+
+.card .suit {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: min(105cqi, 105cqb);
+  line-height: 1;
+  opacity: .95;
+}
+
+.card .rank {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  font-size: clamp(1.35rem, 6.5vw, 3.4rem);
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: -2px -2px 3px #222, 2px -2px 3px #222,
+    -2px 2px 3px #222, 2px 2px 3px #222, 0 3px 6px #000;
+}
+
+.card.empty {
+  border: 2px dashed #ffffff70;
+  background: #ffffff12;
+  box-shadow: none;
+}
+
+.card.held {
+  border: 4px solid var(--gold);
+  box-shadow: 0 0 0 2px #785700, 0 0 18px #ffd34f99;
+}
+
+.hold-label {
+  min-height: 1.4em;
+  margin-top: 5px;
+  color: var(--gold);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.balance {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+
+.balance output {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bet-chips { display: flex; align-items: center; gap: 8px; }
+
+.bet-chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 3px dashed #fff1a8;
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.bet-chip.selected {
+  border-style: dashed;
+  background: #b52b37;
+  box-shadow: 0 2px 4px #001a10a0;
+}
+
+.bet-chip:hover:not(:disabled) { border-color: #fff; }
+.bet-chip:disabled { cursor: default; opacity: .65; }
+
+.action {
+  min-height: 44px;
+  min-width: 125px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #f4be35;
+  color: #241a00;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.action:hover:not(:disabled) { background: #ffda68; }
+.action:disabled { opacity: .5; cursor: not-allowed; }
+
+.overlay {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  max-width: min(94vw, 520px);
+  margin: auto;
+}
+
+.overlay::backdrop {
+  background: #001b12d9;
+  backdrop-filter: blur(3px);
+}
+
+.overlay-card {
+  padding: 24px;
+  border: 1px solid #ffffff45;
+  border-radius: 18px;
+  background: #034a31;
+  box-shadow: 0 20px 50px #001b1280;
+  text-align: center;
+}
+
+.overlay-card h2 { margin: 0 0 10px; color: var(--gold); }
+.overlay-card p { margin: 0 0 18px; line-height: 1.55; }
+
+.start-instructions {
+  margin: 0 0 18px;
+  padding-left: 1.4rem;
+  text-align: left;
+  line-height: 1.55;
+}
+
+.start-instructions li + li { margin-top: .4rem; }
+
+.language-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.language-option {
+  padding: 6px 2px;
+  border: 0;
+  color: var(--gold);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.language-option:hover,
+.language-option.selected {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.overlay-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 820px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 270px;
+    align-items: start;
+  }
+  .paytable { order: 0; }
+}
+</style>
+</head>
+<body>
+<main class="game">
+  <h1 id="title"></h1>
+
+  <div class="layout">
+    <section class="play-area" aria-label="Video poker game">
+      <p class="status" id="status" aria-live="polite"></p>
+      <div class="cards" id="cards"></div>
+
+      <div class="controls">
+        <div class="balance">
+          <span id="balance-label"></span>:
+          <output id="balance"></output>
+        </div>
+        <div class="bet-picker">
+          <span id="bet-label"></span>
+          <div class="bet-chips" id="bet-chips"></div>
+        </div>
+        <button class="action" id="deal" type="button"></button>
+      </div>
+    </section>
+
+    <aside class="paytable">
+      <h2 id="paytable-title"></h2>
+      <table>
+        <thead>
+          <tr>
+            <th id="hand-heading"></th>
+            <th id="payout-heading"></th>
+          </tr>
+        </thead>
+        <tbody id="payout-rows"></tbody>
+      </table>
+    </aside>
+  </div>
+</main>
+
+<dialog class="overlay" id="start-overlay">
+  <div class="overlay-card">
+    <h2 id="start-title"></h2>
+    <ul class="start-instructions" id="start-instructions"></ul>
+    <div class="language-choice" role="group" aria-label="Language">
+      <button class="language-option" type="button" data-language="en">English</button>
+      <span aria-hidden="true">|</span>
+      <button class="language-option" type="button" data-language="es">Español</button>
+      <span aria-hidden="true">|</span>
+      <button class="language-option" type="button" data-language="zh">中文</button>
+    </div>
+    <div class="overlay-actions">
+      <button class="action" id="start-game" type="button"></button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="overlay" id="game-over-overlay">
+  <div class="overlay-card">
+    <h2 id="game-over-title"></h2>
+    <p id="game-over-message"></p>
+    <div class="overlay-actions">
+      <button class="action" id="restart-game" type="button"></button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const translations = {
+    en: {
+      title: "Video Poker", balance: "Credits", bet: "Bet",
+      deal: "Deal", draw: "Draw", paytable: "Paytable",
+      hand: "Hand", payout: "Payout", hold: "HOLD",
+      ready: "Choose your bet, then deal.",
+      choosing: "Select cards to hold, then draw.",
+      win: "You win {amount}!", lose: "No win this time.",
+      insufficient: "Not enough credits for that bet.",
+      startTitle: "Welcome to Video Poker",
+      startInstructions: [
+        "Start with 100 credits.",
+        "Choose a bet from 1 to 5.",
+        "Deal five cards.",
+        "Choose which cards to hold, then draw replacements.",
+        "Winning hands pay according to the paytable."
+      ],
+      startGame: "Start game", gameOverTitle: "No credits left",
+      gameOverMessage: "You have run out of credits. Restart the game to receive another 100 credits.",
+      restartGame: "Restart game",
+      hands: ["Royal flush", "Straight flush", "Four of a kind",
+        "Full house", "Flush", "Straight", "Three of a kind",
+        "Two pair", "Jacks or better"]
+    },
+    es: {
+      title: "Video Póker", balance: "Créditos", bet: "Apuesta",
+      deal: "Repartir", draw: "Robar", paytable: "Tabla de pagos",
+      hand: "Mano", payout: "Premio", hold: "GUARDAR",
+      ready: "Elige tu apuesta y reparte.",
+      choosing: "Selecciona las cartas que quieras guardar y roba.",
+      win: "¡Ganas {amount}!", lose: "Esta vez no hay premio.",
+      insufficient: "No tienes créditos suficientes para esa apuesta.",
+      startTitle: "Bienvenido a Video Póker",
+      startInstructions: [
+        "Empieza con 100 créditos.",
+        "Elige una apuesta de 1 a 5.",
+        "Reparte cinco cartas.",
+        "Selecciona las cartas que quieras conservar y roba las restantes.",
+        "Las manos ganadoras pagan según la tabla de premios."
+      ],
+      startGame: "Empezar partida", gameOverTitle: "No quedan créditos",
+      gameOverMessage: "Te has quedado sin créditos. Reinicia la partida para recibir otros 100 créditos.",
+      restartGame: "Reiniciar partida",
+      hands: ["Escalera real", "Escalera de color", "Póquer",
+        "Full", "Color", "Escalera", "Trío", "Dos parejas",
+        "Jotas o superior"]
+    },
+    zh: {
+      title: "電子撲克", balance: "點數", bet: "下注",
+      deal: "發牌", draw: "換牌", paytable: "派彩表",
+      hand: "牌型", payout: "派彩", hold: "保留",
+      ready: "選擇下注額，然後發牌。",
+      choosing: "選擇要保留的牌，然後換牌。",
+      win: "你贏了 {amount}！", lose: "今次冇中獎。",
+      insufficient: "點數不足以支付這個下注額。",
+      startTitle: "歡迎玩電子撲克",
+      startInstructions: [
+        "以 100 點開始。",
+        "選擇 1 至 5 的下注額。",
+        "發五張牌。",
+        "選擇要保留的牌，然後換牌。",
+        "勝出牌型會按派彩表派彩。"
+      ],
+      startGame: "開始遊戲", gameOverTitle: "沒有剩餘點數",
+      gameOverMessage: "你的點數已用完。重新開始遊戲即可再獲得 100 點。",
+      restartGame: "重新開始",
+      hands: ["皇家同花順", "同花順", "四條", "夫佬",
+        "同花", "順子", "三條", "兩對", "J 牌或以上"]
+    }
+  };
+  
+  const currency = { en: "£", es: "€", zh: "$" };
+  const payouts = [250, 50, 25, 9, 6, 4, 3, 2, 1];
+  const ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+  const suits = [
+    { name: "hearts", symbol: "♥", red: true },
+    { name: "diamonds", symbol: "♦", red: true },
+    { name: "clubs", symbol: "♣", red: false },
+    { name: "spades", symbol: "♠", red: false }
+  ];
+
+  const STARTING_CREDITS = 100;
+  const STORAGE_KEYS = {
+    language: "videoPokerLanguage",
+    balance: "videoPokerBalance"
+  };
+
+  function safeGet(key) {
+    try { return localStorage.getItem(key); }
+    catch { return null; }
+  }
+
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, String(value)); }
+    catch (error) { console.warn("Unable to save game data:", error); }
+  }
+
+  function validLanguage(value) {
+    if (!value) return null;
+    const code = value.toLowerCase().split("-")[0];
+    return translations[code] ? code : null;
+  }
+
+  const params = new URLSearchParams(location.search);
+  let language = validLanguage(params.get("lang"))
+    || validLanguage(safeGet(STORAGE_KEYS.language))
+    || validLanguage(navigator.language || "en")
+    || "en";
+
+  function loadBalance() {
+    const saved = Number(safeGet(STORAGE_KEYS.balance));
+    return Number.isInteger(saved) && saved >= 0 ? saved : STARTING_CREDITS;
+  }
+
+  let balance = loadBalance();
+  let bet = 1;
+  let phase = "start";
+  let cards = [];
+  let held = Array(5).fill(false);
+  let resultIndex = -1;
+  let statusMessage = "";
+  let isWin = false;
+  let audioContext = null;
+
+  const $ = id => document.getElementById(id);
+  const t = () => translations[language];
+
+  function saveBalance() {
+    safeSet(STORAGE_KEYS.balance, balance);
+  }
+
+  function saveLanguage() {
+    safeSet(STORAGE_KEYS.language, language);
+  }
+
+  function playTone(frequency, startTime, duration, type = "sine", volume = 0.08) {
+    if (!audioContext) return;
+  
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+  
+    oscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(frequency * 0.55, startTime);
+    oscillator.frequency.exponentialRampToValueAtTime(
+      frequency,
+      startTime + duration
+    );
+  
+    filter.type = "bandpass";
+    filter.frequency.value = frequency;
+    filter.Q.value = 1.2;
+  
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  
+    oscillator.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+  
+    oscillator.start(startTime);
+    oscillator.stop(startTime + duration + 0.02);
+  }
+  
+  function playCardFlick(startTime, volume = 0.05) {
+    if (!audioContext) return;
+  
+    const bufferSize = Math.floor(audioContext.sampleRate * 0.06);
+    const noise = audioContext.createBuffer(
+      1,
+      bufferSize,
+      audioContext.sampleRate
+    );
+    const data = noise.getChannelData(0);
+  
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+  
+    const source = audioContext.createBufferSource();
+    const filter = audioContext.createBiquadFilter();
+    const gain = audioContext.createGain();
+  
+    source.buffer = noise;
+    filter.type = "highpass";
+    filter.frequency.value = 1800;
+  
+    gain.gain.setValueAtTime(volume, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.05);
+  
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+  
+    source.start(startTime);
+  }
+
+  function playSound(name) {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      audioContext ||= new AudioContextClass();
+      if (audioContext.state === "suspended") audioContext.resume();
+
+      const now = audioContext.currentTime;
+      const melodies = {
+        deal: [
+          [180, 0, 0.08],
+          [320, 0.05, 0.08],
+          [520, 0.10, 0.09],
+          [760, 0.15, 0.10],
+          [980, 0.21, 0.12]
+        ],
+        hold: [[600, 0, 0.11]],
+        lose: [[330, 0, 0.22], [247, 0.19, 0.28], [185, 0.43, 0.42]],
+        win: [[523, 0, 0.14], [659, 0.12, 0.14], [784, 0.24, 0.2]],
+        bigWin: [[523, 0, 0.13], [659, 0.12, 0.13], [784, 0.24, 0.13],
+          [1047, 0.36, 0.18], [1319, 0.52, 0.32]]
+      };
+
+      (melodies[name] || []).forEach(([frequency, offset, duration]) => {
+        playTone(
+          frequency,
+          now + offset,
+          duration,
+          "triangle",
+          name === "lose" ? 0.06 : 0.07
+        );
+      
+        if (name === "deal") {
+          playCardFlick(now + offset + 0.01, 0.05);
+        }
+      });
+    } catch (error) {
+      console.warn("Audio playback was unavailable:", error);
+    }
+  }
+
+  document.querySelectorAll(".language-option").forEach(button => {
+    button.addEventListener("click", () => {
+      language = button.dataset.language;
+      saveLanguage();
+      render();
+    });
+  });
+
+  function money(amount) {
+    const number = Number(amount);
+    if (language === "es") {
+      return number.toLocaleString("es-ES", { maximumFractionDigits: 0 }) + " €";
+    }
+    const locale = language === "en" ? "en-GB" : "zh-Hant";
+    return currency[language] + number.toLocaleString(locale, {
+      maximumFractionDigits: 0
+    });
+  }
+
+  function renderBetChips() {
+    const container = $("bet-chips");
+    container.replaceChildren();
+
+    for (let value = 1; value <= 5; value++) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "bet-chip" + (value <= bet ? " selected" : "");
+      button.textContent = value <= bet ? currency[language] : "";
+      button.setAttribute("aria-label", `${t().bet}: ${value}`);
+      button.setAttribute("aria-pressed", String(bet === value));
+      button.disabled = phase !== "ready" || balance < value;
+      button.addEventListener("click", () => {
+        if (phase !== "ready") return;
+        bet = value;
+        statusMessage = "";
+        isWin = false;
+        resultIndex = -1;
+        render();
+      });
+      container.appendChild(button);
+    }
+  }
+
+  function renderPaytable() {
+    const body = $("payout-rows");
+    body.replaceChildren();
+
+    t().hands.forEach((handName, index) => {
+      const row = document.createElement("tr");
+      if (resultIndex === index) row.className = "active-row";
+
+      const handCell = document.createElement("td");
+      const payoutCell = document.createElement("td");
+      handCell.textContent = handName;
+
+      const amount = index === 0 && bet === 5
+        ? 800 * bet
+        : payouts[index] * bet;
+
+      payoutCell.textContent = money(amount);
+      row.append(handCell, payoutCell);
+      body.appendChild(row);
+    });
+  }
+
+  function renderCards() {
+    const area = $("cards");
+    area.replaceChildren();
+
+    for (let i = 0; i < 5; i++) {
+      const slot = document.createElement("div");
+      slot.className = "card-slot";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "card-button";
+      button.disabled = phase !== "hold";
+
+      const cardElement = document.createElement("div");
+      const card = cards[i];
+
+      if (!card) {
+        cardElement.className = "card empty";
+        cardElement.setAttribute("aria-label", "Empty card");
+      } else {
+        cardElement.className = "card "
+          + (card.suit.red ? "red" : "black")
+          + (held[i] ? " held" : "");
+
+        const suit = document.createElement("span");
+        suit.className = "suit";
+        suit.textContent = card.suit.symbol;
+        suit.setAttribute("aria-hidden", "true");
+
+        const rank = document.createElement("span");
+        rank.className = "rank";
+        rank.textContent = card.rank;
+
+        cardElement.append(suit, rank);
+        cardElement.setAttribute("aria-label", card.rank + " of " + card.suit.name);
+      }
+
+      button.appendChild(cardElement);
+      button.addEventListener("click", () => {
+        if (phase !== "hold") return;
+        held[i] = !held[i];
+        playSound("hold");
+        renderCards();
+      });
+
+      const holdLabel = document.createElement("div");
+      holdLabel.className = "hold-label";
+      holdLabel.textContent = card && held[i] ? t().hold : "\u00a0";
+      slot.append(button, holdLabel);
+      area.appendChild(slot);
+    }
+  }
+
+  function renderInstructions() {
+    const container = $("start-instructions");
+    container.replaceChildren();
+    t().startInstructions.forEach(instruction => {
+      const item = document.createElement("li");
+      item.textContent = instruction;
+      container.appendChild(item);
+    });
+  }
+
+  function render() {
+    const text = t();
+    document.documentElement.lang = language === "zh" ? "zh-Hant" : language;
+
+    $("title").textContent = text.title;
+    $("balance-label").textContent = text.balance;
+    $("balance").textContent = money(balance);
+    $("bet-label").textContent = text.bet;
+    $("paytable-title").textContent = text.paytable;
+    $("hand-heading").textContent = text.hand;
+    $("payout-heading").textContent = text.payout;
+
+    const status = $("status");
+    status.textContent = statusMessage || text.ready;
+    status.classList.toggle("win", isWin);
+
+    $("deal").textContent = phase === "hold" ? text.draw : text.deal;
+    $("deal").disabled = phase === "ready" && balance < bet;
+
+    $("start-title").textContent = text.startTitle;
+    renderInstructions();
+    $("start-game").textContent = text.startGame;
+    $("game-over-title").textContent = text.gameOverTitle;
+    $("game-over-message").textContent = text.gameOverMessage;
+    $("restart-game").textContent = text.restartGame;
+
+    document.querySelectorAll(".language-option").forEach(button => {
+      button.classList.toggle("selected", button.dataset.language === language);
+      button.setAttribute("aria-pressed", String(button.dataset.language === language));
+    });
+
+    renderBetChips();
+    renderCards();
+    renderPaytable();
+  }
+
+  function makeDeck() {
+    const deck = [];
+    suits.forEach(suit => ranks.forEach(rank => deck.push({ suit, rank })));
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
+  }
+
+  function evaluateHand(hand) {
+    const values = hand
+      .map(card => ranks.indexOf(card.rank) + 2)
+      .sort((a, b) => a - b);
+
+    const counts = new Map();
+    values.forEach(value => counts.set(value, (counts.get(value) || 0) + 1));
+    const groups = [...counts.values()].sort((a, b) => b - a);
+    const unique = [...new Set(values)];
+    const flush = hand.every(card => card.suit === hand[0].suit);
+    const straight = unique.length === 5 && (
+      unique[4] - unique[0] === 4 ||
+      unique.join(",") === "2,3,4,5,14"
+    );
+    const royal = straight && flush && unique[0] === 10 && unique[4] === 14;
+
+    if (royal) return 0;
+    if (straight && flush) return 1;
+    if (groups[0] === 4) return 2;
+    if (groups[0] === 3 && groups[1] === 2) return 3;
+    if (flush) return 4;
+    if (straight) return 5;
+    if (groups[0] === 3) return 6;
+    if (groups[0] === 2 && groups[1] === 2) return 7;
+
+    if (groups[0] === 2) {
+      const pair = [...counts.entries()].find(([, count]) => count === 2)[0];
+      if (pair >= 11) return 8;
+    }
+    return -1;
+  }
+
+  function checkGameOver() {
+    if (balance > 0) return;
+    phase = "game-over";
+    statusMessage = "";
+    isWin = false;
+    render();
+    $("game-over-overlay").showModal();
+  }
+
+  function startGame() {
+    balance = STARTING_CREDITS;
+    saveBalance();
+    bet = 1;
+    phase = "ready";
+    cards = [];
+    held = Array(5).fill(false);
+    resultIndex = -1;
+    statusMessage = "";
+    isWin = false;
+    render();
+  }
+
+  $("start-game").addEventListener("click", () => {
+    $("start-overlay").close();
+    startGame();
+  });
+
+  $("restart-game").addEventListener("click", () => {
+    $("game-over-overlay").close();
+    startGame();
+    $("start-overlay").showModal();
+  });
+
+  $("deal").addEventListener("click", () => {
+    if (phase === "ready") {
+      if (balance < bet) {
+        statusMessage = t().insufficient;
+        isWin = false;
+        render();
+        return;
+      }
+
+      balance -= bet;
+      saveBalance();
+      cards = makeDeck().slice(0, 5);
+      held = Array(5).fill(false);
+      resultIndex = -1;
+      phase = "hold";
+      statusMessage = t().choosing;
+      isWin = false;
+      playSound("deal");
+      render();
+      return;
+    }
+
+    if (phase === "hold") {
+      const deck = makeDeck();
+      const heldCards = cards.filter((_, index) => held[index]);
+      const replacements = deck.filter(card =>
+        !heldCards.some(kept => kept.rank === card.rank && kept.suit === card.suit)
+      );
+
+      let replacementIndex = 0;
+      cards = cards.map((card, index) =>
+        held[index] ? card : replacements[replacementIndex++]
+      );
+
+      resultIndex = evaluateHand(cards);
+
+      if (resultIndex >= 0) {
+        const award = resultIndex === 0 && bet === 5
+          ? 800 * bet
+          : payouts[resultIndex] * bet;
+
+        balance += award;
+        saveBalance();
+        statusMessage = t().win.replace("{amount}", money(award));
+        isWin = true;
+        playSound(award > 25 ? "bigWin" : "win");
+      } else {
+        statusMessage = t().lose;
+        isWin = false;
+        playSound("lose");
+      }
+
+      phase = "ready";
+      render();
+      checkGameOver();
+    }
+  });
+
+  render();
+  $("start-overlay").showModal();
+})();
+</script>
+</body>
+</html>
