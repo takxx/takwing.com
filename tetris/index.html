@@ -17,14 +17,14 @@
   --board-width: calc(var(--cols) * var(--cell-size));
   --board-height: calc(var(--rows) * var(--cell-size));
 
-  --page-bg: #10141f;
-  --panel-bg: #1a2233;
-  --board-bg: #0b1020;
-  --border: rgba(255, 255, 255, 0.1);
-  --text: #f4f7fb;
-  --muted: #a9b6cc;
-  --accent: #6c8cff;
-  --accent-hover: #829cff;
+  --page-bg: #283126;
+  --panel-bg: #41483a;
+  --board-bg: #20271f;
+  --border: rgba(207, 211, 177, 0.2);
+  --text: #e8e8d8;
+  --muted: #b9bea6;
+  --accent: #78845a;
+  --accent-hover: #8c9868;
 }
 
 * {
@@ -59,8 +59,7 @@ body {
 
   overflow-x: hidden;
 
-  background:
-    radial-gradient(circle at top, #1b263b 0%, var(--page-bg) 52%);
+  background: radial-gradient(circle at top, #505642 0%, var(--page-bg) 58%);
 
   color: var(--text);
   font-family:
@@ -188,7 +187,7 @@ h1 {
   border: 1px solid var(--border);
   border-radius: 12px;
 
-  background: rgba(26, 34, 51, 0.92);
+  background: rgba(65, 72, 58, 0.94);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
@@ -216,7 +215,7 @@ h1 {
 
   transform: translateX(-50%);
 
-  background: #0d1528;
+  background: #293126;
   z-index: 5;
 
   pointer-events: none;
@@ -278,7 +277,7 @@ select {
   border-radius: 8px;
 
   color: var(--text);
-  background: #0d1528;
+  background: #293126;
 }
 
 .audio-controls {
@@ -322,7 +321,7 @@ select {
   border-radius: 16px;
 
   text-align: center;
-  background: #202a3e;
+  background: #41483a;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
 
   animation: dialog-in 0.18s ease-out;
