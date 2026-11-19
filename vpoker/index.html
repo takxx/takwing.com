@@ -486,7 +486,7 @@ h1 {
 
   function loadBalance() {
     const saved = Number(safeGet(STORAGE_KEYS.balance));
-    return Number.isInteger(saved) && saved >= 0 ? saved : STARTING_CREDITS;
+    return Number.isInteger(saved) && saved > 0 ? saved : STARTING_CREDITS;
   }
 
   let balance = loadBalance();
