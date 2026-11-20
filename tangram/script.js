@@ -1,6 +1,6 @@
 (() => {
   const PUZZLE_MIN_ID = 100;
-  const PUZZLE_MAX_ID = 147;
+  const PUZZLE_MAX_ID = 161;
 
   const GRID = 25;
   const GAP = 12;
