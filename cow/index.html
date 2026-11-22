@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Find the Cow</title>
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./ico.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./ico.png">
 
 <style>
 * {
@@ -559,12 +556,6 @@ document.addEventListener("wheel", (event) => {
 
 updateCounter();
 createGrid();
-
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js");
-  });
-}
 </script>
 </body>
 </html>

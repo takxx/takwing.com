@@ -4,15 +4,13 @@ const CACHE_NAME = "chromo-261031";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
-  "./manifest.webmanifest",
   "./style.css",
   "./script.js",  
   "./lang.js",  
   "./game.js",  
   "./ai.js",  
   "./render.js",
-  "./stats.js",
-  "./ico.svg"
+  "./stats.js"
 ];
 
 self.addEventListener("install", (event) => {

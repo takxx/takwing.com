@@ -3,14 +3,12 @@ const CACHE_NAME = `${CACHE_PREFIX}261122`;
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
-  "./manifest.webmanifest",
   "./style.css",
   "./script.js",  
   "./lang.js",  
   "./game.js",  
   "./ai.js",  
-  "./render.js",
-  "./ico.svg"
+  "./render.js"
 ];
 
 self.addEventListener("install", (event) => {

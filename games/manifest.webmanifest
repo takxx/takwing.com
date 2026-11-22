@@ -1,21 +1,24 @@
 {
   "id": "./",
-  "name": "Buzzword",
-  "short_name": "Buzzword",
+  "name": "takwing.com Games",
+  "short_name": "Games",
+  "name_localized": {
+    "en": "Mini Games", "es": "Jueguitos", "zh": "遊戲"
+  },
   "start_url": "./index.html",
-  "scope": "./",
+  "scope": "../",
   "display": "standalone",
-  "background_color": "#3d5149",
-  "theme_color": "#3d5149",
+  "background_color": "#493355",
+  "theme_color": "#d2c0ec",
   "icons": [
     {
-      "src": "./ico.png",
+      "src": "./games.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./ico.svg",
+      "src": "./games.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
