@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="1 1 48 48">
+<rect x="1" y="1" width="48" height="48" rx="4.5" ry="4.5" fill="#4a3a2c" />
+  <g id="XMLID_1_">
+  	<polygon fill="#d2c0ec" points="38.05,24.87 31.41,36.36 18.59,36.36 11.95,24.87 18.59,13.38 31.41,13.38 	"/>
+  	<g stroke="#303030" stroke-width="2">
+    	<polygon fill="#f5b9a9" points="44.68,13.38 38.05,24.87 31.41,13.38"/>
+    	<polygon fill="#f5b9a9" points="18.59,36.36 5.32,36.36 11.95,24.87" />
+    	<polygon fill="#f5df91" points="31.41,36.36 25,47.47 18.59,36.36" />
+    	<polygon fill="#f5df91" points="25,2.27 31.41,13.38 18.59,13.38" />
+    	<polygon fill="#b9dec8" points="38.05,24.87 44.68,36.36 31.41,36.36" />
+    	<polygon fill="#b9dec8" points="18.59,13.38 11.95,24.87 5.32,13.38" />
+  	</g>
+  </g>
+</svg>

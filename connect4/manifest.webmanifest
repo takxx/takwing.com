@@ -1,0 +1,29 @@
+{
+  "id": "./",
+  "name": "Connect 4",
+  "short_name": "Connect4",
+  "name_localized": {
+    "en": "Connect 4",
+    "es": "Conecta 4",
+    "zh": "四子棋"
+  },
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101c4a",
+  "theme_color": "#101c4a",
+  "icons": [
+    {
+      "src": "./ico.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./ico.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

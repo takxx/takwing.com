@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Block Buster",
+  "short_name": "Block Buster",
+  "name_localized": {
+    "en": "Block Buster", "es": "Rompebloques", "zh": "爆磚"
+  },
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101c4a",
+  "theme_color": "#101c4a",
+  "icons": [
+    {
+      "src": "./ico.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./ico.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Chinese Chequers",
+  "short_name": "Chequers",
+  "name_localized": {
+    "en": "Chinese Chequers", "es": "Damas chinas", "zh": "波子棋"
+  },
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#171310",
+  "theme_color": "#171310",
+  "icons": [
+    {
+      "src": "./ico.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./ico.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
