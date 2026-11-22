@@ -1,561 +1,570 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Find the Cow</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Find the Cow</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./ico.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./ico.png">
 
-  <style>
-    * {
-      box-sizing: border-box;
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
-    }
+<style>
+* {
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-      overscroll-behavior: none;
-      touch-action: manipulation;
-    }
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
 
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-      background: #9ad06b;
-      font-family: system-ui, sans-serif;
-    }
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: #9ad06b;
+  font-family: system-ui, sans-serif;
+}
 
-    .game {
-      width: min(100%, 490px);
-      padding: 22px;
-      border-radius: 20px;
-      background: #fff;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, .18);
-      text-align: center;
-    }
+.game {
+  width: min(100%, 490px);
+  padding: 22px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, .18);
+  text-align: center;
+}
 
-    h1 {
-      margin: 0 0 4px;
-      color: #333;
-    }
+h1 {
+  margin: 0 0 4px;
+  color: #333;
+}
 
-    #prompt {
-      margin: 0 0 16px;
-      color: #666;
-    }
+#prompt {
+  margin: 0 0 16px;
+  color: #666;
+}
 
-    #grid {
-      display: grid;
-      grid-template-columns: repeat(10, minmax(0, 1fr));
-      gap: 5px;
-      touch-action: none;
-    }
+#grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 5px;
+  touch-action: none;
+}
 
-    .tile {
-      display: grid;
-      place-items: center;
-      width: 100%;
-      aspect-ratio: 1;
-      border-radius: 8px;
-      background: #fdf6d8;
-      color: #444;
-      font-size: clamp(14px, 4.5vw, 20px);
-      font-weight: 800;
-      cursor: pointer;
-      touch-action: none;
-      transition: background .12s, transform .1s;
-    }
+.tile {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: #fdf6d8;
+  color: #444;
+  font-size: clamp(14px, 4.5vw, 20px);
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: none;
+  transition: background .12s, transform .1s;
+}
 
-    .tile:hover,
-    .tile.selected {
-      background: #ffe9a8;
-    }
+.tile:hover,
+.tile.selected {
+  background: #ffe9a8;
+}
 
-    .tile.correct {
-      transform: scale(1.05);
-      background: #ffcf3f;
-      color: #6b4a00;
-    }
+.tile.correct {
+  transform: scale(1.05);
+  background: #ffcf3f;
+  color: #6b4a00;
+}
 
-    .tile.wrong {
-      background: #ff8a80;
-      color: #fff;
-      animation: shake .25s;
-    }
+.tile.wrong {
+  background: #ff8a80;
+  color: #fff;
+  animation: shake .25s;
+}
 
-    @keyframes shake {
-      25% { transform: translateX(-3px); }
-      75% { transform: translateX(3px); }
-    }
+@keyframes shake {
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
 
-    #status {
-      min-height: 24px;
-      margin-top: 16px;
-      color: #2f6b1f;
-      font-weight: 700;
-    }
+#status {
+  min-height: 24px;
+  margin-top: 16px;
+  color: #2f6b1f;
+  font-weight: 700;
+}
 
-    #restart {
-      margin-top: 12px;
-      padding: 10px 18px;
-      border: 0;
-      border-radius: 999px;
-      background: #4b8c2f;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-    }
+#restart {
+  margin-top: 12px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #4b8c2f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
 
-    #cow {
-      margin-top: 10px;
-      font-size: 48px;
-      opacity: 0;
-      transform: scale(.4);
-      transition: all .3s;
-    }
+#cow {
+  margin-top: 10px;
+  font-size: 48px;
+  opacity: 0;
+  transform: scale(.4);
+  transition: all .3s;
+}
 
-    #cow.show {
-      opacity: 1;
-      transform: scale(1);
-    }
+#cow.show {
+  opacity: 1;
+  transform: scale(1);
+}
 
-    .game-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 22px;
-      margin-top: 6px;
-    }
+.game-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 22px;
+  margin-top: 6px;
+}
 
-    .language-selector {
-      display: flex;
-      gap: 7px;
-    }
+.language-selector {
+  display: flex;
+  gap: 7px;
+}
 
-    .language-button {
-      margin: 0;
-      padding: 0;
-      border: 0;
-      border-radius: 4px;
-      background: transparent;
-      font-size: 17px;
-      line-height: 1;
-      cursor: pointer;
-    }
+.language-button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
 
-    .language-button[aria-pressed="true"] {
-      outline: 1px solid #aaa;
-      outline-offset: 2px;
-    }
+.language-button[aria-pressed="true"] {
+  outline: 1px solid #aaa;
+  outline-offset: 2px;
+}
 
-    #counter {
-      margin: 0;
-      color: #888;
-      font-size: 11px;
-      text-align: right;
-    }
-  </style>
+#counter {
+  margin: 0;
+  color: #888;
+  font-size: 11px;
+  text-align: right;
+}
+</style>
 </head>
 
 <body>
-  <main class="game">
-    <h1 id="heading"></h1>
-    <p id="prompt"></p>
+<main class="game">
+  <h1 id="heading"></h1>
+  <p id="prompt"></p>
 
-    <div id="grid" aria-label="Letter puzzle"></div>
-    <div id="status" aria-live="polite"></div>
-    <div id="cow" aria-hidden="true">🐄</div>
+  <div id="grid" aria-label="Letter puzzle"></div>
+  <div id="status" aria-live="polite"></div>
+  <div id="cow" aria-hidden="true">🐄</div>
 
-    <button id="restart" type="button"></button>
+  <button id="restart" type="button"></button>
 
-    <div class="game-footer">
-      <div class="language-selector" aria-label="Choose language">
-        <button class="language-button" type="button" data-lang="en" aria-label="English">🇬🇧</button>
-        <button class="language-button" type="button" data-lang="es" aria-label="Español">🇪🇸</button>
-      </div>
-      <div id="counter" aria-live="polite" hidden></div>
+  <div class="game-footer">
+    <div class="language-selector" aria-label="Choose language">
+      <button class="language-button" type="button" data-lang="en" aria-label="English">🇬🇧</button>
+      <button class="language-button" type="button" data-lang="es" aria-label="Español">🇪🇸</button>
     </div>
-  </main>
+    <div id="counter" aria-live="polite" hidden></div>
+  </div>
+</main>
 
-  <script>
-    const translations = {
-      en: {
-        title: "Find the Cow",
-        prompt: 'Find the one hidden word: <strong>COW</strong>',
-        restart: "New puzzle",
-        wrong: "Select the whole word: COW.",
-        found: "You found the cow!",
-        count: (n) => `${n} ${n === 1 ? "cow" : "cows"} found`
-      },
-      es: {
-        title: "Busca la vaca",
-        prompt: 'Busca la palabra escondida: <strong>VACA</strong>',
-        restart: "Nuevo rompecabezas",
-        wrong: "Selecciona la palabra completa: VACA.",
-        found: "¡Encontraste la vaca!",
-        count: (n) => `${n} ${n === 1 ? "vaca encontrada" : "vacas encontradas"}`
-      }
-    };
+<script>
+const translations = {
+  en: {
+    title: "Find the Cow",
+    prompt: 'Find the one hidden word: <strong>COW</strong>',
+    restart: "New puzzle",
+    wrong: "Select the whole word: COW.",
+    found: "You found the cow!",
+    count: (n) => `${n} ${n === 1 ? "cow" : "cows"} found`
+  },
+  es: {
+    title: "Busca la vaca",
+    prompt: 'Busca la palabra escondida: <strong>VACA</strong>',
+    restart: "Nuevo rompecabezas",
+    wrong: "Selecciona la palabra completa: VACA.",
+    found: "¡Encontraste la vaca!",
+    count: (n) => `${n} ${n === 1 ? "vaca encontrada" : "vacas encontradas"}`
+  }
+};
 
-    function getLanguage() {
-      const requested = new URLSearchParams(location.search)
-        .get("lang")
-        ?.toLowerCase();
+function getLanguage() {
+  const requested = new URLSearchParams(location.search)
+    .get("lang")
+    ?.toLowerCase();
 
-      if (requested === "en" || requested === "es") return requested;
+  if (requested === "en" || requested === "es") return requested;
 
-      try {
-        const saved = localStorage.getItem("cowGameLanguage");
-        if (saved === "en" || saved === "es") return saved;
-      } catch {}
+  try {
+    const saved = localStorage.getItem("cowGameLanguage");
+    if (saved === "en" || saved === "es") return saved;
+  } catch {}
 
-      const browserLanguages = navigator.languages || [navigator.language || "en"];
-      return browserLanguages.some((lang) => lang.toLowerCase().startsWith("es"))
-        ? "es"
-        : "en";
-    }
+  const browserLanguages = navigator.languages || [navigator.language || "en"];
+  return browserLanguages.some((lang) => lang.toLowerCase().startsWith("es"))
+    ? "es"
+    : "en";
+}
 
-    const language = getLanguage();
-    const text = translations[language];
-    const TARGET = language === "es" ? "VACA" : "COW";
-    const LETTERS = [...new Set(TARGET)];
-    const SIZE = 10;
-    const COUNTER_KEY = `cowGameFound_${language}`;
+const language = getLanguage();
+const text = translations[language];
+const TARGET = language === "es" ? "VACA" : "COW";
+const LETTERS = [...new Set(TARGET)];
+const SIZE = 10;
+const COUNTER_KEY = `cowGameFound_${language}`;
 
-    document.documentElement.lang = language;
-    document.title = text.title;
-    document.getElementById("heading").textContent = text.title;
-    document.getElementById("prompt").innerHTML = text.prompt;
-    document.getElementById("restart").textContent = text.restart;
+document.documentElement.lang = language;
+document.title = text.title;
+document.getElementById("heading").textContent = text.title;
+document.getElementById("prompt").innerHTML = text.prompt;
+document.getElementById("restart").textContent = text.restart;
 
-    try {
-      localStorage.setItem("cowGameLanguage", language);
-    } catch {}
+try {
+  localStorage.setItem("cowGameLanguage", language);
+} catch {}
 
-    document.querySelectorAll(".language-button").forEach((button) => {
-      button.setAttribute("aria-pressed", String(button.dataset.lang === language));
+document.querySelectorAll(".language-button").forEach((button) => {
+  button.setAttribute("aria-pressed", String(button.dataset.lang === language));
 
-      button.addEventListener("click", () => {
-        const url = new URL(location.href);
-        url.searchParams.set("lang", button.dataset.lang);
-        location.href = url.toString();
-      });
-    });
+  button.addEventListener("click", () => {
+    const url = new URL(location.href);
+    url.searchParams.set("lang", button.dataset.lang);
+    location.href = url.toString();
+  });
+});
 
-    const TARGET_DIRECTIONS = [
-      [0, 1], [0, -1], [1, 0], [-1, 0],
-      [1, 1], [1, -1], [-1, 1], [-1, -1]
+const TARGET_DIRECTIONS = [
+  [0, 1], [0, -1], [1, 0], [-1, 0],
+  [1, 1], [1, -1], [-1, 1], [-1, -1]
+];
+
+const ALL_DIRECTIONS = [
+  [0, 1], [0, -1], [1, 0], [-1, 0],
+  [1, 1], [1, -1], [-1, 1], [-1, -1]
+];
+
+const gridEl = document.getElementById("grid");
+const statusEl = document.getElementById("status");
+const cowEl = document.getElementById("cow");
+const restartBtn = document.getElementById("restart");
+const counterEl = document.getElementById("counter");
+
+let foundCount = 0;
+try {
+  foundCount = Math.max(0, Number(localStorage.getItem(COUNTER_KEY)) || 0);
+} catch {}
+
+let tiles = [];
+let letterGrid = [];
+let targetCells = [];
+let selection = [];
+let found = false;
+let pointerStartTile = null;
+let pointerStartX = 0;
+let pointerStartY = 0;
+let isDragging = false;
+let wrongSelectionTimer = null;
+
+function updateCounter() {
+  counterEl.hidden = foundCount === 0;
+  counterEl.textContent = foundCount ? text.count(foundCount) : "";
+}
+
+function createEmptyGrid() {
+  return Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+}
+
+function createGrid() {
+  gridEl.innerHTML = "";
+  tiles = [];
+  targetCells = [];
+  selection = [];
+  found = false;
+  pointerStartTile = null;
+  isDragging = false;
+
+  clearTimeout(wrongSelectionTimer);
+  statusEl.textContent = "";
+  cowEl.classList.remove("show");
+
+  letterGrid = createEmptyGrid();
+  placeTarget();
+  fillRemainingLetters();
+  renderGrid();
+}
+
+function placeTarget() {
+  while (true) {
+    const row = Math.floor(Math.random() * SIZE);
+    const col = Math.floor(Math.random() * SIZE);
+    const [dr, dc] = TARGET_DIRECTIONS[
+      Math.floor(Math.random() * TARGET_DIRECTIONS.length)
     ];
+    const endRow = row + dr * (TARGET.length - 1);
+    const endCol = col + dc * (TARGET.length - 1);
 
-    const ALL_DIRECTIONS = [
-      [0, 1], [0, -1], [1, 0], [-1, 0],
-      [1, 1], [1, -1], [-1, 1], [-1, -1]
-    ];
+    if (
+      endRow < 0 || endRow >= SIZE ||
+      endCol < 0 || endCol >= SIZE
+    ) continue;
 
-    const gridEl = document.getElementById("grid");
-    const statusEl = document.getElementById("status");
-    const cowEl = document.getElementById("cow");
-    const restartBtn = document.getElementById("restart");
-    const counterEl = document.getElementById("counter");
-
-    let foundCount = 0;
-    try {
-      foundCount = Math.max(0, Number(localStorage.getItem(COUNTER_KEY)) || 0);
-    } catch {}
-
-    let tiles = [];
-    let letterGrid = [];
-    let targetCells = [];
-    let selection = [];
-    let found = false;
-    let pointerStartTile = null;
-    let pointerStartX = 0;
-    let pointerStartY = 0;
-    let isDragging = false;
-    let wrongSelectionTimer = null;
-
-    function updateCounter() {
-      counterEl.hidden = foundCount === 0;
-      counterEl.textContent = foundCount ? text.count(foundCount) : "";
+    targetCells = [];
+    for (let i = 0; i < TARGET.length; i++) {
+      const r = row + dr * i;
+      const c = col + dc * i;
+      letterGrid[r][c] = TARGET[i];
+      targetCells.push([r, c]);
     }
+    return;
+  }
+}
 
-    function createEmptyGrid() {
-      return Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
-    }
+function isTargetCell(row, col) {
+  return targetCells.some(([r, c]) => r === row && c === col);
+}
 
-    function createGrid() {
-      gridEl.innerHTML = "";
-      tiles = [];
-      targetCells = [];
-      selection = [];
-      found = false;
-      pointerStartTile = null;
-      isDragging = false;
+function createsExtraTarget(row, col, letter) {
+  const original = letterGrid[row][col];
+  letterGrid[row][col] = letter;
+  let extra = false;
 
-      clearTimeout(wrongSelectionTimer);
-      statusEl.textContent = "";
-      cowEl.classList.remove("show");
+  for (const [dr, dc] of ALL_DIRECTIONS) {
+    for (let position = 0; position < TARGET.length; position++) {
+      const startRow = row - dr * position;
+      const startCol = col - dc * position;
+      const endRow = startRow + dr * (TARGET.length - 1);
+      const endCol = startCol + dc * (TARGET.length - 1);
 
-      letterGrid = createEmptyGrid();
-      placeTarget();
-      fillRemainingLetters();
-      renderGrid();
-    }
-
-    function placeTarget() {
-      while (true) {
-        const row = Math.floor(Math.random() * SIZE);
-        const col = Math.floor(Math.random() * SIZE);
-        const [dr, dc] = TARGET_DIRECTIONS[
-          Math.floor(Math.random() * TARGET_DIRECTIONS.length)
-        ];
-        const endRow = row + dr * (TARGET.length - 1);
-        const endCol = col + dc * (TARGET.length - 1);
-
-        if (
-          endRow < 0 || endRow >= SIZE ||
-          endCol < 0 || endCol >= SIZE
-        ) continue;
-
-        targetCells = [];
-        for (let i = 0; i < TARGET.length; i++) {
-          const r = row + dr * i;
-          const c = col + dc * i;
-          letterGrid[r][c] = TARGET[i];
-          targetCells.push([r, c]);
-        }
-        return;
-      }
-    }
-
-    function isTargetCell(row, col) {
-      return targetCells.some(([r, c]) => r === row && c === col);
-    }
-
-    function createsExtraTarget(row, col, letter) {
-      const original = letterGrid[row][col];
-      letterGrid[row][col] = letter;
-      let extra = false;
-
-      for (const [dr, dc] of ALL_DIRECTIONS) {
-        for (let position = 0; position < TARGET.length; position++) {
-          const startRow = row - dr * position;
-          const startCol = col - dc * position;
-          const endRow = startRow + dr * (TARGET.length - 1);
-          const endCol = startCol + dc * (TARGET.length - 1);
-
-          if (
-            startRow < 0 || startRow >= SIZE ||
-            startCol < 0 || startCol >= SIZE ||
-            endRow < 0 || endRow >= SIZE ||
-            endCol < 0 || endCol >= SIZE
-          ) continue;
-
-          const matches = TARGET.split("").every((char, i) =>
-            letterGrid[startRow + dr * i][startCol + dc * i] === char
-          );
-
-          if (matches) {
-            extra = true;
-            break;
-          }
-        }
-        if (extra) break;
-      }
-
-      letterGrid[row][col] = original;
-      return extra;
-    }
-
-    function fillRemainingLetters() {
-      for (let row = 0; row < SIZE; row++) {
-        for (let col = 0; col < SIZE; col++) {
-          if (isTargetCell(row, col)) continue;
-
-          const safeLetters = LETTERS.filter(
-            (letter) => !createsExtraTarget(row, col, letter)
-          );
-          const choices = safeLetters.length ? safeLetters : LETTERS;
-
-          letterGrid[row][col] =
-            choices[Math.floor(Math.random() * choices.length)];
-        }
-      }
-    }
-
-    function renderGrid() {
-      for (let row = 0; row < SIZE; row++) {
-        tiles[row] = [];
-
-        for (let col = 0; col < SIZE; col++) {
-          const tile = document.createElement("div");
-          tile.className = "tile";
-          tile.textContent = letterGrid[row][col];
-          tile.dataset.row = row;
-          tile.dataset.col = col;
-          gridEl.appendChild(tile);
-          tiles[row][col] = tile;
-        }
-      }
-    }
-
-    function getTileFromEvent(event) {
-      const element = document.elementFromPoint(event.clientX, event.clientY);
-      return element?.classList.contains("tile") ? element : null;
-    }
-
-    function clearSelection() {
-      selection.forEach((tile) => {
-        tile.classList.remove("selected", "wrong");
-      });
-      selection = [];
-    }
-
-    function addTileToSelection(tile) {
-      if (found || !tile || selection.includes(tile)) return;
-
-      if (selection.length >= TARGET.length) clearSelection();
-
-      selection.push(tile);
-      tile.classList.add("selected");
-
-      if (selection.length === TARGET.length) validateSelection();
-    }
-
-    function selectLineBetween(fromTile, toTile) {
-      const fromRow = Number(fromTile.dataset.row);
-      const fromCol = Number(fromTile.dataset.col);
-      const toRow = Number(toTile.dataset.row);
-      const toCol = Number(toTile.dataset.col);
-      const rowDiff = toRow - fromRow;
-      const colDiff = toCol - fromCol;
-      const steps = Math.max(Math.abs(rowDiff), Math.abs(colDiff));
-
-      if (steps === 0) return;
-
-      // A drag must follow a horizontal, vertical, or diagonal line.
       if (
-        rowDiff !== 0 &&
-        colDiff !== 0 &&
-        Math.abs(rowDiff) !== Math.abs(colDiff)
-      ) return;
+        startRow < 0 || startRow >= SIZE ||
+        startCol < 0 || startCol >= SIZE ||
+        endRow < 0 || endRow >= SIZE ||
+        endCol < 0 || endCol >= SIZE
+      ) continue;
 
-      clearSelection();
-
-      for (let i = 0; i <= steps && i < TARGET.length; i++) {
-        const row = fromRow + Math.sign(rowDiff) * i;
-        const col = fromCol + Math.sign(colDiff) * i;
-        addTileToSelection(tiles[row][col]);
-        if (found) break;
-      }
-    }
-
-    function handlePointerDown(event) {
-      if (found) return;
-
-      const tile = getTileFromEvent(event);
-      if (!tile) return;
-
-      event.preventDefault();
-      pointerStartTile = tile;
-      pointerStartX = event.clientX;
-      pointerStartY = event.clientY;
-      isDragging = false;
-
-      gridEl.setPointerCapture(event.pointerId);
-    }
-
-    function handlePointerMove(event) {
-      if (!pointerStartTile || found) return;
-
-      const distance = Math.hypot(
-        event.clientX - pointerStartX,
-        event.clientY - pointerStartY
+      const matches = TARGET.split("").every((char, i) =>
+        letterGrid[startRow + dr * i][startCol + dc * i] === char
       );
 
-      if (!isDragging && distance > 8) isDragging = true;
-      if (!isDragging) return;
-
-      const tile = getTileFromEvent(event);
-      if (tile) selectLineBetween(pointerStartTile, tile);
-    }
-
-    function handlePointerUp(event) {
-      if (!pointerStartTile) return;
-
-      if (!isDragging && !found) {
-        const tile = getTileFromEvent(event) || pointerStartTile;
-
-        // Tapping again on the last selected letter removes it.
-        if (selection[selection.length - 1] === tile) {
-          tile.classList.remove("selected");
-          selection.pop();
-        } else {
-          addTileToSelection(tile);
-        }
+      if (matches) {
+        extra = true;
+        break;
       }
-
-      pointerStartTile = null;
-      isDragging = false;
     }
+    if (extra) break;
+  }
 
-    function validateSelection() {
-      const word = selection.map((tile) => tile.textContent).join("");
-      const reversedTarget = [...TARGET].reverse().join("");
+  letterGrid[row][col] = original;
+  return extra;
+}
 
-      if (word === TARGET || word === reversedTarget) {
-        found = true;
+function fillRemainingLetters() {
+  for (let row = 0; row < SIZE; row++) {
+    for (let col = 0; col < SIZE; col++) {
+      if (isTargetCell(row, col)) continue;
 
-        targetCells.forEach(([row, col]) => {
-          tiles[row][col].classList.add("correct");
-          tiles[row][col].classList.remove("selected");
-        });
+      const safeLetters = LETTERS.filter(
+        (letter) => !createsExtraTarget(row, col, letter)
+      );
+      const choices = safeLetters.length ? safeLetters : LETTERS;
 
-        selection = [];
-        statusEl.textContent = text.found;
-        cowEl.classList.add("show");
-
-        foundCount++;
-        try {
-          localStorage.setItem(COUNTER_KEY, String(foundCount));
-        } catch {}
-        updateCounter();
-        return;
-      }
-
-      selection.forEach((tile) => tile.classList.add("wrong"));
-      statusEl.textContent = text.wrong;
-
-      wrongSelectionTimer = setTimeout(() => {
-        clearSelection();
-        statusEl.textContent = "";
-      }, 450);
+      letterGrid[row][col] =
+        choices[Math.floor(Math.random() * choices.length)];
     }
+  }
+}
 
-    gridEl.addEventListener("pointerdown", handlePointerDown);
-    gridEl.addEventListener("pointermove", handlePointerMove);
-    gridEl.addEventListener("pointerup", handlePointerUp);
-    gridEl.addEventListener("pointercancel", handlePointerUp);
-    restartBtn.addEventListener("click", createGrid);
+function renderGrid() {
+  for (let row = 0; row < SIZE; row++) {
+    tiles[row] = [];
 
-    // Block common browser pinch, double-click, and Ctrl/Command + wheel zoom gestures.
-    document.addEventListener("gesturestart", (event) => event.preventDefault(), { passive: false });
-    document.addEventListener("gesturechange", (event) => event.preventDefault(), { passive: false });
-    document.addEventListener("gestureend", (event) => event.preventDefault(), { passive: false });
-    document.addEventListener("dblclick", (event) => event.preventDefault());
-    document.addEventListener("wheel", (event) => {
-      if (event.ctrlKey || event.metaKey) event.preventDefault();
-    }, { passive: false });
+    for (let col = 0; col < SIZE; col++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.textContent = letterGrid[row][col];
+      tile.dataset.row = row;
+      tile.dataset.col = col;
+      gridEl.appendChild(tile);
+      tiles[row][col] = tile;
+    }
+  }
+}
 
+function getTileFromEvent(event) {
+  const element = document.elementFromPoint(event.clientX, event.clientY);
+  return element?.classList.contains("tile") ? element : null;
+}
+
+function clearSelection() {
+  selection.forEach((tile) => {
+    tile.classList.remove("selected", "wrong");
+  });
+  selection = [];
+}
+
+function addTileToSelection(tile) {
+  if (found || !tile || selection.includes(tile)) return;
+
+  if (selection.length >= TARGET.length) clearSelection();
+
+  selection.push(tile);
+  tile.classList.add("selected");
+
+  if (selection.length === TARGET.length) validateSelection();
+}
+
+function selectLineBetween(fromTile, toTile) {
+  const fromRow = Number(fromTile.dataset.row);
+  const fromCol = Number(fromTile.dataset.col);
+  const toRow = Number(toTile.dataset.row);
+  const toCol = Number(toTile.dataset.col);
+  const rowDiff = toRow - fromRow;
+  const colDiff = toCol - fromCol;
+  const steps = Math.max(Math.abs(rowDiff), Math.abs(colDiff));
+
+  if (steps === 0) return;
+
+  // A drag must follow a horizontal, vertical, or diagonal line.
+  if (
+    rowDiff !== 0 &&
+    colDiff !== 0 &&
+    Math.abs(rowDiff) !== Math.abs(colDiff)
+  ) return;
+
+  clearSelection();
+
+  for (let i = 0; i <= steps && i < TARGET.length; i++) {
+    const row = fromRow + Math.sign(rowDiff) * i;
+    const col = fromCol + Math.sign(colDiff) * i;
+    addTileToSelection(tiles[row][col]);
+    if (found) break;
+  }
+}
+
+function handlePointerDown(event) {
+  if (found) return;
+
+  const tile = getTileFromEvent(event);
+  if (!tile) return;
+
+  event.preventDefault();
+  pointerStartTile = tile;
+  pointerStartX = event.clientX;
+  pointerStartY = event.clientY;
+  isDragging = false;
+
+  gridEl.setPointerCapture(event.pointerId);
+}
+
+function handlePointerMove(event) {
+  if (!pointerStartTile || found) return;
+
+  const distance = Math.hypot(
+    event.clientX - pointerStartX,
+    event.clientY - pointerStartY
+  );
+
+  if (!isDragging && distance > 8) isDragging = true;
+  if (!isDragging) return;
+
+  const tile = getTileFromEvent(event);
+  if (tile) selectLineBetween(pointerStartTile, tile);
+}
+
+function handlePointerUp(event) {
+  if (!pointerStartTile) return;
+
+  if (!isDragging && !found) {
+    const tile = getTileFromEvent(event) || pointerStartTile;
+
+    // Tapping again on the last selected letter removes it.
+    if (selection[selection.length - 1] === tile) {
+      tile.classList.remove("selected");
+      selection.pop();
+    } else {
+      addTileToSelection(tile);
+    }
+  }
+
+  pointerStartTile = null;
+  isDragging = false;
+}
+
+function validateSelection() {
+  const word = selection.map((tile) => tile.textContent).join("");
+  const reversedTarget = [...TARGET].reverse().join("");
+
+  if (word === TARGET || word === reversedTarget) {
+    found = true;
+
+    targetCells.forEach(([row, col]) => {
+      tiles[row][col].classList.add("correct");
+      tiles[row][col].classList.remove("selected");
+    });
+
+    selection = [];
+    statusEl.textContent = text.found;
+    cowEl.classList.add("show");
+
+    foundCount++;
+    try {
+      localStorage.setItem(COUNTER_KEY, String(foundCount));
+    } catch {}
     updateCounter();
-    createGrid();
-  </script>
+    return;
+  }
+
+  selection.forEach((tile) => tile.classList.add("wrong"));
+  statusEl.textContent = text.wrong;
+
+  wrongSelectionTimer = setTimeout(() => {
+    clearSelection();
+    statusEl.textContent = "";
+  }, 450);
+}
+
+gridEl.addEventListener("pointerdown", handlePointerDown);
+gridEl.addEventListener("pointermove", handlePointerMove);
+gridEl.addEventListener("pointerup", handlePointerUp);
+gridEl.addEventListener("pointercancel", handlePointerUp);
+restartBtn.addEventListener("click", createGrid);
+
+// Block common browser pinch, double-click, and Ctrl/Command + wheel zoom gestures.
+document.addEventListener("gesturestart", (event) => event.preventDefault(), { passive: false });
+document.addEventListener("gesturechange", (event) => event.preventDefault(), { passive: false });
+document.addEventListener("gestureend", (event) => event.preventDefault(), { passive: false });
+document.addEventListener("dblclick", (event) => event.preventDefault());
+document.addEventListener("wheel", (event) => {
+  if (event.ctrlKey || event.metaKey) event.preventDefault();
+}, { passive: false });
+
+updateCounter();
+createGrid();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js");
+  });
+}
+</script>
 </body>
 </html>
