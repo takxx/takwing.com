@@ -1,9 +1,7 @@
 const CACHE_PREFIX = "games-";
-const CACHE_NAME = `${CACHE_PREFIX}261122`;
+const CACHE_NAME = `${CACHE_PREFIX}261123`;
 const FILES_TO_CACHE = [
   "./",
-  "./index.html",
-  "./ico.svg",
   "./2048/index.html",
   "./addoku/index.html",
   "./alquerque/index.html",
@@ -30,7 +28,9 @@ const FILES_TO_CACHE = [
   "./summer/index.html",
   "./untangle/index.html",
   "./vpoker/index.html",
-  "./whackamole/index.html"
+  "./whackamole/index.html",
+  "./games/index.html",
+  "./games/ico.svg",
 ];
 
 self.addEventListener("install", (event) => {
