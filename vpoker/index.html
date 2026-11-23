@@ -447,7 +447,7 @@ h1 {
         "同花", "順子", "三條", "兩對", "一對J或以上"]
     }
   };
-  
+
   const currency = { en: "£", es: "€", zh: "$" };
   const payouts = [250, 50, 25, 9, 6, 4, 3, 2, 1];
   const ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -514,37 +514,37 @@ h1 {
 
   function playTone(frequency, startTime, duration, type = "sine", volume = 0.08) {
     if (!audioContext) return;
-  
+
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
     const filter = audioContext.createBiquadFilter();
-  
+
     oscillator.type = "triangle";
     oscillator.frequency.setValueAtTime(frequency * 0.55, startTime);
     oscillator.frequency.exponentialRampToValueAtTime(
       frequency,
       startTime + duration
     );
-  
+
     filter.type = "bandpass";
     filter.frequency.value = frequency;
     filter.Q.value = 1.2;
-  
+
     gain.gain.setValueAtTime(0.0001, startTime);
     gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-  
+
     oscillator.connect(filter);
     filter.connect(gain);
     gain.connect(audioContext.destination);
-  
+
     oscillator.start(startTime);
     oscillator.stop(startTime + duration + 0.02);
   }
-  
+
   function playCardFlick(startTime, volume = 0.05) {
     if (!audioContext) return;
-  
+
     const bufferSize = Math.floor(audioContext.sampleRate * 0.06);
     const noise = audioContext.createBuffer(
       1,
@@ -552,26 +552,26 @@ h1 {
       audioContext.sampleRate
     );
     const data = noise.getChannelData(0);
-  
+
     for (let i = 0; i < bufferSize; i++) {
       data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
     }
-  
+
     const source = audioContext.createBufferSource();
     const filter = audioContext.createBiquadFilter();
     const gain = audioContext.createGain();
-  
+
     source.buffer = noise;
     filter.type = "highpass";
     filter.frequency.value = 1800;
-  
+
     gain.gain.setValueAtTime(volume, startTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.05);
-  
+
     source.connect(filter);
     filter.connect(gain);
     gain.connect(audioContext.destination);
-  
+
     source.start(startTime);
   }
 
@@ -606,7 +606,7 @@ h1 {
           "triangle",
           name === "lose" ? 0.06 : 0.07
         );
-      
+
         if (name === "deal") {
           playCardFlick(now + offset + 0.01, 0.05);
         }
@@ -865,7 +865,12 @@ h1 {
 
       balance -= bet;
       saveBalance();
-      cards = makeDeck().slice(0, 5);
+
+      // Deal 10 unique cards up front:
+      // indexes 0-4 are the visible initial hand;
+      // indexes 5-9 are the replacement cards, used in order.
+      cards = makeDeck().slice(0, 10);
+
       held = Array(5).fill(false);
       resultIndex = -1;
       phase = "hold";
@@ -877,18 +882,14 @@ h1 {
     }
 
     if (phase === "hold") {
-      const deck = makeDeck();
-      const heldCards = cards.filter((_, index) => held[index]);
-      const replacements = deck.filter(card =>
-        !heldCards.some(kept => kept.rank === card.rank && kept.suit === card.suit)
-      );
+      let replacementIndex = 5;
 
-      let replacementIndex = 0;
-      cards = cards.map((card, index) =>
-        held[index] ? card : replacements[replacementIndex++]
-      );
+      cards = cards.map((card, index) => {
+        if (index >= 5) return card;
+        return held[index] ? card : cards[replacementIndex++];
+      });
 
-      resultIndex = evaluateHand(cards);
+      resultIndex = evaluateHand(cards.slice(0, 5));
 
       if (resultIndex >= 0) {
         const award = resultIndex === 0 && bet === 5

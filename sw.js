@@ -1,5 +1,6 @@
 const CACHE_PREFIX = "games-";
 const CACHE_NAME = `${CACHE_PREFIX}261123`;
+
 const FILES_TO_CACHE = [
   "./",
   "./2048/index.html",
@@ -19,6 +20,7 @@ const FILES_TO_CACHE = [
   "./pachinko/index.html",
   "./pong/index.html",
   "./sfcave/index.html",
+  "./shikaku/index.html",
   "./simon/index.html",
   "./slant/index.html",
   "./slot/index.html",
@@ -30,7 +32,7 @@ const FILES_TO_CACHE = [
   "./vpoker/index.html",
   "./whackamole/index.html",
   "./games/index.html",
-  "./games/ico.svg",
+  "./games/ico.svg"
 ];
 
 self.addEventListener("install", (event) => {
@@ -39,24 +41,33 @@ self.addEventListener("install", (event) => {
   );
 });
 
-self.addEventListener("activate", event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
+    caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-          .map(key => caches.delete(key))
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       )
     )
   );
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+  const request = event.request;
+
+  if (request.method !== "GET") return;
+
+  // Leave cross-origin requests to the browser/network.
+  if (new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cachedResponse = await cache.match(request);
+
+      if (cachedResponse) return cachedResponse;
+
+      return fetch(request);
     })
   );
 });
