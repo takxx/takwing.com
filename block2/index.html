@@ -104,7 +104,9 @@
       corner: "A block must touch your own blocks only at the corners, not along the edges.",
       noMoves: "No legal moves. Turn passed.",
       win: "Game over",
-      score: "squares left",
+      score: "squares placed",
+      wins: "wins",
+      tie: "It's a tie",
       p1: "Purple",
       p2: "Orange",
       help: "Tap a block to select it. Tap it again to rotate; use Flip to mirror. Tap a glowing board square to place it.",
@@ -127,7 +129,9 @@
       corner: "Un bloque debe tocar a tus propias fichas solo por las esquinas, nunca por los lados.",
       noMoves: "No hay movimientos legales. Turno pasado.",
       win: "Fin de la partida",
-      score: "casillas restantes",
+      score: "casillas colocades",
+      wins: "gana",
+      tie: "Empate",
       p1: "Morado",
       p2: "Naranja",
       help: "Toca un bloque para seleccionarlo. Tócalo otra vez para girarlo; usa Voltear para reflejarlo. Toca una casilla iluminada para colocarlo.",
@@ -150,7 +154,9 @@
       corner: "方塊只可以用角接觸自己嘅方塊，唔可以貼住邊。",
       noMoves: "冇位行，唯有放棄。",
       win: "完場",
-      score: "淨低方格",
+      score: "個已放置方格",
+      wins: "勝",
+      tie: "打和",
       p1: "紫色",
       p2: "橙色",
       help: "㩒吓方塊嚟揀選，再㩒就可以轉方向，用「反轉」嚟鏡射。最後㩒發光嘅格嚟擺低。",
@@ -363,9 +369,29 @@
     used[1][m.id]=true;last=cells;advance();
   }
   function finish(){
-    const counts=used.map(u=>u.reduce((n,v,i)=>n+(v?pieces[i].length:0),0));
-    $("status").textContent=`${txt("win")} — ${txt("p1")}: ${counts[0]} ${txt("score")}; ${txt("p2")}: ${counts[1]} ${txt("score")}`;
-    selected=null;update();
+    const counts = [0, 0];
+  
+    for (const row of board) {
+      for (const cell of row) {
+        if (cell === 0 || cell === 1) counts[cell]++;
+      }
+    }
+  
+    let result;
+    if (counts[0] === counts[1]) {
+      result = txt("tie");
+    } else {
+      const winner = counts[0] > counts[1] ? 0 : 1;
+      const winnerName = winner === 0 ? txt("p1") : txt("p2");
+      result = `${winnerName} ${txt("wins")}`;
+    }
+  
+    $("status").textContent =
+      `${txt("win")} — ${result}. ${txt("p1")}: ${counts[0]} ${txt("score")}; ` +
+      `${txt("p2")}: ${counts[1]} ${txt("score")}`;
+  
+    selected = null;
+    update();
   }
   function update(){
     document.documentElement.lang=lang;
