@@ -1,91 +1,2027 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hex</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="script.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hex</title>
+<style>
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #210d18;
+  color: #f4e8ed;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 50% 25%, #482033 0%, #2b101e 48%, #1b0a13 100%);
+}
+
+button,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Wide layout: content on the left, board on the right. */
+.app {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
+  grid-template-areas:
+    "header board"
+    "info   board"
+    "footer board";
+  align-items: start;
+  gap: 18px 28px;
+  width: min(100% - 32px, 1200px);
+  margin: 0 auto;
+  padding: 28px 0 20px;
+}
+
+.topbar {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* Let the panel's children occupy areas in the outer .app grid. */
+.game-panel {
+  display: contents;
+}
+
+.game-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: clamp(16px, 2vw, 24px);
+  border: 1px solid #6b3e53;
+  border-radius: 18px;
+  background: rgb(27 10 19 / 65%);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 25%);
+}
+
+.board-wrap {
+  grid-area: board;
+  min-width: 0;
+  padding: clamp(12px, 3vw, 24px);
+  border: 1px solid #6b3e53;
+  border-radius: 18px;
+  background: rgb(27 10 19 / 65%);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 25%);
+  text-align: center;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  color: #fff5f8;
+  font-size: clamp(2rem, 6vw, 3rem);
+  letter-spacing: 0.04em;
+}
+
+.eyebrow {
+  margin-bottom: 4px;
+  color: #c99bad;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.status {
+  margin-bottom: 0;
+  color: #fff0f5;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 0;
+  color: #d7bdc8;
+  font-size: 0.82rem;
+}
+
+.legend-gap {
+  width: 8px;
+}
+
+.stone {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgb(255 255 255 / 40%);
+  border-radius: 50%;
+}
+
+.stone-red {
+  background: #d56878;
+}
+
+.stone-blue {
+  background: #6e9ed1;
+}
+
+/* The SVG scales to the available width without causing horizontal scrolling. */
+.board {
+  display: block;
+  width: 100%;
+  max-width: 760px;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.cell {
+  stroke: #886277;
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: fill 120ms ease, fill-opacity 180ms ease;
+}
+
+.cell-empty {
+  fill: #553146;
+}
+
+.cell-empty:hover {
+  fill: #70465f;
+}
+
+.cell-empty:focus-visible {
+  fill: #70465f;
+  stroke: #f1dce5;
+  stroke-width: 1.6;
+  outline: none;
+}
+
+.cell-red {
+  fill: #d56878;
+}
+
+.cell-blue {
+  fill: #6e9ed1;
+}
+
+/* Once a winning path exists, dim the other cells. */
+.board:has(.cell-winning) .cell:not(.cell-winning) {
+  fill-opacity: 0.25;
+}
+
+/* Blue connects top to bottom; red connects left to right. */
+.boundary {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.boundary-blue {
+  stroke: #69aef0;
+}
+
+.boundary-red {
+  stroke: #f06b7e;
+}
+
+.board-label {
+  fill: #d3aabc;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-anchor: middle;
+}
+
+.secondary-button,
+.primary-button {
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid #8d5a70;
+  border-radius: 10px;
+  color: #fff4f8;
+  font-weight: 700;
+}
+
+.secondary-button {
+  background: #452034;
+}
+
+.secondary-button:hover {
+  background: #5b2a42;
+}
+
+.primary-button {
+  width: 100%;
+  margin-top: 8px;
+  border-color: #d37e94;
+  background: #8b3d59;
+}
+
+.primary-button:hover {
+  background: #a94e6c;
+}
+
+footer {
+  grid-area: footer;
+  padding: 4px;
+  color: #c4a6b4;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.overlay {
+  position: fixed;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 5 10 / 78%);
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.dialog {
+  width: min(100%, 460px);
+  max-height: min(90vh, 760px);
+  overflow-y: auto;
+  padding: clamp(22px, 5vw, 34px);
+  border: 1px solid #80516a;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #3b192c, #27101d);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 55%);
+}
+
+.dialog h2 {
+  margin-bottom: 12px;
+  font-size: 1.8rem;
+}
+
+.dialog > p:not(.eyebrow) {
+  margin-bottom: 20px;
+  color: #e0cbd4;
+  line-height: 1.55;
+}
+
+.dialog label {
+  display: block;
+  margin: 14px 0 6px;
+  color: #f1dce5;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.dialog select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #80516a;
+  border-radius: 9px;
+  color: #fff4f8;
+  background: #28111e;
+}
+
+.board-wrap {
+  position: relative;
+}
+
+.computer-record {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  z-index: 1;
+  color: #d7bdc8;
+  font-size: 0.82rem;
+}
+
+.board-wrap .legend {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+
+@media (min-width: 701px) {
+  .board {
+    max-height: calc(100vh - 100px);
+  }
+}
+
+/* Narrow layout: title, board, then the other content. */
+@media (max-width: 700px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "board"
+      "info"
+      "footer";
+    gap: 12px;
+    width: min(100% - 20px, 1000px);
+    padding-top: 16px;
+  }
+
+  .topbar {
+    gap: 12px;
+  }
+
+  .game-info {
+    padding: 16px;
+  }
+
+  footer {
+    text-align: center;
+  }
+
+  .dialog {
+    padding: 22px;
+  }
+
+  .board-wrap {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .board {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
 </head>
 <body>
-  <main class="app">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow" data-i18n="eyebrow">A game of connection</p>
-        <h1 data-i18n="title">Hex</h1>
-      </div>
-      <button id="new-game" class="secondary-button" data-i18n="newGame">
-        New game
-      </button>
-    </header>
-
-    <section class="game-panel" aria-label="Hex game">
-      <div class="game-info">
-        <p id="status" class="status" aria-live="polite"></p>
-      </div>
-      <div class="board-wrap">
-<div class="legend">
-  <span class="legend-item">
-    <span class="stone stone-red"></span>
-    <span data-i18n="redGoal">Red connects left to right</span>
-  </span>
-
-  <span class="legend-item">
-    <span class="stone stone-blue"></span>
-    <span data-i18n="blueGoal">Blue connects top to bottom</span>
-  </span>
-</div>
-<div id="computer-record" class="computer-record" hidden></div>
-       <svg id="board" class="board" role="grid" aria-label="Hex board"></svg>
-      </div>
-    </section>
-
-    <footer data-i18n="footer">
-      There are no draws in Hex: one player will always make a connecting path.
-    </footer>
-  </main>
-
-  <div id="start-overlay" class="overlay" role="dialog"
-       aria-modal="true" aria-labelledby="dialog-title">
-    <section class="dialog">
+<main class="app">
+  <header class="topbar">
+    <div>
       <p class="eyebrow" data-i18n="eyebrow">A game of connection</p>
-      <h2 id="dialog-title" data-i18n="welcome">Welcome to Hex</h2>
-      <p data-i18n="instructions">
-        Take turns placing stones on empty hexes. Red tries to connect the
-        left and right edges; blue tries to connect the top and bottom edges.
-        The first player to connect their two sides wins.
-      </p>
+      <h1 data-i18n="title">Hex</h1>
+    </div>
+    <button id="new-game" class="secondary-button" data-i18n="newGame">
+      New game
+    </button>
+  </header>
 
-      <label for="mode-select" data-i18n="modeLabel">Play mode</label>
-      <select id="mode-select">
-        <option value="computer" data-i18n="vsComputer">Play against computer</option>
-        <option value="human" data-i18n="twoPlayers">Two players</option>
-      </select>
+  <section class="game-panel" aria-label="Hex game">
+    <div class="game-info">
+      <p id="status" class="status" aria-live="polite"></p>
+    </div>
+    <div class="board-wrap">
+      <div class="legend">
+        <span class="legend-item">
+          <span class="stone stone-red"></span>
+          <span data-i18n="redGoal">Red connects left to right</span>
+        </span>
+      
+        <span class="legend-item">
+          <span class="stone stone-blue"></span>
+          <span data-i18n="blueGoal">Blue connects top to bottom</span>
+        </span>
+      </div>
+      <div id="computer-record" class="computer-record" hidden></div>
+      <svg id="board" class="board" role="grid" aria-label="Hex board"></svg>
+    </div>
+  </section>
 
-      <label for="size-select" data-i18n="boardLabel">Board size</label>
-      <select id="size-select">
-        <option value="11">11 × 11</option>
-        <option value="13">13 × 13</option>
-      </select>
+  <footer data-i18n="footer">
+    There are no draws in Hex: one player will always make a connecting path.
+  </footer>
+</main>
 
-      <label for="language-select" data-i18n="languageLabel">Language</label>
-      <select id="language-select" aria-label="Language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <option value="zh">中文</option>
-      </select>
+<div id="start-overlay" class="overlay" role="dialog"
+     aria-modal="true" aria-labelledby="dialog-title">
+  <section class="dialog">
+    <p class="eyebrow" data-i18n="eyebrow">A game of connection</p>
+    <h2 id="dialog-title" data-i18n="welcome">Welcome to Hex</h2>
+    <p data-i18n="instructions">
+      Take turns placing stones on empty hexes. Red tries to connect the
+      left and right edges; blue tries to connect the top and bottom edges.
+      The first player to connect their two sides wins.
+    </p>
 
-      <button id="start-game" class="primary-button" data-i18n="start">
-        Start game
-      </button>
-    </section>
-  </div>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
-      });
+    <label for="mode-select" data-i18n="modeLabel">Play mode</label>
+    <select id="mode-select">
+      <option value="computer" data-i18n="vsComputer">Play against computer</option>
+      <option value="human" data-i18n="twoPlayers">Two players</option>
+    </select>
+
+    <label for="size-select" data-i18n="boardLabel">Board size</label>
+    <select id="size-select">
+      <option value="11">11 × 11</option>
+      <option value="13">13 × 13</option>
+    </select>
+
+    <label for="language-select" data-i18n="languageLabel">Language</label>
+    <select id="language-select" aria-label="Language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh">中文</option>
+    </select>
+
+    <button id="start-game" class="primary-button" data-i18n="start">
+      Start game
+    </button>
+  </section>
+</div>
+<script>
+const NEIGHBORS = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+  [-1, 1],
+  [1, -1]
+];
+
+const BRIDGE_DATA = [
+  { offset: [-2, 1], gaps: [[-1, 0], [-1, 1]] },
+  { offset: [-1, 2], gaps: [[0, 1], [-1, 1]] },
+  { offset: [1, 1], gaps: [[1, 0], [0, 1]] },
+  { offset: [2, -1], gaps: [[1, 0], [1, -1]] },
+  { offset: [1, -2], gaps: [[0, -1], [1, -1]] },
+  { offset: [-1, -1], gaps: [[0, -1], [-1, 0]] }
+];
+
+function chooseComputerMove(board, player = "blue") {
+  const size = board.length;
+
+  if (!size || board.some((row) => row.length !== size)) {
+    throw new Error("The AI expects a non-empty square board.");
+  }
+
+  const opponent = otherPlayer(player);
+  const legalMoves = getPrunedLegalMoves(board, player);
+
+  if (legalMoves.length === 0) {
+    return null;
+  }
+
+  const winningMove = findImmediateWin(board, player);
+
+  if (winningMove) {
+    return winningMove;
+  }
+
+  const opponentWinningMove = findImmediateWin(board, opponent);
+
+  if (opponentWinningMove) {
+    return opponentWinningMove;
+  }
+
+  const root = createNode(player);
+  root.untried = rankMovesFast(
+    board,
+    player,
+    Math.min(25, legalMoves.length)
+  );
+
+  const simulations =
+    size >= 12 ? 1400 : size >= 9 ? 1800 : 2200;
+
+  for (let simulation = 0; simulation < simulations; simulation += 1) {
+    const position = board.map((row) => row.slice());
+    const path = [root];
+    let node = root;
+
+    while (!node.terminal) {
+      if (node.untried === null) {
+        node.untried = rankMovesFast(
+          position,
+          node.toMove,
+          Math.min(
+            14,
+            getPrunedLegalMoves(position, node.toMove).length
+          )
+        );
+      }
+
+      if (node.untried.length > 0) {
+        const action = node.untried.shift();
+        const mover = node.toMove;
+
+        position[action.row][action.col] = mover;
+
+        const child = createNode(otherPlayer(mover));
+        child.move = [action.row, action.col];
+        child.prior = action.prior;
+        child.terminal = hasConnection(position, mover);
+        child.winner = child.terminal ? mover : null;
+
+        node.children.push(child);
+        node = child;
+        path.push(node);
+
+        break;
+      }
+
+      if (node.children.length === 0) {
+        break;
+      }
+
+      const child = selectChild(node, player);
+
+      position[child.move[0]][child.move[1]] = node.toMove;
+      node = child;
+      path.push(node);
     }
-  </script>
+
+    const winner = node.terminal
+      ? node.winner
+      : rollout(position, node.toMove);
+
+    const result = winner === player ? 1 : 0;
+
+    for (const visited of path) {
+      visited.visits += 1;
+      visited.wins += result;
+    }
+  }
+
+  if (root.children.length === 0) {
+    return legalMoves[Math.floor(Math.random() * legalMoves.length)];
+  }
+
+  root.children.sort((a, b) => {
+    if (b.visits !== a.visits) {
+      return b.visits - a.visits;
+    }
+
+    return (
+      b.wins / Math.max(1, b.visits) -
+      a.wins / Math.max(1, a.visits)
+    );
+  });
+
+  return root.children[0].move;
+}
+
+function createNode(toMove) {
+  return {
+    toMove,
+    move: null,
+    prior: 0,
+    visits: 0,
+    wins: 0,
+    children: [],
+    untried: null,
+    terminal: false,
+    winner: null
+  };
+}
+
+function selectChild(node, computer) {
+  const logParent = Math.log(node.visits + 1);
+  let bestChild = null;
+  let bestScore = -Infinity;
+
+  for (const child of node.children) {
+    if (child.visits === 0) {
+      return child;
+    }
+
+    const computerWinRate = child.wins / child.visits;
+    const exploitation =
+      node.toMove === computer ? computerWinRate : 1 - computerWinRate;
+    const exploration = 1.41 * Math.sqrt(logParent / child.visits);
+    const priorBonus = 0.2 * child.prior / (1 + child.visits);
+    const score = exploitation + exploration + priorBonus;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestChild = child;
+    }
+  }
+
+  return bestChild;
+}
+
+function rollout(board, firstPlayer) {
+  let player = firstPlayer;
+  const maxMoves = board.length * board.length;
+
+  for (let turn = 0; turn < maxMoves; turn += 1) {
+    const opponent = otherPlayer(player);
+    const ownPath = connectionInfo(board, player);
+    const opponentPath = connectionInfo(board, opponent);
+    const ownPathMoves = emptyCellsOnPath(board, ownPath.path);
+    const opponentPathMoves = emptyCellsOnPath(
+      board,
+      opponentPath.path
+    );
+
+    let move = null;
+
+    if (ownPath.cost === 1 && ownPathMoves.length === 1) {
+      move = ownPathMoves[0];
+    }
+
+    if (
+      !move &&
+      opponentPath.cost === 1 &&
+      opponentPathMoves.length === 1
+    ) {
+      move = opponentPathMoves[0];
+    }
+
+    if (!move) {
+      const useOwnPath =
+        opponentPathMoves.length === 0 || Math.random() < 0.65;
+      const preferred = useOwnPath ? ownPathMoves : opponentPathMoves;
+      const fallback = useOwnPath ? opponentPathMoves : ownPathMoves;
+
+      move = randomItem(preferred) || randomItem(fallback);
+    }
+
+    if (!move || Math.random() < 0.05) {
+      const remaining = getPrunedLegalMoves(board, player);
+      move = randomItem(remaining);
+    }
+
+    if (!move) {
+      break;
+    }
+
+    const [row, col] = move;
+    board[row][col] = player;
+
+    if (hasConnection(board, player)) {
+      return player;
+    }
+
+    player = opponent;
+  }
+
+  return otherPlayer(firstPlayer);
+}
+
+function getPrunedLegalMoves(board, player) {
+  const size = board.length;
+  const allMoves = getLegalMoves(board);
+
+  if (size <= 5 || allMoves.length < size * 2) {
+    return allMoves;
+  }
+
+  const opponent = otherPlayer(player);
+  const ownInfo = connectionInfo(board, player);
+  const oppInfo = connectionInfo(board, opponent);
+  const activeSet = new Set();
+
+  for (const [r, c] of ownInfo.path) {
+    activeSet.add(`${r},${c}`);
+  }
+
+  for (const [r, c] of oppInfo.path) {
+    activeSet.add(`${r},${c}`);
+  }
+
+  const extendedSet = new Set(activeSet);
+
+  for (const key of activeSet) {
+    const [r, c] = key.split(",").map(Number);
+
+    for (const [dr, dc] of NEIGHBORS) {
+      const nr = r + dr;
+      const nc = c + dc;
+
+      if (
+        nr >= 0 &&
+        nr < size &&
+        nc >= 0 &&
+        nc < size &&
+        board[nr][nc] === null
+      ) {
+        extendedSet.add(`${nr},${nc}`);
+      }
+    }
+
+    for (const { offset: [dr, dc] } of BRIDGE_DATA) {
+      const nr = r + dr;
+      const nc = c + dc;
+
+      if (
+        nr >= 0 &&
+        nr < size &&
+        nc >= 0 &&
+        nc < size &&
+        board[nr][nc] === null
+      ) {
+        extendedSet.add(`${nr},${nc}`);
+      }
+    }
+  }
+
+  const pruned = [];
+
+  for (const [row, col] of allMoves) {
+    if (extendedSet.has(`${row},${col}`)) {
+      pruned.push([row, col]);
+    }
+  }
+
+  return pruned.length > 0 ? pruned : allMoves;
+}
+
+function rankMovesFast(board, player, limit) {
+  const size = board.length;
+  const center = (size - 1) / 2;
+  const opponent = otherPlayer(player);
+  const candidateMoves = getPrunedLegalMoves(board, player);
+  const ranked = [];
+
+  for (const [row, col] of candidateMoves) {
+    if (board[row][col] !== null) {
+      continue;
+    }
+
+    let bridgeCompletion = 0;
+    let bridgeDisruption = 0;
+
+    for (const {
+      offset: [dr, dc],
+      gaps
+    } of BRIDGE_DATA) {
+      const tr = row + dr;
+      const tc = col + dc;
+
+      if (tr < 0 || tr >= size || tc < 0 || tc >= size) {
+        continue;
+      }
+
+      if (board[tr][tc] === player) {
+        let gapBlocked = false;
+
+        for (const [gdr, gdc] of gaps) {
+          const gr = row + gdr;
+          const gc = col + gdc;
+
+          if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+            if (board[gr][gc] === opponent) {
+              gapBlocked = true;
+              break;
+            }
+          }
+        }
+
+        if (!gapBlocked) {
+          bridgeCompletion += 2.5;
+        }
+      } else if (board[tr][tc] === opponent) {
+        let gapBlocked = false;
+
+        for (const [gdr, gdc] of gaps) {
+          const gr = row + gdr;
+          const gc = col + gdc;
+
+          if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+            if (board[gr][gc] === player) {
+              gapBlocked = true;
+              break;
+            }
+          }
+        }
+
+        if (!gapBlocked) {
+          bridgeDisruption += 4.0;
+        }
+      }
+    }
+
+    const centerDist = Math.abs(row - center) + Math.abs(col - center);
+    const positionalScore = (size - centerDist) * 0.25;
+    const score =
+      bridgeCompletion * 3.0 +
+      bridgeDisruption * 4.0 +
+      positionalScore;
+
+    ranked.push({ row, col, score });
+  }
+
+  ranked.sort((a, b) => b.score - a.score);
+
+  const count = Math.min(limit, ranked.length);
+
+  return ranked
+    .slice(0, count)
+    .map((move, index) => ({
+      row: move.row,
+      col: move.col,
+      prior: 1 / (1 + index * 0.15)
+    }));
+}
+
+function connectionInfo(board, player) {
+  const size = board.length;
+  const total = size * size;
+  const opponent = otherPlayer(player);
+  const distances = new Int32Array(total);
+  const previous = new Int32Array(total);
+
+  distances.fill(0x3fffffff);
+  previous.fill(-1);
+
+  const buckets = Array.from({ length: total + 1 }, () => []);
+
+  const addStart = (row, col) => {
+    const index = row * size + col;
+
+    if (board[row][col] === opponent) {
+      return;
+    }
+
+    const cost = board[row][col] === player ? 0 : 1;
+
+    if (cost < distances[index]) {
+      distances[index] = cost;
+      buckets[cost].push(index);
+    }
+  };
+
+  if (player === "blue") {
+    for (let col = 0; col < size; col += 1) {
+      addStart(0, col);
+    }
+  } else {
+    for (let row = 0; row < size; row += 1) {
+      addStart(row, 0);
+    }
+  }
+
+  let goal = -1;
+
+  for (let cost = 0; cost < buckets.length; cost += 1) {
+    const bucket = buckets[cost];
+
+    while (bucket.length) {
+      const index = bucket.pop();
+
+      if (distances[index] !== cost) {
+        continue;
+      }
+
+      const row = Math.floor(index / size);
+      const col = index % size;
+
+      if (
+        (player === "blue" && row === size - 1) ||
+        (player === "red" && col === size - 1)
+      ) {
+        goal = index;
+        break;
+      }
+
+      for (const [dr, dc] of NEIGHBORS) {
+        const nextRow = row + dr;
+        const nextCol = col + dc;
+
+        if (
+          nextRow < 0 ||
+          nextRow >= size ||
+          nextCol < 0 ||
+          nextCol >= size ||
+          board[nextRow][nextCol] === opponent
+        ) {
+          continue;
+        }
+
+        const nextIndex = nextRow * size + nextCol;
+        const stepCost =
+          board[nextRow][nextCol] === player ? 0 : 1;
+        const nextCost = cost + stepCost;
+
+        if (nextCost < distances[nextIndex]) {
+          distances[nextIndex] = nextCost;
+          previous[nextIndex] = index;
+          buckets[nextCost].push(nextIndex);
+        }
+      }
+
+      for (const {
+        offset: [dr, dc],
+        gaps
+      } of BRIDGE_DATA) {
+        const nextRow = row + dr;
+        const nextCol = col + dc;
+
+        if (
+          nextRow < 0 ||
+          nextRow >= size ||
+          nextCol < 0 ||
+          nextCol >= size ||
+          board[nextRow][nextCol] === opponent
+        ) {
+          continue;
+        }
+
+        let bridgeBlocked = false;
+
+        for (const [gdr, gdc] of gaps) {
+          const gr = row + gdr;
+          const gc = col + gdc;
+
+          if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+            if (board[gr][gc] === opponent) {
+              bridgeBlocked = true;
+              break;
+            }
+          }
+        }
+
+        if (!bridgeBlocked) {
+          const nextIndex = nextRow * size + nextCol;
+          const stepCost =
+            board[nextRow][nextCol] === player ? 0 : 1;
+          const nextCost = cost + stepCost;
+
+          if (nextCost < distances[nextIndex]) {
+            distances[nextIndex] = nextCost;
+            previous[nextIndex] = index;
+            buckets[nextCost].push(nextIndex);
+          }
+        }
+      }
+    }
+
+    if (goal !== -1) {
+      break;
+    }
+  }
+
+  if (goal === -1) {
+    return {
+      cost: Infinity,
+      path: []
+    };
+  }
+
+  const path = [];
+
+  for (
+    let index = goal;
+    index !== -1;
+    index = previous[index]
+  ) {
+    path.push([
+      Math.floor(index / size),
+      index % size
+    ]);
+  }
+
+  path.reverse();
+
+  return {
+    cost: distances[goal],
+    path
+  };
+}
+
+function findImmediateWin(board, player) {
+  const size = board.length;
+
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < size; col += 1) {
+      if (board[row][col] !== null) {
+        continue;
+      }
+
+      board[row][col] = player;
+      const wins = hasConnection(board, player);
+      board[row][col] = null;
+
+      if (wins) {
+        return [row, col];
+      }
+    }
+  }
+
+  return null;
+}
+
+function hasConnection(board, player) {
+  const size = board.length;
+  const visited = new Uint8Array(size * size);
+  const stack = [];
+
+  if (player === "blue") {
+    for (let col = 0; col < size; col += 1) {
+      if (board[0][col] === player) {
+        stack.push(col);
+      }
+    }
+  } else {
+    for (let row = 0; row < size; row += 1) {
+      if (board[row][0] === player) {
+        stack.push(row * size);
+      }
+    }
+  }
+
+  while (stack.length) {
+    const index = stack.pop();
+
+    if (visited[index]) {
+      continue;
+    }
+
+    visited[index] = 1;
+
+    const row = Math.floor(index / size);
+    const col = index % size;
+
+    if (
+      (player === "blue" && row === size - 1) ||
+      (player === "red" && col === size - 1)
+    ) {
+      return true;
+    }
+
+    for (const [dr, dc] of NEIGHBORS) {
+      const nextRow = row + dr;
+      const nextCol = col + dc;
+
+      if (
+        nextRow >= 0 &&
+        nextRow < size &&
+        nextCol >= 0 &&
+        nextCol < size &&
+        board[nextRow][nextCol] === player
+      ) {
+        const nextIndex = nextRow * size + nextCol;
+
+        if (!visited[nextIndex]) {
+          stack.push(nextIndex);
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function emptyCellsOnPath(board, path) {
+  const moves = [];
+
+  for (const [row, col] of path) {
+    if (board[row][col] === null) {
+      moves.push([row, col]);
+    }
+  }
+
+  return moves;
+}
+
+function getLegalMoves(board) {
+  const moves = [];
+
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board.length; col += 1) {
+      if (board[row][col] === null) {
+        moves.push([row, col]);
+      }
+    }
+  }
+
+  return moves;
+}
+
+function randomItem(items) {
+  if (!items.length) {
+    return null;
+  }
+
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function otherPlayer(player) {
+  return player === "blue" ? "red" : "blue";
+}
+
+// ============================================================
+// Game
+// ============================================================
+
+class HexGame {
+  constructor({ size = 11, mode = "human" } = {}) {
+    this.listeners = new Set();
+    this.newGame({ size, mode });
+  }
+
+  newGame({ size = 11, mode = "human" } = {}) {
+    this.size = Number(size) === 13 ? 13 : 11;
+    this.mode = mode === "computer" ? "computer" : "human";
+
+    if (this.mode === "computer") {
+      this.computerPlayer =
+        Math.random() < 0.5 ? "red" : "blue";
+      this.humanPlayer =
+        this.computerPlayer === "red" ? "blue" : "red";
+    } else {
+      this.computerPlayer = null;
+      this.humanPlayer = null;
+    }
+
+    this.board = Array.from(
+      { length: this.size },
+      () => Array(this.size).fill(null)
+    );
+
+    this.currentPlayer = "red";
+    this.winner = null;
+    this.winningPath = [];
+    this.aiThinking = false;
+    this.generation = (this.generation || 0) + 1;
+
+    this.notify();
+
+    if (
+      this.mode === "computer" &&
+      this.currentPlayer === this.computerPlayer
+    ) {
+      this.runComputerTurn();
+    }
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+
+    return () => this.listeners.delete(listener);
+  }
+
+  notify() {
+    const state = this.getState();
+
+    for (const listener of this.listeners) {
+      listener(state);
+    }
+  }
+
+  getState() {
+    return {
+      size: this.size,
+      mode: this.mode,
+      humanPlayer: this.humanPlayer,
+      computerPlayer: this.computerPlayer,
+      board: this.board.map((row) => [...row]),
+      currentPlayer: this.currentPlayer,
+      winner: this.winner,
+      winningPath: this.winningPath.map(([row, col]) => [
+        row,
+        col
+      ]),
+      aiThinking: this.aiThinking
+    };
+  }
+
+  play(row, col) {
+    if (this.winner || this.aiThinking) {
+      return false;
+    }
+
+    if (!this.board[row] || this.board[row][col] !== null) {
+      return false;
+    }
+
+    if (
+      this.mode === "computer" &&
+      this.currentPlayer !== this.humanPlayer
+    ) {
+      return false;
+    }
+
+    this.place(row, col, this.currentPlayer);
+
+    return true;
+  }
+
+  place(row, col, player) {
+    this.board[row][col] = player;
+
+    const path = this.findWinningPath(player);
+
+    if (path) {
+      this.winner = player;
+      this.winningPath = path;
+      this.notify();
+
+      return;
+    }
+
+    this.currentPlayer =
+      player === "red" ? "blue" : "red";
+
+    this.notify();
+
+    if (
+      this.mode === "computer" &&
+      this.currentPlayer === this.computerPlayer
+    ) {
+      this.runComputerTurn();
+    }
+  }
+
+  runComputerTurn() {
+    this.aiThinking = true;
+    this.notify();
+
+    const generation = this.generation;
+
+    window.setTimeout(() => {
+      if (generation !== this.generation || this.winner) {
+        return;
+      }
+
+      const move = chooseComputerMove(
+        this.board,
+        this.computerPlayer
+      );
+
+      if (move) {
+        this.aiThinking = false;
+        this.place(move[0], move[1], this.computerPlayer);
+      } else {
+        this.aiThinking = false;
+        this.notify();
+      }
+    }, 350);
+  }
+
+  findWinningPath(player) {
+    const stack = [];
+    const previous = new Map();
+    const visited = new Set();
+    const key = (row, col) => `${row},${col}`;
+
+    if (player === "red") {
+      for (let row = 0; row < this.size; row += 1) {
+        if (this.board[row][0] === player) {
+          stack.push([row, 0]);
+        }
+      }
+    } else {
+      for (let col = 0; col < this.size; col += 1) {
+        if (this.board[0][col] === player) {
+          stack.push([0, col]);
+        }
+      }
+    }
+
+    for (const [row, col] of stack) {
+      visited.add(key(row, col));
+    }
+
+    while (stack.length) {
+      const [row, col] = stack.pop();
+      const reachedGoal =
+        player === "red"
+          ? col === this.size - 1
+          : row === this.size - 1;
+
+      if (reachedGoal) {
+        const path = [];
+        let current = [row, col];
+
+        while (current) {
+          path.push(current);
+          current =
+            previous.get(key(current[0], current[1])) || null;
+        }
+
+        return path.reverse();
+      }
+
+      const adjacent = [
+        [row - 1, col],
+        [row + 1, col],
+        [row, col - 1],
+        [row, col + 1],
+        [row - 1, col + 1],
+        [row + 1, col - 1]
+      ];
+
+      for (const [nextRow, nextCol] of adjacent) {
+        if (
+          nextRow < 0 ||
+          nextRow >= this.size ||
+          nextCol < 0 ||
+          nextCol >= this.size ||
+          this.board[nextRow][nextCol] !== player ||
+          visited.has(key(nextRow, nextCol))
+        ) {
+          continue;
+        }
+
+        visited.add(key(nextRow, nextCol));
+        previous.set(key(nextRow, nextCol), [row, col]);
+        stack.push([nextRow, nextCol]);
+      }
+    }
+
+    return null;
+  }
+}
+
+const messages = {
+  en: {
+    eyebrow: "A game of connection",
+    title: "Hex",
+    newGame: "New game",
+    redGoal: "Red connects left to right",
+    blueGoal: "Blue connects top to bottom",
+    footer:
+      "There are no draws in Hex: one player will always make a connecting path.",
+    welcome: "Welcome to Hex",
+    instructions:
+      "Take turns placing stones on empty hexes. Red tries to connect the left and right edges; blue tries to connect the top and bottom edges. The first player to connect their two sides wins.",
+    modeLabel: "Play mode",
+    twoPlayers: "Two players",
+    vsComputer: "Play against computer",
+    boardLabel: "Board size",
+    languageLabel: "Language",
+    start: "Start game",
+    redTurn: "Red's turn",
+    blueTurn: "Blue's turn",
+    yourTurn: (player) =>
+      `Your turn (${player === "blue" ? "Blue" : "Red"})`,
+    computerTurn: "Computer is thinking…",
+    redWins: "Red wins!",
+    blueWins: "Blue wins!",
+    youWin: "You win!",
+    computerWins: "Computer wins!",
+    winloss: "Wins/Losses: ",
+    cellLabel: (row, col, occupant) =>
+      `Row ${row}, column ${col}${
+        occupant ? `, ${occupant}` : ", empty"
+      }`
+  },
+  es: {
+    eyebrow: "Un juego de conexión",
+    title: "Hex",
+    newGame: "Nueva partida",
+    redGoal: "Rojo conecta izquierda y derecha",
+    blueGoal: "Azul conecta arriba y abajo",
+    footer:
+      "En Hex no hay empates: siempre habrá un camino ganador.",
+    welcome: "Bienvenido a Hex",
+    instructions:
+      "Por turnos, coloca fichas en hexágonos vacíos. Rojo intenta conectar los bordes izquierdo y derecho; azul, los bordes superior e inferior. Gana quien conecte primero sus dos lados.",
+    modeLabel: "Modo de juego",
+    twoPlayers: "Dos jugadores",
+    vsComputer: "Jugar contra el ordenador",
+    boardLabel: "Tamaño del tablero",
+    languageLabel: "Idioma",
+    start: "Empezar partida",
+    redTurn: "Turno del rojo",
+    blueTurn: "Turno del azul",
+    yourTurn: (player) =>
+      `Tu turno (${player === "blue" ? "azul" : "rojo"})`,
+    computerTurn: "El ordenador está pensando…",
+    redWins: "¡Gana el rojo!",
+    blueWins: "¡Gana el azul!",
+    youWin: "¡Has ganado!",
+    computerWins: "¡Gana el ordenador!",
+    winloss: "Partitas ganadas/perdidas: ",
+    cellLabel: (row, col, occupant) =>
+      `Fila ${row}, columna ${col}${
+        occupant ? `, ${occupant}` : ", vacía"
+      }`
+  },
+  zh: {
+    eyebrow: "連線棋局",
+    title: "Hex 六角棋",
+    newGame: "新一局",
+    redGoal: "紅方連接左右兩邊",
+    blueGoal: "藍方連接上下兩邊",
+    footer: "六角棋不會和局：總有一方可以連成一條路。",
+    welcome: "歡迎玩六角棋",
+    instructions:
+      "輪流喺空格放棋子。紅方要連接左右兩邊；藍方要連接上下兩邊。首先連通自己兩邊嘅一方獲勝。",
+    modeLabel: "遊戲模式",
+    twoPlayers: "雙人對戰",
+    vsComputer: "對戰電腦",
+    boardLabel: "棋盤大小",
+    languageLabel: "語言",
+    start: "開始遊戲",
+    redTurn: "紅方回合",
+    blueTurn: "藍方回合",
+    yourTurn: (player) =>
+      `輪到你（${player === "blue" ? "藍方" : "紅方"}）`,
+    computerTurn: "電腦思考中…",
+    redWins: "紅方獲勝！",
+    blueWins: "藍方獲勝！",
+    youWin: "你贏咗！",
+    computerWins: "電腦獲勝！",
+    winloss: "勝負：",
+    cellLabel: (row, col, occupant) =>
+      `第 ${row} 行，第 ${col} 列${
+        occupant ? `，${occupant}` : "，空格"
+      }`
+  }
+};
+
+function chooseInitialLanguage() {
+  const params = new URLSearchParams(window.location.search);
+  const queryLanguage = normalizeLanguage(params.get("lang"));
+
+  if (queryLanguage) {
+    return queryLanguage;
+  }
+
+  try {
+    const savedLanguage = normalizeLanguage(
+      localStorage.getItem("hex-language")
+    );
+
+    if (savedLanguage) {
+      return savedLanguage;
+    }
+  } catch {}
+
+  const preferences = navigator.languages?.length
+    ? navigator.languages
+    : [navigator.language || "en"];
+
+  for (const preference of preferences) {
+    const language = normalizeLanguage(preference);
+
+    if (language) {
+      return language;
+    }
+  }
+
+  return "en";
+}
+
+function normalizeLanguage(value) {
+  if (!value) {
+    return null;
+  }
+
+  const language = value.toLowerCase();
+
+  if (language === "en" || language.startsWith("en-")) {
+    return "en";
+  }
+
+  if (language === "es" || language.startsWith("es-")) {
+    return "es";
+  }
+
+  if (
+    language === "zh" ||
+    language.startsWith("zh-") ||
+    language === "yue" ||
+    language.startsWith("yue-")
+  ) {
+    return "zh";
+  }
+
+  return null;
+}
+
+function saveLanguage(language) {
+  try {
+    localStorage.setItem("hex-language", language);
+  } catch {}
+}
+
+function translate(language, key, ...args) {
+  const dictionary = messages[language] || messages.en;
+  const value = dictionary[key] ?? messages.en[key] ?? key;
+
+  return typeof value === "function" ? value(...args) : value;
+}
+
+function applyTranslations(language, root = document) {
+  root.documentElement?.setAttribute(
+    "lang",
+    language === "zh" ? "zh-HK" : language
+  );
+
+  root.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = translate(
+      language,
+      element.dataset.i18n
+    );
+  });
+}
+
+const SQRT3 = Math.sqrt(3);
+const SVG_NS = "http://www.w3.org/2000/svg";
+const BOARD_ROTATION = 30;
+const RECORD_KEY = "hex-computer-record";
+const lastWinnerByGame = new WeakMap();
+
+function renderGame(game, language) {
+  const svg = document.querySelector("#board");
+  const status = document.querySelector("#status");
+
+  if (!svg || !status) {
+    return;
+  }
+
+  const state = game.getState();
+  const size = state.size;
+
+  updateComputerRecord(game, state, language);
+
+  const radius = size === 13 ? 16 : 19;
+  const padding = radius + 5;
+  const boardWidth = SQRT3 * radius * (1.5 * size - 0.5);
+  const boardHeight = 1.5 * radius * (size - 1) + 2 * radius;
+  const viewWidth = boardWidth + 2 * padding;
+  const viewHeight = boardHeight + 2 * padding;
+
+  svg.setAttribute(
+    "aria-label",
+    `${size} × ${size} Hex board`
+  );
+  svg.replaceChildren();
+
+  const centerX = viewWidth / 2;
+  const centerY = viewHeight / 2;
+  const radians = (BOARD_ROTATION * Math.PI) / 180;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < size; col += 1) {
+      const { cx, cy } = cellCenter(
+        row,
+        col,
+        size,
+        radius,
+        padding
+      );
+
+      for (const [x, y] of hexPoints(cx, cy, radius)) {
+        const dx = x - centerX;
+        const dy = y - centerY;
+
+        const rotatedX =
+          centerX +
+          dx * Math.cos(radians) -
+          dy * Math.sin(radians);
+
+        const rotatedY =
+          centerY +
+          dx * Math.sin(radians) +
+          dy * Math.cos(radians);
+
+        minX = Math.min(minX, rotatedX);
+        minY = Math.min(minY, rotatedY);
+        maxX = Math.max(maxX, rotatedX);
+        maxY = Math.max(maxY, rotatedY);
+      }
+    }
+  }
+
+  const margin = 7;
+  const viewBoxX = minX - margin;
+  const viewBoxY = minY - margin;
+  const viewBoxWidth = maxX - minX + margin * 2;
+  const viewBoxHeight = maxY - minY + margin * 2;
+
+  svg.setAttribute(
+    "viewBox",
+    `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`
+  );
+
+  const board = document.createElementNS(SVG_NS, "g");
+  board.setAttribute(
+    "transform",
+    `rotate(${BOARD_ROTATION} ${centerX} ${centerY})`
+  );
+
+  svg.append(board);
+
+  const winning = new Set(
+    (state.winningPath ?? []).map(
+      ([row, col]) => `${row},${col}`
+    )
+  );
+
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < size; col += 1) {
+      const { cx, cy } = cellCenter(
+        row,
+        col,
+        size,
+        radius,
+        padding
+      );
+
+      const occupant = state.board[row][col];
+      const polygon = document.createElementNS(
+        SVG_NS,
+        "polygon"
+      );
+
+      polygon.setAttribute(
+        "points",
+        hexPoints(cx, cy, radius)
+          .map(([x, y]) => `${x},${y}`)
+          .join(" ")
+      );
+
+      polygon.setAttribute(
+        "class",
+        `cell ${
+          occupant ? `cell-${occupant}` : "cell-empty"
+        }` +
+          (winning.has(`${row},${col}`)
+            ? " cell-winning"
+            : "")
+      );
+
+      polygon.setAttribute(
+        "tabindex",
+        occupant || state.winner || state.aiThinking
+          ? "-1"
+          : "0"
+      );
+
+      polygon.setAttribute("role", "gridcell");
+      polygon.dataset.row = row;
+      polygon.dataset.col = col;
+      polygon.setAttribute(
+        "aria-label",
+        translate(
+          language,
+          "cellLabel",
+          row + 1,
+          col + 1,
+          occupant
+        )
+      );
+
+      board.append(polygon);
+    }
+  }
+
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < size; col += 1) {
+      const { cx, cy } = cellCenter(
+        row,
+        col,
+        size,
+        radius,
+        padding
+      );
+
+      if (row === 0) {
+        drawEdges(
+          board,
+          cx,
+          cy,
+          radius,
+          [5, 0],
+          "boundary-blue"
+        );
+      }
+
+      if (row === size - 1) {
+        drawEdges(
+          board,
+          cx,
+          cy,
+          radius,
+          [2, 3],
+          "boundary-blue"
+        );
+      }
+
+      if (col === 0) {
+        drawEdges(
+          board,
+          cx,
+          cy,
+          radius,
+          [3, 4],
+          "boundary-red"
+        );
+      }
+
+      if (col === size - 1) {
+        drawEdges(
+          board,
+          cx,
+          cy,
+          radius,
+          [0, 1],
+          "boundary-red"
+        );
+      }
+    }
+  }
+
+  updateStatus(status, state, language);
+}
+
+function updateComputerRecord(game, state, language) {
+  const recordElement =
+    document.querySelector("#computer-record");
+
+  if (!recordElement) {
+    return;
+  }
+
+  if (state.mode !== "computer") {
+    recordElement.hidden = true;
+    return;
+  }
+
+  recordElement.hidden = false;
+
+  const previousWinner =
+    lastWinnerByGame.get(game) ?? null;
+
+  if (state.winner && !previousWinner) {
+    const record = readRecord();
+
+    if (state.winner === state.humanPlayer) {
+      record.wins += 1;
+    } else {
+      record.losses += 1;
+    }
+
+    try {
+      localStorage.setItem(
+        RECORD_KEY,
+        JSON.stringify(record)
+      );
+    } catch {}
+  }
+
+  lastWinnerByGame.set(game, state.winner ?? null);
+
+  const record = readRecord();
+
+  recordElement.textContent = `${translate(
+    language,
+    "winloss"
+  )}${record.wins}/${record.losses}`;
+}
+
+function readRecord() {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(RECORD_KEY)
+    );
+
+    return {
+      wins: Number.isFinite(saved?.wins) ? saved.wins : 0,
+      losses: Number.isFinite(saved?.losses)
+        ? saved.losses
+        : 0
+    };
+  } catch {
+    return {
+      wins: 0,
+      losses: 0
+    };
+  }
+}
+
+function updateStatus(status, state, language) {
+  if (state.winner) {
+    const key =
+      state.mode === "computer"
+        ? state.winner === state.humanPlayer
+          ? "youWin"
+          : "computerWins"
+        : state.winner === "red"
+          ? "redWins"
+          : "blueWins";
+
+    status.textContent = translate(language, key);
+  } else if (state.aiThinking) {
+    status.textContent = translate(
+      language,
+      "computerTurn"
+    );
+  } else if (state.mode === "computer") {
+    status.textContent = translate(
+      language,
+      "yourTurn",
+      state.currentPlayer
+    );
+  } else {
+    status.textContent = translate(
+      language,
+      state.currentPlayer === "red"
+        ? "redTurn"
+        : "blueTurn"
+    );
+  }
+}
+
+function cellCenter(row, col, size, radius, padding) {
+  const boardWidth = SQRT3 * radius * (1.5 * size - 0.5);
+  const boardHeight =
+    1.5 * radius * (size - 1) + 2 * radius;
+  const viewWidth = boardWidth + 2 * padding;
+  const viewHeight = boardHeight + 2 * padding;
+  const offsetX = (viewWidth - boardWidth) / 2;
+  const offsetY = (viewHeight - boardHeight) / 2;
+
+  return {
+    cx:
+      offsetX +
+      (SQRT3 * radius) / 2 +
+      SQRT3 * radius * (col + row / 2),
+    cy: offsetY + radius + 1.5 * radius * row
+  };
+}
+
+function hexPoints(cx, cy, radius) {
+  return Array.from(
+    { length: 6 },
+    (_, index) => {
+      const angle =
+        (-90 + index * 60) * (Math.PI / 180);
+
+      return [
+        cx + radius * Math.cos(angle),
+        cy + radius * Math.sin(angle)
+      ];
+    }
+  );
+}
+
+function drawEdges(
+  svg,
+  cx,
+  cy,
+  radius,
+  edgeIndexes,
+  className
+) {
+  const vertices = hexPoints(cx, cy, radius);
+
+  for (const index of edgeIndexes) {
+    const start = vertices[index];
+    const end = vertices[(index + 1) % vertices.length];
+
+    const line = document.createElementNS(SVG_NS, "line");
+
+    line.setAttribute("x1", start[0]);
+    line.setAttribute("y1", start[1]);
+    line.setAttribute("x2", end[0]);
+    line.setAttribute("y2", end[1]);
+    line.setAttribute(
+      "class",
+      `boundary ${className}`
+    );
+
+    svg.append(line);
+  }
+}
+
+let language = chooseInitialLanguage();
+let game = new HexGame();
+
+const overlay =
+  document.querySelector("#start-overlay");
+const languageSelect = document.querySelector(
+  "#language-select"
+);
+const sizeSelect =
+  document.querySelector("#size-select");
+const modeSelect =
+  document.querySelector("#mode-select");
+
+languageSelect.value = language;
+applyTranslations(language);
+
+function draw() {
+  renderGame(game, language);
+}
+
+game.subscribe(draw);
+draw();
+
+languageSelect.addEventListener("change", () => {
+  language = languageSelect.value;
+  saveLanguage(language);
+  applyTranslations(language);
+  draw();
+});
+
+document
+  .querySelector("#start-game")
+  .addEventListener("click", () => {
+    game.newGame({
+      size: Number(sizeSelect.value),
+      mode: modeSelect.value
+    });
+
+    overlay.hidden = true;
+  });
+
+document
+  .querySelector("#new-game")
+  .addEventListener("click", () => {
+    sizeSelect.value = String(game.size);
+    modeSelect.value = game.mode;
+    overlay.hidden = false;
+
+    document
+      .querySelector("#start-game")
+      .focus();
+  });
+
+document
+  .querySelector("#board")
+  .addEventListener("click", (event) => {
+    const cell = event.target.closest(".cell");
+
+    if (!cell) {
+      return;
+    }
+
+    game.play(
+      Number(cell.dataset.row),
+      Number(cell.dataset.col)
+    );
+  });
+
+document
+  .querySelector("#board")
+  .addEventListener("keydown", (event) => {
+    if (
+      event.key !== "Enter" &&
+      event.key !== " "
+    ) {
+      return;
+    }
+
+    const cell = event.target.closest(".cell");
+
+    if (!cell) {
+      return;
+    }
+
+    event.preventDefault();
+
+    game.play(
+      Number(cell.dataset.row),
+      Number(cell.dataset.col)
+    );
+  });
+</script>
 </body>
 </html>

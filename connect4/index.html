@@ -1,61 +1,834 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Connect 4</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Connect 4</title>
+
+<style>
+:root {
+  --bg-1: #060b1f;
+  --bg-2: #0b1436;
+  --bg-3: #101c4a;
+
+  --border: #2a3a6e;
+  --text: #e9c46a;
+  --text-dim: #c9a959;
+  --accent: #d4af37;
+  --accent-strong: #f2cf63;
+
+  --board-bg: #142459;
+  --board-border: #3b4f8f;
+
+  --cell-empty: #1c2c66;
+  --cell-empty-highlight: #253a7f;
+
+  --player: #c0392b;
+  --computer: #d4a017;
+  --win-outline: #f2cf63;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(
+      circle at center,
+      #12225c 0%,
+      var(--bg-2) 45%,
+      var(--bg-1) 100%
+    );
+}
+
+.game {
+  width: min(94vw, 650px);
+  padding: 24px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(16, 28, 74, 0.96),
+      rgba(11, 20, 54, 0.98)
+    );
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.65),
+    inset 0 0 22px rgba(212, 175, 55, 0.08);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+}
+
+h1 {
+  margin: 0 0 8px;
+  color: var(--accent-strong);
+  font-family: Georgia, serif;
+  font-size: clamp(2rem, 7vw, 3rem);
+  letter-spacing: 0.5px;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.75),
+    0 0 18px rgba(212, 175, 55, 0.22);
+}
+
+#status {
+  min-height: 24px;
+  margin-bottom: 16px;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: clamp(5px, 1.3vw, 10px);
+  padding: clamp(8px, 2vw, 14px);
+  background: var(--board-bg);
+  border: 4px solid var(--board-border);
+  border-radius: 14px;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.55),
+    inset 0 2px 4px rgba(212, 175, 55, 0.08);
+}
+
+.cell {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cell-empty);
+  box-shadow:
+    inset 0 4px 6px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: transform 0.12s, filter 0.12s, background 0.12s;
+}
+
+.cell:hover {
+  filter: brightness(1.12);
+  transform: scale(1.04);
+  background: var(--cell-empty-highlight);
+}
+
+.cell.player {
+  background: var(--player);
+}
+
+.cell.computer {
+  background: var(--computer);
+}
+
+.cell.win {
+  outline: 3px solid var(--win-outline);
+  outline-offset: -6px;
+  animation: pulse 0.7s infinite alternate;
+}
+
+@keyframes pulse {
+  to {
+    filter: brightness(1.3);
+  }
+}
+
+.controls {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.lang-selector {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.lang-selector select {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 28px 6px 10px;
+  background: var(--bg-3);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 3px),
+    calc(100% - 11px) calc(50% - 3px);
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+.lang-selector select:focus {
+  outline: 1px solid var(--accent);
+}
+
+#restart {
+  padding: 10px 20px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #16255e, #0d183f);
+  color: var(--accent-strong);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.45),
+    inset 0 0 10px rgba(212, 175, 55, 0.08);
+  transition: background 0.15s, transform 0.08s, box-shadow 0.15s;
+}
+
+#restart:hover {
+  background: linear-gradient(180deg, #1b2d70, #101c4a);
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.55),
+    inset 0 0 14px rgba(212, 175, 55, 0.14);
+}
+
+.legend {
+  justify-self: end;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  display: inline-flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-dot {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+.score-dot.red {
+  background: var(--player);
+}
+
+.score-dot.yellow {
+  background: var(--computer);
+}
+
+.score-dot .num {
+  position: relative;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (max-width: 520px) {
+  .controls {
+    grid-template-columns: auto;
+    justify-items: center;
+    gap: 10px;
+  }
+
+  #restart {
+    order: -3;
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .legend {
+    order: -2;
+    justify-self: center;
+  }
+
+  .lang-selector {
+    order: -1;
+    justify-self: center;
+  }
+}
+</style>
 </head>
 
 <body>
-  <main class="game">
-    <h1 data-i18n="title">Connect 4</h1>
+<main class="game">
+  <h1 data-i18n="title">Connect 4</h1>
 
-    <div id="status"></div>
+  <div id="status"></div>
 
-    <div
-      id="board"
-      class="board"
-      aria-label="Connect 4 game board"
-    ></div>
+  <div
+    id="board"
+    class="board"
+    aria-label="Connect 4 game board"
+  ></div>
 
-    <div class="controls">
-      <div class="lang-selector">
-        <label for="lang-select" data-i18n="language">Language</label>
-        <select id="lang-select">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="zh">中文</option>
-        </select>
-      </div>
-
-      <button id="restart" data-i18n="restart">New Game</button>
-
-      <div class="legend">
-        <span class="legend-item">
-          <span class="score-dot red" aria-label="Your wins">
-            <span class="num" id="player-wins">0</span>
-          </span>
-          <span data-i18n="you">You</span>
-        </span>
-
-        <span class="legend-item">
-          <span class="score-dot yellow" aria-label="Computer wins">
-            <span class="num" id="computer-wins">0</span>
-          </span>
-          <span data-i18n="computer">Computer</span>
-        </span>
-      </div>
+  <div class="controls">
+    <div class="lang-selector">
+      <label for="lang-select" data-i18n="language">Language</label>
+      <select id="lang-select">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
     </div>
-  </main>
 
-  <script type="module" src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
-      });
+    <button id="restart" data-i18n="restart">New Game</button>
+
+    <div class="legend">
+      <span class="legend-item">
+        <span class="score-dot red" aria-label="Your wins">
+          <span class="num" id="player-wins">0</span>
+        </span>
+        <span data-i18n="you">You</span>
+      </span>
+
+      <span class="legend-item">
+        <span class="score-dot yellow" aria-label="Computer wins">
+          <span class="num" id="computer-wins">0</span>
+        </span>
+        <span data-i18n="computer">Computer</span>
+      </span>
+    </div>
+  </div>
+</main>
+
+<script>
+const ROWS = 6;
+const COLS = 7;
+const EMPTY = 0;
+const PLAYER = 1;
+const COMPUTER = 2;
+
+function createBoard(rows, cols, empty) {
+  return Array.from({ length: rows }, () => Array(cols).fill(empty));
+}
+
+function dropPiece(board, column, player, rows) {
+  for (let row = rows - 1; row >= 0; row -= 1) {
+    if (board[row][column] === EMPTY) {
+      board[row][column] = player;
+      return row;
     }
-  </script>
+  }
+  return -1;
+}
+
+function getValidColumns(board, cols) {
+  return Array.from({ length: cols }, (_, column) => column)
+    .filter(column => board[0][column] === EMPTY);
+}
+
+function findWinningLine(board, player, rows, cols) {
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < cols; column += 1) {
+      if (board[row][column] !== player) continue;
+
+      const result = checkWin(board, row, column, player, rows, cols);
+      if (result.won) return result;
+    }
+  }
+  return { won: false, cells: [] };
+}
+
+function checkWin(board, row, column, player, rows, cols) {
+  const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+  for (const [rowDirection, columnDirection] of directions) {
+    const cells = [[row, column]];
+
+    for (const direction of [-1, 1]) {
+      let currentRow = row + rowDirection * direction;
+      let currentColumn = column + columnDirection * direction;
+
+      while (
+        currentRow >= 0 && currentRow < rows &&
+        currentColumn >= 0 && currentColumn < cols &&
+        board[currentRow][currentColumn] === player
+      ) {
+        cells.push([currentRow, currentColumn]);
+        currentRow += rowDirection * direction;
+        currentColumn += columnDirection * direction;
+      }
+    }
+
+    if (cells.length >= 4) return { won: true, cells };
+  }
+
+  return { won: false, cells: [] };
+}
+
+function chooseComputerColumn({
+  board,
+  rows,
+  cols,
+  player,
+  computer,
+  depth = 4,
+  mistakeChance = 0.02
+}) {
+  const validColumns = getValidColumns(board, cols);
+  if (validColumns.length === 0) return null;
+  if (Math.random() < mistakeChance) return randomItem(validColumns);
+
+  let bestScore = -Infinity;
+  let bestColumns = [];
+
+  for (const column of orderColumns(validColumns, cols)) {
+    const row = dropPiece(board, column, computer, rows);
+    const score = minimax({
+      board,
+      rows,
+      cols,
+      player,
+      computer,
+      depth: Math.max(0, depth - 1),
+      maximizing: false,
+      alpha: -Infinity,
+      beta: Infinity
+    });
+    board[row][column] = EMPTY;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestColumns = [column];
+    } else if (score === bestScore) {
+      bestColumns.push(column);
+    }
+  }
+
+  return randomItem(bestColumns);
+}
+
+function minimax({
+  board,
+  rows,
+  cols,
+  player,
+  computer,
+  depth,
+  maximizing,
+  alpha,
+  beta
+}) {
+  if (findWinningLine(board, computer, rows, cols).won) return 1_000_000 + depth;
+  if (findWinningLine(board, player, rows, cols).won) return -1_000_000 - depth;
+
+  const validColumns = getValidColumns(board, cols);
+  if (depth <= 0 || validColumns.length === 0) {
+    return evaluateBoard(board, rows, cols, player, computer);
+  }
+
+  if (maximizing) {
+    let bestScore = -Infinity;
+    for (const column of orderColumns(validColumns, cols)) {
+      const row = dropPiece(board, column, computer, rows);
+      const score = minimax({
+        board, rows, cols, player, computer,
+        depth: depth - 1,
+        maximizing: false,
+        alpha,
+        beta
+      });
+      board[row][column] = EMPTY;
+      bestScore = Math.max(bestScore, score);
+      alpha = Math.max(alpha, bestScore);
+      if (beta <= alpha) break;
+    }
+    return bestScore;
+  }
+
+  let bestScore = Infinity;
+  for (const column of orderColumns(validColumns, cols)) {
+    const row = dropPiece(board, column, player, rows);
+    const score = minimax({
+      board, rows, cols, player, computer,
+      depth: depth - 1,
+      maximizing: true,
+      alpha,
+      beta
+    });
+    board[row][column] = EMPTY;
+    bestScore = Math.min(bestScore, score);
+    beta = Math.min(beta, bestScore);
+    if (beta <= alpha) break;
+  }
+  return bestScore;
+}
+
+function orderColumns(columns, cols) {
+  const center = Math.floor(cols / 2);
+  return [...columns].sort(
+    (a, b) => Math.abs(a - center) - Math.abs(b - center)
+  );
+}
+
+function evaluateBoard(board, rows, cols, player, computer) {
+  let score = 0;
+  const centerColumn = Math.floor(cols / 2);
+
+  for (let row = 0; row < rows; row += 1) {
+    if (board[row][centerColumn] === computer) score += 6;
+    if (board[row][centerColumn] === player) score -= 6;
+  }
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < cols; column += 1) {
+      if (column + 3 < cols) {
+        score += evaluateWindow(
+          [board[row][column], board[row][column + 1],
+           board[row][column + 2], board[row][column + 3]],
+          player, computer
+        );
+      }
+      if (row + 3 < rows) {
+        score += evaluateWindow(
+          [board[row][column], board[row + 1][column],
+           board[row + 2][column], board[row + 3][column]],
+          player, computer
+        );
+      }
+      if (row + 3 < rows && column + 3 < cols) {
+        score += evaluateWindow(
+          [board[row][column], board[row + 1][column + 1],
+           board[row + 2][column + 2], board[row + 3][column + 3]],
+          player, computer
+        );
+      }
+      if (row + 3 < rows && column - 3 >= 0) {
+        score += evaluateWindow(
+          [board[row][column], board[row + 1][column - 1],
+           board[row + 2][column - 2], board[row + 3][column - 3]],
+          player, computer
+        );
+      }
+    }
+  }
+
+  return score;
+}
+
+function evaluateWindow(windowCells, player, computer) {
+  const computerCount = windowCells.filter(cell => cell === computer).length;
+  const playerCount = windowCells.filter(cell => cell === player).length;
+  const emptyCount = windowCells.filter(cell => cell === EMPTY).length;
+
+  if (computerCount > 0 && playerCount > 0) return 0;
+  if (computerCount === 4) return 100_000;
+  if (computerCount === 3 && emptyCount === 1) return 120;
+  if (computerCount === 2 && emptyCount === 2) return 12;
+  if (computerCount === 1 && emptyCount === 3) return 2;
+  if (playerCount === 4) return -100_000;
+  if (playerCount === 3 && emptyCount === 1) return -150;
+  if (playerCount === 2 && emptyCount === 2) return -15;
+  if (playerCount === 1 && emptyCount === 3) return -2;
+  return 0;
+}
+
+function randomItem(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+const translations = {
+  en: {
+    title: "Connect 4", restart: "New Game", you: "You",
+    computer: "Computer", yourTurn: "Your turn",
+    computerStarts: "Computer starts",
+    computerThinking: "Computer is thinking...",
+    youWin: "You win!", computerWins: "The computer wins!",
+    draw: "It's a draw!", language: "Language"
+  },
+  es: {
+    title: "Conecta 4", restart: "Nuevo juego", you: "Tú",
+    computer: "Ordenador", yourTurn: "Tu turno",
+    computerStarts: "Empieza el ordenador",
+    computerThinking: "El ordenador está pensando...",
+    youWin: "¡Ganaste!", computerWins: "¡Gana el ordenador!",
+    draw: "¡Es un empate!", language: "Idioma"
+  },
+  zh: {
+    title: "四子棋", restart: "新遊戲", you: "你",
+    computer: "電腦", yourTurn: "到你",
+    computerStarts: "電腦先手",
+    computerThinking: "電腦諗緊...",
+    youWin: "你贏咗！", computerWins: "電腦贏咗！",
+    draw: "和局！", language: "語言"
+  }
+};
+
+let currentLang = detectLanguage();
+localStorage.setItem("connect4_lang", currentLang);
+let languageChangedCallback = null;
+
+function getLanguageFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const lang = (params.get("lang") || "").toLowerCase();
+  return ["en", "es", "zh"].includes(lang) ? lang : null;
+}
+
+function getLanguageFromStorage() {
+  const stored = localStorage.getItem("connect4_lang");
+  return ["en", "es", "zh"].includes(stored) ? stored : null;
+}
+
+function getLanguageFromBrowser() {
+  const navLang = (navigator.language || "").toLowerCase();
+  if (navLang.startsWith("es")) return "es";
+  if (navLang.startsWith("zh")) return "zh";
+  if (navLang.startsWith("en")) return "en";
+  return null;
+}
+
+function detectLanguage() {
+  return getLanguageFromQuery() ||
+    getLanguageFromStorage() ||
+    getLanguageFromBrowser() ||
+    "en";
+}
+
+function t(key) {
+  return translations[currentLang]?.[key] || translations.en[key] || key;
+}
+
+function applyTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    const key = element.getAttribute("data-i18n");
+    element.textContent = t(key);
+  });
+
+  document.documentElement.lang = currentLang;
+  const langSelect = document.getElementById("lang-select");
+  if (langSelect) langSelect.value = currentLang;
+}
+
+function initLanguage({ onLanguageChanged }) {
+  languageChangedCallback = onLanguageChanged;
+  applyTranslations();
+}
+
+function onLanguageChange() {
+  const langSelect = document.getElementById("lang-select");
+  langSelect.addEventListener("change", () => {
+    const newLang = langSelect.value;
+    if (["en", "es", "zh"].includes(newLang)) {
+      currentLang = newLang;
+      localStorage.setItem("connect4_lang", currentLang);
+      applyTranslations();
+      if (languageChangedCallback) languageChangedCallback();
+    }
+  });
+}
+
+function renderBoard({
+  boardElement,
+  board,
+  winningCells,
+  player,
+  computer,
+  onColumnClick
+}) {
+  boardElement.innerHTML = "";
+  const rows = board.length;
+  const cols = board[0].length;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < cols; column += 1) {
+      const cell = document.createElement("button");
+      cell.className = "cell";
+      cell.setAttribute("aria-label", `Row ${row + 1}, column ${column + 1}`);
+
+      if (board[row][column] === player) cell.classList.add("player");
+      if (board[row][column] === computer) cell.classList.add("computer");
+
+      const isWinningCell = winningCells.some(
+        ([winningRow, winningColumn]) =>
+          winningRow === row && winningColumn === column
+      );
+      if (isWinningCell) cell.classList.add("win");
+
+      cell.addEventListener("click", () => onColumnClick(column));
+      boardElement.appendChild(cell);
+    }
+  }
+}
+
+const WINS_KEY = "connect4_wins_v1";
+const boardElement = document.getElementById("board");
+const statusElement = document.getElementById("status");
+const restartButton = document.getElementById("restart");
+const playerWinsEl = document.getElementById("player-wins");
+const computerWinsEl = document.getElementById("computer-wins");
+
+let board;
+let currentPlayer;
+let gameOver;
+let winningCells;
+let playerWins = 0;
+let computerWins = 0;
+
+function loadWins() {
+  try {
+    const raw = localStorage.getItem(WINS_KEY);
+    if (!raw) return { player: 0, computer: 0 };
+    const data = JSON.parse(raw);
+    return {
+      player: typeof data.player === "number" ? data.player : 0,
+      computer: typeof data.computer === "number" ? data.computer : 0
+    };
+  } catch {
+    return { player: 0, computer: 0 };
+  }
+}
+
+function saveWins() {
+  localStorage.setItem(
+    WINS_KEY,
+    JSON.stringify({ player: playerWins, computer: computerWins })
+  );
+}
+
+function updateWinCounts() {
+  playerWinsEl.textContent = String(playerWins);
+  computerWinsEl.textContent = String(computerWins);
+  saveWins();
+}
+
+function setStatus(message) {
+  statusElement.textContent = message;
+}
+
+function render() {
+  renderBoard({
+    boardElement,
+    board,
+    winningCells,
+    player: PLAYER,
+    computer: COMPUTER,
+    onColumnClick: playerMove
+  });
+}
+
+function newGame() {
+  board = createBoard(ROWS, COLS, EMPTY);
+  currentPlayer = Math.random() < 0.5 ? PLAYER : COMPUTER;
+  gameOver = false;
+  winningCells = [];
+  render();
+
+  if (currentPlayer === PLAYER) {
+    setStatus(t("yourTurn"));
+  } else {
+    setStatus(t("computerStarts"));
+    setTimeout(computerTurn, 600);
+  }
+}
+
+function finishIfNeeded(player) {
+  const result = findWinningLine(board, player, ROWS, COLS);
+
+  if (result.won) {
+    winningCells = result.cells;
+    gameOver = true;
+    render();
+
+    if (player === PLAYER) {
+      playerWins += 1;
+      setStatus(t("youWin"));
+    } else {
+      computerWins += 1;
+      setStatus(t("computerWins"));
+    }
+
+    updateWinCounts();
+    return true;
+  }
+
+  if (getValidColumns(board, COLS).length === 0) {
+    gameOver = true;
+    setStatus(t("draw"));
+    return true;
+  }
+
+  return false;
+}
+
+function playerMove(column) {
+  if (gameOver || currentPlayer !== PLAYER) return;
+
+  const row = dropPiece(board, column, PLAYER, ROWS);
+  if (row === -1) return;
+
+  render();
+  if (finishIfNeeded(PLAYER)) return;
+
+  currentPlayer = COMPUTER;
+  setStatus(t("computerThinking"));
+  setTimeout(computerTurn, 350);
+}
+
+function computerTurn() {
+  if (gameOver) return;
+
+  const column = chooseComputerColumn({
+    board,
+    rows: ROWS,
+    cols: COLS,
+    empty: EMPTY,
+    player: PLAYER,
+    computer: COMPUTER,
+    depth: 5
+  });
+
+  dropPiece(board, column, COMPUTER, ROWS);
+  render();
+  if (finishIfNeeded(COMPUTER)) return;
+
+  currentPlayer = PLAYER;
+  setStatus(t("yourTurn"));
+}
+
+initLanguage({
+  onLanguageChanged: () => {
+    if (!gameOver) {
+      setStatus(
+        currentPlayer === PLAYER ? t("yourTurn") : t("computerThinking")
+      );
+    }
+  }
+});
+
+onLanguageChange();
+restartButton.addEventListener("click", newGame);
+
+({ player: playerWins, computer: computerWins } = loadWins());
+updateWinCounts();
+newGame();
+</script>
+
 </body>
 </html>

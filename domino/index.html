@@ -1,135 +1,2766 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-  <title>Dominoes</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dominoes</title>
+<style>
+:root {
+  --page-background: #194a30;
+
+  --line: #c8aa68;
+  --text: #f2eee3;
+  --muted: #aeb4b8;
+
+  --ivory: #f4ecd9;
+  --ivory-back: #d9ceb8;
+  --domino-ink: #1c1d1b;
+  --accent: #c8aa68;
+
+  --board-size: min(72vw, 760px);
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--page-background);
+  color: var(--text);
+}
+
+h1,
+h2 {
+  color: var(--accent);
+}
+
+button,
+select {
+  font: inherit;
+}
+
+/* General controls */
+
+button {
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 0.55rem 0.85rem;
+  background: var(--accent);
+  color: #1b1710;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    filter 120ms ease,
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--ivory);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.secondary-button {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text);
+}
+
+select {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0 0.65rem;
+  background: var(--page-background);
+  color: var(--text);
+}
+
+/* Main layout */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(305px, 390px);
+  align-items: center;
+  gap: clamp(1rem, 3.2vw, 3rem);
+  width: min(1280px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.board-area {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.board {
+  width: min(100%, var(--board-size));
+  overflow: visible;  
+}
+
+.domino-board-svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+/* SVG board */
+
+.board-cell {
+  fill: transparent;
+  stroke: none;
+  pointer-events: none;
+}
+
+.board-domino {
+  pointer-events: none;
+}
+
+/* One rounded body per complete tile. */
+.domino-board-svg .domino-body {
+  fill: var(--ivory);
+  stroke: var(--page-background);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 35%));
+}
+
+.domino-board-svg .domino-divider {
+  stroke: rgb(25 25 22 / 72%);
+  stroke-width: 1;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.domino-board-svg .pip {
+  fill: var(--domino-ink);
+}
+
+/* SVG side selector */
+
+.side-selector {
+  pointer-events: none;
+}
+
+.side-selector-prompt {
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgb(0 0 0 / 55%);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.side-selector-button {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.side-selector-hit-area {
+  fill: rgb(200 170 104 / 10%);
+  stroke: rgb(200 170 104 / 65%);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  transition:
+    fill 120ms ease,
+    stroke 120ms ease;
+}
+
+.side-selector-button:hover .side-selector-hit-area,
+.side-selector-button:focus-visible .side-selector-hit-area {
+  fill: rgb(200 170 104 / 24%);
+  stroke: var(--line);
+}
+
+.side-selector-button:focus {
+  outline: none;
+}
+
+.side-selector-button:focus-visible .side-selector-hit-area {
+  stroke: var(--ivory);
+  stroke-width: 3;
+}
+
+/* Sidebar and headings */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.desktop-title h1,
+.mobile-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.8vw, 2.25rem);
+  letter-spacing: -0.035em;
+}
+
+.desktop-title p {
+  margin: 0.28rem 0 0;
+  color: var(--muted);
+}
+
+.mobile-title {
+  display: none;
+  margin-bottom: 0.85rem;
+  text-align: center;
+  font-size: 1.15rem;
+}
+
+.status-card,
+.side-picker,
+.instructions {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--page-background);
+  padding: 0.9rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.stat-row + .stat-row {
+  margin-top: 0.45rem;
+}
+
+.stat-row strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.game-status {
+  min-height: 2.8em;
+  margin: 0.75rem 0 0;
+  line-height: 1.4;
+}
+
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.section-heading h2,
+.instructions h2 {
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.section-heading span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Computer hand */
+
+.computer-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  min-height: 1.7rem;
+}
+
+.computer-back {
+  width: 1.72rem;
+  height: 0.86rem;
+  border: 1px solid rgb(25 25 22 / 60%);
+  border-radius: 3px;
+  background: var(--ivory-back);
+}
+
+/* Player hand — HTML tiles, separate from SVG board tiles */
+
+.player-hand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.48rem;
+}
+
+.hand-domino {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 0 0 auto;
+  width: clamp(3.45rem, 5.2vw, 4.85rem);
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  border: 1px solid rgb(25 25 22 / 75%);
+  border-radius: 7px;
+  padding: 0;
+  background: var(--ivory);
+  box-shadow: 0 2px 5px rgb(0 0 0 / 28%);
+}
+
+.hand-domino.playable {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hand-domino:hover:not(:disabled) {
+  filter: none;
+  transform: translateY(-3px);
+}
+
+.hand-domino .domino-half {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+.hand-domino .domino-half + .domino-half {
+  border-left: 1px solid rgb(25 25 22 / 72%);
+}
+
+.hand-domino .pips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 69%;
+  height: 69%;
+}
+
+.hand-domino .pip {
+  width: 38%;
+  aspect-ratio: 1;
+  align-self: center;
+  justify-self: center;
+  border-radius: 50%;
+  background: var(--domino-ink);
+}
+
+.pip-1 {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.pip-2 {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.pip-3 {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.pip-4 {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.pip-5 {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.pip-6 {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.pip-7 {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.pip-8 {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.pip-9 {
+  grid-column: 3;
+  grid-row: 3;
+}
+
+/* Optional HTML side picker */
+
+.side-picker p {
+  margin: 0 0 0.7rem;
+  color: var(--muted);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.board-side-picker {
+  position: absolute;
+  z-index: 30;
+  top: 70%;
+  left: 50%;
+  width: min(88%, 25rem);
+  margin: 0;
+  padding: 1rem;
+  transform: translate(-50%, -50%);
+  background: rgb(25 29 32 / 98%);
+  box-shadow:
+    0 14px 38px rgb(0 0 0 / 60%),
+    0 0 0 1px rgb(244 236 217 / 8%);
+  text-align: center;
+}
+
+.board-side-picker .button-row {
+  justify-content: center;
+}
+
+.board-area:has(.board-side-picker:not(.is-hidden))::after {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  background: rgb(0 0 0 / 38%);
+  content: "";
+  pointer-events: none;
+}
+
+/* Controls and instructions */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.controls label {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.instructions p {
+  margin: 0.52rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.is-hidden {
+  display: none;
+}
+
+/* Responsive layout */
+
+@media (max-width: 820px) {
+  :root {
+    --board-size: min(calc(100vw - 2rem), 680px);
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 0.8rem 1rem 1.5rem;
+  }
+
+  .mobile-title {
+    display: block;
+  }
+
+  .desktop-title {
+    display: none;
+  }
+
+  .sidebar {
+    gap: 0.9rem;
+  }
+
+  .player-section {
+    order: 1;
+  }
+
+  .computer-section {
+    order: 2;
+  }
+
+  .status-card {
+    order: 3;
+  }
+
+  .controls {
+    order: 4;
+  }
+
+  .instructions {
+    order: 5;
+  }
+}
+
+@media (max-width: 430px) {
+  .hand-domino {
+    width: auto;
+    min-width: 2.8rem;
+  }
+
+  .controls label {
+    margin-left: 0;
+  }
+
+  .board-side-picker {
+    width: calc(100% - 1rem);
+  }
+
+  .board-side-picker .button-row button {
+    flex: 1 1 100%;
+  }
+}
+</style>
 </head>
 
 <body>
-  <main class="app-shell">
-    <section class="board-area" aria-label="Domino board">
-      <h1 class="mobile-title" data-i18n="title">Dominoes</h1>
+<main class="app-shell">
+  <section class="board-area" aria-label="Domino board">
+    <h1 class="mobile-title" data-i18n="title">Dominoes</h1>
 
-      <svg
-        id="board"
-        class="board"
-        role="grid"
-        aria-label="Domino board"
-      ></svg>
+    <svg
+      id="board"
+      class="board"
+      role="grid"
+      aria-label="Domino board"
+    ></svg>
 
-      <section
-        id="side-picker"
-        class="side-picker board-side-picker is-hidden"
-        aria-live="polite"
-        aria-label="Choose where to play this domino"
-      >
-        <p data-i18n="chooseSide">Choose an end for this tile.</p>
+    <section
+      id="side-picker"
+      class="side-picker board-side-picker is-hidden"
+      aria-live="polite"
+      aria-label="Choose where to play this domino"
+    >
+      <p data-i18n="chooseSide">Choose an end for this tile.</p>
 
-        <div class="button-row">
-          <button id="play-left" type="button" data-i18n="left">
-            Left
-          </button>
-
-          <button id="play-right" type="button" data-i18n="right">
-            Right
-          </button>
-
-          <button
-            id="cancel-play"
-            type="button"
-            class="secondary-button"
-            data-i18n="cancel"
-          >
-            Cancel
-          </button>
-        </div>
-      </section>
-    </section>
-
-    <aside class="sidebar">
-      <header class="desktop-title">
-        <h1 data-i18n="title">Dominoes</h1>
-        <p data-i18n="subtitle">Double-six draw dominoes</p>
-      </header>
-
-      <section class="status-card" aria-live="polite">
-        <div class="stat-row">
-          <span data-i18n="wins">Wins</span>
-          <strong id="score">0 – 0</strong>
-        </div>
-
-        <div class="stat-row">
-          <span data-i18n="boneyard">Boneyard</span>
-          <strong id="boneyard-count">0</strong>
-        </div>
-
-        <p id="game-status" class="game-status"></p>
-      </section>
-
-      <section class="computer-section">
-        <div class="section-heading">
-          <h2 data-i18n="computer">Computer</h2>
-          <span id="computer-count">0</span>
-        </div>
-
-        <div
-          id="computer-hand"
-          class="computer-hand"
-          aria-label="Computer tiles"
-        ></div>
-      </section>
-
-      <section class="player-section">
-        <div class="section-heading">
-          <h2 data-i18n="yourHand">Your hand</h2>
-          <span id="player-count">0</span>
-        </div>
-
-        <div
-          id="player-hand"
-          class="player-hand"
-          aria-label="Your domino tiles"
-        ></div>
-      </section>
-
-      <section class="controls">
-        <button id="new-game" type="button" data-i18n="newGame">
-          New game
+      <div class="button-row">
+        <button id="play-left" type="button" data-i18n="left">
+          Left
         </button>
 
-        <label for="language-select" data-i18n="language">
-          Language
-        </label>
+        <button id="play-right" type="button" data-i18n="right">
+          Right
+        </button>
 
-        <select id="language-select">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="zh">中文</option>
-        </select>
-      </section>
+        <button
+          id="cancel-play"
+          type="button"
+          class="secondary-button"
+          data-i18n="cancel"
+        >
+          Cancel
+        </button>
+      </div>
+    </section>
+  </section>
 
-      <section class="instructions">
-        <h2 data-i18n="howToPlay">How to play</h2>
-        <p data-i18n="instructions">
-          Click a domino that matches an open end. If it matches both ends,
-          choose left or right. Drawing is automatic when no tile can be played.
-        </p>
-      </section>
-    </aside>
-  </main>
+  <aside class="sidebar">
+    <header class="desktop-title">
+      <h1 data-i18n="title">Dominoes</h1>
+      <p data-i18n="subtitle">Double-six draw dominoes</p>
+    </header>
 
-  <script type="module" src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
+    <section class="status-card" aria-live="polite">
+      <div class="stat-row">
+        <span data-i18n="wins">Wins</span>
+        <strong id="score">0 – 0</strong>
+      </div>
+
+      <div class="stat-row">
+        <span data-i18n="boneyard">Boneyard</span>
+        <strong id="boneyard-count">0</strong>
+      </div>
+
+      <p id="game-status" class="game-status"></p>
+    </section>
+
+    <section class="computer-section">
+      <div class="section-heading">
+        <h2 data-i18n="computer">Computer</h2>
+        <span id="computer-count">0</span>
+      </div>
+
+      <div
+        id="computer-hand"
+        class="computer-hand"
+        aria-label="Computer tiles"
+      ></div>
+    </section>
+
+    <section class="player-section">
+      <div class="section-heading">
+        <h2 data-i18n="yourHand">Your hand</h2>
+        <span id="player-count">0</span>
+      </div>
+
+      <div
+        id="player-hand"
+        class="player-hand"
+        aria-label="Your domino tiles"
+      ></div>
+    </section>
+
+    <section class="controls">
+      <button id="new-game" type="button" data-i18n="newGame">
+        New game
+      </button>
+
+      <label for="language-select" data-i18n="language">
+        Language
+      </label>
+
+      <select id="language-select">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+      </select>
+    </section>
+
+    <section class="instructions">
+      <h2 data-i18n="howToPlay">How to play</h2>
+      <p data-i18n="instructions">
+        Click a domino that matches an open end. If it matches both ends,
+        choose left or right. Drawing is automatic when no tile can be played.
+      </p>
+    </section>
+  </aside>
+</main>
+
+<script>
+const PLAYER = Object.freeze({
+  HUMAN: "human",
+  COMPUTER: "computer"
+});
+
+const SCORES_STORAGE_KEY = "domino_wins_v1";
+
+function createEmptyScores() {
+  return {
+    [PLAYER.HUMAN]: 0,
+    [PLAYER.COMPUTER]: 0
+  };
+}
+
+function loadScores() {
+  const emptyScores = createEmptyScores();
+
+  try {
+    const savedScores = localStorage.getItem(SCORES_STORAGE_KEY);
+
+    if (!savedScores) {
+      return emptyScores;
+    }
+
+    const parsedScores = JSON.parse(savedScores);
+
+    return {
+      [PLAYER.HUMAN]: Number.isFinite(parsedScores?.[PLAYER.HUMAN])
+        ? Math.max(0, parsedScores[PLAYER.HUMAN])
+        : 0,
+      [PLAYER.COMPUTER]: Number.isFinite(parsedScores?.[PLAYER.COMPUTER])
+        ? Math.max(0, parsedScores[PLAYER.COMPUTER])
+        : 0
+    };
+  } catch {
+    return emptyScores;
+  }
+}
+
+function saveScores(scores) {
+  try {
+    localStorage.setItem(
+      SCORES_STORAGE_KEY,
+      JSON.stringify({
+        [PLAYER.HUMAN]: scores[PLAYER.HUMAN],
+        [PLAYER.COMPUTER]: scores[PLAYER.COMPUTER]
+      })
+    );
+  } catch {}
+}
+
+function createDoubleSixSet() {
+  const tiles = [];
+  let id = 0;
+
+  for (let high = 0; high <= 6; high += 1) {
+    for (let low = 0; low <= high; low += 1) {
+      id += 1;
+      tiles.push({
+        id: `tile-${id}`,
+        a: low,
+        b: high
       });
     }
-  </script>
+  }
+
+  return tiles;
+}
+
+function shuffle(items) {
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const replacement = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[replacement]] = [
+      shuffled[replacement],
+      shuffled[index]
+    ];
+  }
+
+  return shuffled;
+}
+
+function copyTile(tile) {
+  return {
+    id: tile.id,
+    a: tile.a,
+    b: tile.b
+  };
+}
+
+function isDouble(tile) {
+  return tile.a === tile.b;
+}
+
+function tilePips(tile) {
+  return tile.a + tile.b;
+}
+
+function createGame() {
+  const state = {
+    hands: {
+      [PLAYER.HUMAN]: [],
+      [PLAYER.COMPUTER]: []
+    },
+    boneyard: [],
+    ends: {
+      left: null,
+      right: null
+    },
+    opening: null,
+    turn: PLAYER.HUMAN,
+    gameOver: false,
+    scores: loadScores(),
+    lastEvent: null
+  };
+
+  function playerExists(player) {
+    return player === PLAYER.HUMAN || player === PLAYER.COMPUTER;
+  }
+
+  function oppositePlayer(player) {
+    return player === PLAYER.HUMAN ? PLAYER.COMPUTER : PLAYER.HUMAN;
+  }
+
+  function handPips(player) {
+    return state.hands[player].reduce(
+      (total, tile) => total + tilePips(tile),
+      0
+    );
+  }
+
+  function removeFromHand(player, tileId) {
+    const index = state.hands[player].findIndex(
+      (tile) => tile.id === tileId
+    );
+
+    if (index === -1) {
+      return null;
+    }
+
+    return state.hands[player].splice(index, 1)[0];
+  }
+
+  function highestHeldDouble() {
+    for (let pip = 6; pip >= 0; pip -= 1) {
+      const humanDouble = state.hands[PLAYER.HUMAN].find(
+        (tile) => tile.a === pip && tile.b === pip
+      );
+
+      if (humanDouble) {
+        return {
+          player: PLAYER.HUMAN,
+          tile: humanDouble
+        };
+      }
+
+      const computerDouble = state.hands[PLAYER.COMPUTER].find(
+        (tile) => tile.a === pip && tile.b === pip
+      );
+
+      if (computerDouble) {
+        return {
+          player: PLAYER.COMPUTER,
+          tile: computerDouble
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function drawForOpeningDouble() {
+    let drawingPlayer = PLAYER.HUMAN;
+
+    while (state.boneyard.length > 0) {
+      const tile = state.boneyard.pop();
+      state.hands[drawingPlayer].push(tile);
+
+      if (isDouble(tile)) {
+        return {
+          player: drawingPlayer,
+          tile
+        };
+      }
+
+      drawingPlayer = oppositePlayer(drawingPlayer);
+    }
+
+    return null;
+  }
+
+  function findOpening() {
+    return highestHeldDouble() || drawForOpeningDouble();
+  }
+
+  function canPlay(tile, side) {
+    if (
+      state.gameOver ||
+      (side !== "left" && side !== "right") ||
+      state.ends[side] === null
+    ) {
+      return false;
+    }
+
+    return tile.a === state.ends[side] || tile.b === state.ends[side];
+  }
+
+  function legalSides(tile) {
+    const sides = [];
+
+    if (canPlay(tile, "left")) {
+      sides.push("left");
+    }
+
+    if (canPlay(tile, "right")) {
+      sides.push("right");
+    }
+
+    return sides;
+  }
+
+  function legalMoves(player) {
+    if (!playerExists(player)) {
+      return [];
+    }
+
+    return state.hands[player]
+      .map((tile) => ({
+        tile,
+        sides: legalSides(tile)
+      }))
+      .filter((move) => move.sides.length > 0);
+  }
+
+  function orient(tile, side) {
+    const neededPip = state.ends[side];
+
+    if (tile.a === neededPip) {
+      return {
+        matching: tile.a,
+        exposed: tile.b
+      };
+    }
+
+    return {
+      matching: tile.b,
+      exposed: tile.a
+    };
+  }
+
+  function finishRound(winner, reason) {
+    state.gameOver = true;
+
+    if (winner === PLAYER.HUMAN || winner === PLAYER.COMPUTER) {
+      state.scores[winner] += 1;
+      saveScores(state.scores);
+    }
+
+    state.lastEvent = {
+      type: "round-end",
+      winner,
+      reason,
+      humanPips: handPips(PLAYER.HUMAN),
+      computerPips: handPips(PLAYER.COMPUTER)
+    };
+  }
+
+  function finishBlockedRound() {
+    const humanPips = handPips(PLAYER.HUMAN);
+    const computerPips = handPips(PLAYER.COMPUTER);
+
+    if (humanPips < computerPips) {
+      finishRound(PLAYER.HUMAN, "blocked");
+      return;
+    }
+
+    if (computerPips < humanPips) {
+      finishRound(PLAYER.COMPUTER, "blocked");
+      return;
+    }
+
+    finishRound(null, "blocked-tie");
+  }
+
+  function play(player, tileId, side) {
+    if (
+      state.gameOver ||
+      state.turn !== player ||
+      !playerExists(player) ||
+      (side !== "left" && side !== "right")
+    ) {
+      return {
+        ok: false,
+        reason: "invalid-turn"
+      };
+    }
+
+    const tile = state.hands[player].find(
+      (handTile) => handTile.id === tileId
+    );
+
+    if (!tile || !canPlay(tile, side)) {
+      return {
+        ok: false,
+        reason: "illegal-move"
+      };
+    }
+
+    const values = orient(tile, side);
+    const playedTile = removeFromHand(player, tileId);
+
+    state.ends[side] = values.exposed;
+
+    const placement = {
+      type: "place",
+      player,
+      side,
+      tile: copyTile(playedTile),
+      matching: values.matching,
+      exposed: values.exposed,
+      double: isDouble(playedTile)
+    };
+
+    state.lastEvent = placement;
+
+    if (state.hands[player].length === 0) {
+      finishRound(player, "empty-hand");
+
+      return {
+        ok: true,
+        finished: true,
+        placement
+      };
+    }
+
+    state.turn = oppositePlayer(player);
+
+    return {
+      ok: true,
+      finished: false,
+      placement
+    };
+  }
+
+  function drawUntilPlayable(player) {
+    if (
+      state.gameOver ||
+      state.turn !== player ||
+      !playerExists(player)
+    ) {
+      return {
+        drawn: [],
+        playable: false,
+        gameOver: state.gameOver
+      };
+    }
+
+    if (legalMoves(player).length > 0) {
+      return {
+        drawn: [],
+        playable: true,
+        gameOver: false
+      };
+    }
+
+    const drawn = [];
+
+    while (
+      state.boneyard.length > 0 &&
+      legalMoves(player).length === 0
+    ) {
+      const drawnTile = state.boneyard.pop();
+      state.hands[player].push(drawnTile);
+      drawn.push(copyTile(drawnTile));
+    }
+
+    const playable = legalMoves(player).length > 0;
+
+    if (drawn.length > 0) {
+      state.lastEvent = {
+        type: "draw",
+        player,
+        count: drawn.length
+      };
+    }
+
+    if (!playable && state.boneyard.length === 0) {
+      const nextPlayer = oppositePlayer(player);
+      state.turn = nextPlayer;
+
+      if (legalMoves(nextPlayer).length === 0) {
+        finishBlockedRound();
+      } else {
+        state.lastEvent = {
+          type: "pass",
+          player
+        };
+      }
+    }
+
+    return {
+      drawn,
+      playable,
+      gameOver: state.gameOver
+    };
+  }
+
+  function chooseComputerMove() {
+    const moves = legalMoves(PLAYER.COMPUTER);
+
+    if (moves.length === 0) {
+      return null;
+    }
+
+    const options = [];
+
+    for (const move of moves) {
+      for (const side of move.sides) {
+        const values = orient(move.tile, side);
+
+        options.push({
+          tile: move.tile,
+          side,
+          score:
+            tilePips(move.tile) * 10 +
+            values.exposed +
+            (isDouble(move.tile) ? 2 : 0)
+        });
+      }
+    }
+
+    options.sort(
+      (first, second) => second.score - first.score
+    );
+
+    return {
+      tile: copyTile(options[0].tile),
+      side: options[0].side
+    };
+  }
+
+  function startRound() {
+    const oldScores = { ...state.scores };
+    const set = shuffle(createDoubleSixSet());
+
+    state.hands[PLAYER.HUMAN] = set.splice(0, 7);
+    state.hands[PLAYER.COMPUTER] = set.splice(0, 7);
+    state.boneyard = set;
+    state.ends = {
+      left: null,
+      right: null
+    };
+    state.opening = null;
+    state.turn = PLAYER.HUMAN;
+    state.gameOver = false;
+    state.scores = oldScores;
+    state.lastEvent = null;
+
+    const opening = findOpening();
+
+    if (!opening) {
+      throw new Error(
+        "Unable to find a double tile for the opening."
+      );
+    }
+
+    removeFromHand(opening.player, opening.tile.id);
+
+    state.opening = {
+      type: "opening",
+      player: opening.player,
+      tile: copyTile(opening.tile),
+      value: opening.tile.a
+    };
+
+    state.ends.left = opening.tile.a;
+    state.ends.right = opening.tile.b;
+    state.turn = oppositePlayer(opening.player);
+    state.lastEvent = state.opening;
+
+    return {
+      ...state.opening,
+      nextPlayer: state.turn
+    };
+  }
+
+  function snapshot() {
+    return {
+      hands: {
+        [PLAYER.HUMAN]: state.hands[PLAYER.HUMAN].map(copyTile),
+        [PLAYER.COMPUTER]: state.hands[PLAYER.COMPUTER].map(copyTile)
+      },
+      boneyardCount: state.boneyard.length,
+      ends: {
+        left: state.ends.left,
+        right: state.ends.right
+      },
+      turn: state.turn,
+      gameOver: state.gameOver,
+      scores: {
+        [PLAYER.HUMAN]: state.scores[PLAYER.HUMAN],
+        [PLAYER.COMPUTER]: state.scores[PLAYER.COMPUTER]
+      },
+      lastEvent: state.lastEvent
+        ? structuredClone(state.lastEvent)
+        : null
+    };
+  }
+
+  return {
+    startRound,
+    snapshot,
+    play,
+    drawUntilPlayable,
+    legalSides,
+    legalMoves,
+    chooseComputerMove,
+    handPips
+  };
+}
+
+const translations = {
+  en: {
+    title: "Dominoes",
+    subtitle: "Double-six draw dominoes",
+    wins: "Wins",
+    boneyard: "Boneyard",
+    computer: "Computer",
+    yourHand: "Your hand",
+    chooseSide: "Choose an end for this tile.",
+    left: "Left",
+    right: "Right",
+    cancel: "Cancel",
+    newGame: "New game",
+    language: "Language",
+    howToPlay: "How to play",
+    instructions:
+      "Click a domino that matches an open end. If it matches both ends, choose one. Drawing is automatic when no tile can be played.",
+    yourTurn: "Your turn.",
+    computerTurn: "Computer is thinking…",
+    youOpen: "You open with {tile}.",
+    computerOpens: "Computer opens with {tile}.",
+    youDrew: "You drew {count} tile(s).",
+    computerDrew: "Computer drew {count} tile(s).",
+    youPlayed: "You played {tile} on the {side}.",
+    computerPlayed: "Computer played {tile} on the {side}.",
+    youWin: "You win this round.",
+    computerWins: "Computer wins this round.",
+    blockedYouWin: "The round is blocked. You win with fewer pips.",
+    blockedComputerWins:
+      "The round is blocked. Computer wins with fewer pips.",
+    blockedTie: "The round is blocked. It is a tie.",
+    leftSide: "left",
+    rightSide: "right",
+    tile: "{a}-{b}"
+  },
+  es: {
+    title: "Dominó",
+    subtitle: "Dominó de robo doble-seis",
+    wins: "Victorias",
+    boneyard: "Pozo",
+    computer: "Ordenador",
+    yourHand: "Tu mano",
+    chooseSide: "Elige un extremo para esta ficha.",
+    left: "Izquierda",
+    right: "Derecha",
+    cancel: "Cancelar",
+    newGame: "Nueva partida",
+    language: "Idioma",
+    howToPlay: "Cómo jugar",
+    instructions:
+      "Haz clic en una ficha que coincida con un extremo abierto. Si coincide con ambos extremos, elige uno. El robo es automático cuando no puedes jugar.",
+    yourTurn: "Tu turno.",
+    computerTurn: "El ordenador está pensando…",
+    youOpen: "Abres con {tile}.",
+    computerOpens: "El prdenador abre con {tile}.",
+    youDrew: "Robaste {count} ficha(s).",
+    computerDrew: "El ordenador robó {count} ficha(s).",
+    youPlayed: "Jugaste {tile} a la {side}.",
+    computerPlayed: "El ordenador jugó {tile} a la {side}.",
+    youWin: "Ganas esta ronda.",
+    computerWins: "El ordenador gana esta ronda.",
+    blockedYouWin:
+      "La ronda está bloqueada. Ganas con menos puntos.",
+    blockedComputerWins:
+      "La ronda está bloqueada. El ordenador gana con menos puntos.",
+    blockedTie: "La ronda está bloqueada. Hay empate.",
+    leftSide: "izquierda",
+    rightSide: "derecha",
+    tile: "{a}-{b}"
+  },
+  zh: {
+    title: "骨牌",
+    subtitle: "孖六抽牌骨牌",
+    wins: "勝局",
+    boneyard: "牌堆",
+    computer: "電腦",
+    yourHand: "手牌",
+    chooseSide: "放喺邊",
+    left: "左面",
+    right: "右面",
+    cancel: "取消",
+    newGame: "新一局",
+    language: "語言",
+    howToPlay: "玩法",
+    instructions:
+      "點選配對得到其中一面嘅骨牌。如果兩面都放得，請揀其中一面。無牌出嗰陣會自動抽牌。",
+    yourTurn: "輪到你",
+    computerTurn: "電腦諗緊點出…",
+    youOpen: "你以 {tile} 開局。",
+    computerOpens: "電腦以 {tile} 開局。",
+    youDrew: "你抽咗 {count} 張牌。",
+    computerDrew: "電腦抽咗 {count} 張牌。",
+    youPlayed: "你出咗 {tile} 喺{side}。",
+    computerPlayed: "電腦出咗 {tile} 喺{side}。",
+    youWin: "你贏咗呢局。",
+    computerWins: "電腦贏咗呢局。",
+    blockedYouWin:
+      "呢局無牌可出。你點數少啲，贏咗呢局。",
+    blockedComputerWins:
+      "呢局無牌可出。電腦點數少啲，贏咗呢局。",
+    blockedTie: "呢局無牌可出，打和。",
+    leftSide: "左面",
+    rightSide: "右面",
+    tile: "{a}-{b}"
+  }
+};
+
+let activeLanguage = "en";
+
+function normalizeLanguage(value) {
+  if (!value) {
+    return null;
+  }
+
+  const code = String(value).toLowerCase().split("-")[0];
+  return Object.hasOwn(translations, code) ? code : null;
+}
+
+function detectLanguage() {
+  const urlLanguage = normalizeLanguage(
+    new URLSearchParams(window.location.search).get("lang")
+  );
+
+  if (urlLanguage) {
+    return urlLanguage;
+  }
+
+  const savedLanguage = normalizeLanguage(
+    localStorage.getItem("domino-language")
+  );
+
+  if (savedLanguage) {
+    return savedLanguage;
+  }
+
+  const browserLanguages = navigator.languages?.length
+    ? navigator.languages
+    : [navigator.language];
+
+  for (const browserLanguage of browserLanguages) {
+    const supportedLanguage = normalizeLanguage(browserLanguage);
+
+    if (supportedLanguage) {
+      return supportedLanguage;
+    }
+  }
+
+  return "en";
+}
+
+function t(key, values = {}) {
+  let text =
+    translations[activeLanguage][key] ??
+    translations.en[key] ??
+    key;
+
+  for (const [name, value] of Object.entries(values)) {
+    text = text.replaceAll(`{${name}}`, String(value));
+  }
+
+  return text;
+}
+
+function getLanguage() {
+  return activeLanguage;
+}
+
+function applyTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+
+  const selector = document.getElementById("language-select");
+
+  if (selector) {
+    selector.value = activeLanguage;
+  }
+}
+
+function setLanguage(language, updateUrl = false) {
+  activeLanguage = normalizeLanguage(language) || "en";
+  document.documentElement.lang = activeLanguage;
+  localStorage.setItem("domino-language", activeLanguage);
+
+  if (updateUrl) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", activeLanguage);
+    window.history.replaceState({}, "", url);
+  }
+
+  applyTranslations();
+}
+
+function initializeLanguage() {
+  setLanguage(detectLanguage(), false);
+}
+
+const INITIAL_COLUMNS = 11;
+const MAX_COLUMNS = 15;
+const INITIAL_ROWS = 9;
+const ROWS_PER_EXTENSION = 4;
+const TURN_MARGIN = 2;
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+const FLOW_DIRECTIONS = Object.freeze({
+  WE: { dr: 0, dc: 1 },
+  EW: { dr: 0, dc: -1 },
+  SN: { dr: -1, dc: 0 },
+  NS: { dr: 1, dc: 0 }
+});
+
+const CLOCKWISE_FLOW = Object.freeze({
+  WE: "NS",
+  NS: "EW",
+  EW: "SN",
+  SN: "WE"
+});
+
+const COUNTERCLOCKWISE_FLOW = Object.freeze({
+  WE: "SN",
+  SN: "EW",
+  EW: "NS",
+  NS: "WE"
+});
+
+const PIP_POSITIONS = Object.freeze({
+  0: [],
+  1: [5],
+  2: [1, 9],
+  3: [1, 5, 9],
+  4: [1, 3, 7, 9],
+  5: [1, 3, 5, 7, 9],
+  6: [1, 3, 4, 6, 7, 9]
+});
+
+function coordinate(row, col) {
+  return `${String.fromCharCode(65 + col)}${String(row).padStart(2, "0")}`;
+}
+
+function createTurnState() {
+  return {
+    left: {
+      preferred: "clockwise",
+      count: 0
+    },
+    right: {
+      preferred: "clockwise",
+      count: 0
+    }
+  };
+}
+
+function svgElement(name, attributes = {}) {
+  const element = document.createElementNS(SVG_NS, name);
+
+  for (const [attribute, value] of Object.entries(attributes)) {
+    element.setAttribute(attribute, String(value));
+  }
+
+  return element;
+}
+
+function addPips(group, value, x, y, size) {
+  const inset = size * 0.2;
+  const span = size - inset * 2;
+  const radius = Math.max(1.5, size * 0.055);
+
+  for (const position of PIP_POSITIONS[value] ?? []) {
+    const index = position - 1;
+    const col = index % 3;
+    const row = Math.floor(index / 3);
+
+    group.appendChild(
+      svgElement("circle", {
+        cx: x + inset + (col * span) / 2,
+        cy: y + inset + (row * span) / 2,
+        r: radius,
+        class: "pip"
+      })
+    );
+  }
+}
+
+function addDomino(group, values, x, y, unit, horizontal) {
+  const width = horizontal ? unit * 2 : unit;
+  const height = horizontal ? unit : unit * 2;
+  const dividerInset = unit * 0.15;
+
+  group.appendChild(
+    svgElement("rect", {
+      x,
+      y,
+      width,
+      height,
+      rx: unit * 0.1,
+      class: "domino-body"
+    })
+  );
+
+  group.appendChild(
+    svgElement("line", {
+      x1: horizontal ? x + unit : x + dividerInset,
+      y1: horizontal ? y + dividerInset : y + unit,
+      x2: horizontal ? x + unit : x + unit - dividerInset,
+      y2: horizontal ? y + unit - dividerInset : y + unit,
+      class: "domino-divider"
+    })
+  );
+
+  addPips(group, values[0], x, y, unit);
+  addPips(
+    group,
+    values[1],
+    horizontal ? x + unit : x,
+    horizontal ? y : y + unit,
+    unit
+  );
+}
+
+function createRenderer(elements) {
+  const {
+    board,
+    playerHand,
+    computerHand,
+    playerCount,
+    computerCount,
+    boneyardCount,
+    score,
+    status
+  } = elements;
+
+  let cells = new Map();
+  let topRow = 0;
+  let bottomRow = INITIAL_ROWS - 1;
+  let leftCol = 0;
+  let rightCol = INITIAL_COLUMNS - 1;
+  let visualTiles = [];
+  let endpoints = {
+    left: null,
+    right: null
+  };
+  let turnState = createTurnState();
+  let sideSelector = null;
+
+  const resizeObserver =
+    typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => renderBoard())
+      : null;
+
+  function key(point) {
+    return `${point.row}:${point.col}`;
+  }
+
+  function inside(point) {
+    return (
+      point.row >= topRow &&
+      point.row <= bottomRow &&
+      point.col >= leftCol &&
+      point.col <= rightCol
+    );
+  }
+
+  function read(point) {
+    return inside(point) ? (cells.get(key(point)) ?? null) : null;
+  }
+
+  function write(point, descriptor) {
+    if (!inside(point)) {
+      throw new Error(
+        `Cannot write outside board at ${coordinate(point.row, point.col)}.`
+      );
+    }
+
+    cells.set(key(point), descriptor);
+  }
+
+  function isEmpty(point) {
+    return inside(point) && read(point) === null;
+  }
+
+  function add(point, flow, amount = 1) {
+    const direction = FLOW_DIRECTIONS[flow];
+
+    return {
+      row: point.row + direction.dr * amount,
+      col: point.col + direction.dc * amount
+    };
+  }
+
+  function extendToward(point) {
+    const columns = rightCol - leftCol + 1;
+
+    if (columns < MAX_COLUMNS) {
+      const extension = Math.min(2, MAX_COLUMNS - columns);
+
+      if (point.col < leftCol) {
+        leftCol -= extension;
+      } else if (point.col > rightCol) {
+        rightCol += extension;
+      }
+    }
+
+    if (point.row < topRow) {
+      topRow -= ROWS_PER_EXTENSION;
+    } else if (point.row > bottomRow) {
+      bottomRow += ROWS_PER_EXTENSION;
+    }
+  }
+
+  function markerRoleFor(side) {
+    return side === "left" ? "open-left" : "open-right";
+  }
+
+  function matchingRoleFor(side) {
+    return side === "left" ? "right" : "left";
+  }
+
+  function exposedRoleFor(side) {
+    return side === "left" ? "left" : "right";
+  }
+
+  function setOpenMarker(side, point, pip, flow) {
+    write(point, [pip, markerRoleFor(side), flow]);
+  }
+
+  function assertEndpointMarker(side, matchingPip) {
+    const endpoint = endpoints[side];
+
+    if (!endpoint) {
+      throw new Error(
+        `The ${side} endpoint has not been initialized.`
+      );
+    }
+
+    const descriptor = read(endpoint.marker);
+
+    if (!descriptor) {
+      throw new Error(
+        `Missing ${side} open marker at ${coordinate(
+          endpoint.marker.row,
+          endpoint.marker.col
+        )}.`
+      );
+    }
+
+    const [reservedPip, role, flow] = descriptor;
+
+    if (
+      reservedPip !== endpoint.value ||
+      reservedPip !== matchingPip ||
+      role !== markerRoleFor(side) ||
+      flow !== endpoint.flow
+    ) {
+      throw new Error(
+        `Invalid ${side} endpoint marker at ${coordinate(
+          endpoint.marker.row,
+          endpoint.marker.col
+        )}.`
+      );
+    }
+  }
+
+  function distanceToEdge(point, flow) {
+    const direction = FLOW_DIRECTIONS[flow];
+
+    if (direction.dc === 1) {
+      return rightCol - point.col;
+    }
+
+    if (direction.dc === -1) {
+      return point.col - leftCol;
+    }
+
+    if (direction.dr === 1) {
+      return bottomRow - point.row;
+    }
+
+    return point.row - topRow;
+  }
+
+  function shouldTurnAt(point, flow) {
+    return distanceToEdge(point, flow) <= TURN_MARGIN;
+  }
+
+  function createCandidate(marker, flow) {
+    return {
+      flow,
+      first: marker,
+      second: add(marker, flow),
+      nextMarker: add(marker, flow, 2)
+    };
+  }
+
+  function candidateFits(side, candidate) {
+    const endpoint = endpoints[side];
+    const firstDescriptor = read(candidate.first);
+
+    const firstIsCurrentMarker =
+      firstDescriptor &&
+      firstDescriptor[0] === endpoint.value &&
+      firstDescriptor[1] === markerRoleFor(side) &&
+      firstDescriptor[2] === endpoint.flow;
+
+    return Boolean(
+      firstIsCurrentMarker &&
+        isEmpty(candidate.second) &&
+        isEmpty(candidate.nextMarker)
+    );
+  }
+
+  function straightPathIsClear(candidate) {
+    const beyond = add(candidate.nextMarker, candidate.flow);
+
+    return (
+      isEmpty(candidate.second) &&
+      isEmpty(candidate.nextMarker) &&
+      isEmpty(beyond)
+    );
+  }
+
+  function turnOrder(side) {
+    return turnState[side].preferred === "clockwise"
+      ? ["clockwise", "counterclockwise"]
+      : ["counterclockwise", "clockwise"];
+  }
+
+  function recordTurn(side) {
+    const state = turnState[side];
+    state.count += 1;
+
+    if (state.count === 2) {
+      state.count = 0;
+      state.preferred =
+        state.preferred === "clockwise"
+          ? "counterclockwise"
+          : "clockwise";
+    }
+  }
+
+  function chooseNormalPath(side) {
+    const endpoint = endpoints[side];
+    const straight = createCandidate(
+      endpoint.marker,
+      endpoint.flow
+    );
+
+    const horizontal =
+      endpoint.flow === "WE" || endpoint.flow === "EW";
+
+    if (horizontal && shouldTurnAt(endpoint.marker, endpoint.flow)) {
+      const beyond = add(straight.nextMarker, straight.flow);
+
+      if (!inside(beyond)) {
+        extendToward(beyond);
+      }
+    }
+
+    if (
+      !shouldTurnAt(endpoint.marker, endpoint.flow) &&
+      straightPathIsClear(straight)
+    ) {
+      return straight;
+    }
+
+    const turnFlows = {
+      clockwise: CLOCKWISE_FLOW[endpoint.flow],
+      counterclockwise: COUNTERCLOCKWISE_FLOW[endpoint.flow]
+    };
+
+    for (const turn of turnOrder(side)) {
+      const candidate = createCandidate(
+        endpoint.marker,
+        turnFlows[turn]
+      );
+
+      if (!inside(candidate.nextMarker)) {
+        extendToward(candidate.nextMarker);
+      }
+
+      if (candidateFits(side, candidate)) {
+        recordTurn(side);
+        return candidate;
+      }
+    }
+
+    if (!inside(straight.nextMarker)) {
+      extendToward(straight.nextMarker);
+    }
+
+    return candidateFits(side, straight) ? straight : null;
+  }
+
+  function placeNormal(placement) {
+    const { side, matching, exposed } = placement;
+
+    assertEndpointMarker(side, matching);
+
+    const path = chooseNormalPath(side);
+
+    if (!path) {
+      throw new Error(
+        `No contiguous route is available for the ${side} chain.`
+      );
+    }
+
+    write(path.first, [
+      matching,
+      matchingRoleFor(side),
+      path.flow
+    ]);
+
+    write(path.second, [
+      exposed,
+      exposedRoleFor(side),
+      path.flow
+    ]);
+
+    setOpenMarker(
+      side,
+      path.nextMarker,
+      exposed,
+      path.flow
+    );
+
+    visualTiles.push({
+      kind: "normal",
+      cells: [path.first, path.second]
+    });
+
+    endpoints[side] = {
+      marker: path.nextMarker,
+      flow: path.flow,
+      value: exposed
+    };
+  }
+
+  function placeDouble(placement) {
+    const { side, matching, exposed } = placement;
+
+    assertEndpointMarker(side, matching);
+
+    const endpoint = endpoints[side];
+    const center = endpoint.marker;
+    const nextMarker = add(center, endpoint.flow);
+
+    if (!inside(nextMarker)) {
+      extendToward(nextMarker);
+    }
+
+    if (!isEmpty(nextMarker)) {
+      throw new Error(
+        `No space is available for a ${side} double.`
+      );
+    }
+
+    write(center, [matching, "double", endpoint.flow]);
+    setOpenMarker(side, nextMarker, exposed, endpoint.flow);
+
+    visualTiles.push({
+      kind: "double",
+      center,
+      flow: endpoint.flow
+    });
+
+    endpoints[side] = {
+      marker: nextMarker,
+      flow: endpoint.flow,
+      value: exposed
+    };
+  }
+
+  function place(placement) {
+    if (placement.side !== "left" && placement.side !== "right") {
+      throw new Error(
+        `Invalid placement side "${placement.side}".`
+      );
+    }
+
+    for (const pip of [placement.matching, placement.exposed]) {
+      if (!Number.isInteger(pip) || pip < 0 || pip > 6) {
+        throw new Error(
+          "Placement pips must be integers from 0 through 6."
+        );
+      }
+    }
+
+    if (placement.double) {
+      placeDouble(placement);
+    } else {
+      placeNormal(placement);
+    }
+
+    renderBoard();
+  }
+
+  function renderGrid(svg, unit) {
+    for (let row = topRow; row <= bottomRow; row += 1) {
+      for (let col = leftCol; col <= rightCol; col += 1) {
+        const descriptor = read({ row, col });
+        const label = coordinate(row, col);
+
+        const cell = svgElement("rect", {
+          x: (col - leftCol) * unit,
+          y: (row - topRow) * unit,
+          width: unit,
+          height: unit,
+          class: "board-cell",
+          "data-coordinate": label,
+          role: "gridcell",
+          "aria-label": label
+        });
+
+        if (descriptor) {
+          const [pip, role, flow] = descriptor;
+
+          cell.setAttribute("data-pip", String(pip));
+          cell.setAttribute("data-role", role);
+          cell.setAttribute("data-flow", flow);
+
+          if (role === "open-left" || role === "open-right") {
+            cell.classList.add(role);
+          }
+        }
+
+        svg.appendChild(cell);
+      }
+    }
+  }
+
+  function renderNormalTile(svg, tileData, unit) {
+    const [first, second] = tileData.cells;
+
+    const firstDescriptor = read(first);
+    const secondDescriptor = read(second);
+
+    if (!firstDescriptor || !secondDescriptor) {
+      throw new Error(
+        "Cannot render a normal domino without both descriptors."
+      );
+    }
+
+    const horizontal = first.row === second.row;
+    const x =
+      (Math.min(first.col, second.col) - leftCol) * unit;
+    const y =
+      (Math.min(first.row, second.row) - topRow) * unit;
+
+    const firstBeforeSecond = horizontal
+      ? first.col < second.col
+      : first.row < second.row;
+
+    const values = firstBeforeSecond
+      ? [firstDescriptor[0], secondDescriptor[0]]
+      : [secondDescriptor[0], firstDescriptor[0]];
+
+    const group = svgElement("g", {
+      class: `board-domino ${
+        horizontal ? "horizontal" : "vertical"
+      }`
+    });
+
+    addDomino(group, values, x, y, unit, horizontal);
+    svg.appendChild(group);
+  }
+
+  function renderDoubleTile(svg, tileData, unit) {
+    const descriptor = read(tileData.center);
+
+    if (!descriptor) {
+      throw new Error(
+        "Cannot render a double without its board descriptor."
+      );
+    }
+
+    const vertical =
+      tileData.flow === "WE" || tileData.flow === "EW";
+
+    const centerX =
+      (tileData.center.col - leftCol) * unit;
+    const centerY =
+      (tileData.center.row - topRow) * unit;
+
+    const x = vertical ? centerX : centerX - unit / 2;
+    const y = vertical ? centerY - unit / 2 : centerY;
+
+    const group = svgElement("g", {
+      class: "board-domino board-double"
+    });
+
+    addDomino(
+      group,
+      [descriptor[0], descriptor[0]],
+      x,
+      y,
+      unit,
+      !vertical
+    );
+
+    svg.appendChild(group);
+  }
+
+  function renderSideSelector(svg, unit) {
+    if (!sideSelector) {
+      return;
+    }
+
+    const selector = sideSelector;
+
+    const group = svgElement("g", {
+      class: "side-selector",
+      role: "group",
+      "aria-label": selector.label
+    });
+
+    const prompt = svgElement("text", {
+      x: ((rightCol - leftCol + 1) * unit) / 2,
+      y: 20,
+      "text-anchor": "middle",
+      class: "side-selector-prompt"
+    });
+
+    prompt.textContent = selector.label;
+    group.appendChild(prompt);
+
+    for (const side of ["left", "right"]) {
+      const marker = endpoints[side].marker;
+
+      const button = svgElement("g", {
+        class: `side-selector-button side-selector-${side}`,
+        role: "button",
+        tabindex: "0",
+        "aria-label": selector.sideLabels[side]
+      });
+
+      button.appendChild(
+        svgElement("circle", {
+          cx: (marker.col - leftCol + 0.5) * unit,
+          cy: (marker.row - topRow + 0.5) * unit,
+          r: unit * 0.42,
+          class: "side-selector-hit-area"
+        })
+      );
+
+      const select = () => {
+        if (sideSelector !== selector) {
+          return;
+        }
+
+        const callback = selector.onSelect;
+        sideSelector = null;
+        renderBoard();
+        callback(side);
+      };
+
+      button.addEventListener("click", select);
+
+      button.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          select();
+        }
+      });
+
+      group.appendChild(button);
+    }
+
+    svg.appendChild(group);
+  }
+
+  function renderBoard() {
+    const width = board.getBoundingClientRect().width;
+
+    if (!width) {
+      return;
+    }
+
+    const columns = rightCol - leftCol + 1;
+    const rows = bottomRow - topRow + 1;
+    const unit = width / columns;
+    const height = unit * rows;
+
+    const svg = svgElement("svg", {
+      class: "domino-board-svg",
+      xmlns: SVG_NS,
+      viewBox: `0 0 ${width} ${height}`,
+      width: "100%",
+      height,
+      role: "grid",
+      "aria-label": "Domino board"
+    });
+
+    renderGrid(svg, unit);
+
+    for (const tileData of visualTiles) {
+      if (tileData.kind === "double") {
+        renderDoubleTile(svg, tileData, unit);
+      } else {
+        renderNormalTile(svg, tileData, unit);
+      }
+    }
+
+    renderSideSelector(svg, unit);
+
+    board.replaceChildren(svg);
+    board.style.height = `${height}px`;
+  }
+
+  function showSideSelector({
+    label,
+    sideLabels,
+    onSelect
+  }) {
+    sideSelector = {
+      label,
+      sideLabels,
+      onSelect
+    };
+
+    renderBoard();
+  }
+
+  function hideSideSelector() {
+    sideSelector = null;
+    renderBoard();
+  }
+
+  function reset(opening) {
+    sideSelector = null;
+    cells = new Map();
+
+    leftCol = 5;
+    rightCol = leftCol + INITIAL_COLUMNS - 1;
+    topRow = 45;
+    bottomRow = topRow + INITIAL_ROWS - 1;
+
+    visualTiles = [];
+    turnState = createTurnState();
+
+    const center = {
+      row: topRow + (INITIAL_ROWS - 1) / 2,
+      col: leftCol + (INITIAL_COLUMNS - 1) / 2
+    };
+
+    const leftMarker = {
+      row: center.row,
+      col: center.col - 1
+    };
+
+    const rightMarker = {
+      row: center.row,
+      col: center.col + 1
+    };
+
+    write(center, [opening.value, "double", "EW"]);
+
+    setOpenMarker(
+      "left",
+      leftMarker,
+      opening.value,
+      "EW"
+    );
+
+    setOpenMarker(
+      "right",
+      rightMarker,
+      opening.value,
+      "WE"
+    );
+
+    visualTiles.push({
+      kind: "double",
+      center,
+      flow: "EW"
+    });
+
+    endpoints = {
+      left: {
+        marker: leftMarker,
+        flow: "EW",
+        value: opening.value
+      },
+      right: {
+        marker: rightMarker,
+        flow: "WE",
+        value: opening.value
+      }
+    };
+
+    renderBoard();
+  }
+
+  function renderHand(tiles, options) {
+    const fragment = document.createDocumentFragment();
+
+    for (const tile of tiles) {
+      const playable =
+        options.enabled && options.isPlayable(tile);
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `hand-domino${
+        playable ? " playable" : ""
+      }`;
+      button.disabled = !playable;
+      button.title = `${tile.a}-${tile.b}`;
+      button.setAttribute(
+        "aria-label",
+        `${tile.a}-${tile.b}`
+      );
+
+      for (const value of [tile.a, tile.b]) {
+        const half = document.createElement("span");
+        half.className = "domino-half";
+
+        const pips = document.createElement("span");
+        pips.className = "pips";
+
+        for (const position of PIP_POSITIONS[value] ?? []) {
+          const pip = document.createElement("span");
+          pip.className = `pip pip-${position}`;
+          pips.appendChild(pip);
+        }
+
+        half.appendChild(pips);
+        button.appendChild(half);
+      }
+
+      if (playable) {
+        button.addEventListener("click", () => {
+          options.onTileClick(tile);
+        });
+      }
+
+      fragment.appendChild(button);
+    }
+
+    playerHand.replaceChildren(fragment);
+  }
+
+  function renderComputerHand(count) {
+    const fragment = document.createDocumentFragment();
+
+    for (let index = 0; index < count; index += 1) {
+      const tileBack = document.createElement("span");
+      tileBack.className = "computer-back";
+      tileBack.setAttribute("aria-hidden", "true");
+      fragment.appendChild(tileBack);
+    }
+
+    computerHand.replaceChildren(fragment);
+  }
+
+  function renderStats(values) {
+    playerCount.textContent = values.playerTiles;
+    computerCount.textContent = values.computerTiles;
+    boneyardCount.textContent = values.boneyardTiles;
+    score.textContent = `${values.playerWins} – ${values.computerWins}`;
+    status.textContent = values.message || "";
+  }
+
+  function boardSnapshot() {
+    const rows = bottomRow - topRow + 1;
+    const columns = rightCol - leftCol + 1;
+
+    return Array.from(
+      { length: rows },
+      (_, rowOffset) => {
+        const row = topRow + rowOffset;
+
+        return Array.from(
+          { length: columns },
+          (_, colOffset) => {
+            const col = leftCol + colOffset;
+
+            return (
+              cells.get(key({ row, col })) ?? null
+            );
+          }
+        );
+      }
+    );
+  }
+
+  function destroy() {
+    resizeObserver?.disconnect();
+    sideSelector = null;
+    board.replaceChildren();
+    board.style.removeProperty("height");
+  }
+
+  resizeObserver?.observe(board);
+
+  return {
+    reset,
+    place,
+    renderBoard,
+    renderHand,
+    renderComputerHand,
+    renderStats,
+    boardSnapshot,
+    showSideSelector,
+    hideSideSelector,
+    destroy
+  };
+}
+
+const elements = {
+  board: document.getElementById("board"),
+  playerHand: document.getElementById("player-hand"),
+  computerHand: document.getElementById("computer-hand"),
+  playerCount: document.getElementById("player-count"),
+  computerCount: document.getElementById("computer-count"),
+  boneyardCount: document.getElementById("boneyard-count"),
+  score: document.getElementById("score"),
+  status: document.getElementById("game-status"),
+
+  newGame: document.getElementById("new-game"),
+  languageSelect: document.getElementById("language-select")
+};
+
+const game = createGame();
+const renderer = createRenderer(elements);
+
+let pendingTile = null;
+let computerThinking = false;
+let statusOverride = "";
+let pendingTileButton = null;
+
+function tileText(tile) {
+  return t("tile", {
+    a: tile.a,
+    b: tile.b
+  });
+}
+
+function sideText(side) {
+  return t(side === "left" ? "leftSide" : "rightSide");
+}
+
+function rememberTileButton(tile) {
+  const buttons = elements.playerHand.querySelectorAll(
+    ".hand-domino"
+  );
+
+  const targetLabel = `${tile.a}-${tile.b}`;
+
+  pendingTileButton =
+    Array.from(buttons).find((button) => {
+      return (
+        button.getAttribute("aria-label") === targetLabel
+      );
+    }) || null;
+}
+
+function restoreTileFocus() {
+  if (!pendingTileButton) return;
+
+  const button = pendingTileButton;
+  pendingTileButton = null;
+
+  window.requestAnimationFrame(() => {
+    if (document.contains(button) && !button.disabled) {
+      button.focus();
+    }
+  });
+}
+
+function clearPendingTile({
+  restoreFocus = false
+} = {}) {
+  pendingTile = null;
+  renderer.hideSideSelector();
+
+  if (restoreFocus) {
+    restoreTileFocus();
+  } else {
+    pendingTileButton = null;
+  }
+}
+
+function resultMessage(snapshot) {
+  const event = snapshot.lastEvent;
+
+  if (
+    snapshot.gameOver &&
+    event?.type === "round-end"
+  ) {
+    if (event.reason === "empty-hand") {
+      return event.winner === PLAYER.HUMAN
+        ? t("youWin")
+        : t("computerWins");
+    }
+
+    if (event.reason === "blocked") {
+      return event.winner === PLAYER.HUMAN
+        ? t("blockedYouWin")
+        : t("blockedComputerWins");
+    }
+
+    return t("blockedTie");
+  }
+
+  if (statusOverride) return statusOverride;
+
+  if (event?.type === "opening") {
+    return event.player === PLAYER.HUMAN
+      ? t("youOpen", {
+          tile: tileText(event.tile)
+        })
+      : t("computerOpens", {
+          tile: tileText(event.tile)
+        });
+  }
+
+  if (event?.type === "place") {
+    return event.player === PLAYER.HUMAN
+      ? t("youPlayed", {
+          tile: tileText(event.tile),
+          side: sideText(event.side)
+        })
+      : t("computerPlayed", {
+          tile: tileText(event.tile),
+          side: sideText(event.side)
+        });
+  }
+
+  if (event?.type === "draw") {
+    return event.player === PLAYER.HUMAN
+      ? t("youDrew", {
+          count: event.count
+        })
+      : t("computerDrew", {
+          count: event.count
+        });
+  }
+
+  if (event?.type === "pass") {
+    return event.player === PLAYER.HUMAN
+      ? t("yourTurn")
+      : t("computerTurn");
+  }
+
+  return snapshot.turn === PLAYER.HUMAN
+    ? t("yourTurn")
+    : t("computerTurn");
+}
+
+function renderApplication() {
+  const snapshot = game.snapshot();
+
+  const playerCanInteract =
+    !snapshot.gameOver &&
+    !computerThinking &&
+    !pendingTile &&
+    snapshot.turn === PLAYER.HUMAN;
+
+  renderer.renderHand(snapshot.hands[PLAYER.HUMAN], {
+    enabled: playerCanInteract,
+
+    isPlayable(tile) {
+      return game.legalSides(tile).length > 0;
+    },
+
+    onTileClick(tile) {
+      onHumanTileClick(tile);
+    }
+  });
+
+  renderer.renderComputerHand(
+    snapshot.hands[PLAYER.COMPUTER].length
+  );
+
+  renderer.renderStats({
+    playerTiles: snapshot.hands[PLAYER.HUMAN].length,
+    computerTiles: snapshot.hands[PLAYER.COMPUTER].length,
+    boneyardTiles: snapshot.boneyardCount,
+    playerWins: snapshot.scores[PLAYER.HUMAN],
+    computerWins: snapshot.scores[PLAYER.COMPUTER],
+    message: resultMessage(snapshot)
+  });
+
+  if (pendingTile) {
+    renderer.showSideSelector({
+      label: t("chooseSide"),
+      sideLabels: {
+        left: t("leftSide"),
+        right: t("rightSide")
+      },
+      onSelect(side) {
+        if (pendingTile) {
+          playHumanTile(pendingTile, side);
+        }
+      }
+    });
+  } else {
+    renderer.hideSideSelector();
+  }
+
+  elements.newGame.classList.toggle(
+    "is-hidden",
+    !snapshot.gameOver
+  );
+}
+
+function scheduleComputerTurn(delay = 350) {
+  window.setTimeout(beginComputerTurn, delay);
+}
+
+function scheduleHumanTurn(delay = 350) {
+  window.setTimeout(beginHumanTurn, delay);
+}
+
+function beginHumanTurn() {
+  const beforeDraw = game.snapshot();
+
+  if (beforeDraw.gameOver) {
+    renderApplication();
+    return;
+  }
+
+  if (beforeDraw.turn !== PLAYER.HUMAN) {
+    renderApplication();
+
+    if (beforeDraw.turn === PLAYER.COMPUTER) {
+      scheduleComputerTurn();
+    }
+
+    return;
+  }
+
+  statusOverride = "";
+
+  const drawResult = game.drawUntilPlayable(PLAYER.HUMAN);
+  const afterDraw = game.snapshot();
+
+  if (drawResult.gameOver || afterDraw.gameOver) {
+    renderApplication();
+    return;
+  }
+
+  if (afterDraw.turn !== PLAYER.HUMAN) {
+    statusOverride = t("computerTurn");
+    renderApplication();
+
+    if (afterDraw.turn === PLAYER.COMPUTER) {
+      scheduleComputerTurn();
+    }
+
+    return;
+  }
+
+  statusOverride =
+    drawResult.drawn.length > 0
+      ? t("youDrew", {
+          count: drawResult.drawn.length
+        })
+      : t("yourTurn");
+
+  renderApplication();
+}
+
+function onHumanTileClick(tile) {
+  const snapshot = game.snapshot();
+
+  if (
+    snapshot.gameOver ||
+    snapshot.turn !== PLAYER.HUMAN ||
+    computerThinking ||
+    pendingTile
+  ) {
+    return;
+  }
+
+  const sides = game.legalSides(tile);
+
+  if (sides.length === 0) return;
+
+  if (sides.length === 1) {
+    playHumanTile(tile, sides[0]);
+    return;
+  }
+
+  if (
+    snapshot.ends.left === snapshot.ends.right
+  ) {
+    const side =
+      sides[Math.floor(Math.random() * sides.length)];
+
+    playHumanTile(tile, side);
+    return;
+  }
+
+  pendingTile = tile;
+  rememberTileButton(tile);
+  statusOverride = t("chooseSide");
+  renderApplication();
+}
+
+function playHumanTile(tile, side) {
+  clearPendingTile();
+  statusOverride = "";
+
+  const result = game.play(
+    PLAYER.HUMAN,
+    tile.id,
+    side
+  );
+
+  if (!result.ok) {
+    renderApplication();
+    return;
+  }
+
+  renderer.place(result.placement);
+  renderApplication();
+
+  if (!game.snapshot().gameOver) {
+    scheduleComputerTurn(420);
+  }
+}
+
+function beginComputerTurn() {
+  const beforeTurn = game.snapshot();
+
+  if (beforeTurn.gameOver) {
+    computerThinking = false;
+    renderApplication();
+    return;
+  }
+
+  if (beforeTurn.turn !== PLAYER.COMPUTER) {
+    computerThinking = false;
+    renderApplication();
+
+    if (beforeTurn.turn === PLAYER.HUMAN) {
+      scheduleHumanTurn(0);
+    }
+
+    return;
+  }
+
+  computerThinking = true;
+  statusOverride = t("computerTurn");
+  renderApplication();
+
+  window.setTimeout(() => {
+    const drawResult = game.drawUntilPlayable(
+      PLAYER.COMPUTER
+    );
+
+    const afterDraw = game.snapshot();
+
+    if (drawResult.gameOver || afterDraw.gameOver) {
+      computerThinking = false;
+      renderApplication();
+      return;
+    }
+
+    if (afterDraw.turn !== PLAYER.COMPUTER) {
+      computerThinking = false;
+      statusOverride = t("yourTurn");
+      renderApplication();
+
+      if (afterDraw.turn === PLAYER.HUMAN) {
+        scheduleHumanTurn();
+      }
+
+      return;
+    }
+
+    const move = game.chooseComputerMove();
+
+    if (!move) {
+      computerThinking = false;
+
+      const current = game.snapshot();
+      renderApplication();
+
+      if (
+        !current.gameOver &&
+        current.turn === PLAYER.HUMAN
+      ) {
+        scheduleHumanTurn();
+      }
+
+      return;
+    }
+
+    const result = game.play(
+      PLAYER.COMPUTER,
+      move.tile.id,
+      move.side
+    );
+
+    computerThinking = false;
+
+    if (!result.ok) {
+      renderApplication();
+
+      const current = game.snapshot();
+
+      if (
+        !current.gameOver &&
+        current.turn === PLAYER.HUMAN
+      ) {
+        scheduleHumanTurn();
+      }
+
+      return;
+    }
+
+    renderer.place(result.placement);
+
+    const drawText =
+      drawResult.drawn.length > 0
+        ? `${t("computerDrew", {
+            count: drawResult.drawn.length
+          })} `
+        : "";
+
+    statusOverride = `${drawText}${t("computerPlayed", {
+      tile: tileText(move.tile),
+      side: sideText(move.side)
+    })}`;
+
+    renderApplication();
+
+    if (!game.snapshot().gameOver) {
+      scheduleHumanTurn(350);
+    }
+  }, 550);
+}
+
+function startRound() {
+  clearPendingTile();
+  computerThinking = false;
+  statusOverride = "";
+
+  const opening = game.startRound();
+
+  renderer.reset(opening);
+  renderApplication();
+
+  if (game.snapshot().turn === PLAYER.COMPUTER) {
+    scheduleComputerTurn(450);
+  } else {
+    scheduleHumanTurn(120);
+  }
+}
+
+function bindEvents() {
+  elements.newGame.addEventListener("click", startRound);
+
+  elements.languageSelect.addEventListener(
+    "change",
+    (event) => {
+      setLanguage(event.target.value, true);
+      renderApplication();
+    }
+  );
+
+  window.addEventListener("resize", () => {
+    renderer.renderBoard();
+  });
+}
+
+function initialize() {
+  initializeLanguage();
+  bindEvents();
+  startRound();
+}
+
+initialize();
+</script>
 </body>
 </html>

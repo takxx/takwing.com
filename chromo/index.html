@@ -1,66 +1,1345 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title data-i18n="title">Dominos of Colours</title>
-  <link rel="stylesheet" href="./style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title">Dominos of Colours</title>
+<style>
+:root {
+  font-family: system-ui, sans-serif;
+  color: #fff8e8;
+  background: #190b26;
+
+  --velvet: #281238;
+  --velvet-deep: #190b26;
+  --velvet-light: #39204b;
+  --gold: #d7b66b;
+  --gold-bright: #f0d78d;
+  --cream: #fff8e8;
+  --muted: #dfd2e6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse at top left, #39204b 0, transparent 55%),
+    var(--velvet-deep);
+  color: var(--cream);
+}
+
+button,
+select {
+  font: inherit;
+}
+
+button {
+  color: var(--cream);
+  background: var(--velvet);
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  padding: .55rem .75rem;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--velvet-light);
+  border-color: var(--gold-bright);
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "board title"
+    "board hands";
+  gap: 1.25rem;
+  align-items: start;
+  width: min(1600px, 100%);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.sidebar-header {
+  grid-area: title;
+  position: relative;
+}
+
+#new-game {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+#board-panel {
+  grid-area: board;
+  height: min(92vh, 1000px);
+  min-height: 360px;
+  overflow: hidden;
+  background: transparent;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  box-shadow: 0 10px 35px #0005;
+  touch-action: manipulation;
+}
+
+#board {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sidebar-header,
+.play-area {
+  min-width: 0;
+  background: var(--velvet);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px #0003;
+}
+
+.sidebar-header h1 {
+  margin: 0 0 .5rem;
+  color: var(--gold-bright);
+  font-size: 1.45rem;
+}
+
+#status {
+  min-height: 1.5rem;
+  margin-bottom: .75rem;
+  color: var(--cream);
+}
+
+.play-area {
+  grid-area: hands;
+}
+
+#pile-count {
+  margin-bottom: .75rem;
+  color: var(--muted);
+}
+
+#players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .65rem;
+  background: var(--velvet-deep);
+  border: 1px solid #927a4c;
+  border-radius: 6px;
+}
+
+.player.active {
+  border: 2px solid var(--gold-bright);
+}
+
+.mini-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 100px;
+}
+
+.mini-piece {
+  width: 12px;
+  height: 7px;
+  flex: 0 0 12px;
+  background: var(--cream);
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+}
+
+#hand-title {
+  color: var(--gold-bright);
+  font-size: 1.1rem;
+}
+
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.tile-button {
+  display: flex;
+  gap: 2px;
+  padding: 5px;
+  background: #fffdf6;
+  border: 2px solid var(--gold);
+  border-radius: 6px;
+}
+
+.tile-button[aria-pressed="true"] {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+.swatch {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 3px;
+  color: #fff;
+  font-weight: 800;
+  text-shadow: 0 1px 3px #000;
+}
+
+.swatch.wild {
+  background:
+    linear-gradient(135deg, #fff 0 35%, #e8d9a8 35% 65%, #fff 65%);
+  color: #4b2c53;
+  text-shadow: none;
+}
+
+#hint {
+  min-height: 2.5em;
+  color: var(--muted);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+/* The modal follows the same velvet-and-gold palette. */
+dialog {
+  width: min(92vw, 540px);
+  padding: 1.25rem;
+  color: var(--cream);
+  background: var(--velvet);
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  box-shadow: 0 14px 60px #0009;
+}
+
+dialog::backdrop {
+  background: #090510c9;
+}
+
+#start-form {
+  display: grid;
+  gap: .75rem;
+}
+
+#start-form h2,
+#start-form p {
+  margin: 0;
+}
+
+#start-form h2 {
+  color: var(--gold-bright);
+}
+
+#start-form select {
+  padding: .55rem;
+  color: var(--cream);
+  background: var(--velvet-deep);
+  border: 1px solid var(--gold);
+  border-radius: 5px;
+}
+
+.board-cell {
+  stroke: #4f4552;
+  stroke-width: 1.5;
+}
+
+.wild-cell {
+  stroke: #94783f;
+  stroke-width: 2;
+}
+
+.move-preview {
+  cursor: pointer;
+  fill: var(--gold-bright);
+  opacity: .6;
+  stroke: #40e0d0;
+  stroke-width: 1.5;
+}
+
+.move-preview:hover,
+.move-preview:focus {
+  opacity: 1;
+  fill: var(--gold);
+  stroke: #bb831b;
+  stroke-width: 4;
+  outline: none;
+}
+
+.move-star {
+  pointer-events: none;
+  fill: #4b2c53;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    display: flex;
+    flex-direction: column;
+    padding: .5rem;
+  }
+
+  .sidebar-header,
+  #board-panel,
+  .play-area {
+    width: 100%;
+  }
+
+  #board-panel {
+    height: 48vh;
+    min-height: 250px;
+  }
+}
+</style>
 </head>
+
 <body>
-  <main class="layout">
-    <header class="sidebar-header">
-      <h1 data-i18n="title"></h1>
-      <p id="record"></p>
-      <button id="new-game" type="button" data-i18n="newGame"></button>
-      <div id="status" aria-live="polite"></div>
-    </header>
+<main class="layout">
+  <header class="sidebar-header">
+    <h1 data-i18n="title"></h1>
+    <p id="record"></p>
+    <button id="new-game" type="button" data-i18n="newGame"></button>
+    <div id="status" aria-live="polite"></div>
+  </header>
 
-    <section id="board-panel" aria-label="Game board">
-      <svg id="board" role="img" aria-label="Game board"></svg>
-    </section>
+  <section id="board-panel" aria-label="Game board">
+    <svg id="board" role="img" aria-label="Game board"></svg>
+  </section>
 
-    <section class="play-area">
-      <div id="pile-count" aria-live="polite"></div>
-      <div id="players"></div>
-      <h2 id="hand-title"></h2>
-      <div id="hand" class="hand"></div>
-      <p id="hint" aria-live="polite"></p>
-      <div class="controls">
-        <button id="draw" type="button" data-i18n="draw"></button>
-        <button id="cancel" type="button" data-i18n="cancel"></button>
-      </div>
-    </section>
-  </main>
+  <section class="play-area">
+    <div id="pile-count" aria-live="polite"></div>
+    <div id="players"></div>
+    <h2 id="hand-title"></h2>
+    <div id="hand" class="hand"></div>
+    <p id="hint" aria-live="polite"></p>
+    <div class="controls">
+      <button id="draw" type="button" data-i18n="draw"></button>
+      <button id="cancel" type="button" data-i18n="cancel"></button>
+    </div>
+  </section>
+</main>
 
-  <dialog id="start-dialog">
-    <form id="start-form">
-      <h2 data-i18n="welcome"></h2>
-      <p data-i18n="rules"></p>
+<dialog id="start-dialog">
+  <form id="start-form">
+    <h2 data-i18n="welcome"></h2>
+    <p data-i18n="rules"></p>
 
-      <label for="ai-count" data-i18n="opponents"></label>
-      <select id="ai-count">
-        <option value="1">1</option>
-        <option value="2">2</option>
-      </select>
+    <label for="ai-count" data-i18n="opponents"></label>
+    <select id="ai-count">
+      <option value="1">1</option>
+      <option value="2">2</option>
+    </select>
 
-      <label for="language" data-i18n="language"></label>
-      <select id="language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <option value="zh">中文</option>
-      </select>
+    <label for="language" data-i18n="language"></label>
+    <select id="language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="zh">中文</option>
+    </select>
 
-      <button id="start-button" type="submit" data-i18n="start"></button>
-    </form>
-  </dialog>
+    <button id="start-button" type="submit" data-i18n="start"></button>
+  </form>
+</dialog>
 
-  <script type="module" src="./script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
+<script type="module">
+// bundle.js — all modules combined
+
+// ---------- lang.js ----------
+const strings = {
+  en: {
+    title: "Colour Dominoes",
+    welcome: "Welcome to Colour Dominoes",
+    rules: "Players take turns placing a three-square tile. At least two squares on the tile must touch matching colours, and different colours cannot touch. If you have no valid moves, you draw one tile; if you still cannot play, your turn ends. The first player to empty their hand wins. The starting Chameleon tile features a wild centre square.",
+    opponents: "Computer opponents",
+    language: "Language",
+    start: "Start Game",
+    newGame: "New Game",
+    draw: "Draw Tile",
+    cancel: "Cancel Selection",
+    yourTurn: "Your turn",
+    aiTurn: "{name} is thinking…",
+    yourHand: "Your Tiles",
+    pileCount: "Pile: {count}",
+    tilesCount: "{count} tiles",
+    selectTile: "Select a tile, then tap one of the highlighted placement spots.",
+    chooseMove: "Tap the highlighted full-tile preview to confirm your placement.",
+    mustDraw: "No valid moves. Draw a tile.",
+    drawnPlayable: "You drew a playable tile! Choose a highlighted placement.",
+    drawnPass: "No valid moves after drawing. Turn passed.",
+    gameOver: "{name} wins!",
+    record: "Wins / Losses: {wins} / {losses}",
+    invalid: "That placement isn't allowed.",
+    human: "You",
+    computer: "Computer {n}",
+    wild: "Wild Centre"
+  },
+  es: {
+    title: "Dominó de Colores",
+    welcome: "Te damos la bienvenida a Dominó de Colores",
+    rules: "Los jugadores se turnan para colocar una ficha de tres casillas. Al menos dos casillas de la ficha deben coincidir con los colores adyacentes, y los colores diferentes no pueden tocarse. Si no tienes movimientos válidos, robas una ficha; si aún así no puedes jugar, tu turno termina. Gana el primer jugador en quedarse sin fichas. La ficha Camaleón inicial tiene una casilla central comodín.",
+    opponents: "Oponentes controlados por ordenador",
+    language: "Idioma",
+    start: "Empezar partida",
+    newGame: "Nueva partida",
+    draw: "Robar ficha",
+    cancel: "Cancelar selección",
+    yourTurn: "Tu turno",
+    aiTurn: "{name} está pensando…",
+    yourHand: "Tus fichas",
+    pileCount: "Montón: {count}",
+    tilesCount: "{count} fichas",
+    selectTile: "Selecciona una ficha y toca una de las casillas resaltadas.",
+    chooseMove: "Toca la vista previa resaltada para confirmar la colocación.",
+    mustDraw: "No hay movimientos válidos. Roba una ficha.",
+    drawnPlayable: "¡Has robado una ficha jugable! Elige una posición resaltada.",
+    drawnPass: "No hay movimientos válidos tras robar. Turno pasado.",
+    gameOver: "¡{name} ha ganado!",
+    record: "Victorias / Derrotas: {wins} / {losses}",
+    invalid: "Esa colocación no es válida.",
+    human: "Tú",
+    computer: "Ordenador {n}",
+    wild: "Casilla central comodín"
+  },
+  zh: {
+    title: "七彩骨牌",
+    welcome: "歡迎遊玩七彩骨牌",
+    rules: "玩家輪流放置三格牌。牌上至少必須有兩格與相鄰顏色相符，且不同顏色不能相鄰。如果你冇合法嘅步數，就要抽一張牌；如果抽完都係出唔到牌，就會輪到下一位玩家。最先清空手牌嘅玩家勝出。起始嘅變色龍牌擁有百搭嘅中心格。",
+    opponents: "電腦對手",
+    language: "語言",
+    start: "開始遊戲",
+    newGame: "新遊戲",
+    draw: "抽牌",
+    cancel: "取消選擇",
+    yourTurn: "輪到你",
+    aiTurn: "{name} 正在思考…",
+    yourHand: "你的手牌",
+    pileCount: "牌堆：{count}",
+    tilesCount: "{count} 張牌",
+    selectTile: "請選擇一張牌，然後點擊其中一個反白嘅放置位置。",
+    chooseMove: "點擊反白嘅完整牌面預覽嚟確認放置。",
+    mustDraw: "冇合法嘅走法，請抽一張牌。",
+    drawnPlayable: "抽到一張可以出嘅牌！請選擇一個反白嘅位置。",
+    drawnPass: "抽牌後依然無法出牌，回合結束。",
+    gameOver: "{name} 贏咗！",
+    record: "勝／負：{wins} 勝 {losses} 負",
+    invalid: "呢個位置唔可以放置。",
+    human: "你",
+    computer: "電腦 {n}",
+    wild: "百搭中心格"
+  }
+};
+
+let current = "en";
+
+function setLanguage(lang) {
+  current = strings[lang] ? lang : "en";
+  document.documentElement.lang = current;
+
+  try {
+    localStorage.setItem("doc-language", current);
+  } catch {}
+
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    element.textContent = t(element.dataset.i18n);
+  });
+
+  document.title = t("title");
+  return current;
+}
+
+function t(key, values = {}) {
+  let text = strings[current]?.[key] ?? strings.en[key] ?? key;
+
+  for (const [name, value] of Object.entries(values)) {
+    text = text.replaceAll(`{${name}}`, String(value));
+  }
+
+  return text;
+}
+
+function chooseInitialLanguage() {
+  const queryLanguage = new URLSearchParams(location.search).get("lang");
+
+  if (["en", "es", "zh"].includes(queryLanguage)) {
+    return queryLanguage;
+  }
+
+  try {
+    const storedLanguage = localStorage.getItem("doc-language");
+
+    if (["en", "es", "zh"].includes(storedLanguage)) {
+      return storedLanguage;
+    }
+  } catch {}
+
+  const preferences = (navigator.languages || [navigator.language || "en"])
+    .map(language => language.toLowerCase());
+
+  if (preferences.some(language => language.startsWith("zh"))) {
+    return "zh";
+  }
+
+  if (preferences.some(language => language.startsWith("es"))) {
+    return "es";
+  }
+
+  return "en";
+}
+
+// ---------- stats.js ----------
+const RECORD_KEY = "doc-record";
+
+function getRecord() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RECORD_KEY));
+    return {
+      wins: Number(saved?.wins) || 0,
+      losses: Number(saved?.losses) || 0
+    };
+  } catch {
+    return { wins: 0, losses: 0 };
+  }
+}
+
+function recordResult(won) {
+  const record = getRecord();
+
+  if (won) {
+    record.wins += 1;
+  } else {
+    record.losses += 1;
+  }
+
+  try {
+    localStorage.setItem(RECORD_KEY, JSON.stringify(record));
+  } catch {}
+
+  return record;
+}
+
+// ---------- ai.js ----------
+function chooseMove(game, player) {
+  const candidates = [];
+
+  for (const tile of player.hand) {
+    for (const move of game.legalMoves(tile)) {
+      candidates.push({
+        tile,
+        ...move,
+        score: scoreMove(game, player, tile, move)
       });
     }
-  </script>
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0] || null;
+}
+
+function scoreMove(game, player, tile, move) {
+  let score = 10;
+  score += (3 - new Set(tile.colors).size) * 2;
+
+  if (tile.type === "chameleon") {
+    score -= 1.5;
+  }
+
+  const [dx, dy] = move.dir === 0 ? [1, 0] : [0, 1];
+  const insertedKeys = [];
+
+  for (let i = 0; i < 3; i += 1) {
+    const x = move.x + dx * i;
+    const y = move.y + dy * i;
+    const key = `${x},${y}`;
+
+    game.board.set(key, {
+      color: tile.colors[i],
+      tileId: tile.id
+    });
+
+    insertedKeys.push(key);
+  }
+
+  const nextPlayer = game.players[(game.current + 1) % game.players.length];
+  let nextOptions = 0;
+
+  for (const nextTile of nextPlayer.hand) {
+    nextOptions += Math.min(game.legalMoves(nextTile).length, 8);
+  }
+
+  for (const key of insertedKeys) {
+    game.board.delete(key);
+  }
+
+  score -= nextOptions * 0.12;
+  score += Math.random() * 0.25;
+  return score;
+}
+
+// ---------- game.js ----------
+const COLORS = [
+  "#e74c3c",
+  "#3498db",
+  "#f1c40f",
+  "#2ecc71",
+  "#9b59b6"
+];
+
+const DIRECTIONS = [
+  [1, 0],
+  [0, 1]
+];
+
+const cellKey = (x, y) => `${x},${y}`;
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+
+  return array;
+}
+
+function createDeck() {
+  const deck = [];
+
+  for (let a = 0; a < COLORS.length; a += 1) {
+    for (let b = 0; b < COLORS.length; b += 1) {
+      for (let c = 0; c < COLORS.length; c += 1) {
+        const forward = `${a}${b}${c}`;
+        const reverse = `${c}${b}${a}`;
+
+        if (forward <= reverse) {
+          deck.push({
+            id: `normal-${forward}`,
+            colors: [a, b, c],
+            type: "normal"
+          });
+        }
+      }
+    }
+  }
+
+  for (let color = 0; color < COLORS.length; color += 1) {
+    const nextColor = (color + 1) % COLORS.length;
+
+    deck.push({
+      id: `chameleon-${color}`,
+      colors: [color, -1, nextColor],
+      type: "chameleon"
+    });
+  }
+
+  return shuffle(deck);
+}
+
+function colorsForOrientation(tile, reversed = false) {
+  return reversed ? [...tile.colors].reverse() : tile.colors;
+}
+
+class Game {
+  constructor(aiCount, onChange) {
+    this.onChange = onChange;
+    this.board = new Map();
+
+    this.players = [
+      {
+        name: "👤",
+        human: true,
+        hand: []
+      },
+      ...Array.from({ length: aiCount }, (_, index) => ({
+        name: ["🤖", "👾", "💻", "🖥️"][index] ?? `🤖 ${index + 1}`,
+        human: false,
+        hand: []
+      }))
+    ];
+
+    this.current = 0;
+    this.selected = null;
+    this.finished = false;
+    this.winner = null;
+    this.drawnThisTurn = false;
+    this.deck = createDeck();
+    this.start();
+  }
+
+  start() {
+    const starterIndex = this.deck.findIndex(tile => tile.type === "chameleon");
+    const [starter] = this.deck.splice(starterIndex, 1);
+
+    for (let i = 0; i < 3; i += 1) {
+      this.board.set(cellKey(i - 1, 0), {
+        color: starter.colors[i],
+        tileId: starter.id
+      });
+    }
+
+    for (const player of this.players) {
+      player.hand = this.deck.splice(0, 8);
+    }
+
+    this.notify();
+  }
+
+  notify() {
+    if (this.onChange) {
+      this.onChange(this);
+    }
+  }
+
+  selectTile(tileId) {
+    if (this.finished || !this.players[this.current]?.human) {
+      return false;
+    }
+
+    const player = this.players[this.current];
+    const tile = player.hand.find(item => item.id === tileId);
+
+    if (!tile || this.legalMoves(tile).length === 0) {
+      return false;
+    }
+
+    this.selected = tile;
+    return true;
+  }
+
+  legalMoves(tile) {
+    const occupied = [...this.board.keys()]
+      .map(position => position.split(",").map(Number));
+
+    if (!occupied.length) {
+      return [];
+    }
+
+    const xs = occupied.map(([x]) => x);
+    const ys = occupied.map(([, y]) => y);
+
+    const minX = Math.min(...xs) - 3;
+    const maxX = Math.max(...xs) + 3;
+    const minY = Math.min(...ys) - 3;
+    const maxY = Math.max(...ys) + 3;
+
+    const moves = [];
+    const orientations = tile.colors[0] === tile.colors[2]
+      ? [false]
+      : [false, true];
+
+    for (let dir = 0; dir < DIRECTIONS.length; dir += 1) {
+      for (const reversed of orientations) {
+        for (let y = minY; y <= maxY; y += 1) {
+          for (let x = minX; x <= maxX; x += 1) {
+            if (this.checkPlacement(tile, x, y, dir, reversed)) {
+              moves.push({ x, y, dir, reversed });
+            }
+          }
+        }
+      }
+    }
+
+    return moves;
+  }
+
+  checkPlacement(tile, x, y, dir, reversed = false) {
+    const direction = DIRECTIONS[dir];
+
+    if (!direction) {
+      return false;
+    }
+
+    const [dx, dy] = direction;
+    const colors = colorsForOrientation(tile, reversed);
+    const proposed = [];
+    let matches = 0;
+
+    for (let i = 0; i < 3; i += 1) {
+      const px = x + dx * i;
+      const py = y + dy * i;
+
+      if (this.board.has(cellKey(px, py))) {
+        return false;
+      }
+
+      proposed.push({
+        x: px,
+        y: py,
+        color: colors[i]
+      });
+    }
+
+    for (const cell of proposed) {
+      for (const [nx, ny] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const neighbour = this.board.get(cellKey(cell.x + nx, cell.y + ny));
+
+        if (!neighbour) {
+          continue;
+        }
+
+        if (
+          neighbour.color === -1 ||
+          cell.color === -1 ||
+          neighbour.color === cell.color
+        ) {
+          matches += 1;
+        } else {
+          return false;
+        }
+      }
+    }
+
+    return matches >= 2;
+  }
+
+  place(playerIndex, tileId, move) {
+    if (this.finished || playerIndex !== this.current || !move) {
+      return false;
+    }
+
+    const player = this.players[playerIndex];
+    const tileIndex = player.hand.findIndex(tile => tile.id === tileId);
+
+    if (tileIndex === -1) {
+      return false;
+    }
+
+    const tile = player.hand[tileIndex];
+    const reversed = move.reversed === true;
+
+    if (!this.checkPlacement(tile, move.x, move.y, move.dir, reversed)) {
+      return false;
+    }
+
+    const [dx, dy] = DIRECTIONS[move.dir];
+    const colors = colorsForOrientation(tile, reversed);
+
+    for (let i = 0; i < 3; i += 1) {
+      this.board.set(cellKey(move.x + dx * i, move.y + dy * i), {
+        color: colors[i],
+        tileId: tile.id
+      });
+    }
+
+    player.hand.splice(tileIndex, 1);
+    this.selected = null;
+
+    if (player.hand.length === 0) {
+      this.finished = true;
+      this.winner = playerIndex;
+      this.notify();
+      return true;
+    }
+
+    this.nextTurn();
+    return true;
+  }
+
+  hasAnyMove(player) {
+    return player.hand.some(tile => this.legalMoves(tile).length > 0);
+  }
+
+  draw() {
+    const player = this.players[this.current];
+
+    if (
+      this.finished ||
+      !player.human ||
+      this.drawnThisTurn ||
+      this.hasAnyMove(player)
+    ) {
+      return false;
+    }
+
+    const tile = this.deck.pop();
+
+    if (tile) {
+      player.hand.push(tile);
+    }
+
+    this.drawnThisTurn = true;
+    this.notify();
+    return true;
+  }
+
+  endTurnAfterDraw() {
+    if (!this.drawnThisTurn || this.finished) {
+      return;
+    }
+
+    const player = this.players[this.current];
+
+    if (!this.hasAnyMove(player)) {
+      this.nextTurn();
+    }
+  }
+
+  nextTurn() {
+    this.current = (this.current + 1) % this.players.length;
+    this.drawnThisTurn = false;
+    this.selected = null;
+    this.notify();
+
+    if (!this.finished && !this.players[this.current].human) {
+      setTimeout(() => this.playAI(), 450);
+    }
+  }
+
+  playAI() {
+    if (this.finished) {
+      return;
+    }
+
+    const player = this.players[this.current];
+    let move = chooseMove(this, player);
+
+    if (!move && this.deck.length > 0) {
+      player.hand.push(this.deck.pop());
+      move = chooseMove(this, player);
+    }
+
+    if (move) {
+      this.place(this.current, move.tile.id, move);
+    } else {
+      this.nextTurn();
+    }
+  }
+}
+
+// ---------- render.js ----------
+const SVG_NS = "http://www.w3.org/2000/svg";
+const WILD_COLOR = "#fff4d5";
+
+function svgElement(name, attributes = {}) {
+  const element = document.createElementNS(SVG_NS, name);
+
+  for (const [key, value] of Object.entries(attributes)) {
+    element.setAttribute(key, String(value));
+  }
+
+  return element;
+}
+
+function moveColors(tile, move) {
+  return move.reversed ? [...tile.colors].reverse() : tile.colors;
+}
+
+class Renderer {
+  constructor(game, callbacks) {
+    this.game = game;
+    this.onPlace = callbacks.onPlace;
+    this.onDraw = callbacks.onDraw;
+    this.onCancel = callbacks.onCancel;
+    this.record = callbacks.record ?? { wins: 0, losses: 0 };
+
+    this.svg = document.querySelector("#board");
+    this.hand = document.querySelector("#hand");
+    this.hint = document.querySelector("#hint");
+    this.status = document.querySelector("#status");
+    this.recordElement = document.querySelector("#record");
+    this.players = document.querySelector("#players");
+    this.pileCount = document.querySelector("#pile-count");
+    this.handTitle = document.querySelector("#hand-title");
+    this.drawButton = document.querySelector("#draw");
+
+    this.drawButton.addEventListener("click", () => this.onDraw());
+
+    document.querySelector("#cancel").addEventListener("click", () => {
+      this.onCancel();
+    });
+
+    this.render();
+  }
+
+  setRecord(record) {
+    this.record = record;
+    this.renderRecord();
+  }
+
+  render() {
+    this.renderStatus();
+    this.renderHand();
+    this.renderBoard();
+    this.renderRecord();
+  }
+
+  renderRecord() {
+    if (!this.recordElement) {
+      return;
+    }
+
+    this.recordElement.textContent = t("record", this.record);
+  }
+
+  renderStatus() {
+    const game = this.game;
+    this.players.replaceChildren();
+
+    game.players.forEach((player, index) => {
+      const element = document.createElement("div");
+      element.className = `player ${index === game.current ? "active" : ""}`;
+
+      const name = document.createElement("span");
+      name.textContent = player.name;
+      element.append(name);
+
+      if (!player.human) {
+        const miniHand = document.createElement("span");
+        miniHand.className = "mini-hand";
+        miniHand.setAttribute(
+          "aria-label",
+          t("tilesCount", { count: player.hand.length })
+        );
+
+        for (let i = 0; i < player.hand.length; i += 1) {
+          const piece = document.createElement("span");
+          piece.className = "mini-piece";
+          piece.setAttribute("aria-hidden", "true");
+          miniHand.append(piece);
+        }
+
+        element.append(miniHand);
+      }
+
+      this.players.append(element);
+    });
+
+    this.pileCount.textContent = t("pileCount", { count: game.deck.length });
+
+    if (game.finished) {
+      const winner = game.players[game.winner];
+      this.status.textContent = t("gameOver", { name: winner.name });
+      return;
+    }
+
+    const player = game.players[game.current];
+    this.status.textContent = player.human
+      ? t("yourTurn")
+      : t("aiTurn", { name: player.name });
+  }
+
+  renderHand() {
+    const game = this.game;
+    const player = game.players[game.current];
+    const human = game.players.find(p => p.human);
+
+    this.hand.replaceChildren();
+    this.handTitle.textContent = human ? t("yourHand") : "";
+
+    if (!human) {
+      this.hint.textContent = "";
+      this.drawButton.disabled = true;
+      return;
+    }
+
+    for (const tile of human.hand) {
+      const playable =
+        !game.finished &&
+        player?.human &&
+        game.legalMoves(tile).length > 0;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "tile-button";
+      button.disabled = !playable;
+      button.setAttribute(
+        "aria-pressed",
+        String(game.selected?.id === tile.id)
+      );
+      button.setAttribute(
+        "aria-label",
+        tile.colors
+          .map(color => color === -1 ? t("wild") : color)
+          .join(", ")
+      );
+
+      button.addEventListener("click", () => {
+        if (!playable) {
+          return;
+        }
+
+        if (game.selected?.id === tile.id) {
+          game.selected = null;
+        } else {
+          game.selectTile(tile.id);
+        }
+
+        this.render();
+      });
+
+      tile.colors.forEach(color => {
+        const swatch = document.createElement("span");
+        swatch.className = `swatch ${color === -1 ? "wild" : ""}`;
+
+        if (color !== -1) {
+          swatch.style.backgroundColor = COLORS[color];
+        } else {
+          swatch.textContent = "★";
+        }
+
+        button.append(swatch);
+      });
+
+      this.hand.append(button);
+    }
+
+    const canPlay = !game.finished && game.hasAnyMove(human);
+
+    this.drawButton.disabled =
+      game.finished ||
+      canPlay ||
+      game.drawnThisTurn ||
+      game.deck.length === 0;
+
+    this.hint.textContent = game.finished
+      ? ""
+      : game.selected
+        ? t("chooseMove")
+        : canPlay
+          ? t("selectTile")
+          : t("mustDraw");
+  }
+
+  renderBoard() {
+    const game = this.game;
+    this.svg.replaceChildren();
+
+    const cells = [...game.board.entries()].map(([position, value]) => {
+      const [x, y] = position.split(",").map(Number);
+      return { x, y, ...value };
+    });
+
+    const player = game.players[game.current];
+    const moves =
+      player?.human && game.selected && !game.finished
+        ? game.legalMoves(game.selected)
+        : [];
+
+    const pointsX = cells.map(cell => cell.x);
+    const pointsY = cells.map(cell => cell.y);
+
+    for (const move of moves) {
+      const dx = move.dir === 0 ? 1 : 0;
+      const dy = move.dir === 1 ? 1 : 0;
+
+      for (let i = 0; i < 3; i += 1) {
+        pointsX.push(move.x + dx * i);
+        pointsY.push(move.y + dy * i);
+      }
+    }
+
+    const margin = 2;
+    const minX = Math.min(...pointsX) - margin;
+    const maxX = Math.max(...pointsX) + margin;
+    const minY = Math.min(...pointsY) - margin;
+    const maxY = Math.max(...pointsY) + margin;
+
+    const cols = maxX - minX + 1;
+    const rows = maxY - minY + 1;
+    const unit = 40;
+
+    this.svg.setAttribute("viewBox", `0 0 ${cols * unit} ${rows * unit}`);
+    this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+    for (const cell of cells) {
+      const wild = cell.color === -1;
+      const x = (cell.x - minX) * unit + 2;
+      const y = (cell.y - minY) * unit + 2;
+
+      this.svg.append(svgElement("rect", {
+        x,
+        y,
+        width: unit - 4,
+        height: unit - 4,
+        rx: 5,
+        fill: wild ? WILD_COLOR : COLORS[cell.color],
+        class: wild ? "board-cell wild-cell" : "board-cell"
+      }));
+
+      if (wild) {
+        const star = svgElement("text", {
+          x: x + (unit - 4) / 2,
+          y: y + (unit - 4) / 2,
+          class: "move-star",
+          "font-size": 20
+        });
+
+        star.textContent = "★";
+        this.svg.append(star);
+      }
+    }
+
+    for (const move of moves) {
+      this.drawMovePreview(move, game.selected, minX, minY, unit);
+    }
+  }
+
+  drawMovePreview(move, tile, minX, minY, unit) {
+    const dx = move.dir === 0 ? 1 : 0;
+    const dy = move.dir === 1 ? 1 : 0;
+    const colors = moveColors(tile, move);
+
+    const group = svgElement("g", {
+      class: "move-preview",
+      tabindex: 0,
+      role: "button",
+      "aria-label": `${t("chooseMove")} ${move.dir === 0 ? "horizontal" : "vertical"}`
+    });
+
+    for (let i = 0; i < 3; i += 1) {
+      const x = move.x + dx * i;
+      const y = move.y + dy * i;
+      const color = colors[i];
+      const rectX = (x - minX) * unit + 3;
+      const rectY = (y - minY) * unit + 3;
+
+      group.append(svgElement("rect", {
+        x: rectX,
+        y: rectY,
+        width: unit - 6,
+        height: unit - 6,
+        rx: 5,
+        fill: color === -1 ? WILD_COLOR : COLORS[color]
+      }));
+
+      if (color === -1) {
+        const star = svgElement("text", {
+          x: rectX + (unit - 6) / 2,
+          y: rectY + (unit - 6) / 2,
+          class: "move-star",
+          "font-size": 18
+        });
+
+        star.textContent = "★";
+        group.append(star);
+      }
+    }
+
+    const place = () => this.onPlace(tile.id, move);
+
+    group.addEventListener("click", place);
+
+    group.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        place();
+      }
+    });
+
+    this.svg.append(group);
+  }
+}
+
+// ---------- script.js ----------
+let game = null;
+let renderer = null;
+
+function refreshLanguage(language) {
+  setLanguage(language);
+  document.querySelector("#language").value = language;
+
+  if (renderer) {
+    renderer.render();
+  }
+}
+
+function startGame(aiCount) {
+  renderer = null;
+
+  let thisGame;
+  let resultRecorded = false;
+
+  thisGame = new Game(aiCount, () => {
+    if (thisGame?.finished && !resultRecorded) {
+      resultRecorded = true;
+      const record = recordResult(thisGame.winner === 0);
+      renderer?.setRecord(record);
+    }
+
+    if (renderer) {
+      renderer.render();
+    }
+  });
+
+  game = thisGame;
+
+  renderer = new Renderer(game, {
+    record: getRecord(),
+
+    onPlace(tileId, move) {
+      if (!game.place(game.current, tileId, move)) {
+        document.querySelector("#hint").textContent = t("invalid");
+      }
+    },
+
+    onDraw() {
+      if (!game.drawnThisTurn) {
+        game.draw();
+
+        if (!game.drawnThisTurn) {
+          return;
+        }
+      }
+
+      if (game.hasAnyMove(game.players[game.current])) {
+        document.querySelector("#hint").textContent = t("drawnPlayable");
+        renderer.render();
+      } else {
+        document.querySelector("#hint").textContent = t("drawnPass");
+        setTimeout(() => game.endTurnAfterDraw(), 700);
+      }
+    },
+
+    onCancel() {
+      game.selected = null;
+      renderer.render();
+    }
+  });
+}
+
+const initialLanguage = chooseInitialLanguage();
+setLanguage(initialLanguage);
+document.querySelector("#language").value = initialLanguage;
+
+document.querySelector("#language").addEventListener("change", event => {
+  refreshLanguage(event.target.value);
+});
+
+document.querySelector("#start-form").addEventListener("submit", event => {
+  event.preventDefault();
+  document.querySelector("#start-dialog").close();
+  startGame(Number(document.querySelector("#ai-count").value));
+});
+
+document.querySelector("#new-game").addEventListener("click", () => {
+  document.querySelector("#start-dialog").showModal();
+});
+
+document.querySelector("#start-dialog").showModal();
+</script>
 </body>
 </html>

@@ -1,144 +1,1891 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reversi</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reversi</title>
+<style>
+:root {
+  --page-background: #1b2a5e;
+  --panel-background: rgba(18, 64, 27, 0.92);
+  --panel-border: #4a9e5c;
+  --text: #f4f7fa;
+  --muted-text: #b9ddc4;
+  --accent: #f0b429;
+  --board-green: #177245;
+  --board-green-dark: #115935;
+  --board-line: rgba(255, 255, 255, 0.35);
+  --hint: #f7d154;
+  --button-text: #17202a;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px;
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 20% 0%, #177254 0%, var(--board-green) 38%, var(--board-green-dark) 78%);
+}
+
+button,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+.app {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  margin-bottom: 16px;
+  font-size: 1.05rem;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(260px, 340px);
+  align-items: start;
+  gap: 28px;
+}
+
+.panel {
+  padding: 22px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-background);
+  box-shadow: var(--shadow);
+}
+
+.panel section + section {
+  margin-top: 26px;
+}
+
+.score-row,
+.record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.score-row:last-child,
+.record-row:last-child {
+  border-bottom: 0;
+}
+
+.player-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.piece {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.25),
+    inset -3px -3px 4px rgba(0, 0, 0, 0.3);
+}
+
+.black-piece {
+  background: #101214;
+}
+
+.white-piece {
+  background: #f6f6f2;
+}
+
+.score-row strong,
+.record-row strong {
+  min-width: 30px;
+  color: var(--accent);
+  text-align: right;
+}
+
+.controls-section {
+  display: grid;
+  gap: 10px;
+}
+
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--button-text);
+}
+
+.secondary-button {
+  background: #dce5ec;
+  color: #17202a;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.status-section p {
+  min-height: 48px;
+  margin-bottom: 0;
+  color: var(--muted-text);
+  line-height: 1.5;
+}
+
+.board-area {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-wrapper {
+  width: min(78vw, 700px);
+  max-width: 100%;
+  padding: 12px;
+  border-radius: 16px;
+  background: #0d4328;
+  box-shadow: var(--shadow);
+}
+
+.board-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.board-cell {
+  cursor: default;
+}
+
+.board-cell.legal {
+  cursor: pointer;
+}
+
+.legal-marker {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.hint-marker {
+  fill: none;
+  stroke: var(--hint);
+  stroke-width: 4;
+  pointer-events: none;
+  animation: pulse 0.9s ease-in-out infinite alternate;
+}
+
+.disk-black {
+  fill: #101214;
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1;
+}
+
+.disk-white {
+  fill: #f6f6f2;
+  stroke: rgba(0, 0, 0, 0.2);
+  stroke-width: 1;
+}
+
+.hint-message {
+  min-height: 28px;
+  margin: 14px 0 0;
+  color: var(--hint);
+  font-weight: 600;
+  text-align: center;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 13, 32, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay-card {
+  width: min(430px, 100%);
+  padding: 26px;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: var(--panel-background);
+  box-shadow: var(--shadow);
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: var(--muted-text);
+}
+
+.field select {
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #144a20;
+  color: var(--text);
+  cursor: pointer;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.65;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(260px, 340px);
+  grid-template-areas:
+    "board header"
+    "board sidebar";
+  align-items: start;
+  gap: 0 28px;
+}
+
+.game-layout > .topbar {
+  grid-area: header;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 20px;
+}
+
+.game-layout > .topbar .primary-button {
+  align-self: flex-end;
+}
+
+.board-area {
+  grid-area: board;
+}
+
+.information-panel {
+  grid-area: sidebar;
+}
+
+@media (max-width: 820px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "board"
+      "sidebar";
+    gap: 0;
+  }
+
+  .game-layout > .topbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .board-area,
+  .information-panel {
+    order: initial;
+  }
+  
+  body {
+    padding: 8px;
+  }
+
+  .board-wrapper {
+    width: 100%;
+    padding: 6px;
+  }
+
+}
+</style>
 </head>
 <body>
-  <main class="app">
+<main class="app">
 
-    <section class="game-layout">
-      <header class="topbar">
-        <div class="title-block">
-          <h1 id="gameTitle" data-i18n="title">Reversi</h1>
-        </div>
-        <button id="newGameButton" class="primary-button" data-i18n="newGame">
-          New game
-        </button>
-      </header>
+  <section class="game-layout">
+    <header class="topbar">
+      <div class="title-block">
+        <h1 id="gameTitle" data-i18n="title">Reversi</h1>
+      </div>
+      <button id="newGameButton" class="primary-button" data-i18n="newGame">
+        New game
+      </button>
+    </header>
 
-      <section class="board-area">
-        <div class="board-wrapper">
-          <svg
-            id="board"
-            class="board-svg"
-            role="grid"
-            aria-label="Reversi board"
-          ></svg>
+    <section class="board-area">
+      <div class="board-wrapper">
+        <svg
+          id="board"
+          class="board-svg"
+          role="grid"
+          aria-label="Reversi board"
+        ></svg>
+      </div>
+      <p id="hintMessage" class="hint-message" aria-live="polite"></p>
+    </section>
+
+    <aside class="panel information-panel">
+      <section class="score-section">
+        <h2 data-i18n="currentScore">Current pieces</h2>
+
+        <div class="score-row">
+          <div class="player-label">
+            <span class="piece black-piece"></span>
+            <span id="playerOneLabel">Black</span>
+          </div>
+          <strong id="playerOneScore">2</strong>
         </div>
-        <p id="hintMessage" class="hint-message" aria-live="polite"></p>
+
+        <div class="score-row">
+          <div class="player-label">
+            <span class="piece white-piece"></span>
+            <span id="playerTwoLabel">White</span>
+          </div>
+          <strong id="playerTwoScore">2</strong>
+        </div>
       </section>
 
-      <aside class="panel information-panel">
-        <section class="score-section">
-          <h2 data-i18n="currentScore">Current pieces</h2>
+      <section class="record-section" id="recordSection">
+        <h2 data-i18n="record">Game record</h2>
 
-          <div class="score-row">
-            <div class="player-label">
-              <span class="piece black-piece"></span>
-              <span id="playerOneLabel">Black</span>
-            </div>
-            <strong id="playerOneScore">2</strong>
-          </div>
+        <div class="record-row">
+          <span data-i18n="won">Won</span>
+          <strong id="wins">0</strong>
+        </div>
 
-          <div class="score-row">
-            <div class="player-label">
-              <span class="piece white-piece"></span>
-              <span id="playerTwoLabel">White</span>
-            </div>
-            <strong id="playerTwoScore">2</strong>
-          </div>
-        </section>
+        <div class="record-row">
+          <span data-i18n="lost">Lost</span>
+          <strong id="losses">0</strong>
+        </div>
 
-        <section class="record-section" id="recordSection">
-          <h2 data-i18n="record">Game record</h2>
+        <div class="record-row">
+          <span data-i18n="drawn">Drawn</span>
+          <strong id="draws">0</strong>
+        </div>
+      </section>
 
-          <div class="record-row">
-            <span data-i18n="won">Won</span>
-            <strong id="wins">0</strong>
-          </div>
+      <section class="controls-section">
+        <button id="hintButton" class="secondary-button" data-i18n="hint">
+          Hint
+        </button>
+      </section>
 
-          <div class="record-row">
-            <span data-i18n="lost">Lost</span>
-            <strong id="losses">0</strong>
-          </div>
+      <section class="status-section">
+        <h2 data-i18n="status">Status</h2>
+        <p id="statusText" aria-live="polite"></p>
+      </section>
+    </aside>
+  </section>
+</main>
 
-          <div class="record-row">
-            <span data-i18n="drawn">Drawn</span>
-            <strong id="draws">0</strong>
-          </div>
-        </section>
-
-        <section class="controls-section">
-          <button id="hintButton" class="secondary-button" data-i18n="hint">
-            Hint
-          </button>
-        </section>
-
-        <section class="status-section">
-          <h2 data-i18n="status">Status</h2>
-          <p id="statusText" aria-live="polite"></p>
-        </section>
-      </aside>
-    </section>
-  </main>
-
-  <div id="setupOverlay" class="overlay" role="dialog" aria-modal="true">
-    <div class="overlay-card">
-       <div class="instructions">
-        <h3 data-i18n="instructionsTitle">How to play</h3>
-        <p data-i18n="instructions1">
-          Place a disk so that it traps one or more opponent disks between the
-          new disk and one of your existing disks.
-        </p>
-        <p data-i18n="instructions2">
-          All trapped opponent disks are turned to your colour. If a player has
-          no legal move, they must pass. The game ends when neither player can
-          move; the player with more disks wins.
-        </p>
-      </div>
-      <h2 data-i18n="setupTitle">New game</h2>
-
-      <label class="field">
-        <span data-i18n="gameMode">Game mode</span>
-        <select id="modeSelect">
-          <option value="hva" data-i18n="humanVsAi">Human vs AI</option>
-          <option value="hh" data-i18n="twoHumans">Two human players</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span data-i18n="boardConfiguration">Board configuration</span>
-        <select id="boardSelect">
-          <option value="board4" data-i18n="standardBoard">Standard</option>
-          <option value="board6" data-i18n="hexagonalBoard">Hexagonal</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span data-i18n="language">Language</span>
-        <select id="languageSelect">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="zh-Hant">中文</option>
-        </select>
-      </label>
-
-      <button id="startGameButton" class="primary-button" data-i18n="startGame">
-        Start game
-      </button>
+<div id="setupOverlay" class="overlay" role="dialog" aria-modal="true">
+  <div class="overlay-card">
+     <div class="instructions">
+      <h3 data-i18n="instructionsTitle">How to play</h3>
+      <p data-i18n="instructions1">
+        Place a disk so that it traps one or more opponent disks between the
+        new disk and one of your existing disks.
+      </p>
+      <p data-i18n="instructions2">
+        All trapped opponent disks are turned to your colour. If a player has
+        no legal move, they must pass. The game ends when neither player can
+        move; the player with more disks wins.
+      </p>
     </div>
-  </div>
+    <h2 data-i18n="setupTitle">New game</h2>
 
-  <script type="module" src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
-      });
+    <label class="field">
+      <span data-i18n="gameMode">Game mode</span>
+      <select id="modeSelect">
+        <option value="hva" data-i18n="humanVsAi">Human vs AI</option>
+        <option value="hh" data-i18n="twoHumans">Two human players</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span data-i18n="boardConfiguration">Board configuration</span>
+      <select id="boardSelect">
+        <option value="board4" data-i18n="standardBoard">Standard</option>
+        <option value="board6" data-i18n="hexagonalBoard">Hexagonal</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span data-i18n="language">Language</span>
+      <select id="languageSelect">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh-Hant">中文</option>
+      </select>
+    </label>
+
+    <button id="startGameButton" class="primary-button" data-i18n="startGame">
+      Start game
+    </button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ===== Shared constants =====
+  const EMPTY = 0;
+  const BLACK = 1;
+  const WHITE = -1;
+
+  // ===== board4.js =====
+  const SIZE = 8;
+  const DIRECTIONS = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1], [0, 1],
+    [1, -1], [1, 0], [1, 1]
+  ];
+
+  const WEIGHTS = [
+    [120, -25, 20, 5, 5, 20, -25, 120],
+    [-25, -45, -5, -5, -5, -5, -45, -25],
+    [20, -5, 15, 3, 3, 15, -5, 20],
+    [5, -5, 3, 3, 3, 3, -5, 5],
+    [5, -5, 3, 3, 3, 3, -5, 5],
+    [20, -5, 15, 3, 3, 15, -5, 20],
+    [-25, -45, -5, -5, -5, -5, -45, -25],
+    [120, -25, 20, 5, 5, 20, -25, 120]
+  ];
+
+  function id(row, col) {
+    return `${row},${col}`;
+  }
+
+  function createInitialBoard() {
+    const board = new Map();
+
+    for (let row = 0; row < SIZE; row += 1) {
+      for (let col = 0; col < SIZE; col += 1) {
+        board.set(id(row, col), EMPTY);
+      }
     }
-  </script>
+
+    board.set(id(3, 3), WHITE);
+    board.set(id(3, 4), BLACK);
+    board.set(id(4, 3), BLACK);
+    board.set(id(4, 4), WHITE);
+
+    return board;
+  }
+
+  function createStandardBoard() {
+    const cells = [];
+
+    for (let row = 0; row < SIZE; row += 1) {
+      for (let col = 0; col < SIZE; col += 1) {
+        cells.push({ id: id(row, col), row, col });
+      }
+    }
+
+    const neighbours = new Map();
+    const directed = new Map();
+
+    for (const cell of cells) {
+      const neighbourIds = [];
+      const directionIds = [];
+
+      for (const [dr, dc] of DIRECTIONS) {
+        const nextRow = cell.row + dr;
+        const nextCol = cell.col + dc;
+        const inside =
+          nextRow >= 0 &&
+          nextRow < SIZE &&
+          nextCol >= 0 &&
+          nextCol < SIZE;
+
+        if (inside) {
+          const nextId = id(nextRow, nextCol);
+          neighbourIds.push(nextId);
+          directionIds.push(nextId);
+        } else {
+          directionIds.push(null);
+        }
+      }
+
+      neighbours.set(cell.id, neighbourIds);
+      directed.set(cell.id, directionIds);
+    }
+
+    function getFlips(board, cellId, color) {
+      const [row, col] = cellId.split(",").map(Number);
+
+      if (board.get(cellId) !== EMPTY) {
+        return [];
+      }
+
+      const opponent = -color;
+      const flips = [];
+
+      for (const [dr, dc] of DIRECTIONS) {
+        const line = [];
+        let nextRow = row + dr;
+        let nextCol = col + dc;
+
+        while (
+          nextRow >= 0 &&
+          nextRow < SIZE &&
+          nextCol >= 0 &&
+          nextCol < SIZE &&
+          board.get(id(nextRow, nextCol)) === opponent
+        ) {
+          line.push(id(nextRow, nextCol));
+          nextRow += dr;
+          nextCol += dc;
+        }
+
+        if (
+          line.length > 0 &&
+          nextRow >= 0 &&
+          nextRow < SIZE &&
+          nextCol >= 0 &&
+          nextCol < SIZE &&
+          board.get(id(nextRow, nextCol)) === color
+        ) {
+          flips.push(...line);
+        }
+      }
+
+      return flips;
+    }
+
+    return {
+      variant: "board4",
+      cells,
+      neighbours,
+      directed,
+      corners: [
+        id(0, 0),
+        id(0, 7),
+        id(7, 0),
+        id(7, 7)
+      ],
+      initial: createInitialBoard(),
+      getWeight: (cellId) => {
+        const [row, col] = cellId.split(",").map(Number);
+        return WEIGHTS[row][col];
+      },
+      getFlips,
+      positionName: (cellId) => {
+        const [row, col] = cellId.split(",").map(Number);
+        return `${String.fromCharCode(65 + col)}${row + 1}`;
+      },
+      geometry: {
+        kind: "square",
+        cellSize: 80,
+        width: SIZE * 80,
+        height: SIZE * 80,
+        positions: cells.map((cell) => ({
+          id: cell.id,
+          x: cell.col * 80 + 40,
+          y: cell.row * 80 + 40
+        }))
+      }
+    };
+  }
+
+  // ===== board6.js =====
+  const RADIUS = 4;
+  const HEX_DIRECTIONS = [
+    [1, 0],
+    [1, -1],
+    [0, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, 1]
+  ];
+
+  function createCellList() {
+    const cells = [];
+
+    for (let r = -RADIUS; r <= RADIUS; r += 1) {
+      const start = Math.max(-RADIUS, -r - RADIUS);
+      const end = Math.min(RADIUS, RADIUS - r);
+
+      for (let q = start; q <= end; q += 1) {
+        cells.push({ id: id(q, r), q, r });
+      }
+    }
+
+    return cells;
+  }
+
+  function createHexagonalInitialBoard(cells) {
+    const board = new Map();
+
+    cells.forEach((cell) => board.set(cell.id, EMPTY));
+    board.set(id(0, 0), WHITE);
+
+    const centreNeighbours = HEX_DIRECTIONS.map(([dq, dr]) => id(dq, dr));
+
+    centreNeighbours.forEach((cellId, index) => {
+      board.set(cellId, index % 2 === 0 ? BLACK : WHITE);
+    });
+
+    return board;
+  }
+
+  function createHexagonalBoard() {
+    const cells = createCellList();
+    const cellMap = new Map(cells.map((cell) => [cell.id, cell]));
+    const neighbours = new Map();
+    const directed = new Map();
+
+    for (const cell of cells) {
+      const neighbourIds = [];
+      const directionIds = [];
+
+      for (const [dq, dr] of HEX_DIRECTIONS) {
+        const nextId = id(cell.q + dq, cell.r + dr);
+
+        if (cellMap.has(nextId)) {
+          neighbourIds.push(nextId);
+          directionIds.push(nextId);
+        } else {
+          directionIds.push(null);
+        }
+      }
+
+      neighbours.set(cell.id, neighbourIds);
+      directed.set(cell.id, directionIds);
+    }
+
+    function getFlips(board, cellId, color) {
+      if (board.get(cellId) !== EMPTY) {
+        return [];
+      }
+
+      const [q, r] = cellId.split(",").map(Number);
+      const opponent = -color;
+      const flips = [];
+
+      for (const [dq, dr] of HEX_DIRECTIONS) {
+        const line = [];
+        let nextQ = q + dq;
+        let nextR = r + dr;
+        let nextId = id(nextQ, nextR);
+
+        while (
+          cellMap.has(nextId) &&
+          board.get(nextId) === opponent
+        ) {
+          line.push(nextId);
+          nextQ += dq;
+          nextR += dr;
+          nextId = id(nextQ, nextR);
+        }
+
+        if (
+          line.length > 0 &&
+          cellMap.has(nextId) &&
+          board.get(nextId) === color
+        ) {
+          flips.push(...line);
+        }
+      }
+
+      return flips;
+    }
+
+    const corners = [
+      id(-RADIUS, 0),
+      id(0, -RADIUS),
+      id(RADIUS, -RADIUS),
+      id(RADIUS, 0),
+      id(0, RADIUS),
+      id(-RADIUS, RADIUS)
+    ];
+
+    return {
+      variant: "board6",
+      cells,
+      neighbours,
+      directed,
+      corners,
+      initial: createHexagonalInitialBoard(cells),
+      getWeight: (cellId) => {
+        const [q, r] = cellId.split(",").map(Number);
+        const distance = (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2;
+        return corners.includes(cellId) ? 120 : 24 - distance * 4;
+      },
+      getFlips,
+      positionName: (cellId) => {
+        const [q, r] = cellId.split(",").map(Number);
+        return `${String.fromCharCode(65 + q + RADIUS)}${r + RADIUS + 1}`;
+      },
+      geometry: {
+        kind: "hex",
+        cellSize: 42,
+        positions: cells.map((cell) => ({
+          id: cell.id,
+          x: 42 * 1.5 * cell.q,
+          y: 42 * Math.sqrt(3) * (cell.r + cell.q / 2)
+        }))
+      }
+    };
+  }
+
+  // ===== ai.js =====
+  function cloneBoard(board) {
+    return new Map(board);
+  }
+
+  function getLegalMoves(boardDefinition, board, color) {
+    const moves = [];
+
+    for (const cell of boardDefinition.cells) {
+      const flips = boardDefinition.getFlips(board, cell.id, color);
+
+      if (flips.length > 0) {
+        moves.push({ id: cell.id, flips });
+      }
+    }
+
+    return moves;
+  }
+
+  function applyMove(boardDefinition, board, move, color) {
+    const nextBoard = cloneBoard(board);
+    nextBoard.set(move.id, color);
+
+    for (const flipId of move.flips) {
+      nextBoard.set(flipId, color);
+    }
+
+    return nextBoard;
+  }
+
+  function countPieces(board) {
+    let black = 0;
+    let white = 0;
+
+    for (const value of board.values()) {
+      if (value === BLACK) {
+        black += 1;
+      }
+
+      if (value === WHITE) {
+        white += 1;
+      }
+    }
+
+    return { black, white };
+  }
+
+  function isFrontier(boardDefinition, board, cellId) {
+    const neighbours = boardDefinition.neighbours.get(cellId) ?? [];
+    return neighbours.some((id) => board.get(id) === EMPTY);
+  }
+
+  function evaluateBoard(boardDefinition, board, perspective) {
+    let score = 0;
+    let ownFrontier = 0;
+    let opponentFrontier = 0;
+    let ownPieces = 0;
+    let opponentPieces = 0;
+
+    for (const cell of boardDefinition.cells) {
+      const value = board.get(cell.id);
+
+      if (value === perspective) {
+        ownPieces += 1;
+        score += boardDefinition.getWeight(cell.id);
+
+        if (isFrontier(boardDefinition, board, cell.id)) {
+          ownFrontier += 1;
+        }
+      } else if (value === -perspective) {
+        opponentPieces += 1;
+        score -= boardDefinition.getWeight(cell.id);
+
+        if (isFrontier(boardDefinition, board, cell.id)) {
+          opponentFrontier += 1;
+        }
+      }
+    }
+
+    let cornerScore = 0;
+
+    for (const cornerId of boardDefinition.corners) {
+      const value = board.get(cornerId);
+
+      if (value === perspective) {
+        cornerScore += 1;
+      }
+
+      if (value === -perspective) {
+        cornerScore -= 1;
+      }
+    }
+
+    const ownMobility = getLegalMoves(boardDefinition, board, perspective).length;
+    const opponentMobility = getLegalMoves(boardDefinition, board, -perspective).length;
+    const occupied = ownPieces + opponentPieces;
+    const total = boardDefinition.cells.length;
+    const endgameWeight = occupied > total * 0.68 ? 4 : 1;
+
+    return (
+      score +
+      (ownMobility - opponentMobility) * 12 +
+      cornerScore * 180 +
+      (opponentFrontier - ownFrontier) * 4 +
+      (ownPieces - opponentPieces) * endgameWeight * 2
+    );
+  }
+
+  function terminalScore(board, perspective) {
+    const { black, white } = countPieces(board);
+    const ownCount = perspective === BLACK ? black : white;
+    const opponentCount = perspective === BLACK ? white : black;
+    const difference = ownCount - opponentCount;
+
+    if (difference > 0) {
+      return 100000 + difference * 100;
+    }
+
+    if (difference < 0) {
+      return -100000 + difference * 100;
+    }
+
+    return 0;
+  }
+
+  function orderMoves(boardDefinition, moves) {
+    return [...moves].sort((a, b) => {
+      const aCorner = boardDefinition.corners.includes(a.id) ? 1 : 0;
+      const bCorner = boardDefinition.corners.includes(b.id) ? 1 : 0;
+
+      const aScore =
+        aCorner * 10000 +
+        boardDefinition.getWeight(a.id) +
+        a.flips.length;
+
+      const bScore =
+        bCorner * 10000 +
+        boardDefinition.getWeight(b.id) +
+        b.flips.length;
+
+      return bScore - aScore;
+    });
+  }
+
+  function negamax(boardDefinition, board, playerToMove, depth, alpha, beta) {
+    const moves = getLegalMoves(boardDefinition, board, playerToMove);
+
+    if (moves.length === 0) {
+      const opponentMoves = getLegalMoves(boardDefinition, board, -playerToMove);
+
+      if (opponentMoves.length === 0) {
+        return terminalScore(board, playerToMove);
+      }
+
+      if (depth <= 0) {
+        return evaluateBoard(boardDefinition, board, playerToMove);
+      }
+
+      return -negamax(
+        boardDefinition,
+        board,
+        -playerToMove,
+        depth - 1,
+        -beta,
+        -alpha
+      );
+    }
+
+    if (depth <= 0) {
+      return evaluateBoard(boardDefinition, board, playerToMove);
+    }
+
+    let best = -Infinity;
+
+    for (const move of orderMoves(boardDefinition, moves)) {
+      const nextBoard = applyMove(boardDefinition, board, move, playerToMove);
+      const score = -negamax(
+        boardDefinition,
+        nextBoard,
+        -playerToMove,
+        depth - 1,
+        -beta,
+        -alpha
+      );
+
+      best = Math.max(best, score);
+      alpha = Math.max(alpha, score);
+
+      if (alpha >= beta) {
+        break;
+      }
+    }
+
+    return best;
+  }
+
+  function chooseDepth(boardDefinition, board) {
+    const { black, white } = countPieces(board);
+    const empty = boardDefinition.cells.length - black - white;
+
+    if (empty <= 8) {
+      return 5;
+    }
+
+    if (empty <= 16) {
+      return 4;
+    }
+
+    if (empty <= 32) {
+      return 3;
+    }
+
+    return 2;
+  }
+
+  function findBestMove(boardDefinition, board, color, depth = null) {
+    const moves = getLegalMoves(boardDefinition, board, color);
+
+    if (moves.length === 0) {
+      return null;
+    }
+
+    const searchDepth = Math.max(1, depth ?? chooseDepth(boardDefinition, board));
+    let bestScore = -Infinity;
+    let bestMoves = [];
+
+    for (const move of orderMoves(boardDefinition, moves)) {
+      const nextBoard = applyMove(boardDefinition, board, move, color);
+      const score = -negamax(
+        boardDefinition,
+        nextBoard,
+        -color,
+        searchDepth - 1,
+        -Infinity,
+        Infinity
+      );
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMoves = [move];
+      } else if (score === bestScore) {
+        bestMoves.push(move);
+      }
+    }
+
+    return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+  }
+
+  // ===== render.js =====
+  const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+  function createSvgElement(tagName, attributes = {}) {
+    const element = document.createElementNS(SVG_NAMESPACE, tagName);
+
+    for (const [name, value] of Object.entries(attributes)) {
+      element.setAttribute(name, String(value));
+    }
+
+    return element;
+  }
+
+  function squarePoints(position, cellSize) {
+    const half = cellSize / 2;
+    const x = position.x;
+    const y = position.y;
+
+    return [
+      [x - half, y - half],
+      [x + half, y - half],
+      [x + half, y + half],
+      [x - half, y + half]
+    ];
+  }
+
+  function hexPoints(position, cellSize) {
+    const points = [];
+
+    for (let index = 0; index < 6; index += 1) {
+      const angle = Math.PI / 180 * (60 * index);
+      points.push([
+        position.x + cellSize * Math.cos(angle),
+        position.y + cellSize * Math.sin(angle)
+      ]);
+    }
+
+    return points;
+  }
+
+  function pointsAttribute(points) {
+    return points
+      .map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`)
+      .join(" ");
+  }
+
+  class BoardRenderer {
+    constructor(boardElement, onCellClick) {
+      this.boardElement = boardElement;
+      this.onCellClick = onCellClick;
+    }
+
+    render({ boardDefinition, board, legalMoveIds, hintId }) {
+      const geometry = boardDefinition.geometry;
+      const positions = geometry.positions;
+      const xs = positions.map((position) => position.x);
+      const ys = positions.map((position) => position.y);
+      const cellSize = geometry.cellSize;
+
+      const minX = Math.min(...xs) - cellSize;
+      const maxX = Math.max(...xs) + cellSize;
+      const minY = Math.min(...ys) - cellSize;
+      const maxY = Math.max(...ys) + cellSize;
+
+      this.boardElement.setAttribute(
+        "viewBox",
+        `${minX.toFixed(2)} ${minY.toFixed(2)} ${(maxX - minX).toFixed(2)} ${(maxY - minY).toFixed(2)}`
+      );
+
+      this.boardElement.replaceChildren();
+
+      const legalIds = new Set(legalMoveIds);
+
+      for (const position of positions) {
+        const value = board.get(position.id) ?? EMPTY;
+        const isLegal = legalIds.has(position.id);
+        const isHint = hintId === position.id;
+
+        const group = createSvgElement("g", {
+          class: `board-cell${isLegal ? " legal" : ""}`,
+          "data-cell-id": position.id,
+          role: "gridcell",
+          "aria-label": boardDefinition.positionName(position.id)
+        });
+
+        const shapePoints =
+          geometry.kind === "hex"
+            ? hexPoints(position, cellSize * 0.96)
+            : squarePoints(position, cellSize * 0.96);
+
+        const shape = createSvgElement("polygon", {
+          points: pointsAttribute(shapePoints),
+          fill: "var(--board-green)",
+          stroke: "var(--board-line)",
+          "stroke-width": geometry.kind === "hex" ? 2 : 1
+        });
+
+        group.appendChild(shape);
+
+        if (value !== EMPTY) {
+          group.appendChild(
+            createSvgElement("circle", {
+              cx: position.x,
+              cy: position.y,
+              r: cellSize * 0.36,
+              class: value === BLACK ? "disk-black" : "disk-white"
+            })
+          );
+        }
+
+        if (isLegal) {
+          group.appendChild(
+            createSvgElement("circle", {
+              cx: position.x,
+              cy: position.y,
+              r: cellSize * 0.13,
+              class: "legal-marker"
+            })
+          );
+        }
+
+        if (isHint) {
+          group.appendChild(
+            createSvgElement("circle", {
+              cx: position.x,
+              cy: position.y,
+              r: cellSize * 0.25,
+              class: "hint-marker"
+            })
+          );
+        }
+
+        if (isLegal) {
+          group.addEventListener("click", () => {
+            this.onCellClick(position.id);
+          });
+        }
+
+        this.boardElement.appendChild(group);
+      }
+    }
+  }
+
+  // ===== lang.js =====
+  const LANGUAGE_STORAGE_KEY = "reversi-language";
+  const WINS_STORAGE_KEY = "reversi-wins";
+  const LOSSES_STORAGE_KEY = "reversi-losses";
+  const DRAWS_STORAGE_KEY = "reversi-draws";
+
+  const SUPPORTED_LANGUAGES = ["en", "es", "zh-Hant"];
+
+  const translations = {
+    en: {
+      title: "Reversi",
+      newGame: "New game",
+      setupTitle: "New game",
+      gameMode: "Game mode",
+      humanVsAi: "Human vs AI",
+      twoHumans: "Two human players",
+      boardConfiguration: "Board configuration",
+      standardBoard: "Standard",
+      hexagonalBoard: "Hexagonal",
+      language: "Language",
+      startGame: "Start game",
+      currentScore: "Current pieces",
+      record: "Game record",
+      won: "Won",
+      lost: "Lost",
+      drawn: "Drawn",
+      black: "Black",
+      white: "White",
+      you: "You",
+      computer: "Computer",
+      hint: "Hint",
+      status: "Status",
+      yourTurn: "Your turn.",
+      blackTurn: "Black to move.",
+      whiteTurn: "White to move.",
+      computerTurn: "Computer is thinking…",
+      blackStarts: "Black starts.",
+      whiteStarts: "White starts.",
+      youStart: "You start.",
+      computerStarts: "The computer starts.",
+      youPassed: "You have no legal moves and must pass.",
+      computerPassed: "The computer has no legal moves and passes.",
+      playerPassed: "{player} has no legal moves and passes.",
+      gameOver: "Game over.",
+      youWin: "You win!",
+      youLose: "You lose.",
+      draw: "It's a draw.",
+      blackWins: "Black wins!",
+      whiteWins: "White wins!",
+      hintMessage: "Suggested move: {position}.",
+      noHint: "There are no legal moves to suggest.",
+      thinkingHint: "Calculating a strong move…",
+      movePosition: "{column}{row}",
+      instructionsTitle: "How to play",
+      instructions1: "Place a disc so that it traps one or more opponent discs between the new disc and one of your existing discs.",
+      instructions2: "All trapped opponent discs are turned to your colour. If a player has no legal moves, they must pass. The game ends when neither player can move; the player with more discs wins."
+    },
+    es: {
+      title: "Reversi",
+      newGame: "Nueva partida",
+      setupTitle: "Nueva partida",
+      gameMode: "Modo de juego",
+      humanVsAi: "Humano contra IA",
+      twoHumans: "Dos jugadores humanos",
+      boardConfiguration: "Configuración del tablero",
+      standardBoard: "Estándar",
+      hexagonalBoard: "Hexagonal",
+      language: "Idioma",
+      startGame: "Comenzar partida",
+      currentScore: "Fichas actuales",
+      record: "Historial",
+      won: "Ganadas",
+      lost: "Perdidas",
+      drawn: "Empates",
+      black: "Negras",
+      white: "Blancas",
+      you: "Tú",
+      computer: "Ordenador",
+      hint: "Pista",
+      status: "Estado",
+      yourTurn: "Tu turno.",
+      blackTurn: "Turno de las negras.",
+      whiteTurn: "Turno de las blancas.",
+      computerTurn: "El ordenador está pensando…",
+      blackStarts: "Empiezan las negras.",
+      whiteStarts: "Empiezan las blancas.",
+      youStart: "Empiezas tú.",
+      computerStarts: "Empieza el ordenador.",
+      youPassed: "No tienes movimientos legales y debes pasar.",
+      computerPassed: "El ordenador no tiene movimientos legales y pasa.",
+      playerPassed: "{player} no tiene movimientos legales y pasa.",
+      gameOver: "Fin de la partida.",
+      youWin: "¡Has ganado!",
+      youLose: "Has perdido.",
+      draw: "La partida termina en empate.",
+      blackWins: "¡Ganan las negras!",
+      whiteWins: "¡Ganan las blancas!",
+      hintMessage: "Movimiento sugerido: {position}.",
+      noHint: "No hay ningún movimiento legal que sugerir.",
+      thinkingHint: "Calculando un buen movimiento…",
+      movePosition: "{column}{row}",
+      instructionsTitle: "Cómo jugar",
+      instructions1: "Coloca una ficha de manera que atrapes una o más fichas rivales entre la nueva ficha y otra de tus fichas.",
+      instructions2: "Todas las fichas rivales atrapadas cambian a tu color. Si un jugador no tiene movimientos legales, debe pasar. La partida termina cuando ningún jugador puede mover; gana quien tenga más fichas."
+    },
+    "zh-Hant": {
+      title: "黑白棋",
+      newGame: "新遊戲",
+      setupTitle: "新遊戲",
+      gameMode: "遊戲模式",
+      humanVsAi: "與電腦對戰",
+      twoHumans: "雙人對戰",
+      boardConfiguration: "棋盤設定",
+      standardBoard: "標準",
+      hexagonalBoard: "六角",
+      language: "語言",
+      startGame: "開始遊戲",
+      currentScore: "目前棋數",
+      record: "戰績",
+      won: "勝",
+      lost: "負",
+      drawn: "和",
+      black: "黑棋",
+      white: "白棋",
+      you: "你",
+      computer: "電腦",
+      hint: "提示",
+      status: "狀態",
+      yourTurn: "輪到你喇。",
+      blackTurn: "輪到黑棋。",
+      whiteTurn: "輪到白棋。",
+      computerTurn: "電腦思考中……",
+      blackStarts: "黑棋先行。",
+      whiteStarts: "白棋先行。",
+      youStart: "由你開始。",
+      computerStarts: "由電腦開始。",
+      youPassed: "你冇合規格嘅步法，須要停手一次。",
+      computerPassed: "電腦冇合規格嘅步法，需要停手一次。",
+      playerPassed: "{player}冇合規格嘅步法，需要停手一次。",
+      gameOver: "遊戲結束。",
+      youWin: "你贏咗！",
+      youLose: "你輸咗。",
+      draw: "平手。",
+      blackWins: "黑棋勝出！",
+      whiteWins: "白棋勝出！",
+      hintMessage: "建議落子位置：{position}。",
+      noHint: "目前冇合規格嘅建議步法。",
+      thinkingHint: "計算緊最佳步法……",
+      movePosition: "{column}{row}",
+      instructionsTitle: "玩法說明",
+      instructions1: "落子時，必須用新棋子同你本身嘅棋子夾住對方嘅一隻或多隻棋子。",
+      instructions2: "所有被夾住嘅對方棋子都會變成你嘅顏色。如果玩家冇合規格嘅步法，就要停手。當雙方都無法落子時遊戲就會結束，擁有最多棋子嘅玩家獲勝。"
+    }
+  };
+
+  function readStorage(key, fallback = null) {
+    try {
+      return localStorage.getItem(key) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      localStorage.setItem(key, String(value));
+    } catch {}
+  }
+
+  function determineInitialLanguage() {
+    try {
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const langParam = params.get("lang");
+
+        if (langParam) {
+          if (langParam === "zh" || langParam.startsWith("zh-")) {
+            return "zh-Hant";
+          }
+
+          if (SUPPORTED_LANGUAGES.includes(langParam)) {
+            return langParam;
+          }
+        }
+      }
+    } catch {}
+
+    const saved = readStorage(LANGUAGE_STORAGE_KEY);
+
+    if (SUPPORTED_LANGUAGES.includes(saved)) {
+      return saved;
+    }
+
+    try {
+      if (typeof navigator !== "undefined") {
+        const browserLangs = navigator.languages
+          ? Array.from(navigator.languages)
+          : [navigator.language];
+
+        for (const bl of browserLangs) {
+          if (!bl) {
+            continue;
+          }
+
+          const lower = bl.toLowerCase();
+
+          if (lower.startsWith("es")) {
+            return "es";
+          }
+
+          if (lower.startsWith("zh")) {
+            return "zh-Hant";
+          }
+
+          if (lower.startsWith("en")) {
+            return "en";
+          }
+        }
+      }
+    } catch {}
+
+    return "en";
+  }
+
+  let currentLanguage = determineInitialLanguage();
+
+  function t(key, replacements = {}) {
+    let text =
+      translations[currentLanguage][key] ??
+      translations.en[key] ??
+      key;
+
+    for (const [name, value] of Object.entries(replacements)) {
+      text = text.replaceAll(`{${name}}`, value);
+    }
+
+    return text;
+  }
+
+  function getCurrentLanguage() {
+    return currentLanguage;
+  }
+
+  function getInitialLanguage() {
+    return currentLanguage;
+  }
+
+  function applyTranslations() {
+    document.documentElement.lang = currentLanguage;
+
+    document.querySelectorAll("[data-i18n]").forEach((element) => {
+      element.textContent = t(element.dataset.i18n);
+    });
+  }
+
+  function setLanguage(language) {
+    currentLanguage = SUPPORTED_LANGUAGES.includes(language)
+      ? language
+      : "en";
+
+    writeStorage(LANGUAGE_STORAGE_KEY, currentLanguage);
+    applyTranslations();
+  }
+
+  function readRecord() {
+    const number = (key) => {
+      const value = Number(readStorage(key, "0"));
+      return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+    };
+
+    return {
+      wins: number(WINS_STORAGE_KEY),
+      losses: number(LOSSES_STORAGE_KEY),
+      draws: number(DRAWS_STORAGE_KEY)
+    };
+  }
+
+  function saveRecord(record) {
+    writeStorage(WINS_STORAGE_KEY, record.wins);
+    writeStorage(LOSSES_STORAGE_KEY, record.losses);
+    writeStorage(DRAWS_STORAGE_KEY, record.draws);
+  }
+
+  // ===== game.js =====
+  class GameEngine {
+    constructor() {
+      this.boardElement = document.getElementById("board");
+
+      this.elements = {
+        statusText: document.getElementById("statusText"),
+        hintMessage: document.getElementById("hintMessage"),
+        hintButton: document.getElementById("hintButton"),
+        playerOneLabel: document.getElementById("playerOneLabel"),
+        playerTwoLabel: document.getElementById("playerTwoLabel"),
+        playerOneScore: document.getElementById("playerOneScore"),
+        playerTwoScore: document.getElementById("playerTwoScore"),
+        wins: document.getElementById("wins"),
+        losses: document.getElementById("losses"),
+        draws: document.getElementById("draws"),
+        recordSection: document.getElementById("recordSection")
+      };
+
+      this.renderer = new BoardRenderer(
+        this.boardElement,
+        (cellId) => this.handleCellClick(cellId)
+      );
+
+      this.record = readRecord();
+      this.boardVariant = "board4";
+      this.mode = "hva";
+      this.humanColor = BLACK;
+      this.aiColor = WHITE;
+      this.currentPlayer = BLACK;
+      this.board = new Map();
+      this.boardDefinition = createStandardBoard();
+      this.legalMoves = [];
+      this.hintId = null;
+      this.gameOver = false;
+      this.aiThinking = false;
+
+      this.refreshText();
+    }
+
+    startGame({ mode, boardVariant }) {
+      this.mode = mode === "hh" ? "hh" : "hva";
+      this.boardVariant = boardVariant === "board6" ? "board6" : "board4";
+
+      this.boardDefinition =
+        this.boardVariant === "board6"
+          ? createHexagonalBoard()
+          : createStandardBoard();
+
+      if (this.mode === "hva") {
+        this.humanColor = Math.random() < 0.5 ? BLACK : WHITE;
+        this.aiColor = -this.humanColor;
+      } else {
+        this.humanColor = BLACK;
+        this.aiColor = WHITE;
+      }
+
+      this.currentPlayer = BLACK;
+      this.board = new Map(this.boardDefinition.initial);
+      this.legalMoves = getLegalMoves(
+        this.boardDefinition,
+        this.board,
+        this.currentPlayer
+      );
+
+      this.hintId = null;
+      this.gameOver = false;
+      this.aiThinking = false;
+      this.elements.hintMessage.textContent = "";
+
+      this.render();
+      this.updateStatus(
+        this.currentPlayer === BLACK
+          ? t("blackStarts")
+          : t("whiteStarts")
+      );
+
+      if (this.mode === "hva" && this.currentPlayer === this.aiColor) {
+        window.setTimeout(() => this.makeComputerTurn(), 350);
+      }
+    }
+
+    refreshText() {
+      this.render();
+      this.updateStatus();
+    }
+
+    handleCellClick(cellId) {
+      if (
+        this.gameOver ||
+        this.aiThinking ||
+        this.currentPlayer !== this.humanColor ||
+        this.mode !== "hva"
+      ) {
+        return;
+      }
+
+      const move = this.legalMoves.find(
+        (candidate) => candidate.id === cellId
+      );
+
+      if (!move) {
+        return;
+      }
+
+      this.hintId = null;
+      this.elements.hintMessage.textContent = "";
+
+      this.board = applyMove(
+        this.boardDefinition,
+        this.board,
+        move,
+        this.humanColor
+      );
+
+      this.currentPlayer = this.aiColor;
+      this.continueGame();
+    }
+
+    continueGame() {
+      this.legalMoves = getLegalMoves(
+        this.boardDefinition,
+        this.board,
+        this.currentPlayer
+      );
+
+      this.render();
+
+      if (this.legalMoves.length > 0) {
+        if (this.mode === "hva" && this.currentPlayer === this.aiColor) {
+          this.aiThinking = true;
+          this.updateStatus();
+          window.setTimeout(() => this.makeComputerTurn(), 300);
+        } else {
+          this.aiThinking = false;
+          this.updateStatus();
+        }
+
+        return;
+      }
+
+      const opponent = -this.currentPlayer;
+      const opponentMoves = getLegalMoves(
+        this.boardDefinition,
+        this.board,
+        opponent
+      );
+
+      if (opponentMoves.length === 0) {
+        this.finishGame();
+        return;
+      }
+
+      if (this.mode === "hva" && this.currentPlayer === this.humanColor) {
+        this.updateStatus(t("youPassed"));
+        this.currentPlayer = this.aiColor;
+        this.aiThinking = true;
+        window.setTimeout(() => this.makeComputerTurn(), 700);
+        return;
+      }
+
+      const passingPlayer = this.playerName(this.currentPlayer);
+      this.currentPlayer = opponent;
+      this.legalMoves = opponentMoves;
+      this.aiThinking = false;
+
+      this.render();
+      this.updateStatus(
+        t("playerPassed", { player: passingPlayer })
+      );
+    }
+
+    makeComputerTurn() {
+      if (
+        this.gameOver ||
+        this.currentPlayer !== this.aiColor ||
+        this.mode !== "hva"
+      ) {
+        return;
+      }
+
+      const move = findBestMove(
+        this.boardDefinition,
+        this.board,
+        this.aiColor,
+        chooseDepth(this.boardDefinition, this.board)
+      );
+
+      this.aiThinking = false;
+
+      if (!move) {
+        this.continueGame();
+        return;
+      }
+
+      this.board = applyMove(
+        this.boardDefinition,
+        this.board,
+        move,
+        this.aiColor
+      );
+
+      this.currentPlayer = this.humanColor;
+      this.hintId = null;
+      this.elements.hintMessage.textContent = "";
+
+      this.continueGame();
+    }
+
+    finishGame() {
+      this.gameOver = true;
+      this.aiThinking = false;
+      this.legalMoves = [];
+      this.hintId = null;
+
+      const counts = countPieces(this.board);
+      const blackCount = counts.black;
+      const whiteCount = counts.white;
+
+      this.render();
+
+      if (this.mode === "hva") {
+        const humanCount =
+          this.humanColor === BLACK ? blackCount : whiteCount;
+        const aiCount =
+          this.aiColor === BLACK ? blackCount : whiteCount;
+
+        if (humanCount > aiCount) {
+          this.record.wins += 1;
+        } else if (humanCount < aiCount) {
+          this.record.losses += 1;
+        } else {
+          this.record.draws += 1;
+        }
+
+        saveRecord(this.record);
+        this.updateScores();
+
+        const result =
+          humanCount > aiCount
+            ? t("youWin")
+            : humanCount < aiCount
+              ? t("youLose")
+              : t("draw");
+
+        this.updateStatus(`${t("gameOver")} ${result}`);
+        return;
+      }
+
+      const result =
+        blackCount > whiteCount
+          ? t("blackWins")
+          : blackCount < whiteCount
+            ? t("whiteWins")
+            : t("draw");
+
+      this.updateStatus(`${t("gameOver")} ${result}`);
+    }
+
+    requestHint() {
+      if (
+        this.gameOver ||
+        this.mode !== "hva" ||
+        this.currentPlayer !== this.humanColor ||
+        this.aiThinking
+      ) {
+        this.elements.hintMessage.textContent = t("noHint");
+        return;
+      }
+
+      if (this.legalMoves.length === 0) {
+        this.elements.hintMessage.textContent = t("noHint");
+        return;
+      }
+
+      this.elements.hintMessage.textContent = t("thinkingHint");
+      this.elements.hintButton.disabled = true;
+
+      window.setTimeout(() => {
+        const bestMove = findBestMove(
+          this.boardDefinition,
+          this.board,
+          this.humanColor,
+          chooseDepth(this.boardDefinition, this.board)
+        );
+
+        this.elements.hintButton.disabled = false;
+
+        if (!bestMove) {
+          this.elements.hintMessage.textContent = t("noHint");
+          return;
+        }
+
+        this.hintId = bestMove.id;
+        this.elements.hintMessage.textContent = t("hintMessage", {
+          position: this.boardDefinition.positionName(bestMove.id)
+        });
+
+        this.render();
+      }, 20);
+    }
+
+    playerName(color) {
+      if (this.mode === "hh") {
+        return color === BLACK ? t("black") : t("white");
+      }
+
+      return color === this.humanColor ? t("you") : t("computer");
+    }
+
+    updateStatus(message = null) {
+      if (message !== null) {
+        this.elements.statusText.textContent = message;
+        return;
+      }
+
+      if (this.gameOver) {
+        return;
+      }
+
+      if (this.mode === "hva") {
+        if (this.aiThinking || this.currentPlayer === this.aiColor) {
+          this.elements.statusText.textContent = t("computerTurn");
+        } else {
+          this.elements.statusText.textContent = t("yourTurn");
+        }
+
+        return;
+      }
+
+      this.elements.statusText.textContent =
+        this.currentPlayer === BLACK
+          ? t("blackTurn")
+          : t("whiteTurn");
+    }
+
+    render() {
+      this.renderer.render({
+        boardDefinition: this.boardDefinition,
+        board: this.board,
+        legalMoveIds:
+          this.gameOver ||
+          this.aiThinking ||
+          (this.mode === "hva" && this.currentPlayer !== this.humanColor)
+            ? []
+            : this.legalMoves.map((move) => move.id),
+        hintId: this.hintId
+      });
+
+      this.updateScores();
+    }
+
+    updateScores() {
+      const counts = countPieces(this.board);
+
+      this.elements.playerOneScore.textContent = String(counts.black);
+      this.elements.playerTwoScore.textContent = String(counts.white);
+      this.elements.playerOneLabel.textContent = t("black");
+      this.elements.playerTwoLabel.textContent = t("white");
+
+      const showRecord = this.mode === "hva";
+      this.elements.recordSection.style.display = showRecord ? "" : "none";
+
+      if (showRecord) {
+        this.elements.wins.textContent = String(this.record.wins);
+        this.elements.losses.textContent = String(this.record.losses);
+        this.elements.draws.textContent = String(this.record.draws);
+      }
+    }
+  }
+
+  // ===== script.js entry point =====
+  const elements = {
+    newGameButton: document.getElementById("newGameButton"),
+    hintButton: document.getElementById("hintButton"),
+    setupOverlay: document.getElementById("setupOverlay"),
+    modeSelect: document.getElementById("modeSelect"),
+    boardSelect: document.getElementById("boardSelect"),
+    languageSelect: document.getElementById("languageSelect"),
+    startGameButton: document.getElementById("startGameButton")
+  };
+
+  const engine = new GameEngine();
+
+  function showSetup() {
+    elements.setupOverlay.classList.remove("hidden");
+  }
+
+  function hideSetup() {
+    elements.setupOverlay.classList.add("hidden");
+  }
+
+  elements.newGameButton.addEventListener("click", showSetup);
+
+  elements.startGameButton.addEventListener("click", () => {
+    setLanguage(elements.languageSelect.value);
+
+    engine.startGame({
+      mode: elements.modeSelect.value,
+      boardVariant: elements.boardSelect.value
+    });
+
+    hideSetup();
+  });
+
+  elements.languageSelect.addEventListener("change", (event) => {
+    setLanguage(event.target.value);
+    engine.refreshText();
+  });
+
+  elements.hintButton.addEventListener("click", () => {
+    engine.requestHint();
+  });
+
+  elements.languageSelect.value = getInitialLanguage();
+  applyTranslations();
+  showSetup();
+})();
+</script>
 </body>
 </html>

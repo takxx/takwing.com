@@ -1,23 +1,30 @@
 const CACHE_PREFIX = "games-";
-const CACHE_NAME = `${CACHE_PREFIX}261123`;
+const CACHE_NAME = `${CACHE_PREFIX}261124`;
 
 const FILES_TO_CACHE = [
   "/2048/index.html",
   "/addoku/index.html",
   "/alquerque/index.html",
   "/brick/index.html",
+  "/chromo/index.html",
+  "/connect4/index.html",
   "/cow/index.html",
   "/dopewars/index.html",
+  "/domino/index.html",
   "/fishprawncrab/index.html",
   "/freecell/index.html",
   "/froggy/index.html",
+  "/hex/index.html",
   "/hockey/index.html",
   "/labyrinth/index.html",
   "/lightsout/index.html",
   "/mastermind/index.html",
   "/match/index.html",
+  "/minesweeper/index.html",
   "/pachinko/index.html",
   "/pong/index.html",
+  "/reversi/index.html",
+  "/rushhour/index.html",
   "/sfcave/index.html",
   "/shikaku/index.html",
   "/simon/index.html",
@@ -27,11 +34,15 @@ const FILES_TO_CACHE = [
   "/spin/index.html",
   "/sudoku/index.html",
   "/summer/index.html",
+  "/tangram/index.html",
+  "/tangram/tan.svg",  
   "/untangle/index.html",
+  "/vaca/index.html",
   "/vpoker/index.html",
   "/whackamole/index.html",
   "/games/index.html",
   "/games/ico.svg"
+  "/juegos/index.html",
 ];
 
 self.addEventListener("install", (event) => {
@@ -57,16 +68,25 @@ self.addEventListener("fetch", (event) => {
 
   if (request.method !== "GET") return;
 
-  // Leave cross-origin requests to the browser/network.
-  if (new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const cachedResponse = await cache.match(request);
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
 
-      if (cachedResponse) return cachedResponse;
+    if (request.mode === "navigate") {
+      const path = url.pathname.endsWith("/")
+        ? `${url.pathname}index.html`
+        : url.pathname;
 
-      return fetch(request);
-    })
-  );
+      const cached = await cache.match(
+        new URL(path, self.location.origin).href
+      );
+
+      if (cached) return cached;
+    }
+
+    const cached = await cache.match(request, { ignoreSearch: true });
+    return cached || fetch(request);
+  })());
 });
