@@ -1,86 +1,2146 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rummiqub</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rummiqub</title>
+<style>
+:root {
+  color-scheme: dark;
+  font: 15px/1.4 serif;
+  color: #f5efe2;
+
+  --royal: #1e2f66;
+  --royal-deep: #13214a;
+  --royal-soft: #2b448c;
+  --velvet: #243a7a;
+  --gold: #d7b15a;
+  --gold-light: #f0cf82;
+  --gold-dim: #a88634;
+  --tile-brown: #4a2f1f;
+  --tile-brown-dark: #352014;
+  --tile-border: #8a5a31;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 18px;
+  color: #f5efe2;
+  background:
+    radial-gradient(circle at top, rgb(82 113 214 / 30%), transparent 35%),
+    radial-gradient(circle at bottom right, rgb(215 177 90 / 12%), transparent 28%),
+    linear-gradient(135deg, #243a7a 0%, #162658 50%, #0f1731 100%);
+}
+
+.game {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-areas:
+    "header"
+    "board"
+    "side";
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  direction: ltr;
+}
+
+.game-header {
+  grid-area: header;
+}
+
+.game-header h1 {
+  color: var(--gold-light);
+  margin: 0 0 6px;
+}
+
+.game-header p {
+  margin: 0;
+}
+
+.board-column {
+  grid-area: board;
+  min-width: 0;
+}
+
+.side-panel {
+  grid-area: side;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hand-section,
+.board-section {
+  min-width: 0;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 1.08rem;
+}
+
+.title-row,
+.hand-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.title-row h1,
+.hand-title-row h2 {
+  margin: 0;
+}
+
+.board-layout {
+  display: grid;
+  width: min(100%, 720px);
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 0;
+  grid-template:
+    ". top ." 28px
+    "left center right" minmax(0, 5fr)
+    ". bottom ." 28px
+    / 28px minmax(0, 5fr) 28px;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
+}
+
+.board-center {
+  grid-area: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--royal) 0%, var(--royal-deep) 100%);
+}
+
+.table {
+  display: flex;
+  min-width: 0;
+  min-height: 100%;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.opponent {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #1a2f66;
+  text-align: center;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.opponent-top,
+.opponent-bottom {
+  flex-direction: row;
+}
+
+.opponent-top {
+  grid-area: top;
+}
+
+.opponent-bottom {
+  grid-area: bottom;
+}
+
+.opponent-left {
+  grid-area: left;
+  flex-direction: column;
+}
+
+.opponent-right {
+  grid-area: right;
+  flex-direction: column;
+}
+
+.opponent-name,
+.opponent-count {
+  flex: 0 0 auto;
+  font-weight: 400;
+  color: #1a2f66;
+}
+
+.mini-rack {
+  display: flex;
+  flex: 0 0 auto;
+  flex-flow: row nowrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+.opponent-left .mini-rack,
+.opponent-right .mini-rack {
+  flex-direction: column;
+}
+
+.mini-tile {
+  display: block;
+  flex: 0 0 auto;
+  width: 9px;
+  height: 13px;
+  border: 1px solid #7a5a37;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #4b3020 0%, #2f1d12 100%);
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 45%);
+}
+
+.opponent-left .mini-tile,
+.opponent-right .mini-tile {
+  width: 13px;
+  height: 9px;
+}
+
+.hand {
+  display: flex;
+  min-height: 68px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #243a7a 0%, #1b2d63 100%);
+}
+
+.loose-area {
+  position: relative;
+  min-height: 92px;
+  margin-top: 8px;
+  border-style: dashed;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.loose-area::before {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  color: #dfd0a6;
+  font-size: 0.82rem;
+  content: var(--draft-hint, "Draft — drag rack or board tiles here");
+  pointer-events: none;
+}
+
+.loose-area.is-drop-ready {
+  border-color: #ecd38a;
+}
+
+.loose-area.drag-over {
+  border-color: var(--gold-light);
+  background: #17365c;
+  box-shadow: 0 0 0 2px rgb(240 207 130 / 22%);
+}
+
+.set {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 58px;
+  flex-wrap: nowrap;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #304a93 0%, #21356f 100%);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.set.drag-over {
+  border-color: var(--gold-light);
+  background: #1c3a76;
+}
+
+.set.set-invalid {
+  border: 2px solid #ff8d6a;
+  background: #4a2430;
+  box-shadow: 0 0 10px rgb(255 120 90 / 35%);
+}
+
+.tile {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 52px;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--tile-border);
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--tile-brown) 0%, var(--tile-brown-dark) 100%);
+  color: var(--tile-color, #fff);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--tile-color) 45%, transparent);
+  font-size: 1.2rem;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tile[draggable="true"] {
+  cursor: grab;
+  touch-action: manipulation;
+}
+
+.tile.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.tile:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.log-tile {
+  display: inline-grid;
+  min-width: 1.65em;
+  height: 1.8em;
+  margin: 0 2px;
+  padding: 0 3px;
+  place-items: center;
+  border: 1px solid #7a5a37;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #4b3020 0%, #2f1d12 100%);
+  color: var(--tile-color, #fff);
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+.draft-valid-tick {
+  right: 8px;
+  top: 8px;
+  z-index: 1;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #c7a34b;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #d9b45f 0%, #b88a2f 100%);
+  color: #2a1d07;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgb(215 177 90 / 34%);
+}
+
+.draft-valid-tick:hover {
+  background: linear-gradient(180deg, #f0cf82 0%, #c99a3d 100%);
+}
+
+.draft-valid-tick[hidden] {
+  display: none;
+}
+
+.draft-cancel-x {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #fff;
+  background: #c62828;
+}
+
+.draft-cancel-x:hover {
+  background: #a51f1f;
+}
+
+.draft-cancel-x:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.controls button,
+.header-button,
+.draw-button,
+#instructions-dialog button {
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 7px;
+  background: linear-gradient(180deg, #d9b45f 0%, #b88a2f 100%);
+  color: #2a1d07;
+  font: inherit;
+  cursor: pointer;
+}
+
+.controls button:hover:not(:disabled),
+.header-button:hover:not(:disabled),
+.draw-button:hover:not(:disabled),
+#instructions-dialog button:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--gold-light) 0%, #c99a3d 100%);
+}
+
+.controls button:disabled,
+.header-button:disabled,
+.draw-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 16px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #243a7a 0%, #1a2a5d 100%);
+}
+
+.status > p {
+  margin: 0;
+}
+
+#message {
+  flex-basis: 100%;
+  min-width: 0;
+  max-height: 180px;
+  margin: 0;
+  overflow-y: auto;
+}
+
+.message-entry {
+  margin: 0;
+  padding: 4px 0;
+  border-bottom: 1px solid #ffffff30;
+}
+
+.message-entry:last-child {
+  border-bottom: 0;
+}
+
+#turn {
+  display: none;
+}
+
+.instructions-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#instructions-dialog {
+  width: min(90vw, 38rem);
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid var(--gold-dim);
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: linear-gradient(180deg, #1c2c62 0%, #121c3f 100%);
+  color: #f5efe2;
+}
+
+#instructions-dialog::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+
+#instructions-dialog h2 {
+  margin-bottom: 1rem;
+}
+
+#instructions-dialog h3 {
+  margin: 1rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+#instructions-dialog p {
+  margin: 0;
+}
+
+@media (min-width: 801px) {
+  .game-layout {
+    grid-template-areas:
+      "board header"
+      "board side";
+    grid-template-columns: minmax(0, 720px) minmax(280px, 380px);
+    gap: 16px 22px;
+    align-items: start;
+    justify-content: center;
+  }
+
+  .board-column {
+    grid-area: board;
+  }
+
+  .game-header {
+    grid-area: header;
+    margin: 0;
+  }
+
+  .side-panel {
+    grid-area: side;
+  }
+}
+
+@media (max-width: 800px) {
+  body {
+    padding: 12px;
+  }
+
+  .board-layout {
+    width: min(100%, 600px);
+    grid-template:
+      ". top ." 24px
+      "left center right" minmax(0, 5fr)
+      ". bottom ." 24px
+      / 24px minmax(0, 5fr) 24px;
+    gap: 3px;
+  }
+
+  .opponent {
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .mini-tile {
+    width: 7px;
+    height: 10px;
+  }
+
+  .opponent-left .mini-tile,
+  .opponent-right .mini-tile {
+    width: 10px;
+    height: 7px;
+  }
+
+  .tile {
+    width: 34px;
+    height: 45px;
+  }
+}
+
+@media (max-width: 420px) {
+  body {
+    padding: 8px;
+  }
+
+  .board-layout {
+    width: 100%;
+    padding: 3px;
+    grid-template:
+      ". top ." 20px
+      "left center right" minmax(0, 5fr)
+      ". bottom ." 20px
+      / 20px minmax(0, 5fr) 20px;
+    gap: 2px;
+  }
+
+  .opponent {
+    gap: 2px;
+    font-size: 8px;
+  }
+
+  .opponent-left .mini-tile,
+  .opponent-right .mini-tile {
+    width: 8px;
+    height: 6px;
+  }
+
+  .tile {
+    width: 30px;
+    height: 41px;
+  }
+
+  .hand {
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .loose-area {
+    min-height: 84px;
+  }
+}
+</style>
 </head>
 <body>
-  <main class="game">
-    <div id="game-layout" class="game-layout">
-      <header class="game-header">
-        <div class="title-row">
-          <h1 data-i18n="title">Rummiqub</h1>
-          <button id="new-game" class="header-button" type="button" data-i18n="newGame">
-            New game
+<main class="game">
+  <div id="game-layout" class="game-layout">
+    <header class="game-header">
+      <div class="title-row">
+        <h1 data-i18n="title">Rummiqub</h1>
+        <button id="new-game" class="header-button" type="button" data-i18n="newGame">
+          New game
+        </button>
+      </div>
+      <button
+        id="instructions-button"
+        class="instructions-link"
+        type="button"
+        data-i18n="instructionsLink"
+        aria-haspopup="dialog"
+        aria-controls="instructions-dialog"
+      ></button>
+    </header>
+
+    <section class="board-column" aria-label="Game board">
+      <div id="board-layout" class="board-layout">
+        <div id="opponent-top" class="opponent opponent-top"></div>
+        <div id="opponent-left" class="opponent opponent-left"></div>
+
+        <div class="board-center">
+          <div id="table" class="table" aria-label="Played sets"></div>
+        </div>
+
+        <div id="opponent-right" class="opponent opponent-right"></div>
+        <div id="opponent-bottom" class="opponent opponent-bottom"></div>
+      </div>
+    </section>
+
+    <aside class="side-panel">
+      <section class="hand-section">
+        <div class="hand-title-row">
+          <h2 data-i18n="yourTiles">Your tiles</h2>
+          <button id="draw" class="draw-button" type="button" data-i18n="draw">
+            Draw a tile
           </button>
         </div>
-        <button
-          id="instructions-button"
-          class="instructions-link"
-          type="button"
-          data-i18n="instructionsLink"
-          aria-haspopup="dialog"
-          aria-controls="instructions-dialog"
-        ></button>
-      </header>
+        <div id="hand" class="hand" aria-label="Your tiles"></div>
 
-      <section class="board-column" aria-label="Game board">
-        <div id="board-layout" class="board-layout">
-          <div id="opponent-top" class="opponent opponent-top"></div>
-          <div id="opponent-left" class="opponent opponent-left"></div>
+        <h2 class="draft-heading" data-i18n="draftArea">Draft</h2>
+        <div
+          id="loose"
+          class="hand loose-area"
+          aria-label="Draft area"
+          aria-dropeffect="move"
+        ></div>
 
-          <div class="board-center">
-            <div id="table" class="table" aria-label="Played sets"></div>
-          </div>
-
-          <div id="opponent-right" class="opponent opponent-right"></div>
-          <div id="opponent-bottom" class="opponent opponent-bottom"></div>
+        <div class="controls">
+          <button id="play" type="button" data-i18n="play">
+            Play selected tiles
+          </button>
         </div>
       </section>
 
-      <aside class="side-panel">
-        <section class="hand-section">
-          <div class="hand-title-row">
-            <h2 data-i18n="yourTiles">Your tiles</h2>
-            <button id="draw" class="draw-button" type="button" data-i18n="draw">
-              Draw a tile
-            </button>
-          </div>
-          <div id="hand" class="hand" aria-label="Your tiles"></div>
+      <section class="status" aria-label="Game status">
+        <p id="turn"></p>
+        <p id="stock"></p>
+        <div id="message" class="message-log" aria-live="polite"></div>
+      </section>
+    </aside>
+  </div>
+</main>
 
-          <h2 class="draft-heading" data-i18n="draftArea">Draft</h2>
-          <div
-            id="loose"
-            class="hand loose-area"
-            aria-label="Draft area"
-            aria-dropeffect="move"
-          ></div>
-
-          <div class="controls">
-            <button id="play" type="button" data-i18n="play">
-              Play selected tiles
-            </button>
-          </div>
-        </section>
-
-        <section class="status" aria-label="Game status">
-          <p id="turn"></p>
-          <p id="stock"></p>
-          <div id="message" class="message-log" aria-live="polite"></div>
-        </section>
-      </aside>
-    </div>
-  </main>
-
-  <script type="module" src="script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
+<script>
+var COLORS = ["pink", "orange", "green", "azure"];
+var SEARCH_BUDGET_MS = 2500;
+var MAX_REARRANGED_SETS = 3;
+var MAX_HAND_TILES_TO_CONSIDER = 8;
+var MAX_POOL_TILES = 24;
+function expired(deadline) {
+  return Date.now() >= deadline;
+}
+function isConcreteSet(tiles) {
+  if (tiles.length < 3 || tiles.length > 13) return false;
+  if (tiles.some((tile) => tile.joker)) return false;
+  const sameValue = tiles.every((tile) => tile.value === tiles[0].value);
+  if (sameValue) {
+    return tiles.length <= COLORS.length && new Set(tiles.map((tile) => tile.color)).size === tiles.length;
+  }
+  if (!tiles.every((tile) => tile.color === tiles[0].color)) return false;
+  const values = tiles.map((tile) => tile.value).sort((a, b) => a - b);
+  return new Set(values).size === values.length && values.every(
+    (value, index) => index === 0 || value === values[index - 1] + 1
+  );
+}
+function forEachJokerAssignment(tiles, visit) {
+  const jokers = tiles.filter((tile) => tile.joker);
+  const natural = tiles.filter((tile) => !tile.joker);
+  if (jokers.length > 2 || natural.length === 0) return false;
+  function assign(index, completed, assignments) {
+    if (index === jokers.length) {
+      if (!isConcreteSet(completed)) return false;
+      return visit(completed, assignments) === true;
+    }
+    const joker = jokers[index];
+    for (const color of COLORS) {
+      for (let value = 1; value <= 13; value++) {
+        const replacement = { ...joker, color, value, joker: false };
+        if (assign(
+          index + 1,
+          [...completed, replacement],
+          [...assignments, { joker, color, value }]
+        )) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  return assign(0, natural, []);
+}
+function isValidSet(tiles) {
+  if (tiles.length < 3 || tiles.length > 13) return false;
+  if (!tiles.some((tile) => tile.joker)) {
+    return isConcreteSet(tiles);
+  }
+  return forEachJokerAssignment(tiles, () => true);
+}
+function handPointsInMeld(meld, handIds) {
+  const natural = meld.filter((tile) => !tile.joker);
+  if (!meld.some((tile) => tile.joker)) {
+    if (!isConcreteSet(meld)) return -1;
+    return natural.filter((tile) => handIds.has(tile.id)).reduce((sum, tile) => sum + tile.value, 0);
+  }
+  let best = -1;
+  forEachJokerAssignment(meld, (_completed, assignments) => {
+    let points = natural.filter((tile) => handIds.has(tile.id)).reduce((sum, tile) => sum + tile.value, 0);
+    for (const assignment of assignments) {
+      if (handIds.has(assignment.joker.id)) {
+        points += assignment.value;
+      }
+    }
+    best = Math.max(best, points);
+  });
+  return best;
+}
+function choose(items, count, visit, deadline) {
+  const chosen = [];
+  function walk(start) {
+    if (expired(deadline)) return;
+    if (chosen.length === count) {
+      visit([...chosen]);
+      return;
+    }
+    const needed = count - chosen.length;
+    for (let i = start; i <= items.length - needed; i++) {
+      if (expired(deadline)) return;
+      chosen.push(items[i]);
+      walk(i + 1);
+      chosen.pop();
+    }
+  }
+  walk(0);
+}
+function tileSearchScore(tile) {
+  return (tile.joker ? 1e3 : 0) + (tile.value || 0);
+}
+function playIsBetter(candidate, current) {
+  if (!current) return true;
+  if (candidate.playedIds.size !== current.playedIds.size) {
+    return candidate.playedIds.size > current.playedIds.size;
+  }
+  if (candidate.playedPoints !== current.playedPoints) {
+    return candidate.playedPoints > current.playedPoints;
+  }
+  return candidate.reclaimedJokers > current.reclaimedJokers;
+}
+function findComputerPlay(hand, table, hasOpened) {
+  const deadline = Date.now() + SEARCH_BUDGET_MS;
+  const handIds = new Set(hand.map((tile) => tile.id));
+  const searchHand = [...hand].sort(
+    (a, b) => tileSearchScore(b) - tileSearchScore(a)
+  );
+  let best = null;
+  function openingIsValid(melds) {
+    if (hasOpened) return true;
+    let points = 0;
+    for (const meld of melds) {
+      const meldPoints = handPointsInMeld(meld, handIds);
+      if (meldPoints < 0) return false;
+      points += meldPoints;
+    }
+    return points >= 30;
+  }
+  function considerPool(pool, replacedIndexes) {
+    if (expired(deadline) || pool.length > MAX_POOL_TILES) return;
+    const indexById = new Map(pool.map((tile, index) => [tile.id, index]));
+    const meldsByTile = Array.from({ length: pool.length }, () => []);
+    for (let size = 3; size <= Math.min(13, pool.length); size++) {
+      if (expired(deadline)) return;
+      choose(
+        pool,
+        size,
+        (meld) => {
+          if (expired(deadline) || !isValidSet(meld)) return;
+          const indexes = meld.map((tile) => indexById.get(tile.id));
+          const candidate = { tiles: meld, indexes };
+          for (const index of indexes) {
+            meldsByTile[index].push(candidate);
+          }
+        },
+        deadline
+      );
+    }
+    for (const candidates of meldsByTile) {
+      candidates.sort((a, b) => {
+        function priority(candidate) {
+          let score = 0;
+          for (const tile of candidate.tiles) {
+            if (!handIds.has(tile.id)) continue;
+            score += tile.joker ? 100 : 1;
+          }
+          return score;
+        }
+        return priority(b) - priority(a);
       });
     }
-  </script>
+    const used = new Array(pool.length).fill(false);
+    const partition = [];
+    function searchPartition(usedCount) {
+      if (expired(deadline)) return;
+      if (usedCount === pool.length) {
+        if (!openingIsValid(partition)) return;
+        const playedIds = new Set(
+          pool.filter((tile) => handIds.has(tile.id)).map((tile) => tile.id)
+        );
+        if (playedIds.size === 0) return;
+        let playedPoints = 0;
+        for (const meld of partition) {
+          const points = handPointsInMeld(meld, handIds);
+          if (points >= 0) playedPoints += points;
+        }
+        const replaced = new Set(replacedIndexes);
+        const newTable = [
+          ...table.filter((_, index) => !replaced.has(index)).map((set) => [...set]),
+          ...partition.map((meld) => [...meld])
+        ];
+        const reclaimedJokers = replacedIndexes.reduce(
+          (total, index) => total + table[index].filter((tile) => tile.joker).length,
+          0
+        );
+        const candidate = {
+          table: newTable,
+          playedIds,
+          playedPoints,
+          reclaimedJokers
+        };
+        if (playIsBetter(candidate, best)) best = candidate;
+        return;
+      }
+      let pivot = 0;
+      while (used[pivot]) pivot++;
+      for (const candidate of meldsByTile[pivot]) {
+        if (expired(deadline)) return;
+        if (candidate.indexes.some((index) => used[index])) continue;
+        for (const index of candidate.indexes) used[index] = true;
+        partition.push(candidate.tiles);
+        searchPartition(usedCount + candidate.indexes.length);
+        partition.pop();
+        for (const index of candidate.indexes) used[index] = false;
+      }
+    }
+    searchPartition(0);
+  }
+  for (let count = 1; count <= Math.min(MAX_HAND_TILES_TO_CONSIDER, searchHand.length); count++) {
+    if (expired(deadline)) break;
+    choose(
+      searchHand,
+      count,
+      (selected) => considerPool(selected, []),
+      deadline
+    );
+  }
+  const tableIndexes = table.map((set, index) => ({
+    index,
+    containsJoker: set.some((tile) => tile.joker)
+  })).sort((a, b) => Number(b.containsJoker) - Number(a.containsJoker)).map((item) => item.index);
+  for (let setCount = 1; setCount <= Math.min(MAX_REARRANGED_SETS, table.length); setCount++) {
+    if (expired(deadline)) break;
+    choose(
+      tableIndexes,
+      setCount,
+      (indexes) => {
+        const boardTiles = indexes.flatMap((index) => table[index]);
+        if (boardTiles.length >= MAX_POOL_TILES) return;
+        const maxHandCount = Math.min(
+          MAX_HAND_TILES_TO_CONSIDER,
+          searchHand.length,
+          MAX_POOL_TILES - boardTiles.length
+        );
+        for (let handCount = 1; handCount <= maxHandCount; handCount++) {
+          if (expired(deadline)) return;
+          choose(
+            searchHand,
+            handCount,
+            (selectedHandTiles) => {
+              considerPool(
+                [...boardTiles, ...selectedHandTiles],
+                indexes
+              );
+            },
+            deadline
+          );
+        }
+      },
+      deadline
+    );
+  }
+  return best ? { table: best.table, playedIds: best.playedIds } : null;
+}
+
+var translations = {
+    en: {
+        title: "Rummiqub",
+        subtitle: "Make groups of the same number or runs of consecutive numbers.",
+        table: "Table",
+        yourTiles: "👤 Your tiles",
+        draftArea: "Draft",
+        play: "Play selected tiles",
+        draw: "Draw a tile",
+        newGame: "New game",
+        
+        draftHint: "Draft — drag rack or board tiles here",
+        validateDraft: "Draft is not a valid set or run",
+        validDraft: "Add this valid set or run to the board",
+        validateDraftHint: "The tick checks only the tiles currently in Draft.",
+        validDraftHint: "Valid set or run. Click to place it on the board.",
+        finishTurn: "Finish Turn",
+        cancelDraft: "Cancel draft",
+        boardDropHint: "Drop a Draft tile here to add it to this set.",
+        joker: "Joker",
+        tileTitle: "{color} {value}",
+        pink: "Pink",
+        orange: "Orange",
+        green: "Green",
+        azure: "Blue",
+        opponentTiles: "{count} tiles",
+        playerName: "👤 You",
+
+        yourTurn: "👤 Your turn",
+        opponentTurn: "{name}'s turn",
+        gameOver: "Game over",
+
+        stock: "Tiles left: {count}",
+        selected: "{count} selected",
+
+        invalid: "⚠️ Those tiles don't make a valid group or run.",
+        played: "👤 Nice move!",
+        youDrew: "👤 You drew:",
+        youPlayed: "👤 You played:",
+        youWin: "👤 You win!",
+        opponentWins: "{name} wins!",
+        youWinLowest: "👤 You win with {points} hand points (lowest score).",
+        opponentWinsLowest: "{name} wins with {points} hand points (lowest score).",
+        tieLowest: "Tie: {names} share the lowest score at {points} points.",
+        drawEmpty: "No tiles left to draw. Turn passed.",
+        newGameMessage: "New game started.",
+
+        aiDrew: "{name} drew a tile.",
+        aiPlayed: "{name} played:",
+
+        invalidTable: "⚠️ Every set on the table must be valid.",
+        mustPlayFromHand: "⚠️ Play at least one tile from your rack.",
+        openingMeld: "⚠️ Your opening play must total at least 30 points.",
+        looseTiles: "⚠️ Place all Draft tiles before finishing your turn.",
+        noDraft: "⚠️ There is no active turn to finish.",
+        selectedTileError: "⚠️ Couldn't move one of the selected rack tiles.",
+        draftCancelled: "❌ Draft cancelled.",
+        invalidMove: "⚠️ That move isn't valid.",
+
+        scoresTitle: "Final scores",
+        scoreRow: "{name}: {points} points ({tileCount} tiles)",
+        instructionsLink: "Click for instructions",
+        instructionsTitle: "How to play",
+        instructionsGoalTitle: "Goal",
+        instructionsGoal: "Be the first player to play all the tiles from your rack.",
+        instructionsSetsTitle: "Valid sets",
+        instructionsSets: "A group is 3 or 4 tiles with the same number in different colours. A run is 3 or more consecutive numbers in the same colour.",
+        instructionsFirstTurnTitle: "Your opening play",
+        instructionsFirstTurn: "Your first play must total at least 30 points using tiles from your rack. You cannot use tiles already on the table to meet this total.",
+        instructionsTurnsTitle: "Taking a turn",
+        instructionsTurns: "Play at least one tile from your rack. You may add tiles to sets on the table or rearrange them, but every set must be valid when you finish. If you cannot or do not want to play, draw a tile to end your turn.",
+        instructionsControlsTitle: "Controls",
+        instructionsControls: "Click a tile on the table to move it into the Draft area. Drag tiles from your rack or the table into Draft, and drag Draft tiles onto a table set to add them. Use the tick to place a valid Draft set on the board. Finish Turn commits your move; Cancel draft restores the turn.",
+        closeInstructions: "Close"
+    },
+
+    es: {
+        title: "Rummiqub",
+        subtitle: "Forma grupos con el mismo número o escaleras de números consecutivos.",
+        table: "Mesa",
+        yourTiles: "👤 Tus fichas",
+        draftArea: "Zona temporal",
+        play: "Jugar las fichas seleccionadas",
+        draw: "Robar una ficha",
+        newGame: "Nueva partida",
+        
+        draftHint: "Zona temporal: arrastra aquí las fichas del soporte o de la mesa",        validateDraft: "El borrador no es un grupo ni una escalera válidos",
+        validDraft: "Añadir esta combinación válida a la mesa",
+        validateDraftHint: "La marca solo comprueba las fichas del borrador.",
+        validDraftHint: "Grupo o escalera válidos. Pulsa para añadirlos a la mesa.",
+        finishTurn: "Terminar turno",
+        cancelDraft: "Cancelar borrador",
+        boardDropHint: "Suelta aquí una ficha del borrador para añadirla a este grupo.",
+        joker: "Comodín",
+        tileTitle: "{color} {value}",
+        pink: "Rosa",
+        orange: "Naranja",
+        green: "Verde",
+        azure: "Azul",
+        opponentTiles: "{count} fichas",
+        playerName: "👤 Tú",
+
+        yourTurn: "👤 Tu turno",
+        opponentTurn: "Turno de {name}",
+        gameOver: "Fin de la partida",
+
+        stock: "Fichas restantes: {count}",
+        selected: "{count} seleccionadas",
+
+        invalid: "⚠️ Esas fichas no forman un grupo ni una escalera válidos.",
+        played: "👤 ¡Buena jugada!",
+        youDrew: "👤 Has robado:",
+        youPlayed: "👤 Has jugado:",
+        youWin: "👤 ¡Has ganado!",
+        opponentWins: "¡{name} gana!",
+        youWinLowest: "👤 Ganas con {points} puntos en la mano (la puntuación más baja).",
+        opponentWinsLowest: "{name} gana con {points} puntos en la mano (la puntuación más baja).",
+        tieLowest: "Empate: {names} comparten la puntuación más baja, con {points} puntos.",
+        drawEmpty: "No quedan fichas para robar. Se pasa el turno.",
+        newGameMessage: "Ha comenzado una nueva partida.",
+
+        aiDrew: "{name} ha robado una ficha.",
+        aiPlayed: "{name} ha jugado:",
+
+        invalidTable: "⚠️ Todos los grupos de la mesa deben ser válidos.",
+        mustPlayFromHand: "⚠️ Juega al menos una ficha de tu soporte.",
+        openingMeld: "⚠️ Tu primera jugada debe sumar al menos 30 puntos.",
+        looseTiles: "⚠️ Coloca todas las fichas del borrador antes de terminar el turno.",
+        noDraft: "⚠️ No hay ningún turno activo que terminar.",
+        selectedTileError: "⚠️ No se pudo mover una de las fichas seleccionadas del soporte.",
+        draftCancelled: "❌ Borrador cancelado.",
+        invalidMove: "⚠️ Esa jugada no es válida.",
+
+        scoresTitle: "Puntuaciones finales",
+        scoreRow: "{name}: {points} puntos ({tileCount} fichas)",
+        instructionsLink: "Ver instrucciones",
+        instructionsTitle: "Cómo jugar",
+        instructionsGoalTitle: "Objetivo",
+        instructionsGoal: "Sé el primer jugador en jugar todas las fichas de tu soporte.",
+        instructionsSetsTitle: "Combinaciones válidas",
+        instructionsSets: "Un grupo son 3 o 4 fichas con el mismo número y distintos colores. Una escalera son 3 o más números consecutivos del mismo color.",
+        instructionsFirstTurnTitle: "Tu primera jugada",
+        instructionsFirstTurn: "Tu primera jugada debe sumar al menos 30 puntos con fichas de tu soporte. No puedes usar fichas de la mesa para alcanzar esa puntuación.",
+        instructionsTurnsTitle: "Tu turno",
+        instructionsTurns: "Juega al menos una ficha de tu soporte. Puedes añadir fichas a las combinaciones de la mesa o reorganizarlas, pero todas deben ser válidas al terminar. Si no puedes o no quieres jugar, roba una ficha para terminar tu turno.",
+        instructionsControlsTitle: "Controles",
+        instructionsControls: "Pulsa una ficha de la mesa para moverla al borrador. Arrastra fichas de tu soporte o de la mesa al borrador; arrastra fichas del borrador sobre una combinación para añadirlas. Usa la marca para colocar en la mesa una combinación válida del borrador. «Terminar turno» confirma tu jugada; «Cancelar borrador» restaura el turno.",
+        closeInstructions: "Cerrar"
+    },
+
+    zh: {
+        title: "巴別橋",
+        subtitle: "將相同數字組成一組，或將連續數字排成一列。",
+        table: "牌桌",
+        yourTiles: "👤 你的牌磚",
+        draftArea: "暫存區",
+        play: "打出已選牌磚",
+        draw: "摸牌",
+        newGame: "新遊戲",
+        
+        draftHint: "暫存區 — 將牌架或牌桌上的牌磚拖到這裏",
+        validateDraft: "暫存區的牌磚未能組成有效牌組或順序",
+        validDraft: "將這組有效牌磚加入牌桌",
+        validateDraftHint: "剔號只會檢查暫存區內的牌磚。",
+        validDraftHint: "有效牌組或順序。按一下即可放到牌桌。",
+        finishTurn: "結束回合",
+        cancelDraft: "取消暫存",
+        boardDropHint: "將暫存區的牌磚拖到這裏，加入此牌組。",
+        joker: "百搭牌",
+        tileTitle: "{color} {value}",
+        pink: "粉紅色",
+        orange: "橙色",
+        green: "綠色",
+        azure: "藍色",
+        opponentTiles: "{count} 隻牌磚",
+        playerName: "👤 你",
+
+        yourTurn: "👤 輪到你",
+        opponentTurn: "{name}嘅回合",
+        gameOver: "遊戲結束",
+
+        stock: "剩餘牌磚：{count}",
+        selected: "已選取 {count} 隻",
+
+        invalid: "⚠️ 這些牌磚未能組成有效牌組或順序。",
+        played: "打得好！",
+        youDrew: "👤 你摸咗：",
+        youPlayed: "👤 你打出咗：",
+        youWin: "👤 你贏咗！",
+        opponentWins: "{name}贏咗！",
+        youWinLowest: "👤 你以手上牌磚總分 {points} 分獲勝（最低分）。",
+        opponentWinsLowest: "{name}以手上牌磚總分 {points} 分獲勝（最低分）。",
+        tieLowest: "平手：{names}同得最低分，均為 {points} 分。",
+        drawEmpty: "已沒有牌磚可摸。回合結束。",
+        newGameMessage: "新遊戲開始。",
+
+        aiDrew: "{name}摸了一隻牌磚。",
+        aiPlayed: "{name}打出咗：",
+
+        invalidTable: "⚠️ 牌桌上每個牌組都必須有效。",
+        mustPlayFromHand: "⚠️ 你必須至少從自己嘅牌架打出一隻牌磚。",
+        openingMeld: "⚠️ 你首次出牌總分必須至少為 30 分。",
+        looseTiles: "⚠️ 結束回合前，請將暫存區所有牌磚放好。",
+        noDraft: "⚠️ 沒有可供結束的進行中回合。",
+        selectedTileError: "⚠️ 無法移動其中一隻已選取嘅牌架牌磚。",
+        draftCancelled: "❌ 已取消暫存。",
+        invalidMove: "⚠️ 這步棋無效。",
+
+        scoresTitle: "最終分數",
+        scoreRow: "{name}：{points} 分（{tileCount} 隻牌磚）",
+        instructionsLink: "按此查看玩法",
+        instructionsTitle: "玩法說明",
+        instructionsGoalTitle: "遊戲目標",
+        instructionsGoal: "最快打出手上所有牌磚的玩家獲勝。",
+        instructionsSetsTitle: "有效牌組",
+        instructionsSets: "組合由 3 或 4 隻數字相同、顏色各異的牌磚組成。順序由 3 隻或以上同色、數字連續的牌磚組成。",
+        instructionsFirstTurnTitle: "首次出牌",
+        instructionsFirstTurn: "首次出牌必須只用自己牌架上嘅牌磚，總分至少 30 分。不能用牌桌上嘅牌磚計算這個分數。",
+        instructionsTurnsTitle: "回合玩法",
+        instructionsTurns: "每回合至少要打出一隻自己牌架上嘅牌磚。你可以將牌磚加入牌桌上嘅牌組，或重新排列牌組；回合結束時，所有牌組都必須有效。如果你無法或不想出牌，就摸一隻牌磚來結束回合" +
+            "。",
+        instructionsControlsTitle: "操作方法",
+        instructionsControls: "按一下牌桌上嘅牌磚即可將它移到暫存區。將牌架或牌桌上嘅牌磚拖到暫存區；將暫存區嘅牌磚拖到牌桌上的牌組即可加入。按剔號將有效牌組放上牌桌。「結束回合」會確認你嘅行" +
+            "動；「取消暫存」會還原本回合。",
+        closeInstructions: "關閉"
+    }
+};
+var LANGUAGE_KEY = "tile-rummy-language";
+var supportedLanguages = ["en", "es", "zh"];
+function normalizeLanguage(value) {
+  if (!value) {
+    return null;
+  }
+  const language = String(value).toLowerCase().split("-")[0];
+  return supportedLanguages.includes(language) ? language : null;
+}
+function languageFromBrowserPreferences() {
+  const preferences = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const preference of preferences) {
+    const language = normalizeLanguage(preference);
+    if (language) {
+      return language;
+    }
+  }
+  return null;
+}
+function getInitialLanguage() {
+  const queryLanguage = new URLSearchParams(location.search).get("lang");
+  if (queryLanguage !== null) {
+    return normalizeLanguage(queryLanguage) ?? "en";
+  }
+  try {
+    const savedLanguage = normalizeLanguage(localStorage.getItem(LANGUAGE_KEY));
+    if (savedLanguage) {
+      return savedLanguage;
+    }
+  } catch {
+  }
+  return languageFromBrowserPreferences() ?? "en";
+}
+var currentLanguage = getInitialLanguage();
+function setLanguage(language, { persist = true } = {}) {
+  const normalized = normalizeLanguage(language);
+  if (!normalized) {
+    return false;
+  }
+  currentLanguage = normalized;
+  if (persist) {
+    try {
+      localStorage.setItem(LANGUAGE_KEY, normalized);
+    } catch {
+    }
+  }
+  updateDraftHint();
+  return true;
+}
+function updateDraftHint() {
+  document.documentElement.style.setProperty(
+    "--draft-hint",
+    JSON.stringify(t("draftHint"))
+  );
+}
+updateDraftHint();
+function t(key, values = {}) {
+  let text = translations[currentLanguage][key] ?? translations.en[key] ?? key;
+  for (const [name, value] of Object.entries(values)) {
+    text = text.replaceAll(`{${name}}`, String(value));
+  }
+  return text;
+}
+function playerName(playerIndex) {
+  if (playerIndex === 0) {
+    return t("playerName");
+  }
+  return ["\u{1F916}", "\u{1F47E}", "\u{1F9DE}"][playerIndex - 1] ?? "\u{1F916}";
+}
+
+var COLORS2 = ["pink", "orange", "green", "azure"];
+var PLAYER_COUNT = 3;
+var JOKER_POINTS = 30;
+var PASSES_TO_END = PLAYER_COUNT * 2;
+function shuffle(items) {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+function makeDeck() {
+  const deck = [];
+  let id = 0;
+  for (const color of COLORS2) {
+    for (let copy = 0; copy < 2; copy++) {
+      for (let value = 1; value <= 13; value++) {
+        deck.push({ id: id++, color, value, joker: false });
+      }
+    }
+  }
+  deck.push({ id: id++, color: "joker", value: 0, joker: true });
+  deck.push({ id: id++, color: "joker", value: 0, joker: true });
+  return shuffle(deck);
+}
+function isConcreteSet2(tiles) {
+  if (!Array.isArray(tiles) || tiles.length < 3 || tiles.length > 13 || tiles.some((tile) => tile.joker)) {
+    return false;
+  }
+  const sameNumber = tiles.every((tile) => tile.value === tiles[0].value) && new Set(tiles.map((tile) => tile.color)).size === tiles.length;
+  if (sameNumber) return tiles.length <= 4;
+  const sameColor = tiles.every((tile) => tile.color === tiles[0].color);
+  if (!sameColor) return false;
+  const values = tiles.map((tile) => tile.value).sort((a, b) => a - b);
+  if (new Set(values).size !== values.length) return false;
+  return values.every(
+    (value, index) => index === 0 || value === values[index - 1] + 1
+  );
+}
+function isValidSet2(tiles) {
+  if (!Array.isArray(tiles) || tiles.length < 3 || tiles.length > 13) {
+    return false;
+  }
+  const jokers = tiles.filter((tile) => tile.joker);
+  const natural = tiles.filter((tile) => !tile.joker);
+  if (jokers.length === 0) return isConcreteSet2(tiles);
+  if (jokers.length > 2 || natural.length === 0) return false;
+  function assignJokers(index, completed) {
+    if (index === jokers.length) return isConcreteSet2(completed);
+    for (const color of COLORS2) {
+      for (let value = 1; value <= 13; value++) {
+        const assignment = {
+          id: `joker-${index}`,
+          color,
+          value,
+          joker: false
+        };
+        if (assignJokers(index + 1, [...completed, assignment])) return true;
+      }
+    }
+    return false;
+  }
+  return assignJokers(0, natural);
+}
+function bestSetPoints(tiles) {
+  const jokers = tiles.filter((tile) => tile.joker);
+  const natural = tiles.filter((tile) => !tile.joker);
+  if (jokers.length === 0) {
+    return isConcreteSet2(tiles) ? natural.reduce((sum, tile) => sum + tile.value, 0) : -1;
+  }
+  if (jokers.length > 2 || natural.length === 0) return -1;
+  let best = -1;
+  function assign(index, completed, score) {
+    if (index === jokers.length) {
+      if (isConcreteSet2(completed)) best = Math.max(best, score);
+      return;
+    }
+    for (const color of COLORS2) {
+      for (let value = 1; value <= 13; value++) {
+        assign(
+          index + 1,
+          [...completed, { id: `joker-${index}`, color, value, joker: false }],
+          score + value
+        );
+      }
+    }
+  }
+  assign(0, natural, natural.reduce((sum, tile) => sum + tile.value, 0));
+  return best;
+}
+function cloneSets(sets) {
+  return sets.map((set) => [...set]);
+}
+function handPoints(hand) {
+  return hand.reduce(
+    (total, tile) => total + (tile.joker ? JOKER_POINTS : tile.value),
+    0
+  );
+}
+function getScores(players) {
+  return players.map((player, playerIndex) => ({
+    playerIndex,
+    name: playerName(playerIndex),
+    points: handPoints(player.hand),
+    tileCount: player.hand.length,
+    tiles: [...player.hand]
+  }));
+}
+var Game = class {
+  constructor() {
+    this.newGame();
+  }
+  newGame() {
+    this.stock = makeDeck();
+    this.players = Array.from({ length: PLAYER_COUNT }, (_, index) => ({
+      id: index,
+      hand: []
+    }));
+    for (let i = 0; i < 14; i++) {
+      for (const player of this.players) {
+        player.hand.push(this.stock.pop());
+      }
+    }
+    this.table = [];
+    this.current = 0;
+    this.over = false;
+    this.hasOpened = this.players.map(() => false);
+    this.draft = null;
+    this.consecutiveNoDrawTurns = 0;
+    this.message = { key: "newGameMessage" };
+  }
+  get isHumanTurn() {
+    return !this.over && this.current === 0;
+  }
+  beginHumanTurn() {
+    if (!this.isHumanTurn) return false;
+    this.draft = {
+      table: cloneSets(this.table),
+      hand: [...this.players[0].hand],
+      loose: [],
+      playedFromHand: /* @__PURE__ */ new Set()
+    };
+    return true;
+  }
+  pickFromHand(tileId) {
+    if (!this.draft) return false;
+    const index = this.draft.hand.findIndex((tile2) => tile2.id === tileId);
+    if (index < 0) return false;
+    const [tile] = this.draft.hand.splice(index, 1);
+    this.draft.loose.push(tile);
+    this.draft.playedFromHand.add(tile.id);
+    return true;
+  }
+  pickFromTable(setIndex, tileId) {
+    if (!this.draft) return false;
+    const set = this.draft.table[setIndex];
+    if (!set) return false;
+    const tileIndex = set.findIndex((tile2) => tile2.id === tileId);
+    if (tileIndex < 0) return false;
+    const [tile] = set.splice(tileIndex, 1);
+    this.draft.loose.push(tile);
+    if (set.length === 0) this.draft.table.splice(setIndex, 1);
+    return true;
+  }
+  putLoose(tileId, setIndex) {
+    if (!this.draft) return false;
+    const looseIndex = this.draft.loose.findIndex((tile2) => tile2.id === tileId);
+    if (looseIndex < 0 || !this.draft.table[setIndex]) return false;
+    const [tile] = this.draft.loose.splice(looseIndex, 1);
+    this.draft.table[setIndex].push(tile);
+    return true;
+  }
+  makeNewSet(tileId) {
+    if (!this.draft) return false;
+    const looseIndex = this.draft.loose.findIndex((tile2) => tile2.id === tileId);
+    if (looseIndex < 0) return false;
+    const [tile] = this.draft.loose.splice(looseIndex, 1);
+    this.draft.table.push([tile]);
+    return true;
+  }
+  cancelDraft() {
+    this.draft = null;
+  }
+  commitHumanTurn() {
+    if (!this.isHumanTurn || !this.draft) {
+      return { ok: false, reason: "no-draft" };
+    }
+    if (this.draft.loose.length) {
+      return { ok: false, reason: "loose-tiles" };
+    }
+    if (!this.draft.playedFromHand.size) {
+      return { ok: false, reason: "must-play-from-hand" };
+    }
+    if (!this.draft.table.every(isValidSet2)) {
+      return { ok: false, reason: "invalid-table" };
+    }
+    if (!this.hasOpened[0]) {
+      let openingPoints = 0;
+      for (const set of this.draft.table) {
+        const playedTiles = set.filter(
+          (tile) => this.draft.playedFromHand.has(tile.id)
+        );
+        if (playedTiles.length) {
+          const score = bestSetPoints(playedTiles);
+          if (score < 0) return { ok: false, reason: "opening-meld" };
+          openingPoints += score;
+        }
+      }
+      if (openingPoints < 30) {
+        return { ok: false, reason: "opening-meld" };
+      }
+    }
+    this.table = cloneSets(this.draft.table);
+    this.players[0].hand = [...this.draft.hand];
+    this.hasOpened[0] = true;
+    this.draft = null;
+    this.consecutiveNoDrawTurns = 0;
+    if (this.players[0].hand.length === 0) {
+      this.over = true;
+      this.message = {
+        key: "youWin",
+        values: { scores: getScores(this.players) }
+      };
+    } else {
+      this.message = { key: "played" };
+      this.advanceTurn();
+    }
+    return { ok: true };
+  }
+  drawForHuman() {
+    if (!this.isHumanTurn) return false;
+    this.draft = null;
+    const tile = this.stock.pop();
+    if (tile) {
+      this.players[0].hand.push(tile);
+      this.consecutiveNoDrawTurns = 0;
+      this.message = null;
+      this.advanceTurn();
+    } else {
+      this.message = { key: "drawEmpty" };
+      this.recordNoDrawTurn();
+      if (!this.over) this.advanceTurn();
+    }
+    return true;
+  }
+  recordNoDrawTurn() {
+    this.consecutiveNoDrawTurns++;
+    if (this.consecutiveNoDrawTurns >= PASSES_TO_END) {
+      this.endByLowestHandPoints();
+    }
+  }
+  endByLowestHandPoints() {
+    const scores = getScores(this.players);
+    const lowest = Math.min(...scores.map((score) => score.points));
+    const winners = scores.filter((score) => score.points === lowest);
+    this.over = true;
+    this.draft = null;
+    if (winners.length === 1) {
+      const winner = winners[0];
+      this.message = {
+        key: winner.playerIndex === 0 ? "youWinLowest" : "opponentWinsLowest",
+        values: {
+          name: winner.name,
+          points: lowest,
+          scores
+        }
+      };
+    } else {
+      this.message = {
+        key: "tieLowest",
+        values: {
+          names: winners.map((winner) => winner.name).join(", "),
+          points: lowest,
+          scores
+        }
+      };
+    }
+  }
+  advanceTurn() {
+    if (!this.over) {
+      this.current = (this.current + 1) % this.players.length;
+    }
+  }
+  playComputerTurn() {
+    if (this.over || this.current === 0) return;
+    const playerIndex = this.current;
+    const player = this.players[playerIndex];
+    const play = findComputerPlay(
+      player.hand,
+      this.table,
+      this.hasOpened[playerIndex]
+    );
+    if (play && Array.isArray(play.table) && play.playedIds instanceof Set) {
+      const handIds = new Set(player.hand.map((tile2) => tile2.id));
+      const tableIds = new Set(play.table.flat().map((tile2) => tile2.id));
+      const validPlay = play.playedIds.size > 0 && [...play.playedIds].every((id) => handIds.has(id)) && [...play.playedIds].every((id) => tableIds.has(id)) && play.table.every(isValidSet2);
+      if (validPlay) {
+        player.hand = player.hand.filter((tile2) => !play.playedIds.has(tile2.id));
+        this.table = cloneSets(play.table);
+        this.hasOpened[playerIndex] = true;
+        this.consecutiveNoDrawTurns = 0;
+        if (player.hand.length === 0) {
+          this.over = true;
+          this.message = {
+            key: "opponentWins",
+            values: {
+              name: playerIndex,
+              scores: getScores(this.players)
+            }
+          };
+          return;
+        }
+        this.advanceTurn();
+        return;
+      }
+    }
+    const tile = this.stock.pop();
+    if (tile) {
+      player.hand.push(tile);
+      this.consecutiveNoDrawTurns = 0;
+    } else {
+      this.recordNoDrawTurn();
+    }
+    if (!this.over) this.advanceTurn();
+  }
+};
+
+var COLOR_ORDER = ["pink", "orange", "green", "azure"];
+var TILE_COLORS = {
+  pink: "#ff1493",
+  orange: "#ff6a00",
+  green: "#39ff14",
+  azure: "#00bfff",
+  joker: "#bb86fc"
+};
+function compareTiles(a, b) {
+  if (a.joker !== b.joker) return a.joker ? 1 : -1;
+  const colorDifference = COLOR_ORDER.indexOf(a.color) - COLOR_ORDER.indexOf(b.color);
+  return colorDifference || a.value - b.value;
+}
+function orderSet(tiles) {
+  const natural = tiles.filter((tile) => !tile.joker);
+  const jokers = tiles.filter((tile) => tile.joker);
+  if (jokers.length > 0 && natural.length > 0 && natural.every((tile) => tile.color === natural[0].color)) {
+    const length = tiles.length;
+    for (let start = 1; start <= 14 - length; start++) {
+      const runValues = Array.from(
+        { length },
+        (_, index) => start + index
+      );
+      if (!natural.every((tile) => runValues.includes(tile.value))) continue;
+      const missingValues = runValues.filter(
+        (value) => !natural.some((tile) => tile.value === value)
+      );
+      if (missingValues.length !== jokers.length) continue;
+      const displayTiles = [
+        ...natural,
+        ...jokers.map((tile, index) => ({
+          ...tile,
+          displayValue: missingValues[index]
+        }))
+      ];
+      return displayTiles.sort(
+        (a, b) => (a.displayValue ?? a.value) - (b.displayValue ?? b.value)
+      );
+    }
+  }
+  return [...tiles].sort(compareTiles);
+}
+function requireElement(selector) {
+  const element = document.querySelector(selector);
+  if (!element) {
+    throw new Error(`Required game element not found: ${selector}`);
+  }
+  return element;
+}
+function makeTile(tile, { disabled = false, draggable = false, loose = false } = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "tile";
+  button.style.setProperty(
+    "--tile-color",
+    TILE_COLORS[tile.color] ?? TILE_COLORS.joker
+  );
+  button.textContent = tile.joker ? "\u{1F31D}" : String(tile.value);
+  button.title = tile.joker ? t("joker") : t("tileTitle", {
+    color: t(tile.color),
+    value: tile.value
+  });
+  button.disabled = disabled;
+  button.draggable = draggable && !disabled;
+  button.dataset.tileId = String(tile.id);
+  if (loose) button.dataset.looseTile = "true";
+  return button;
+}
+function ensureDraftControls(handSection) {
+  const mainControls = [...handSection.querySelectorAll(".controls")].find((element) => element.id !== "draft-controls");
+  if (!mainControls) {
+    throw new Error("Game controls not found.");
+  }
+  const oldDraftControls = document.querySelector("#draft-controls");
+  let finishButton = mainControls.querySelector('[data-action="commit"]');
+  if (!finishButton) {
+    finishButton = oldDraftControls?.querySelector(
+      '[data-action="commit"]'
+    );
+  }
+  if (!finishButton) {
+    finishButton = document.createElement("button");
+    finishButton.type = "button";
+    finishButton.dataset.action = "commit";
+  }
+  finishButton.textContent = t("finishTurn");
+  const drawButton = mainControls.querySelector("#draw");
+  mainControls.insertBefore(finishButton, drawButton);
+  oldDraftControls?.remove();
+  return { controls: mainControls, finishButton };
+}
+function renderOpponent(position, player, index) {
+  const seat = document.querySelector(`#opponent-${position}`);
+  if (!seat) return;
+  seat.replaceChildren();
+  if (!player) {
+    seat.hidden = true;
+    return;
+  }
+  seat.hidden = false;
+  seat.className = `opponent opponent-${position}`;
+  const name = document.createElement("span");
+  name.className = "opponent-name";
+  name.textContent = playerName(index);
+  const rack = document.createElement("span");
+  rack.className = "mini-rack";
+  rack.setAttribute(
+    "aria-label",
+    t("opponentTiles", { count: player.hand.length })
+  );
+  for (let i = 0; i < Math.min(player.hand.length, 14); i++) {
+    const miniTile = document.createElement("span");
+    miniTile.className = "mini-tile";
+    rack.append(miniTile);
+  }
+  const count = document.createElement("span");
+  count.className = "opponent-count";
+  count.textContent = String(player.hand.length);
+  seat.append(name, rack, count);
+}
+function renderLogTile(tile) {
+  const element = document.createElement("span");
+  element.className = "log-tile";
+  element.style.setProperty(
+    "--tile-color",
+    TILE_COLORS[tile.color] ?? TILE_COLORS.joker
+  );
+  element.textContent = tile.joker ? "\u{1F31D}" : String(tile.value);
+  element.title = tile.joker ? t("joker") : t("tileTitle", {
+    color: t(tile.color),
+    value: tile.value
+  });
+  return element;
+}
+function renderFinalScores(container, game2) {
+  if (!game2.over) return;
+  const scores = game2.finalScores ?? game2.message?.values?.scores;
+  if (!Array.isArray(scores)) return;
+  const section = document.createElement("section");
+  section.className = "final-scores";
+  section.setAttribute("aria-label", t("scoresTitle"));
+  const heading = document.createElement("h2");
+  heading.textContent = t("scoresTitle");
+  const list = document.createElement("ul");
+  list.className = "final-scores-list";
+  for (const score of scores) {
+    const item = document.createElement("li");
+    item.className = "final-score";
+    const summary = document.createElement("p");
+    summary.textContent = t("scoreRow", {
+      name: score.name,
+      points: score.points,
+      tileCount: score.tileCount
+    });
+    item.append(summary);
+    if (score.tiles?.length) {
+      const tiles = document.createElement("div");
+      tiles.className = "final-score-tiles";
+      for (const tile of score.tiles) {
+        tiles.append(renderLogTile(tile));
+      }
+      item.append(tiles);
+    }
+    list.append(item);
+  }
+  section.append(heading, list);
+  container.append(section);
+}
+function renderMessageLog(messages, game2) {
+  const element = requireElement("#message");
+  element.replaceChildren();
+  renderFinalScores(element, game2);
+  for (const message of messages) {
+    const entry = document.createElement("p");
+    entry.className = "message-entry";
+    entry.append(document.createTextNode(message.text));
+    if (message.tiles?.length) {
+      entry.append(document.createTextNode(" "));
+      for (const tile of message.tiles) {
+        entry.append(renderLogTile(tile));
+      }
+    }
+    element.append(entry);
+  }
+  let languageSelect = document.querySelector("#language-select");
+  if (!languageSelect) {
+    languageSelect = document.createElement("select");
+    languageSelect.id = "language-select";
+    languageSelect.setAttribute("aria-label", "Language");
+    for (const [value, label] of [
+      ["en", "English"],
+      ["es", "Espa\xF1ol"],
+      ["zh", "\u4E2D\u6587"]
+    ]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      languageSelect.append(option);
+    }
+    languageSelect.addEventListener("change", () => {
+      if (!setLanguage(languageSelect.value)) return;
+      setEnglishLabels();
+      render(game2, /* @__PURE__ */ new Set(), messages);
+    });
+  }
+  languageSelect.value = currentLanguage;
+  if (element.nextElementSibling !== languageSelect) {
+    element.insertAdjacentElement("afterend", languageSelect);
+  }
+}
+function tableSignature(table) {
+  return JSON.stringify(table.map((set) => set.map((tile) => tile.id)));
+}
+function render(game2, _selectedIds = /* @__PURE__ */ new Set(), messageLog2 = []) {
+  const table = requireElement("#table");
+  const hand = requireElement("#hand");
+  const handSection = hand.closest(".hand-section");
+  if (!handSection) {
+    throw new Error("#hand must be inside .hand-section.");
+  }
+  const draft = game2.draft;
+  const sets = draft ? draft.table : game2.table;
+  const rack = draft ? draft.hand : game2.players[0].hand;
+  const canInteract = game2.isHumanTurn && Boolean(draft);
+  table.replaceChildren();
+  sets.forEach((tiles, originalIndex) => {
+    const group = document.createElement("div");
+    group.className = "set";
+    group.dataset.setIndex = String(originalIndex);
+    group.title = t("boardDropHint");
+    if (canInteract && !isValidSet2(tiles)) {
+      group.classList.add("set-invalid");
+    }
+    for (const tile of orderSet(tiles)) {
+      const button = makeTile(tile, {
+        disabled: !game2.isHumanTurn,
+        draggable: game2.isHumanTurn
+      });
+      button.dataset.setIndex = String(originalIndex);
+      group.append(button);
+    }
+    table.append(group);
+  });
+  hand.replaceChildren();
+  for (const tile of [...rack].sort(compareTiles)) {
+    const button = makeTile(tile, {
+      disabled: !game2.isHumanTurn,
+      draggable: game2.isHumanTurn
+    });
+    button.dataset.handTile = "true";
+    hand.append(button);
+  }
+  const loose = requireElement("#loose");
+  loose.replaceChildren();
+  loose.classList.toggle("is-drop-ready", canInteract);
+  loose.setAttribute("aria-label", t("draftArea"));
+  if (draft) {
+    for (const tile of [...draft.loose].sort(compareTiles)) {
+      loose.append(
+        makeTile(tile, {
+          disabled: !game2.isHumanTurn,
+          draggable: game2.isHumanTurn,
+          loose: true
+        })
+      );
+    }
+  }
+  const validDraft = Boolean(draft) && draft.loose.length >= 3 && isValidSet2(draft.loose);
+  const tick = document.createElement("button");
+  tick.type = "button";
+  tick.className = "draft-valid-tick";
+  tick.dataset.action = "validate-draft";
+  tick.textContent = "\u2713";
+  tick.setAttribute("aria-label", t("validDraft"));
+  tick.title = t("validDraftHint");
+  tick.hidden = !canInteract || !validDraft;
+  loose.append(tick);
+  const hasDraftChanges = Boolean(draft) && (draft.loose.length > 0 || draft.hand.length < game2.players[0].hand.length || tableSignature(draft.table) !== tableSignature(game2.table));
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "draft-valid-tick draft-cancel-x";
+  cancel.dataset.action = "cancel";
+  cancel.textContent = "\xD7";
+  cancel.setAttribute("aria-label", t("cancelDraft"));
+  cancel.title = t("cancelDraft");
+  cancel.hidden = !canInteract || !hasDraftChanges;
+  loose.append(cancel);
+  const { finishButton } = ensureDraftControls(handSection);
+  const playedFromHand = Boolean(draft) && draft.hand.length < game2.players[0].hand.length;
+  finishButton.hidden = !canInteract || !playedFromHand;
+  finishButton.disabled = !canInteract || !playedFromHand;
+  renderOpponent("top", game2.players[1], 1);
+  renderOpponent("left", game2.players[2], 2);
+  const rightSeat = document.querySelector("#opponent-right");
+  if (rightSeat) rightSeat.hidden = true;
+  const bottomSeat = document.querySelector("#opponent-bottom");
+  if (bottomSeat) bottomSeat.hidden = true;
+  requireElement("#turn").textContent = game2.over ? "" : game2.current === 0 ? t("yourTurn") : t("opponentTurn", { name: playerName(game2.current) });
+  requireElement("#stock").textContent = t("stock", {
+    count: game2.stock.length
+  });
+  renderMessageLog(messageLog2, game2);
+  const playButton = document.querySelector("#play");
+  if (playButton) playButton.hidden = true;
+  const drawButton = document.querySelector("#draw");
+  if (drawButton) drawButton.disabled = !game2.isHumanTurn;
+  const newGameButton = document.querySelector("#new-game");
+  if (newGameButton) newGameButton.disabled = false;
+}
+function ensureInstructionsDialog() {
+  if (document.querySelector("#instructions-dialog")) return;
+  const dialog = document.createElement("dialog");
+  dialog.id = "instructions-dialog";
+  dialog.setAttribute("aria-labelledby", "instructions-title");
+  const heading = document.createElement("h2");
+  heading.id = "instructions-title";
+  heading.dataset.i18n = "instructionsTitle";
+  dialog.append(heading);
+  const sections = [
+    ["instructionsGoalTitle", "instructionsGoal"],
+    ["instructionsSetsTitle", "instructionsSets"],
+    ["instructionsFirstTurnTitle", "instructionsFirstTurn"],
+    ["instructionsTurnsTitle", "instructionsTurns"],
+    ["instructionsControlsTitle", "instructionsControls"]
+  ];
+  for (const [headingKey, textKey] of sections) {
+    const sectionHeading = document.createElement("h3");
+    sectionHeading.dataset.i18n = headingKey;
+    const paragraph = document.createElement("p");
+    paragraph.dataset.i18n = textKey;
+    dialog.append(sectionHeading, paragraph);
+  }
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.dataset.i18n = "closeInstructions";
+  closeButton.addEventListener("click", () => dialog.close());
+  dialog.append(closeButton);
+  document.body.append(dialog);
+  document.querySelector("#instructions-button")?.addEventListener("click", () => dialog.showModal());
+}
+function setEnglishLabels() {
+  ensureInstructionsDialog();
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const value = t(element.dataset.i18n);
+    if (element instanceof HTMLInputElement && element.type === "button") {
+      element.value = value;
+    } else {
+      element.textContent = value;
+    }
+  });
+  const languageSelect = document.querySelector("#language-select");
+  if (languageSelect) languageSelect.value = currentLanguage;
+}
+
+// /input.ts
+setEnglishLabels();
+var game = new Game();
+var messageLog = [];
+var lastLoggedKey;
+var lastTurnState;
+game.beginHumanTurn();
+function addLogMessage(message, tiles = []) {
+  const text = String(message ?? "").trim();
+  if (!text) return;
+  const key = `${text}|${tiles.map((tile) => tile.id).join(",")}`;
+  if (key === lastLoggedKey) return;
+  messageLog.unshift({ text, tiles: [...tiles] });
+  lastLoggedKey = key;
+}
+function displayGameMessage(message) {
+  if (!message) return "";
+  if (typeof message === "string") return message;
+  const values = message.values ?? {};
+  return t(message.key, {
+    ...values,
+    name: values.name === void 0 ? void 0 : typeof values.name === "number" ? playerName(values.name) : values.name,
+    names: values.names === void 0 ? void 0 : values.names.split(",").map((index) => playerName(Number(index))).join(", ")
+  });
+}
+function tilesAdded(before, after) {
+  const previousIds = new Set(before.map((tile) => tile.id));
+  return after.filter((tile) => !previousIds.has(tile.id));
+}
+function tilesRemoved(before, after) {
+  const remainingIds = new Set(after.map((tile) => tile.id));
+  return before.filter((tile) => !remainingIds.has(tile.id));
+}
+function update() {
+  const pendingMessage = game.message;
+  if (game.over && Array.isArray(pendingMessage?.values?.scores)) {
+    game.finalScores = pendingMessage.values.scores;
+  }
+  const gameMessage = displayGameMessage(pendingMessage);
+  if (gameMessage) {
+    addLogMessage(gameMessage);
+    game.message = null;
+  }
+  const turnState = game.over ? t("gameOver") : game.current === 0 ? t("yourTurn") : t("opponentTurn", { name: playerName(game.current) });
+  if (turnState !== lastTurnState) {
+    addLogMessage(turnState);
+    lastTurnState = turnState;
+  }
+  render(game, /* @__PURE__ */ new Set(), messageLog);
+}
+function restartDraft(messageKey) {
+  game.cancelDraft();
+  if (game.isHumanTurn && !game.over) {
+    game.beginHumanTurn();
+  }
+  if (messageKey) game.message = { key: messageKey };
+  update();
+}
+function runComputerTurns() {
+  if (game.over) {
+    update();
+    return;
+  }
+  if (game.isHumanTurn) {
+    if (!game.draft) game.beginHumanTurn();
+    update();
+    return;
+  }
+  update();
+  window.setTimeout(() => {
+    if (game.over || game.isHumanTurn) {
+      runComputerTurns();
+      return;
+    }
+    const aiIndex = game.current;
+    const aiName = playerName(aiIndex);
+    const handBefore = [...game.players[aiIndex].hand];
+    game.playComputerTurn();
+    const handAfter = game.players[aiIndex].hand;
+    const playedTiles = tilesRemoved(handBefore, handAfter);
+    const drewTiles = tilesAdded(handBefore, handAfter);
+    if (playedTiles.length > 0) {
+      addLogMessage(t("aiPlayed", { name: aiName }), playedTiles);
+    } else if (drewTiles.length > 0) {
+      addLogMessage(t("aiDrew", { name: aiName }));
+    }
+    runComputerTurns();
+  }, 650);
+}
+function addDraftAsNewSet() {
+  if (!game.draft || game.draft.loose.length < 3) return;
+  if (!isValidSet2(game.draft.loose)) return;
+  const ids = game.draft.loose.map((tile) => tile.id);
+  if (!game.makeNewSet(ids[0])) return;
+  const setIndex = game.draft.table.length - 1;
+  for (const id of ids.slice(1)) {
+    if (!game.putLoose(id, setIndex)) {
+      restartDraft("invalidMove");
+      return;
+    }
+  }
+  update();
+}
+function commitTurn() {
+  const handBefore = [...game.players[0].hand];
+  const result = game.commitHumanTurn();
+  if (!result.ok) {
+    const reasonKeys = {
+      "invalid-table": "invalidTable",
+      "must-play-from-hand": "mustPlayFromHand",
+      "opening-meld": "openingMeld",
+      "loose-tiles": "looseTiles",
+      "no-draft": "noDraft"
+    };
+    restartDraft(reasonKeys[result.reason] ?? "invalidMove");
+    return;
+  }
+  const playedTiles = tilesRemoved(handBefore, game.players[0].hand);
+  if (playedTiles.length > 0) {
+    addLogMessage(t("youPlayed"), playedTiles);
+  }
+  runComputerTurns();
+}
+function beginDrag(event, tileButton) {
+  if (!game.isHumanTurn || !tileButton.draggable) {
+    event.preventDefault();
+    return;
+  }
+  const tileId = tileButton.dataset.tileId;
+  if (!tileId) return;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", tileId);
+  tileButton.classList.add("is-dragging");
+}
+function handleDrop(event, target) {
+  event.preventDefault();
+  target.classList.remove("drag-over");
+  const tileId = Number(event.dataTransfer.getData("text/plain"));
+  if (!Number.isInteger(tileId) || !game.isHumanTurn) return;
+  const tileButton = document.querySelector(
+    `button[data-tile-id="${tileId}"]`
+  );
+  if (!tileButton) return;
+  if (target.id === "loose") {
+    if (!game.draft) game.beginHumanTurn();
+    if (tileButton.dataset.handTile) {
+      if (game.pickFromHand(tileId)) update();
+      return;
+    }
+    if (tileButton.dataset.setIndex !== void 0) {
+      if (game.pickFromTable(Number(tileButton.dataset.setIndex), tileId)) {
+        update();
+      }
+    }
+    return;
+  }
+  const setElement = target.closest(".set[data-set-index]");
+  if (setElement && tileButton.dataset.looseTile) {
+    if (game.putLoose(tileId, Number(setElement.dataset.setIndex))) {
+      update();
+    }
+  }
+}
+document.addEventListener("dragstart", (event) => {
+  const tileButton = event.target.closest?.("button[data-tile-id]");
+  if (tileButton) beginDrag(event, tileButton);
+});
+document.addEventListener("dragend", (event) => {
+  event.target.closest?.("button[data-tile-id]")?.classList.remove("is-dragging");
+  document.querySelectorAll(".drag-over").forEach((element) => element.classList.remove("drag-over"));
+});
+document.addEventListener("dragover", (event) => {
+  const target = event.target.closest?.("#loose, .set[data-set-index]");
+  if (!target) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  target.classList.add("drag-over");
+});
+document.addEventListener("dragleave", (event) => {
+  const target = event.target.closest?.("#loose, .set[data-set-index]");
+  if (target && !target.contains(event.relatedTarget)) {
+    target.classList.remove("drag-over");
+  }
+});
+document.addEventListener("drop", (event) => {
+  const target = event.target.closest?.("#loose, .set[data-set-index]");
+  if (target) handleDrop(event, target);
+});
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const actionButton = target.closest("[data-action]");
+  if (actionButton) {
+    switch (actionButton.dataset.action) {
+      case "validate-draft":
+        addDraftAsNewSet();
+        return;
+      case "commit":
+        commitTurn();
+        return;
+      case "cancel":
+        restartDraft("draftCancelled");
+        return;
+    }
+  }
+  if (!game.isHumanTurn) return;
+  const tileButton = target.closest("button[data-tile-id]");
+  if (!tileButton) return;
+  const tileId = Number(tileButton.dataset.tileId);
+  if (!Number.isInteger(tileId)) return;
+  if (!game.draft) game.beginHumanTurn();
+  if (tileButton.dataset.handTile) {
+    if (game.pickFromHand(tileId)) update();
+    return;
+  }
+  const setIndex = tileButton.dataset.setIndex;
+  if (setIndex !== void 0) {
+    if (game.pickFromTable(Number(setIndex), tileId)) update();
+  }
+});
+document.querySelector("#draw")?.addEventListener("click", () => {
+  if (!game.isHumanTurn) return;
+  const handBefore = [...game.players[0].hand];
+  game.drawForHuman();
+  const drawnTiles = tilesAdded(handBefore, game.players[0].hand);
+  if (drawnTiles.length > 0) {
+    addLogMessage(t("youDrew"), drawnTiles);
+  }
+  runComputerTurns();
+});
+document.querySelector("#new-game")?.addEventListener("click", () => {
+  game.newGame();
+  game.finalScores = null;
+  messageLog.length = 0;
+  lastLoggedKey = void 0;
+  lastTurnState = void 0;
+  game.beginHumanTurn();
+  update();
+});
+update();
+</script>
 </body>
 </html>

@@ -1,19 +1,607 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta
-    name="description"
-    content="A Chinese Checkers with computer opponents and extended-jump rules.">
-  <title>Chinese Chequers</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta
+  name="description"
+  content="A Chinese Chequers with computer opponents and extended-jump rules.">
+<title>Chinese Chequers</title>
+
+<style>
+:root {
+  /* Table surfaces */
+  --background: #171310;
+  --background-deep: #0e0b09;
+  --panel: #221b16;
+  --panel-subtle: #2a211b;
+  --panel-border: #4a3a2c;
+  --panel-border-strong: #6d543d;
+
+  /* Text */
+  --text: #f4ece2;
+  --muted: #c8b7a5;
+  --focus: #f2d38b;
+
+  /* Board */
+  --board: #1d1713;
+  --board-edge: #33261d;
+  --hole: #2e251d;
+  --hole-stroke: #544234;
+  --hole-hover: #6a523d;
+  --hole-legal: #2f6b58;
+  --hole-legal-stroke: #8ce0bd;
+
+  /* Brass guides */
+  --guide-center-fill: rgba(242, 211, 139, 0.055);
+  --guide-center-stroke: rgba(242, 211, 139, 0.34);
+  --guide-arm-fill: rgba(242, 211, 139, 0.025);
+  --guide-arm-stroke: rgba(242, 211, 139, 0.17);
+
+  /* Marbles */
+  --player-one: #e5b04b;
+  --player-one-light: #ffe6a3;
+  --computer-one: #b34a55;
+  --computer-one-light: #f4a9b2;
+  --computer-two: #7a5fc0;
+  --computer-two-light: #c7b8f7;
+
+  /* Status */
+  --success: #7ddba9;
+  --danger: #ef8f8f;
+  --brass: #d9b36c;
+  --brass-bright: #f2d38b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background-deep);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+  color: var(--text);
+  font-family:
+    "Iowan Old Style",
+    "Palatino Linotype",
+    Palatino,
+    Georgia,
+    system-ui,
+    sans-serif;
+  background:
+    radial-gradient(
+      circle at 50% -8%,
+      rgba(217, 179, 108, 0.09),
+      transparent 46%
+    ),
+    radial-gradient(
+      circle at 8% 100%,
+      rgba(122, 95, 192, 0.05),
+      transparent 38%
+    ),
+    linear-gradient(180deg, var(--background), var(--background-deep));
+  background-attachment: fixed;
+}
+
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+.app-shell {
+  width: min(1500px, 100%);
+  margin: 0 auto;
+}
+
+.page-header {
+  max-width: 100ch;
+  margin: 0 auto 20px;
+  text-align: center;
+}
+
+.page-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.75rem, 3vw, 2.65rem);
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  line-height: 1.12;
+  color: var(--brass-bright);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.description {
+  max-width: 88ch;
+  margin: 0 auto;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.8fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.board-panel,
+.status-panel,
+.summary-panel,
+.rules-panel,
+.language-panel {
+  border: 1px solid var(--panel-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 38%),
+    var(--panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 200, 0.06),
+    0 18px 40px rgba(0, 0, 0, 0.34);
+}
+
+.board-panel {
+  position: sticky;
+  top: 16px;
+  padding: clamp(10px, 1.5vw, 20px);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+#board {
+  display: block;
+  width: 100%;
+  height: min(calc(100vh - 150px), 780px);
+  min-height: 480px;
+  overflow: visible;
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      rgba(255, 226, 170, 0.045),
+      transparent 58%
+    ),
+    var(--board);
+  border: 1px solid var(--board-edge);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 235, 200, 0.04),
+    inset 0 20px 45px rgba(0, 0, 0, 0.32);
+}
+
+.side-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.status-panel {
+  padding: 1.1rem;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.game-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+}
+
+.game-options label {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.game-options select {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--panel-border-strong);
+  border-radius: 0.55rem;
+  background:
+    linear-gradient(180deg, #382c23, #241c16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 200, 0.07),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.game-options select:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.game-options select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.turn-status {
+  margin: 0 0 0.55rem;
+  color: var(--brass-bright);
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.readout {
+  min-height: 2.9rem;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.controls button {
+  min-width: 0;
+  padding: 0.68rem 0.8rem;
+  border: 1px solid var(--panel-border-strong);
+  border-radius: 0.6rem;
+  background:
+    linear-gradient(180deg, #3a2d23, #241c16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 200, 0.08),
+    0 3px 8px rgba(0, 0, 0, 0.24);
+  cursor: pointer;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.controls button:hover:not(:disabled) {
+  border-color: var(--brass);
+  background:
+    linear-gradient(180deg, #4a392b, #2b211a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 200, 0.1),
+    0 5px 14px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.controls button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.controls button:focus-visible,
+.language-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.summary-panel {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.summary-panel p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.summary-panel strong {
+  color: var(--text);
+}
+
+.rules-panel {
+  padding: 1.1rem;
+  border-radius: 18px;
+}
+
+.rules-panel h2 {
+  margin: 0 0 0.9rem;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--brass-bright);
+}
+
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.rules-grid article {
+  padding: 0.78rem;
+  border: 1px solid rgba(109, 84, 61, 0.72);
+  border-radius: 0.7rem;
+  background:
+    linear-gradient(180deg, rgba(255, 235, 200, 0.03), transparent 45%),
+    var(--panel-subtle);
+  box-shadow: inset 0 1px 0 rgba(255, 235, 200, 0.04);
+}
+
+.rules-grid h3 {
+  margin: 0 0 0.32rem;
+  color: var(--brass);
+  font-size: 0.97rem;
+  letter-spacing: 0.015em;
+}
+
+.rules-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.language-panel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: 16px;
+  color: var(--muted);
+}
+
+.language-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.language-button {
+  padding: 0.34rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  color: var(--brass-bright);
+  background: transparent;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(242, 211, 139, 0.5);
+  text-underline-offset: 0.18em;
+  transition:
+    background 130ms ease,
+    border-color 130ms ease,
+    color 130ms ease;
+}
+
+.language-button:hover:not(:disabled) {
+  border-color: rgba(217, 179, 108, 0.45);
+  background: rgba(217, 179, 108, 0.08);
+}
+
+.language-button:disabled {
+  opacity: 1;
+}
+
+.language-button[aria-pressed="true"] {
+  border-color: rgba(217, 179, 108, 0.65);
+  color: var(--brass-bright);
+  background: rgba(217, 179, 108, 0.11);
+  cursor: default;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Board guides */
+.central-hexagon-guide {
+  fill: var(--guide-center-fill);
+  stroke: var(--guide-center-stroke);
+  stroke-width: 1.5;
+  stroke-dasharray: 7 5;
+  pointer-events: none;
+}
+
+.outer-arm-guide {
+  fill: var(--guide-arm-fill);
+  stroke: var(--guide-arm-stroke);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+  pointer-events: none;
+}
+
+/* Holes */
+.hole {
+  fill: var(--hole);
+  stroke: var(--hole-stroke);
+  stroke-width: 1.5;
+}
+
+.hole.is-legal {
+  fill: var(--hole-legal);
+  stroke: var(--hole-legal-stroke);
+  stroke-width: 2.1;
+  stroke-dasharray: 4 3;
+  cursor: pointer;
+}
+
+.hole.is-legal:hover {
+  fill: #3a8169;
+  stroke: #d8fff0;
+}
+
+/* Marbles */
+.piece {
+  cursor: pointer;
+  transition: filter 130ms ease;
+}
+
+.piece:hover {
+  filter: brightness(1.16);
+}
+
+.piece-body {
+  stroke-width: 2.1;
+}
+
+.piece-highlight {
+  fill: rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+}
+
+.piece.player-1 .piece-body {
+  fill: var(--player-one);
+  stroke: var(--player-one-light);
+}
+
+.piece.computer-1 .piece-body {
+  fill: var(--computer-one);
+  stroke: var(--computer-one-light);
+}
+
+.piece.computer-2 .piece-body {
+  fill: var(--computer-two);
+  stroke: var(--computer-two-light);
+}
+
+.piece.is-active {
+  filter: drop-shadow(0 0 7px rgba(242, 211, 139, 0.78));
+}
+
+.piece.is-selected .piece-body {
+  stroke: #fff8e7;
+  stroke-width: 3.4;
+}
+
+/* Results */
+.results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.78rem;
+  border: 1px solid var(--panel-border-strong);
+  border-radius: 0.6rem;
+  background:
+    linear-gradient(180deg, #382c23, #241c16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 200, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.22);
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.result-item strong {
+  min-width: 2ch;
+  color: var(--text);
+  font-size: 1.08rem;
+  text-align: center;
+}
+
+.result-win strong {
+  color: var(--success);
+}
+
+.result-loss strong {
+  color: var(--danger);
+}
+
+@media (max-width: 980px) {
+  body {
+    padding: 16px;
+  }
+
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .board-panel {
+    position: static;
+  }
+
+  #board {
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 550 / 620;
+  }
+
+  .side-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .status-panel,
+  .summary-panel,
+  .language-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+.summary-panel {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  body {
+    padding: 12px 10px 24px;
+  }
+
+  .page-header {
+    margin-bottom: 12px;
+  }
+
+  .side-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .status-panel,
+  .summary-panel,
+  .language-panel {
+    grid-column: auto;
+  }
+
+  .rules-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .game-options {
+    flex-direction: column;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .results {
+    grid-template-columns: 1fr;
+  }
+
+  .language-panel {
+    border-radius: 16px;
+  }
+}
+</style>
 </head>
 
 <body>
   <main class="app-shell">
     <header class="page-header">
-      <h1 data-i18n="title">Chinese Checkers Board</h1>
+      <h1 data-i18n="title">Chinese Chequers Board</h1>
 
       <p class="description" data-i18n="description">
       </p>
@@ -23,14 +611,14 @@
       <section
         class="board-panel"
         data-i18n-aria-label="boardPanelAriaLabel"
-        aria-label="Chinese Checkers board">
+        aria-label="Chinese Chequers board">
 
         <svg
           id="board"
           viewBox="-275 -305 550 620"
           preserveAspectRatio="xMidYMid meet"
           role="grid"
-          aria-label="Chinese Checkers coordinate board">
+          aria-label="Chinese Chequers coordinate board">
         </svg>
       </section>
 
@@ -70,148 +658,1888 @@
             Select one of your marbles.
           </p>
 
-<div class="results" aria-live="polite">
-  <span class="result-item result-win">
-    <span data-i18n="winsLabel">Wins</span>
-    <strong id="winCount">0</strong>
-  </span>
+        <div class="results" aria-live="polite">
+          <span class="result-item result-win">
+            <span data-i18n="winsLabel">Wins</span>
+            <strong id="winCount">0</strong>
+          </span>
+        
+          <span class="result-item result-loss">
+            <span data-i18n="lossesLabel">Losses</span>
+            <strong id="lossCount">0</strong>
+          </span>
+        </div>
 
-  <span class="result-item result-loss">
-    <span data-i18n="lossesLabel">Losses</span>
-    <strong id="lossCount">0</strong>
-  </span>
-</div>
+        <div class="controls">
+          <button id="resetMoveButton" type="button" disabled>
+            Reset move
+          </button>
 
-          <div class="controls">
-            <button id="resetMoveButton" type="button" disabled>
-              Reset move
-            </button>
+          <button id="restartButton" type="button">
+            Restart game
+          </button>
+        </div>
+      </section>
 
-            <button id="restartButton" type="button">
-              Restart game
-            </button>
-          </div>
-        </section>
+      <section
+        class="summary-panel"
+        data-i18n-aria-label="boardSummaryAriaLabel"
+        aria-label="Board summary">
+        <p>
+          <span data-i18n="boardHolesLabel">Board holes:</span>
+          <strong id="totalHoles">0</strong>.
+          <span data-i18n="centralHexagonLabel">Central hexagon:</span>
+          <strong id="centralHoles">0</strong>.
+          <span data-i18n="outerTriangleLabel">Each outer triangle:</span>
+          <strong id="armHoles">0</strong>.
+        </p>
+      </section>
 
-        <section
-          class="summary-panel"
-          data-i18n-aria-label="boardSummaryAriaLabel"
-          aria-label="Board summary">
-          <p>
-            <span data-i18n="boardHolesLabel">Board holes:</span>
-            <strong id="totalHoles">0</strong>.
-            <span data-i18n="centralHexagonLabel">Central hexagon:</span>
-            <strong id="centralHoles">0</strong>.
-            <span data-i18n="outerTriangleLabel">Each outer triangle:</span>
-            <strong id="armHoles">0</strong>.
-          </p>
-        </section>
+      <section class="rules-panel" aria-labelledby="rulesTitle">
+        <h2 id="rulesTitle" data-i18n="rulesTitle">Variant rules</h2>
 
-        <section class="rules-panel" aria-labelledby="rulesTitle">
-          <h2 id="rulesTitle" data-i18n="rulesTitle">Variant rules</h2>
+        <div class="rules-grid">
+          <article>
+            <h3 data-i18n="ruleObjectiveTitle">Objective</h3>
+            <p data-i18n="ruleObjectiveText">
+              Move all ten of your marbles from your home triangle into the
+              triangle directly opposite it.
+            </p>
+          </article>
 
-          <div class="rules-grid">
-            <article>
-              <h3 data-i18n="ruleObjectiveTitle">Objective</h3>
-              <p data-i18n="ruleObjectiveText">
-                Move all ten of your marbles from your home triangle into the
-                triangle directly opposite it.
-              </p>
-            </article>
+          <article>
+            <h3 data-i18n="ruleStepTitle">Step move</h3>
+            <p data-i18n="ruleStepText">
+              Move one marble to an adjacent empty hole. A step ends your turn.
+            </p>
+          </article>
 
-            <article>
-              <h3 data-i18n="ruleStepTitle">Step move</h3>
-              <p data-i18n="ruleStepText">
-                Move one marble to an adjacent empty hole. A step ends your turn.
-              </p>
-            </article>
+          <article>
+            <h3 data-i18n="ruleExtendedJumpTitle">Extended jump</h3>
+            <p data-i18n="ruleExtendedJumpText">
+              Jump exactly one marble at any straight-line distance:
+              x --- o --- x. Both clear segments must be equal in length.
+            </p>
+          </article>
 
-            <article>
-              <h3 data-i18n="ruleExtendedJumpTitle">Extended jump</h3>
-              <p data-i18n="ruleExtendedJumpText">
-                Jump exactly one marble at any straight-line distance:
-                x --- o --- x. Both clear segments must be equal in length.
-              </p>
-            </article>
+          <article>
+            <h3 data-i18n="ruleMultipleJumpTitle">Multiple jumps</h3>
+            <p data-i18n="ruleMultipleJumpText">
+              After a jump, click the same jumping marble to finish the
+              sequence. A marble cannot land on the same hole twice in one
+              jump sequence.
+            </p>
+          </article>
 
-            <article>
-              <h3 data-i18n="ruleMultipleJumpTitle">Multiple jumps</h3>
-              <p data-i18n="ruleMultipleJumpText">
-                After a jump, click the same jumping marble to finish the
-                sequence. A marble cannot land on the same hole twice in one
-                jump sequence.
-              </p>
-            </article>
+          <article>
+            <h3 data-i18n="ruleTerritoryTitle">Territory restriction</h3>
+            <p data-i18n="ruleTerritoryText">
+              A marble may pass through another player's territory but may not
+              finish a move there, whether or not that triangle contains marbles.
+            </p>
+          </article>
 
-            <article>
-              <h3 data-i18n="ruleTerritoryTitle">Territory restriction</h3>
-              <p data-i18n="ruleTerritoryText">
-                A marble may pass through another player's territory but may not
-                finish a move there, whether or not that triangle contains marbles.
-              </p>
-            </article>
+          <article>
+            <h3 data-i18n="ruleNoCaptureTitle">No captures</h3>
+            <p data-i18n="ruleNoCaptureText">
+              Jumped marbles remain on the board. They are never removed.
+            </p>
+          </article>
+        </div>
+      </section>
 
-            <article>
-              <h3 data-i18n="ruleNoCaptureTitle">No captures</h3>
-              <p data-i18n="ruleNoCaptureText">
-                Jumped marbles remain on the board. They are never removed.
-              </p>
-            </article>
-          </div>
-        </section>
+      <footer
+        class="language-panel"
+        data-i18n-aria-label="languageSelectorAriaLabel"
+        aria-label="Language selection">
 
-        <footer
-          class="language-panel"
+        <span data-i18n="languageLabel">Language:</span>
+
+        <div
+          class="language-controls"
           data-i18n-aria-label="languageSelectorAriaLabel"
+          role="group"
           aria-label="Language selection">
 
-          <span data-i18n="languageLabel">Language:</span>
+          <button
+            type="button"
+            class="language-button"
+            data-language="en"
+            lang="en"
+            aria-pressed="true">
+            English
+          </button>
 
-          <div
-            class="language-controls"
-            data-i18n-aria-label="languageSelectorAriaLabel"
-            role="group"
-            aria-label="Language selection">
+          <button
+            type="button"
+            class="language-button"
+            data-language="es"
+            lang="es"
+            aria-pressed="false">
+            Español
+          </button>
 
-            <button
-              type="button"
-              class="language-button"
-              data-language="en"
-              lang="en"
-              aria-pressed="true">
-              English
-            </button>
+          <button
+            type="button"
+            class="language-button"
+            data-language="zh"
+            lang="zh-Hant"
+            aria-pressed="false">
+            中文
+          </button>
+        </div>
+      </footer>
+    </aside>
+  </div>
+</main>
 
-            <button
-              type="button"
-              class="language-button"
-              data-language="es"
-              lang="es"
-              aria-pressed="false">
-              Español
-            </button>
-
-            <button
-              type="button"
-              class="language-button"
-              data-language="zh"
-              lang="zh-Hant"
-              aria-pressed="false">
-              中文
-            </button>
-          </div>
-        </footer>
-      </aside>
-    </div>
-  </main>
-
-  <script type="module" src="./script.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js");
+<script>
+var HUMAN_PLAYER_ID = "player-1";
+var GAME_CONFIGURATIONS = {
+  1: [
+    {
+      id: HUMAN_PLAYER_ID,
+      type: "human",
+      nameKey: "humanPlayer",
+      homeRegion: "arm-0",
+      targetRegion: "arm-3"
+    },
+    {
+      id: "computer-1",
+      type: "computer",
+      nameKey: "computerOne",
+      homeRegion: "arm-3",
+      targetRegion: "arm-0"
+    }
+  ],
+  2: [
+    {
+      id: HUMAN_PLAYER_ID,
+      type: "human",
+      nameKey: "humanPlayer",
+      homeRegion: "arm-0",
+      targetRegion: "arm-3"
+    },
+    {
+      id: "computer-1",
+      type: "computer",
+      nameKey: "computerOne",
+      homeRegion: "arm-2",
+      targetRegion: "arm-5"
+    },
+    {
+      id: "computer-2",
+      type: "computer",
+      nameKey: "computerTwo",
+      homeRegion: "arm-4",
+      targetRegion: "arm-1"
+    }
+  ]
+};
+var HEX_CORNERS = [
+  [4, 0],
+  [8, 0],
+  [8, 4],
+  [4, 8],
+  [0, 8],
+  [0, 4]
+];
+var TRIANGLE_ARMS = [
+  {
+    region: "arm-0",
+    nameKey: "homeRegion",
+    tip: [0, 0],
+    baseA: [4, 0],
+    baseB: [0, 4]
+  },
+  {
+    region: "arm-1",
+    nameKey: "bottomLeftRegion",
+    tip: [8, -4],
+    baseA: [8, 0],
+    baseB: [4, 0]
+  },
+  {
+    region: "arm-2",
+    nameKey: "topLeftRegion",
+    tip: [12, 0],
+    baseA: [8, 4],
+    baseB: [8, 0]
+  },
+  {
+    region: "arm-3",
+    nameKey: "topRegion",
+    tip: [8, 8],
+    baseA: [4, 8],
+    baseB: [8, 4]
+  },
+  {
+    region: "arm-4",
+    nameKey: "topRightRegion",
+    tip: [0, 12],
+    baseA: [0, 8],
+    baseB: [4, 8]
+  },
+  {
+    region: "arm-5",
+    nameKey: "bottomRightRegion",
+    tip: [-4, 8],
+    baseA: [0, 4],
+    baseB: [0, 8]
+  }
+];
+var HORIZONTAL_STEP = 18;
+var VERTICAL_STEP = 31.176;
+var BOARD_BOTTOM_Y = 245;
+var HOLE_RADIUS = 10.5;
+var PIECE_RADIUS = 8.4;
+var MAX_JUMP_DISTANCE = 12;
+var ADJACENT_DIRECTIONS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, -1],
+  [-1, 1]
+];
+var PERSISTENT_RESULTS_STORAGE_KEY = "boziqiPersistentResults";
+function coordinateKey(x, y) {
+  return `${x},${y}`;
+}
+function coordinateToScreen(x, y) {
+  return {
+    screenX: (y - x) * HORIZONTAL_STEP,
+    screenY: BOARD_BOTTOM_Y - (x + y) * VERTICAL_STEP
+  };
+}
+function axialDistance(aX, aY, bX, bY) {
+  const dx = aX - bX;
+  const dy = aY - bY;
+  return (Math.abs(dx) + Math.abs(dy) + Math.abs(dx + dy)) / 2;
+}
+function buildBoard() {
+  const cells = /* @__PURE__ */ new Map();
+  function addCell(x, y, region, armNameKey = null) {
+    const key = coordinateKey(x, y);
+    if (cells.has(key)) {
+      throw new Error(`Duplicate board coordinate: ${key}.`);
+    }
+    cells.set(key, { x, y, region, armNameKey });
+  }
+  function addCentralHexagon() {
+    for (let x = 0; x <= 8; x += 1) {
+      for (let y = 0; y <= 8; y += 1) {
+        if (x + y >= 4 && x + y <= 12) {
+          addCell(x, y, "center");
+        }
+      }
+    }
+  }
+  function addTriangleArm(arm) {
+    const [tipX, tipY] = arm.tip;
+    const [baseAX, baseAY] = arm.baseA;
+    const [baseBX, baseBY] = arm.baseB;
+    const edgeAX = (baseAX - tipX) / 4;
+    const edgeAY = (baseAY - tipY) / 4;
+    const edgeBX = (baseBX - tipX) / 4;
+    const edgeBY = (baseBY - tipY) / 4;
+    for (let depth = 0; depth < 4; depth += 1) {
+      for (let offset = 0; offset <= depth; offset += 1) {
+        const alongA = depth - offset;
+        const alongB = offset;
+        addCell(
+          tipX + alongA * edgeAX + alongB * edgeBX,
+          tipY + alongA * edgeAY + alongB * edgeBY,
+          arm.region,
+          arm.nameKey
+        );
+      }
+    }
+  }
+  addCentralHexagon();
+  TRIANGLE_ARMS.forEach(addTriangleArm);
+  return { cells };
+}
+function validateBoard(board) {
+  if (board.cells.size !== 121) {
+    throw new Error(`Expected 121 board holes, found ${board.cells.size}.`);
+  }
+  let centerCount = 0;
+  const armCounts = /* @__PURE__ */ new Map();
+  for (const cell of board.cells.values()) {
+    if (cell.region === "center") {
+      centerCount += 1;
+    } else {
+      armCounts.set(cell.region, (armCounts.get(cell.region) ?? 0) + 1);
+    }
+  }
+  if (centerCount !== 61) {
+    throw new Error(`Expected 61 central holes, found ${centerCount}.`);
+  }
+  for (const arm of TRIANGLE_ARMS) {
+    if (armCounts.get(arm.region) !== 10) {
+      throw new Error(`${arm.region} must contain 10 holes.`);
+    }
+  }
+}
+function getCell(board, x, y) {
+  return board.cells.get(coordinateKey(x, y)) ?? null;
+}
+function isBoardCoordinate(board, x, y) {
+  return board.cells.has(coordinateKey(x, y));
+}
+function getPieceAt(position, x, y) {
+  return position.pieces.get(coordinateKey(x, y)) ?? null;
+}
+function isEmptyHole(position, board, x, y) {
+  return isBoardCoordinate(board, x, y) && !getPieceAt(position, x, y);
+}
+function canPlayerEndMoveAt(board, player, x, y) {
+  const cell = getCell(board, x, y);
+  if (!cell) {
+    return false;
+  }
+  return cell.region === "center" || cell.region === player.homeRegion || cell.region === player.targetRegion;
+}
+function getNormalMoves(position, board, piece, player) {
+  const moves = [];
+  for (const [dx, dy] of ADJACENT_DIRECTIONS) {
+    const destinationX = piece.x + dx;
+    const destinationY = piece.y + dy;
+    if (isEmptyHole(position, board, destinationX, destinationY) && canPlayerEndMoveAt(board, player, destinationX, destinationY)) {
+      moves.push({
+        type: "step",
+        from: [piece.x, piece.y],
+        to: [destinationX, destinationY],
+        pieceId: piece.id
       });
     }
+  }
+  return moves;
+}
+function getExtendedJumpsAtPosition(position, board, piece, player, currentX, currentY, visitedLandings, occupiedKeys) {
+  const jumps = [];
+  for (const [dx, dy] of ADJACENT_DIRECTIONS) {
+    for (let distance = 1; distance <= MAX_JUMP_DISTANCE; distance += 1) {
+      const jumpedX = currentX + distance * dx;
+      const jumpedY = currentY + distance * dy;
+      const landingX = currentX + 2 * distance * dx;
+      const landingY = currentY + 2 * distance * dy;
+      const jumpedKey = coordinateKey(jumpedX, jumpedY);
+      const landingKey = coordinateKey(landingX, landingY);
+      if (!isBoardCoordinate(board, landingX, landingY)) {
+        break;
+      }
+      if (!occupiedKeys.has(jumpedKey) || occupiedKeys.has(landingKey)) {
+        continue;
+      }
+      if (visitedLandings.has(landingKey)) {
+        continue;
+      }
+      let pathIsClear = true;
+      for (let step = 1; step < 2 * distance; step += 1) {
+        if (step === distance) {
+          continue;
+        }
+        const pathX = currentX + step * dx;
+        const pathY = currentY + step * dy;
+        const pathKey = coordinateKey(pathX, pathY);
+        if (!isBoardCoordinate(board, pathX, pathY) || occupiedKeys.has(pathKey)) {
+          pathIsClear = false;
+          break;
+        }
+      }
+      if (!pathIsClear) {
+        continue;
+      }
+      jumps.push({
+        type: "extended-jump",
+        from: [currentX, currentY],
+        jumped: [jumpedX, jumpedY],
+        to: [landingX, landingY],
+        distance,
+        direction: [dx, dy],
+        pieceId: piece.id
+      });
+    }
+  }
+  return jumps;
+}
+function jumpCanEventuallyFinish(position, board, piece, player, currentX, currentY, visitedLandings, occupiedKeys) {
+  if (canPlayerEndMoveAt(board, player, currentX, currentY)) {
+    return true;
+  }
+  const jumps = getExtendedJumpsAtPosition(
+    position,
+    board,
+    piece,
+    player,
+    currentX,
+    currentY,
+    visitedLandings,
+    occupiedKeys
+  );
+  for (const jump of jumps) {
+    const [landingX, landingY] = jump.to;
+    const landingKey = coordinateKey(landingX, landingY);
+    const nextVisitedLandings = new Set(visitedLandings);
+    nextVisitedLandings.add(landingKey);
+    const nextOccupiedKeys = new Set(occupiedKeys);
+    nextOccupiedKeys.delete(coordinateKey(currentX, currentY));
+    nextOccupiedKeys.add(landingKey);
+    if (jumpCanEventuallyFinish(
+      position,
+      board,
+      piece,
+      player,
+      landingX,
+      landingY,
+      nextVisitedLandings,
+      nextOccupiedKeys
+    )) {
+      return true;
+    }
+  }
+  return false;
+}
+function getPlayableJumpsAtPosition(position, board, piece, player, currentX, currentY, visitedLandings, occupiedKeys) {
+  return getExtendedJumpsAtPosition(
+    position,
+    board,
+    piece,
+    player,
+    currentX,
+    currentY,
+    visitedLandings,
+    occupiedKeys
+  ).filter((jump) => {
+    const [landingX, landingY] = jump.to;
+    const landingKey = coordinateKey(landingX, landingY);
+    const nextVisitedLandings = new Set(visitedLandings);
+    nextVisitedLandings.add(landingKey);
+    const nextOccupiedKeys = new Set(occupiedKeys);
+    nextOccupiedKeys.delete(coordinateKey(currentX, currentY));
+    nextOccupiedKeys.add(landingKey);
+    return jumpCanEventuallyFinish(
+      position,
+      board,
+      piece,
+      player,
+      landingX,
+      landingY,
+      nextVisitedLandings,
+      nextOccupiedKeys
+    );
+  });
+}
+function getExtendedJumps(position, board, piece, player, {
+  visitedLandings = /* @__PURE__ */ new Set([coordinateKey(piece.x, piece.y)]),
+  occupiedKeys = new Set(position.pieces.keys())
+} = {}) {
+  return getPlayableJumpsAtPosition(
+    position,
+    board,
+    piece,
+    player,
+    piece.x,
+    piece.y,
+    visitedLandings,
+    occupiedKeys
+  );
+}
+function getLegalMovesForPiece(position, board, piece, player, {
+  jumpChainActive = false,
+  selectedPieceId = null,
+  jumpChainVisited = /* @__PURE__ */ new Set()
+} = {}) {
+  if (!piece || piece.playerId !== player.id) {
+    return [];
+  }
+  if (jumpChainActive) {
+    if (piece.id !== selectedPieceId) {
+      return [];
+    }
+    return getExtendedJumps(position, board, piece, player, {
+      visitedLandings: jumpChainVisited
+    });
+  }
+  const visited = /* @__PURE__ */ new Set([coordinateKey(piece.x, piece.y)]);
+  const occupiedKeys = new Set(position.pieces.keys());
+  return [
+    ...getNormalMoves(position, board, piece, player),
+    ...getExtendedJumps(position, board, piece, player, {
+      visitedLandings: visited,
+      occupiedKeys
+    })
+  ];
+}
+function getAllLegalMovesForPlayer(position, board, player) {
+  const moves = [];
+  for (const piece of position.pieces.values()) {
+    if (piece.playerId !== player.id) {
+      continue;
+    }
+    moves.push(
+      ...getLegalMovesForPiece(position, board, piece, player)
+    );
+  }
+  return moves;
+}
+function playerHasWon(position, board, player) {
+  const playerPieces = [...position.pieces.values()].filter((piece) => piece.playerId === player.id);
+  return playerPieces.length === 10 && playerPieces.every((piece) => {
+    return getCell(board, piece.x, piece.y)?.region === player.targetRegion;
+  });
+}
+function clonePosition(position) {
+  const pieces = /* @__PURE__ */ new Map();
+  for (const [key, piece] of position.pieces) {
+    pieces.set(key, { ...piece });
+  }
+  return { pieces };
+}
+function normaliseNonNegativeInteger(value) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+function readPersistentResults() {
+  try {
+    const storedResults = window.localStorage.getItem(
+      PERSISTENT_RESULTS_STORAGE_KEY
+    );
+    if (!storedResults) {
+      return { wins: 0, losses: 0 };
+    }
+    const parsedResults = JSON.parse(storedResults);
+    return {
+      wins: normaliseNonNegativeInteger(parsedResults.wins),
+      losses: normaliseNonNegativeInteger(parsedResults.losses)
+    };
+  } catch {
+    return { wins: 0, losses: 0 };
+  }
+}
+function writePersistentResults(results) {
+  const safeResults = {
+    wins: normaliseNonNegativeInteger(results.wins),
+    losses: normaliseNonNegativeInteger(results.losses)
+  };
+  try {
+    window.localStorage.setItem(
+      PERSISTENT_RESULTS_STORAGE_KEY,
+      JSON.stringify(safeResults)
+    );
+  } catch {
+  }
+  return safeResults;
+}
+function createGame({ opponentCount = 1 } = {}) {
+  const board = buildBoard();
+  validateBoard(board);
+  const listeners = /* @__PURE__ */ new Set();
+  const state = {
+    opponentCount,
+    aiDifficulty: "easy",
+    activePlayerIndex: 0,
+    selectedPieceId: null,
+    jumpChainActive: false,
+    jumpAwaitingConfirmation: false,
+    jumpChainVisited: /* @__PURE__ */ new Set(),
+    jumpChainStart: null,
+    gameOver: false,
+    computerThinking: false,
+    turnToken: 0,
+    pieces: /* @__PURE__ */ new Map()
+  };
+  let activePlayers = GAME_CONFIGURATIONS[opponentCount];
+  let persistentResults = readPersistentResults();
+  function emit(type = "update") {
+    const snapshot = getSnapshot();
+    for (const listener of listeners) {
+      listener({ type, snapshot });
+    }
+  }
+  function subscribe(listener) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  }
+  function getActivePlayer() {
+    return activePlayers[state.activePlayerIndex];
+  }
+  function getPlayerById(playerId) {
+    return activePlayers.find((player) => player.id === playerId) ?? null;
+  }
+  function findPieceById2(pieceId) {
+    for (const piece of state.pieces.values()) {
+      if (piece.id === pieceId) {
+        return piece;
+      }
+    }
+    return null;
+  }
+  function getSelectedPiece() {
+    return state.selectedPieceId ? findPieceById2(state.selectedPieceId) : null;
+  }
+  function getPosition() {
+    return { pieces: state.pieces };
+  }
+  function createPiece(playerId, x, y) {
+    const piece = {
+      id: `${playerId}:${x},${y}`,
+      playerId,
+      x,
+      y
+    };
+    state.pieces.set(coordinateKey(x, y), piece);
+  }
+  function placeStartingPieces() {
+    state.pieces.clear();
+    for (const player of activePlayers) {
+      for (const cell of board.cells.values()) {
+        if (cell.region === player.homeRegion) {
+          createPiece(player.id, cell.x, cell.y);
+        }
+      }
+    }
+  }
+  function movePiece(piece, destinationX, destinationY) {
+    state.pieces.delete(coordinateKey(piece.x, piece.y));
+    piece.x = destinationX;
+    piece.y = destinationY;
+    state.pieces.set(coordinateKey(piece.x, piece.y), piece);
+  }
+  function clearJumpChainState() {
+    state.selectedPieceId = null;
+    state.jumpChainActive = false;
+    state.jumpAwaitingConfirmation = false;
+    state.jumpChainVisited.clear();
+    state.jumpChainStart = null;
+  }
+  function recordHumanWin() {
+    persistentResults.wins += 1;
+    persistentResults = writePersistentResults(persistentResults);
+  }
+  function recordHumanLoss() {
+    persistentResults.losses += 1;
+    persistentResults = writePersistentResults(persistentResults);
+  }
+  function recordGameResult(winningPlayer) {
+    if (winningPlayer.id === HUMAN_PLAYER_ID) {
+      recordHumanWin();
+    } else {
+      recordHumanLoss();
+    }
+  }
+  function startHumanJumpChain(piece) {
+    state.jumpChainActive = true;
+    state.jumpAwaitingConfirmation = false;
+    state.jumpChainStart = {
+      pieceId: piece.id,
+      x: piece.x,
+      y: piece.y
+    };
+    state.jumpChainVisited = /* @__PURE__ */ new Set([coordinateKey(piece.x, piece.y)]);
+  }
+  function selectPiece(pieceId) {
+    const activePlayer = getActivePlayer();
+    if (state.gameOver || state.computerThinking) {
+      return;
+    }
+    if (activePlayer.type !== "human") {
+      return;
+    }
+    const piece = findPieceById2(pieceId);
+    if (!piece || piece.playerId !== activePlayer.id) {
+      return;
+    }
+    if (state.jumpChainActive) {
+      if (piece.id === state.selectedPieceId) {
+        if (canPlayerEndMoveAt(board, activePlayer, piece.x, piece.y)) {
+          state.jumpAwaitingConfirmation = true;
+          endTurn();
+        }
+      }
+      return;
+    }
+    const legalMoves = getLegalMovesForPiece(
+      getPosition(),
+      board,
+      piece,
+      activePlayer
+    );
+    if (legalMoves.length === 0) {
+      emit();
+      return;
+    }
+    state.selectedPieceId = piece.id;
+    emit();
+  }
+  function applyHumanMove(destinationX, destinationY) {
+    const activePlayer = getActivePlayer();
+    if (state.gameOver || state.computerThinking || activePlayer.type !== "human") {
+      return;
+    }
+    const piece = getSelectedPiece();
+    if (!piece) {
+      return;
+    }
+    const legalMoves = getLegalMovesForPiece(
+      getPosition(),
+      board,
+      piece,
+      activePlayer,
+      {
+        jumpChainActive: state.jumpChainActive,
+        selectedPieceId: state.selectedPieceId,
+        jumpChainVisited: state.jumpChainVisited
+      }
+    );
+    const move = legalMoves.find((candidate) => {
+      return candidate.to[0] === destinationX && candidate.to[1] === destinationY;
+    });
+    if (!move) {
+      return;
+    }
+    if (move.type === "extended-jump" && !state.jumpChainActive) {
+      startHumanJumpChain(piece);
+    }
+    movePiece(piece, move.to[0], move.to[1]);
+    if (move.type === "step") {
+      endTurn();
+      return;
+    }
+    state.selectedPieceId = piece.id;
+    state.jumpAwaitingConfirmation = false;
+    state.jumpChainVisited.add(coordinateKey(move.to[0], move.to[1]));
+    emit();
+  }
+  function resetCurrentHumanMove() {
+    const activePlayer = getActivePlayer();
+    const selectedPiece = getSelectedPiece();
+    if (state.gameOver || state.computerThinking || activePlayer.type !== "human" || !state.jumpChainActive || !selectedPiece || !state.jumpChainStart || selectedPiece.id !== state.jumpChainStart.pieceId) {
+      return;
+    }
+    movePiece(selectedPiece, state.jumpChainStart.x, state.jumpChainStart.y);
+    state.selectedPieceId = selectedPiece.id;
+    state.jumpChainActive = false;
+    state.jumpAwaitingConfirmation = false;
+    state.jumpChainVisited.clear();
+    state.jumpChainStart = null;
+    emit();
+  }
+  function applyComputerMove(move) {
+    if (state.gameOver) {
+      return;
+    }
+    const piece = getPieceAt(getPosition(), move.from[0], move.from[1]);
+    if (!piece) {
+      return;
+    }
+    if (move.type === "extended-jump" && !state.jumpChainActive) {
+      startHumanJumpChain(piece);
+    }
+    movePiece(piece, move.to[0], move.to[1]);
+    state.selectedPieceId = piece.id;
+    if (move.type === "extended-jump") {
+      state.jumpChainVisited.add(coordinateKey(move.to[0], move.to[1]));
+    }
+    emit();
+  }
+  function endTurn() {
+    const playerWhoMoved = getActivePlayer();
+    clearJumpChainState();
+    state.computerThinking = false;
+    if (playerHasWon(getPosition(), board, playerWhoMoved)) {
+      state.gameOver = true;
+      state.turnToken += 1;
+      recordGameResult(playerWhoMoved);
+      emit("game-over");
+      return;
+    }
+    state.activePlayerIndex = (state.activePlayerIndex + 1) % activePlayers.length;
+    state.turnToken += 1;
+    emit("turn-changed");
+  }
+  function resetGame() {
+    state.turnToken += 1;
+    state.activePlayerIndex = 0;
+    state.gameOver = false;
+    state.computerThinking = false;
+    clearJumpChainState();
+    placeStartingPieces();
+    emit("reset");
+  }
+  function setOpponentCount(count) {
+    if (!GAME_CONFIGURATIONS[count]) {
+      return;
+    }
+    state.opponentCount = count;
+    activePlayers = GAME_CONFIGURATIONS[count];
+    resetGame();
+  }
+  function setAiDifficulty(difficulty) {
+    if (difficulty === "easy" || difficulty === "normal") {
+      state.aiDifficulty = difficulty;
+      emit();
+    }
+  }
+  function setComputerThinking(value) {
+    state.computerThinking = Boolean(value);
+    emit();
+  }
+  function getSnapshot() {
+    const activePlayer = getActivePlayer();
+    const selectedPiece = getSelectedPiece();
+    const legalMovesForSelected = selectedPiece ? getLegalMovesForPiece(
+      getPosition(),
+      board,
+      selectedPiece,
+      activePlayer,
+      {
+        jumpChainActive: state.jumpChainActive,
+        selectedPieceId: state.selectedPieceId,
+        jumpChainVisited: state.jumpChainVisited
+      }
+    ) : [];
+    const hasAnyLegalMove = getAllLegalMovesForPlayer(
+      getPosition(),
+      board,
+      activePlayer
+    ).length > 0;
+    return {
+      board,
+      state,
+      activePlayers,
+      activePlayer,
+      legalMovesForSelected,
+      hasAnyLegalMove,
+      persistentResults: { ...persistentResults }
+    };
+  }
+  return {
+    subscribe,
+    getSnapshot,
+    selectPiece,
+    applyHumanMove,
+    applyComputerMove,
+    resetCurrentHumanMove,
+    resetGame,
+    setOpponentCount,
+    setAiDifficulty,
+    setComputerThinking,
+    endTurn
+  };
+}
+
+var MAX_JUMP_DEPTH = 4;
+var MAX_SEARCH_CANDIDATES = 20;
+var EASY_MOVE_POOL_SIZE = 8;
+function findPieceById(position, pieceId) {
+  for (const piece of position.pieces.values()) {
+    if (piece.id === pieceId) {
+      return piece;
+    }
+  }
+  return null;
+}
+function getNearestTargetDistance(board, player, x, y) {
+  let shortestDistance = Infinity;
+  for (const cell of board.cells.values()) {
+    if (cell.region !== player.targetRegion) {
+      continue;
+    }
+    shortestDistance = Math.min(
+      shortestDistance,
+      axialDistance(x, y, cell.x, cell.y)
+    );
+  }
+  return shortestDistance;
+}
+function quickMoveScore(position, board, turn, player) {
+  const piece = findPieceById(position, turn.pieceId);
+  if (!piece) {
+    return -Infinity;
+  }
+  const startDistance = getNearestTargetDistance(
+    board,
+    player,
+    piece.x,
+    piece.y
+  );
+  const finalMove = turn.moves[turn.moves.length - 1];
+  const endDistance = getNearestTargetDistance(
+    board,
+    player,
+    finalMove.to[0],
+    finalMove.to[1]
+  );
+  return (startDistance - endDistance) * 100 + turn.moves.length * 5;
+}
+function enumerateJumpChains(position, board, piece, player) {
+  const chains = [];
+  const originKey = coordinateKey(piece.x, piece.y);
+  const baseOccupiedKeys = new Set(position.pieces.keys());
+  function explore(currentPosition, currentX, currentY, visitedLandings, occupiedKeys, moves) {
+    const jumps = getExtendedJumpsAtPosition(
+      currentPosition,
+      board,
+      piece,
+      player,
+      currentX,
+      currentY,
+      visitedLandings,
+      occupiedKeys
+    );
+    for (const jump of jumps) {
+      const nextPosition = clonePosition(currentPosition);
+      const movingPiece = findPieceById(nextPosition, piece.id);
+      if (!movingPiece) {
+        continue;
+      }
+      nextPosition.pieces.delete(
+        coordinateKey(movingPiece.x, movingPiece.y)
+      );
+      movingPiece.x = jump.to[0];
+      movingPiece.y = jump.to[1];
+      nextPosition.pieces.set(
+        coordinateKey(movingPiece.x, movingPiece.y),
+        movingPiece
+      );
+      const nextMoves = [...moves, jump];
+      if (canPlayerEndMoveAt(
+        board,
+        player,
+        jump.to[0],
+        jump.to[1]
+      )) {
+        chains.push({
+          type: "jump-chain",
+          pieceId: piece.id,
+          moves: nextMoves
+        });
+      }
+      if (nextMoves.length >= MAX_JUMP_DEPTH) {
+        continue;
+      }
+      const nextVisitedLandings = new Set(visitedLandings);
+      nextVisitedLandings.add(coordinateKey(jump.to[0], jump.to[1]));
+      const nextOccupiedKeys = new Set(occupiedKeys);
+      nextOccupiedKeys.delete(coordinateKey(currentX, currentY));
+      nextOccupiedKeys.add(coordinateKey(jump.to[0], jump.to[1]));
+      explore(
+        nextPosition,
+        jump.to[0],
+        jump.to[1],
+        nextVisitedLandings,
+        nextOccupiedKeys,
+        nextMoves
+      );
+    }
+  }
+  explore(
+    position,
+    piece.x,
+    piece.y,
+    /* @__PURE__ */ new Set([originKey]),
+    baseOccupiedKeys,
+    []
+  );
+  return chains;
+}
+function generateCandidateTurns(position, board, player) {
+  const candidates = [];
+  for (const piece of position.pieces.values()) {
+    if (piece.playerId !== player.id) {
+      continue;
+    }
+    for (const move of getNormalMoves(position, board, piece, player)) {
+      candidates.push({
+        type: "step",
+        pieceId: piece.id,
+        moves: [move]
+      });
+    }
+    candidates.push(
+      ...enumerateJumpChains(position, board, piece, player)
+    );
+  }
+  for (const candidate of candidates) {
+    candidate.quickScore = quickMoveScore(
+      position,
+      board,
+      candidate,
+      player
+    );
+  }
+  return candidates;
+}
+function applyTurnToPosition(position, turn) {
+  const nextPosition = clonePosition(position);
+  const piece = findPieceById(nextPosition, turn.pieceId);
+  if (!piece) {
+    return nextPosition;
+  }
+  for (const move of turn.moves) {
+    nextPosition.pieces.delete(coordinateKey(piece.x, piece.y));
+    piece.x = move.to[0];
+    piece.y = move.to[1];
+    nextPosition.pieces.set(
+      coordinateKey(piece.x, piece.y),
+      piece
+    );
+  }
+  return nextPosition;
+}
+function evaluatePlayer(position, board, player) {
+  let score = 0;
+  let targetPieceCount = 0;
+  for (const piece of position.pieces.values()) {
+    if (piece.playerId !== player.id) {
+      continue;
+    }
+    const targetDistance = getNearestTargetDistance(
+      board,
+      player,
+      piece.x,
+      piece.y
+    );
+    score -= targetDistance * 100;
+    const cell = getCell(board, piece.x, piece.y);
+    if (cell?.region === player.targetRegion) {
+      score += 900;
+      targetPieceCount += 1;
+    }
+    if (cell?.region === player.homeRegion) {
+      score -= 140;
+    }
+  }
+  score += targetPieceCount * 180;
+  score += getAllLegalMovesForPlayer(position, board, player).length * 4;
+  return score;
+}
+function evaluatePosition(position, board, rootPlayerId, activePlayers) {
+  let score = 0;
+  for (const player of activePlayers) {
+    const playerScore = evaluatePlayer(position, board, player);
+    if (player.id === rootPlayerId) {
+      score += playerScore;
+    } else {
+      score -= playerScore * 0.8;
+    }
+  }
+  return score;
+}
+function minimax(position, board, depth, alpha, beta, rootPlayerId, activePlayers, currentPlayerIndex) {
+  const currentPlayer = activePlayers[currentPlayerIndex];
+  for (const player of activePlayers) {
+    if (playerHasWon(position, board, player)) {
+      return evaluatePosition(
+        position,
+        board,
+        rootPlayerId,
+        activePlayers
+      );
+    }
+  }
+  if (depth === 0) {
+    return evaluatePosition(
+      position,
+      board,
+      rootPlayerId,
+      activePlayers
+    );
+  }
+  const candidateTurns = generateCandidateTurns(
+    position,
+    board,
+    currentPlayer
+  ).sort((first, second) => second.quickScore - first.quickScore).slice(0, MAX_SEARCH_CANDIDATES);
+  const nextPlayerIndex = (currentPlayerIndex + 1) % activePlayers.length;
+  if (candidateTurns.length === 0) {
+    return minimax(
+      position,
+      board,
+      depth - 1,
+      alpha,
+      beta,
+      rootPlayerId,
+      activePlayers,
+      nextPlayerIndex
+    );
+  }
+  const maximizing = currentPlayer.id === rootPlayerId;
+  if (maximizing) {
+    let bestScore2 = -Infinity;
+    for (const turn of candidateTurns) {
+      const nextPosition = applyTurnToPosition(position, turn);
+      const score = minimax(
+        nextPosition,
+        board,
+        depth - 1,
+        alpha,
+        beta,
+        rootPlayerId,
+        activePlayers,
+        nextPlayerIndex
+      );
+      bestScore2 = Math.max(bestScore2, score);
+      alpha = Math.max(alpha, bestScore2);
+      if (alpha >= beta) {
+        break;
+      }
+    }
+    return bestScore2;
+  }
+  let bestScore = Infinity;
+  for (const turn of candidateTurns) {
+    const nextPosition = applyTurnToPosition(position, turn);
+    const score = minimax(
+      nextPosition,
+      board,
+      depth - 1,
+      alpha,
+      beta,
+      rootPlayerId,
+      activePlayers,
+      nextPlayerIndex
+    );
+    bestScore = Math.min(bestScore, score);
+    beta = Math.min(beta, bestScore);
+    if (alpha >= beta) {
+      break;
+    }
+  }
+  return bestScore;
+}
+function chooseComputerTurn({
+  position,
+  board,
+  player,
+  activePlayers,
+  playerIndex,
+  depth = 2,
+  difficulty = "normal"
+}) {
+  const candidateTurns = generateCandidateTurns(
+    position,
+    board,
+    player
+  ).sort((first, second) => second.quickScore - first.quickScore);
+  if (candidateTurns.length === 0) {
+    return null;
+  }
+  if (difficulty === "easy") {
+    const poolSize = Math.min(
+      EASY_MOVE_POOL_SIZE,
+      candidateTurns.length
+    );
+    return candidateTurns[Math.floor(Math.random() * poolSize)];
+  }
+  const candidates = candidateTurns.slice(
+    0,
+    MAX_SEARCH_CANDIDATES
+  );
+  let bestTurn = null;
+  let bestScore = -Infinity;
+  for (const turn of candidates) {
+    const nextPosition = applyTurnToPosition(position, turn);
+    const score = minimax(
+      nextPosition,
+      board,
+      depth - 1,
+      -Infinity,
+      Infinity,
+      player.id,
+      activePlayers,
+      (playerIndex + 1) % activePlayers.length
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      bestTurn = turn;
+    }
+  }
+  return bestTurn;
+}
+
+var SUPPORTED_LANGUAGES = /* @__PURE__ */ new Set(["en", "es", "zh"]);
+var translations = {
+  en: {
+    documentTitle: "Chinese Chequers",
+    title: "Chinese Chequers",
+    description: "",
+    boardAriaLabel: "Chinese Chequers board",
+    boardPanelAriaLabel: "Chinese Chequers board",
+    boardSummaryAriaLabel: "Board summary",
+    statusAriaLabel: "Game status",
+    languageSelectorAriaLabel: "Language selection",
+    boardHolesLabel: "Board holes:",
+    centralHexagonLabel: "Central hexagon:",
+    outerTriangleLabel: "Each outer triangle:",
+    rulesTitle: "Variant rules",
+    ruleObjectiveTitle: "Objective",
+    ruleObjectiveText: "Move all ten of your marbles from your home triangle into the triangle directly opposite it.",
+    ruleStepTitle: "Step move",
+    ruleStepText: "Move one marble to an adjacent empty hole. A step ends your turn.",
+    ruleExtendedJumpTitle: "Extended jump",
+    ruleExtendedJumpText: "Jump exactly one marble at any straight-line distance. Both clear segments must be equal in length.",
+    ruleMultipleJumpTitle: "Multiple jumps",
+    ruleMultipleJumpText: "After a jump, click the white jumping marble to finish the sequence, or choose another highlighted jump destination. A marble cannot land on the same hole twice in one jump sequence.",
+    ruleTerritoryTitle: "Territory restriction",
+    ruleTerritoryText: "A marble may pass through another player's territory but may not finish a move there, whether or not that triangle contains marbles.",
+    ruleNoCaptureTitle: "No captures",
+    ruleNoCaptureText: "Jumped marbles remain on the board. They are never removed.",
+    languageLabel: "Language:",
+    opponentCountLabel: "Computer opponents",
+    oneEasyOpponentOption: "1 Casual AI",
+    twoEasyOpponentsOption: "2 Casual AI",
+    oneNormalOpponentOption: "1 Normal AI",
+    twoNormalOpponentsOption: "2 Normal AI",
+    resetMoveButton: "Reset move",
+    restartButton: "Restart game",
+    loading: "Loading game…",
+    selectOwnMarble: "Select one of your marbles.",
+    selectOwnMarbleWithMoves: "Select one of your marbles with a legal move.",
+    selectedPiece: "Selected marble at ({x}, {y}). Choose a highlighted destination.",
+    jumpContinue: "Jump sequence active. Click the white marble to finish, or choose a highlighted jump destination.",
+    resetMoveHint: "Reset move returns the jumping marble to its position before this jump sequence.",
+    playerTurn: "{player}'s turn.",
+    playerWon: "{player} wins!",
+    computerThinking: "{player} is thinking…",
+    computerTurn: "{player}'s turn.",
+    coordinateReadout: "Coordinate ({x}, {y}) — {region}.",
+    homeRegion: "Bottom / Player's home",
+    bottomLeftRegion: "Bottom-left",
+    topLeftRegion: "Top-left",
+    topRegion: "Top",
+    topRightRegion: "Top-right",
+    bottomRightRegion: "Bottom-right",
+    centralHexagon: "Central hexagon",
+    humanPlayer: "Player",
+    computerOne: "Computer 1",
+    computerTwo: "Computer 2",
+    winsLabel: "Wins",
+    lossesLabel: "Losses"
+  },
+
+  es: {
+    documentTitle: "Damas chinas",
+    title: "Damas chinas",
+    description: "",
+    boardAriaLabel: "Tablero de damas chinas",
+    boardPanelAriaLabel: "Tablero de damas chinas",
+    boardSummaryAriaLabel: "Resumen del tablero",
+    statusAriaLabel: "Estado de la partida",
+    languageSelectorAriaLabel: "Selección de idioma",
+    boardHolesLabel: "Casillas del tablero:",
+    centralHexagonLabel: "Hexágono central:",
+    outerTriangleLabel: "Cada triángulo exterior:",
+    rulesTitle: "Reglas de la variante",
+    ruleObjectiveTitle: "Objetivo",
+    ruleObjectiveText: "Lleva tus diez fichas desde tu triángulo inicial hasta el triángulo situado directamente enfrente.",
+    ruleStepTitle: "Movimiento simple",
+    ruleStepText: "Mueve una ficha a una casilla adyacente vacía. Un movimiento simple termina tu turno.",
+    ruleExtendedJumpTitle: "Salto extendido",
+    ruleExtendedJumpText: "Puedes saltar exactamente una ficha a cualquier distancia en línea recta. Los dos tramos despejados deben tener la misma longitud.",
+    ruleMultipleJumpTitle: "Saltos múltiples",
+    ruleMultipleJumpText: "Después de un salto, pulsa la ficha blanca para terminar la secuencia o elige otro destino de salto resaltado. Una ficha no puede aterrizar dos veces en la misma casilla durante una secuencia.",
+    ruleTerritoryTitle: "Restricción de territorio",
+    ruleTerritoryText: "Una ficha puede atravesar el territorio de otro jugador, pero no puede terminar un movimiento allí, aunque ese triángulo no contenga fichas.",
+    ruleNoCaptureTitle: "Sin capturas",
+    ruleNoCaptureText: "Las fichas saltadas permanecen en el tablero. Nunca se retiran.",
+    languageLabel: "Idioma:",
+    opponentCountLabel: "Oponentes controlados por ordenador",
+    oneEasyOpponentOption: "1 IA casual",
+    twoEasyOpponentsOption: "2 IA casuales",
+    oneNormalOpponentOption: "1 IA normal",
+    twoNormalOpponentsOption: "2 IA normales",
+    resetMoveButton: "Restablecer movimiento",
+    restartButton: "Reiniciar partida",
+    loading: "Cargando partida…",
+    selectOwnMarble: "Selecciona una de tus fichas.",
+    selectOwnMarbleWithMoves: "Selecciona una de tus fichas con un movimiento legal.",
+    selectedPiece: "Ficha seleccionada en ({x}, {y}). Elige un destino resaltado.",
+    jumpContinue: "Secuencia de saltos activa. Pulsa la ficha blanca para terminar o elige un destino resaltado.",
+    resetMoveHint: "Restablecer movimiento devuelve la ficha a su posición anterior a esta secuencia de saltos.",
+    playerTurn: "Turno de {player}.",
+    playerWon: "¡{player} gana!",
+    computerThinking: "{player} está pensando…",
+    computerTurn: "Turno de {player}.",
+    coordinateReadout: "Coordenada ({x}, {y}) — {region}.",
+    homeRegion: "Abajo / inicio del Jugador",
+    bottomLeftRegion: "Abajo a la izquierda",
+    topLeftRegion: "Arriba a la izquierda",
+    topRegion: "Arriba",
+    topRightRegion: "Arriba a la derecha",
+    bottomRightRegion: "Abajo a la derecha",
+    centralHexagon: "Hexágono central",
+    humanPlayer: "Jugador",
+    computerOne: "Ordenador 1",
+    computerTwo: "Ordenador 2",
+    winsLabel: "Victorias",
+    lossesLabel: "Derrotas"
+  },
+
+zh: {
+    documentTitle: "波子棋",
+    title: "波子棋",
+    description: "",
+    boardAriaLabel: "波子棋棋盤",
+    boardPanelAriaLabel: "波子棋棋盤",
+    boardSummaryAriaLabel: "棋盤摘要",
+    statusAriaLabel: "遊戲狀態",
+    languageSelectorAriaLabel: "語言選擇",
+    boardHolesLabel: "棋盤孔位：",
+    centralHexagonLabel: "中央六角形：",
+    outerTriangleLabel: "每個外側三角形：",
+    rulesTitle: "變體規則",
+    ruleObjectiveTitle: "目標",
+    ruleObjectiveText: "將你全部十粒波子由起始三角形移去正對面嘅目標三角形。",
+    ruleStepTitle: "單步移動",
+    ruleStepText: "將一粒波子移去隔離嘅空位。單步移動會完結回合。",
+    ruleExtendedJumpTitle: "延伸跳躍",
+    ruleExtendedJumpText: "你可以沿直線跨越剛好一粒波子，距離不限。被跨越波子兩邊嘅空位距離必須相等。",
+    ruleMultipleJumpTitle: "連續跳躍",
+    ruleMultipleJumpText: "跳躍之後，按白色波子就可以結束，或者揀另一個標示咗嘅跳躍目的地。喺同一跳躍序列入面，波子唔可以去返同一孔位。",
+    ruleTerritoryTitle: "領地限制",
+    ruleTerritoryText: "波子可以行過其他玩家嘅領地，但不可以在嗰度完結移動，不論該三角形入面有無波子。",
+    ruleNoCaptureTitle: "唔食棋",
+    ruleNoCaptureText: "被跳過嘅波子會留喺棋盤上面，唔會拎走。",
+    languageLabel: "語言：",
+    opponentCountLabel: "電腦對手數量",
+    oneEasyOpponentOption: "1個輕鬆對手",
+    twoEasyOpponentsOption: "2個輕鬆對手",
+    oneNormalOpponentOption: "1個一般對手",
+    twoNormalOpponentsOption: "2個一般對手",
+    resetMoveButton: "重設移動",
+    restartButton: "重新開始",
+    loading: "載入緊遊戲…",
+    selectOwnMarble: "請揀一粒你嘅波子。",
+    selectOwnMarbleWithMoves: "請揀一粒行得郁嘅波子。",
+    selectedPiece: "已經揀咗 ({x}, {y}) 嗰粒波子。請揀標示咗嘅目的地。",
+    jumpContinue: "連續跳躍進行中。按白色波子就可以結束，或者揀標示咗嘅跳躍目的地。",
+    resetMoveHint: "重設移動會將跳緊嘅波子還原去本次跳躍開始前嘅位置。",
+    playerTurn: "輪到 {player}。",
+    playerWon: "{player} 贏咗！",
+    computerThinking: "{player} 諗緊…",
+    computerTurn: "輪到 {player}。",
+    coordinateReadout: "座標 ({x}, {y}) — {region}。",
+    homeRegion: "下方／玩家起點",
+    bottomLeftRegion: "左下",
+    topLeftRegion: "左上",
+    topRegion: "上方",
+    topRightRegion: "右上",
+    bottomRightRegion: "右下",
+    centralHexagon: "中央六角形",
+    humanPlayer: "玩家",
+    computerOne: "電腦甲",
+    computerTwo: "電腦乙",
+    winsLabel: "勝",
+    lossesLabel: "負"
+  }
+};
+var currentLanguage = getLanguageFromQuery();
+function getLanguageFromQuery() {
+  const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+  return SUPPORTED_LANGUAGES.has(requestedLanguage) ? requestedLanguage : "en";
+}
+function getLanguage() {
+  return currentLanguage;
+}
+function t(key, replacements = {}) {
+  let value = translations[currentLanguage]?.[key] ?? translations.en[key] ?? key;
+  for (const [name, replacement] of Object.entries(replacements)) {
+    value = value.replaceAll(`{${name}}`, String(replacement));
+  }
+  return value;
+}
+function replaceLanguageInUrl(language) {
+  const url = new URL(window.location.href);
+  if (language === "en") {
+    url.searchParams.delete("lang");
+  } else {
+    url.searchParams.set("lang", language);
+  }
+  window.history.replaceState(
+    { language },
+    "",
+    `${url.pathname}${url.search}${url.hash}`
+  );
+}
+function setLanguage(language, { updateUrl = true } = {}) {
+  currentLanguage = SUPPORTED_LANGUAGES.has(language) ? language : "en";
+  if (updateUrl) {
+    replaceLanguageInUrl(currentLanguage);
+  }
+  return currentLanguage;
+}
+function installLanguagePopstate(onChange) {
+  window.addEventListener("popstate", () => {
+    setLanguage(getLanguageFromQuery(), { updateUrl: false });
+    onChange?.();
+  });
+}
+
+function createSvgElement(tagName) {
+  return document.createElementNS("http://www.w3.org/2000/svg", tagName);
+}
+function createPolygon(coordinates, className) {
+  const polygon = createSvgElement("polygon");
+  polygon.setAttribute(
+    "points",
+    coordinates.map(([x, y]) => {
+      const point = coordinateToScreen(x, y);
+      return `${point.screenX},${point.screenY}`;
+    }).join(" ")
+  );
+  polygon.setAttribute("class", className);
+  return polygon;
+}
+function getRegionName(cell) {
+  return cell.region === "center" ? t("centralHexagon") : t(cell.armNameKey);
+}
+function createRenderer(elements2, handlers) {
+  const {
+    boardSvg,
+    turnStatus,
+    readout,
+    resetMoveButton,
+    restartButton,
+    opponentCountSelect,
+    totalHolesElement,
+    centralHolesElement,
+    armHolesElement,
+    winCountElement,
+    lossCountElement
+  } = elements2;
+  let lastSnapshot = null;
+  let staticLayersBuilt = false;
+  let guidesLayer = null;
+  let holesLayer = null;
+  let piecesLayer = null;
+  const holeNodes = /* @__PURE__ */ new Map();
+  const pieceNodes = /* @__PURE__ */ new Map();
+  let previousLegalKeys = /* @__PURE__ */ new Set();
+  function ensureStaticLayers(snapshot) {
+    if (staticLayersBuilt) {
+      return;
+    }
+    guidesLayer = createSvgElement("g");
+    guidesLayer.classList.add("guides-layer");
+    holesLayer = createSvgElement("g");
+    holesLayer.classList.add("holes-layer");
+    piecesLayer = createSvgElement("g");
+    piecesLayer.classList.add("pieces-layer");
+    boardSvg.replaceChildren(guidesLayer, holesLayer, piecesLayer);
+    guidesLayer.appendChild(
+      createPolygon(HEX_CORNERS, "central-hexagon-guide")
+    );
+    for (const arm of TRIANGLE_ARMS) {
+      guidesLayer.appendChild(
+        createPolygon(
+          [arm.tip, arm.baseA, arm.baseB],
+          "outer-arm-guide"
+        )
+      );
+    }
+    const cells = [...snapshot.board.cells.values()].sort((first, second) => {
+      const depthDifference = second.x + second.y - (first.x + first.y);
+      return depthDifference || first.x - second.x;
+    });
+    for (const cell of cells) {
+      const point = coordinateToScreen(cell.x, cell.y);
+      const key = coordinateKey(cell.x, cell.y);
+      const hole = createSvgElement("circle");
+      hole.setAttribute("class", "hole");
+      hole.setAttribute("cx", point.screenX);
+      hole.setAttribute("cy", point.screenY);
+      hole.setAttribute("r", HOLE_RADIUS);
+      hole.dataset.cellKey = key;
+      hole.setAttribute("role", "gridcell");
+      hole.setAttribute(
+        "aria-label",
+        t("coordinateReadout", {
+          x: cell.x,
+          y: cell.y,
+          region: getRegionName(cell)
+        })
+      );
+      holesLayer.appendChild(hole);
+      holeNodes.set(key, hole);
+    }
+    staticLayersBuilt = true;
+  }
+  function updateStaticText() {
+    const language = getLanguage();
+    document.documentElement.lang = language === "zh" ? "zh-Hant" : language;
+    document.title = t("documentTitle");
+    document.querySelectorAll("[data-i18n]").forEach((element) => {
+      element.textContent = t(element.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+      element.setAttribute(
+        "aria-label",
+        t(element.dataset.i18nAriaLabel)
+      );
+    });
+    boardSvg.setAttribute("aria-label", t("boardAriaLabel"));
+    resetMoveButton.textContent = t("resetMoveButton");
+    resetMoveButton.title = t("resetMoveHint");
+    restartButton.textContent = t("restartButton");
+    document.querySelectorAll(".language-button").forEach((button) => {
+      const isSelected = button.dataset.language === language;
+      button.setAttribute("aria-pressed", String(isSelected));
+      button.disabled = isSelected;
+    });
+  }
+  function updateBoardSummary(snapshot) {
+    const { board } = snapshot;
+    totalHolesElement.textContent = board.cells.size;
+    let centerCount = 0;
+    let armZeroCount = 0;
+    for (const cell of board.cells.values()) {
+      if (cell.region === "center") {
+        centerCount += 1;
+      }
+      if (cell.region === "arm-0") {
+        armZeroCount += 1;
+      }
+    }
+    centralHolesElement.textContent = centerCount;
+    armHolesElement.textContent = armZeroCount;
+  }
+  function updateLegalDestinations(snapshot) {
+    const currentLegalKeys = new Set(
+      snapshot.legalMovesForSelected.map((move) => {
+        return coordinateKey(move.to[0], move.to[1]);
+      })
+    );
+    for (const key of previousLegalKeys) {
+      if (currentLegalKeys.has(key)) {
+        continue;
+      }
+      const hole = holeNodes.get(key);
+      if (hole) {
+        hole.classList.remove("is-legal");
+        hole.setAttribute("role", "gridcell");
+        hole.removeAttribute("tabindex");
+      }
+    }
+    for (const key of currentLegalKeys) {
+      const hole = holeNodes.get(key);
+      if (!hole) {
+        continue;
+      }
+      hole.classList.add("is-legal");
+      if (!snapshot.state.computerThinking) {
+        hole.setAttribute("role", "button");
+        hole.setAttribute("tabindex", "0");
+      }
+    }
+    previousLegalKeys = currentLegalKeys;
+  }
+  function createPieceNode(piece) {
+    const group = createSvgElement("g");
+    group.classList.add("piece", piece.playerId);
+    group.dataset.pieceId = piece.id;
+    group.setAttribute("role", "button");
+    group.setAttribute("tabindex", "0");
+    const body = createSvgElement("circle");
+    body.classList.add("piece-body");
+    body.setAttribute("r", PIECE_RADIUS);
+    const highlight = createSvgElement("circle");
+    highlight.classList.add("piece-highlight");
+    highlight.setAttribute("cx", "-2.5");
+    highlight.setAttribute("cy", "-2.6");
+    highlight.setAttribute("r", "2.5");
+    group.append(body, highlight);
+    return group;
+  }
+  function updatePieceNode(node, piece, snapshot) {
+    const player = snapshot.activePlayers.find(
+      (candidate) => candidate.id === piece.playerId
+    );
+    const point = coordinateToScreen(piece.x, piece.y);
+    node.setAttribute(
+      "transform",
+      `translate(${point.screenX} ${point.screenY})`
+    );
+    node.setAttribute(
+      "aria-label",
+      `${t(player.nameKey)}: (${piece.x}, ${piece.y})`
+    );
+    node.classList.toggle(
+      "is-active",
+      piece.playerId === snapshot.activePlayer.id && !snapshot.state.gameOver && !snapshot.state.computerThinking
+    );
+    node.classList.toggle(
+      "is-selected",
+      piece.id === snapshot.state.selectedPieceId
+    );
+    const awaitingConfirmation = piece.id === snapshot.state.selectedPieceId && snapshot.state.jumpChainActive && snapshot.state.jumpAwaitingConfirmation;
+    node.classList.toggle(
+      "is-awaiting-confirmation",
+      awaitingConfirmation
+    );
+    const body = node.querySelector(".piece-body");
+    if (awaitingConfirmation) {
+      body.setAttribute("fill", "#ffffff");
+    } else {
+      body.removeAttribute("fill");
+    }
+  }
+  function updatePieces(snapshot) {
+    const livePieceIds = /* @__PURE__ */ new Set();
+    for (const piece of snapshot.state.pieces.values()) {
+      livePieceIds.add(piece.id);
+      let node = pieceNodes.get(piece.id);
+      if (!node) {
+        node = createPieceNode(piece);
+        pieceNodes.set(piece.id, node);
+        piecesLayer.appendChild(node);
+      }
+      updatePieceNode(node, piece, snapshot);
+    }
+    for (const [pieceId, node] of pieceNodes) {
+      if (!livePieceIds.has(pieceId)) {
+        node.remove();
+        pieceNodes.delete(pieceId);
+      }
+    }
+  }
+  function updateStatus(snapshot) {
+    opponentCountSelect.value = `${snapshot.state.opponentCount}-${snapshot.state.aiDifficulty}`;
+    opponentCountSelect.disabled = snapshot.state.computerThinking || snapshot.state.jumpChainActive;
+    resetMoveButton.disabled = !(snapshot.state.jumpChainActive && !snapshot.state.computerThinking && snapshot.activePlayer.type === "human" && snapshot.state.jumpChainStart);
+    if (snapshot.state.gameOver) {
+      const message = t("playerWon", {
+        player: t(snapshot.activePlayer.nameKey)
+      });
+      turnStatus.textContent = message;
+      readout.textContent = message;
+      resetMoveButton.disabled = true;
+      return;
+    }
+    if (snapshot.state.computerThinking && snapshot.activePlayer.type === "computer") {
+      turnStatus.textContent = t("computerThinking", {
+        player: t(snapshot.activePlayer.nameKey)
+      });
+      readout.textContent = t("computerTurn", {
+        player: t(snapshot.activePlayer.nameKey)
+      });
+      resetMoveButton.disabled = true;
+      return;
+    }
+    turnStatus.textContent = t("playerTurn", {
+      player: t(snapshot.activePlayer.nameKey)
+    });
+    if (snapshot.state.jumpChainActive && snapshot.state.selectedPieceId) {
+      readout.textContent = t("jumpContinue");
+      return;
+    }
+    if (snapshot.state.selectedPieceId) {
+      const selectedPiece = [...snapshot.state.pieces.values()].find((piece) => piece.id === snapshot.state.selectedPieceId);
+      if (selectedPiece) {
+        readout.textContent = t("selectedPiece", {
+          x: selectedPiece.x,
+          y: selectedPiece.y
+        });
+        return;
+      }
+    }
+    readout.textContent = snapshot.hasAnyLegalMove ? t("selectOwnMarble") : t("selectOwnMarbleWithMoves");
+  }
+  function updateWinLossCount(snapshot) {
+    winCountElement.textContent = snapshot.persistentResults.wins;
+    lossCountElement.textContent = snapshot.persistentResults.losses;
+  }
+  function render(snapshot) {
+    lastSnapshot = snapshot;
+    ensureStaticLayers(snapshot);
+    updateStaticText();
+    updateBoardSummary(snapshot);
+    updateLegalDestinations(snapshot);
+    updatePieces(snapshot);
+    updateStatus(snapshot);
+    updateWinLossCount(snapshot);
+  }
+  function showCoordinateReadout(x, y) {
+    if (!lastSnapshot) {
+      return;
+    }
+    const cell = getCell(lastSnapshot.board, x, y);
+    if (!cell) {
+      return;
+    }
+    readout.textContent = t("coordinateReadout", {
+      x,
+      y,
+      region: getRegionName(cell)
+    });
+  }
+  boardSvg.addEventListener("click", (event) => {
+    const pieceNode = event.target.closest("[data-piece-id]");
+    if (pieceNode) {
+      handlers.onPieceSelected(pieceNode.dataset.pieceId);
+      return;
+    }
+    const holeNode = event.target.closest("[data-cell-key]");
+    if (!holeNode) {
+      return;
+    }
+    const [x, y] = holeNode.dataset.cellKey.split(",").map(Number);
+    if (holeNode.classList.contains("is-legal")) {
+      handlers.onDestinationSelected(x, y);
+    } else {
+      handlers.onReadoutRequested(x, y);
+    }
+  });
+  boardSvg.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    const pieceNode = event.target.closest("[data-piece-id]");
+    if (pieceNode) {
+      event.preventDefault();
+      handlers.onPieceSelected(pieceNode.dataset.pieceId);
+      return;
+    }
+    const holeNode = event.target.closest("[data-cell-key]");
+    if (!holeNode) {
+      return;
+    }
+    event.preventDefault();
+    const [x, y] = holeNode.dataset.cellKey.split(",").map(Number);
+    if (holeNode.classList.contains("is-legal")) {
+      handlers.onDestinationSelected(x, y);
+    } else {
+      handlers.onReadoutRequested(x, y);
+    }
+  });
+  return {
+    render,
+    showCoordinateReadout
+  };
+}
+
+// /input.ts
+var elements = {
+  boardSvg: document.getElementById("board"),
+  turnStatus: document.getElementById("turnStatus"),
+  readout: document.getElementById("readout"),
+  resetMoveButton: document.getElementById("resetMoveButton"),
+  restartButton: document.getElementById("restartButton"),
+  opponentCountSelect: document.getElementById("opponentCount"),
+  totalHolesElement: document.getElementById("totalHoles"),
+  centralHolesElement: document.getElementById("centralHoles"),
+  armHolesElement: document.getElementById("armHoles"),
+  winCountElement: document.getElementById("winCount"),
+  lossCountElement: document.getElementById("lossCount")
+};
+for (const [name, element] of Object.entries(elements)) {
+  if (!element) {
+    throw new Error(`Missing required HTML element: ${name}`);
+  }
+}
+var game = createGame();
+var renderer = createRenderer(elements, {
+  onPieceSelected: (pieceId) => game.selectPiece(pieceId),
+  onDestinationSelected: (destinationX, destinationY) => {
+    game.applyHumanMove(destinationX, destinationY);
+  },
+  onReadoutRequested: (x, y) => renderer.showCoordinateReadout(x, y)
+});
+var renderQueued = false;
+function requestRender() {
+  if (renderQueued) {
+    return;
+  }
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    renderer.render(game.getSnapshot());
+  });
+}
+var COMPUTER_THINKING_DELAY = 420;
+var COMPUTER_JUMP_DELAY = 310;
+function playComputerMoveSequence(moves, moveIndex, scheduledTurnToken) {
+  const snapshot = game.getSnapshot();
+  if (snapshot.state.gameOver || snapshot.state.turnToken !== scheduledTurnToken) {
+    game.setComputerThinking(false);
+    return;
+  }
+  if (moveIndex >= moves.length) {
+    game.setComputerThinking(false);
+    game.endTurn();
+    return;
+  }
+  game.applyComputerMove(moves[moveIndex]);
+  window.setTimeout(() => {
+    playComputerMoveSequence(moves, moveIndex + 1, scheduledTurnToken);
+  }, COMPUTER_JUMP_DELAY);
+}
+function maybeScheduleComputerTurn() {
+  const snapshot = game.getSnapshot();
+  if (snapshot.state.gameOver || snapshot.activePlayer.type !== "computer" || snapshot.state.computerThinking) {
+    return;
+  }
+  game.setComputerThinking(true);
+  const scheduledTurnToken = snapshot.state.turnToken;
+  window.setTimeout(() => {
+    const currentSnapshot = game.getSnapshot();
+    if (currentSnapshot.state.gameOver || currentSnapshot.state.turnToken !== scheduledTurnToken || currentSnapshot.activePlayer.type !== "computer") {
+      game.setComputerThinking(false);
+      return;
+    }
+    const computerTurn = chooseComputerTurn({
+      position: { pieces: currentSnapshot.state.pieces },
+      board: currentSnapshot.board,
+      player: currentSnapshot.activePlayer,
+      activePlayers: currentSnapshot.activePlayers,
+      playerIndex: currentSnapshot.state.activePlayerIndex,
+      depth: currentSnapshot.activePlayers.length === 2 ? 3 : 2,
+      difficulty: currentSnapshot.state.aiDifficulty
+    });
+    if (!computerTurn) {
+      game.setComputerThinking(false);
+      game.endTurn();
+      return;
+    }
+    playComputerMoveSequence(
+      computerTurn.moves,
+      0,
+      scheduledTurnToken
+    );
+  }, COMPUTER_THINKING_DELAY);
+}
+game.subscribe((event) => {
+  requestRender();
+  if (event.type === "turn-changed") {
+    maybeScheduleComputerTurn();
+  }
+});
+elements.resetMoveButton.addEventListener("click", () => {
+  game.resetCurrentHumanMove();
+});
+elements.restartButton.addEventListener("click", () => {
+  game.resetGame();
+});
+elements.opponentCountSelect.addEventListener("change", (event) => {
+  const [count, difficulty] = event.target.value.split("-");
+  game.setOpponentCount(Number(count));
+  game.setAiDifficulty(difficulty);
+});
+document.querySelectorAll(".language-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    setLanguage(button.dataset.language);
+    renderer.render(game.getSnapshot());
+  });
+});
+installLanguagePopstate(() => {
+  renderer.render(game.getSnapshot());
+});
+renderer.render(game.getSnapshot());
+game.resetGame();
+
   </script>
 </body>
 </html>
