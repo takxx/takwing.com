@@ -41,7 +41,7 @@ const FILES_TO_CACHE = [
   "/vpoker/index.html",
   "/whackamole/index.html",
   "/games/index.html",
-  "/games/ico.svg"
+  "/games/ico.svg",
   "/juegos/index.html",
 ];
 
