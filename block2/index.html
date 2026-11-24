@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Blockus Duo</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --page:#202a35; --panel:#2c3947; --board:#455563; --line:#71818d;
+    --purple:#a879e8; --orange:#f0a24e; --text:#f1f4f6; --muted:#bcc6ce;
+  }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--page); color:var(--text); font:16px system-ui,sans-serif }
+  main { width:min(1100px,100%); margin:auto; padding:16px }
+  header,.toolbar,.players { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap }
+  h1 { margin:0; font-size:clamp(1.5rem,4vw,2.2rem) }
+  button,select { font:inherit; color:var(--text); background:#394957; border:1px solid #61717d; border-radius:8px; padding:9px 12px }
+  button { cursor:pointer; touch-action:manipulation }
+  button:hover { background:#4a5d6c }
+  .layout { display:grid; grid-template-columns:minmax(280px,650px) minmax(220px,1fr); gap:16px; margin-top:14px }
+  .boardwrap,.side { background:var(--panel); border-radius:12px; padding:12px }
+  svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
+  .cell { stroke:#82919c; stroke-width:.55 }
+  .empty { fill:var(--board) }
+  .hint { fill:#fff; fill-opacity:.28; stroke:#fff; stroke-width:.7; cursor:pointer }
+  .hint:hover { fill-opacity:.55 }
+  .last { stroke:#fff; stroke-width:2.4 }
+  .side { display:flex; flex-direction:column; gap:12px; min-height:300px }
+  .players { justify-content:flex-start }
+  .player { padding:8px 10px; border-radius:8px; background:#394957 }
+  .player.active { outline:2px solid white }
+  .player.p1 { color:#d8c2ff } .player.p2 { color:#ffd1a0 }
+  #pieces { display:grid; grid-template-columns:repeat(4,minmax(42px,1fr)); gap:7px }
+  .piece { min-height:52px; padding:5px; display:grid; place-items:center; background:#394957 }
+  .piece.selected { outline:2px solid white }
+  .piece.used { opacity:.3; cursor:default }
+  .piece svg { display:block; width:auto; height:auto; max-width:50px; max-height:50px; overflow:visible }
+  .piece rect { stroke:#fff8; stroke-width:.5 }
+  .controls { display:flex; gap:8px; flex-wrap:wrap }
+  #status { color:var(--muted); min-height:2.5em }
+  .small { color:var(--muted); font-size:.9rem }
+  @media(max-width:720px) {
+    main { padding:10px }
+    .layout { grid-template-columns:1fr }
+    .side { min-height:0 }
+    #pieces { grid-template-columns:repeat(5,minmax(42px,1fr)) }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title">Blockus Duo</h1>
+    <label><span id="languageLabel">Language</span>
+      <select id="language" aria-label="Language">
+        <option value="en">English</option><option value="es">Español</option><option value="zh">繁體中文</option>
+      </select>
+    </label>
+  </header>
+  <div class="toolbar" style="margin-top:12px">
+    <label><span id="modeLabel">Mode</span>
+      <select id="mode"><option value="human">Two players</option><option value="ai">Play against AI</option></select>
+    </label>
+    <button id="newGame">New game</button>
+  </div>
+  <div class="layout">
+    <section class="boardwrap">
+      <svg id="board" viewBox="0 0 560 560" role="img" aria-label="Game board"></svg>
+    </section>
+    <aside class="side">
+      <div class="players">
+        <div id="p1" class="player p1"></div>
+        <div id="p2" class="player p2"></div>
+      </div>
+      <div id="status" aria-live="polite"></div>
+      <div class="controls">
+        <button id="rotate"></button><button id="flip"></button>
+        <button id="pass"></button>
+      </div>
+      <div class="small" id="pieceHelp"></div>
+      <div id="pieces"></div>
+    </aside>
+  </div>
+</main>
+<script>
+(() => {
+  const N=14, S=40, NS="http://www.w3.org/2000/svg";
+  const colors=["#a879e8","#f0a24e"];
+  const translations={
+  const translations = {
+    en: {
+      title: "BlockGrid Duel",
+      language: "Language",
+      mode: "Mode",
+      two: "Two players",
+      ai: "Play against AI",
+      fresh: "New game",
+      rotate: "Rotate",
+      flip: "Flip",
+      pass: "Pass turn",
+      choose: "Choose a block, then place it on a glowing square.",
+      turn: "'s turn",
+      first: "Your first block must cover your starting square.",
+      corner: "A block must touch your own blocks only at the corners, not along the edges.",
+      noMoves: "No legal moves. Turn passed.",
+      win: "Game over",
+      score: "squares left",
+      p1: "Purple",
+      p2: "Orange",
+      help: "Tap a block to select it. Tap it again to rotate; use Flip to mirror. Tap a glowing board square to place it.",
+      aiThinking: "AI is choosing…",
+      placed: "Block placed."
+    },
+    es: {
+      title: "BloqueGrid Duelo",
+      language: "Idioma",
+      mode: "Modo",
+      two: "Dos jugadores",
+      ai: "Jugar contra la IA",
+      fresh: "Nueva partida",
+      rotate: "Girar",
+      flip: "Voltear",
+      pass: "Pasar turno",
+      choose: "Elige un bloque y colócalo en una casilla iluminada.",
+      turn: " juega",
+      first: "El primer bloque debe cubrir tu casilla inicial.",
+      corner: "Un bloque debe tocar a tus propias fichas solo por las esquinas, nunca por los lados.",
+      noMoves: "No hay movimientos legales. Turno pasado.",
+      win: "Fin de la partida",
+      score: "casillas restantes",
+      p1: "Morado",
+      p2: "Naranja",
+      help: "Toca un bloque para seleccionarlo. Tócalo otra vez para girarlo; usa Voltear para reflejarlo. Toca una casilla iluminada para colocarlo.",
+      aiThinking: "La IA está pensando…",
+      placed: "Bloque colocado."
+    },
+    zh: {
+      title: "方塊對決",
+      language: "語言",
+      mode: "模式",
+      two: "二人對戰",
+      ai: "對戰電腦",
+      fresh: "新局",
+      rotate: "轉方向",
+      flip: "反轉",
+      pass: "放棄回合",
+      choose: "揀一塊方塊，擺落發光嘅格度。",
+      turn: "行緊",
+      first: "第一塊方塊一定要覆蓋起步格。",
+      corner: "方塊只可以用角接觸自己嘅方塊，唔可以貼住邊。",
+      noMoves: "冇位行，唯有放棄。",
+      win: "完場",
+      score: "淨低方格",
+      p1: "紫色",
+      p2: "橙色",
+      help: "㩒吓方塊嚟揀選，再㩒就可以轉方向，用「反轉」嚟鏡射。最後㩒發光嘅格嚟擺低。",
+      aiThinking: "電腦諗緊…",
+      placed: "擺好方塊。"
+    }
+  };
+  const pieces = [
+    // 1 monomino
+    [[0,0]],
+    // 1 domino
+    [[0,0],[1,0]],
+    // 2 triominoes
+    [[0,0],[1,0],[2,0]],                 // straight
+    [[0,0],[0,1],[1,1]],                 // L
+    // 5 tetrominoes
+    [[0,0],[1,0],[2,0],[3,0]],           // I
+    [[0,0],[1,0],[0,1],[1,1]],           // O
+    [[0,0],[1,0],[2,0],[1,1]],           // T
+    [[0,0],[0,1],[0,2],[1,2]],           // L
+    [[1,0],[2,0],[0,1],[1,1]],           // S
+    // 12 pentominoes
+    [[1,0],[2,0],[0,1],[1,1],[1,2]],     // F
+    [[0,0],[1,0],[2,0],[3,0],[4,0]],     // I
+    [[0,0],[0,1],[0,2],[0,3],[1,3]],     // L
+    [[0,0],[1,0],[0,1],[1,1],[0,2]],     // P
+    [[0,0],[0,1],[1,1],[1,2],[1,3]],     // N
+    [[0,0],[1,0],[2,0],[1,1],[1,2]],     // T
+    [[0,0],[2,0],[0,1],[1,1],[2,1]],     // U
+    [[0,0],[0,1],[0,2],[1,2],[2,2]],     // V
+    [[0,0],[0,1],[1,1],[1,2],[2,2]],     // W
+    [[1,0],[0,1],[1,1],[2,1],[1,2]],     // X
+    [[0,0],[1,0],[2,0],[3,0],[1,1]],     // Y
+    [[0,0],[1,0],[1,1],[1,2],[2,2]]      // Z
+  ];
+
+  const starts=[[4,4],[9,9]];
+  let board, used, turn, selected, orientation, last, mode="human", lang="en", legal=[];
+  const $=id=>document.getElementById(id);
+  const txt=key=>translations[lang][key];
+  const norm=cells=>{
+    const minX=Math.min(...cells.map(c=>c[0])), minY=Math.min(...cells.map(c=>c[1]));
+    return cells.map(([x,y])=>[x-minX,y-minY]).sort((a,b)=>a[1]-b[1]||a[0]-b[0]);
+  };
+  function oriented(id,o){
+    let c=pieces[id].map(([x,y])=>[x,y]);
+    if(o>=4)c=c.map(([x,y])=>[-x,y]);
+    for(let i=0;i<(o%4);i++)c=c.map(([x,y])=>[-y,x]);
+    return norm(c);
+  }
+  function renderBoard(){
+    const svg = $("board");
+    svg.innerHTML = "";
+  
+    const bg = document.createElementNS(NS, "rect");
+    bg.setAttribute("width", 560);
+    bg.setAttribute("height", 560);
+    bg.setAttribute("rx", 8);
+    bg.setAttribute("fill", "#455563");
+    svg.append(bg);
+  
+    // Draw the board cells.
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", x * S + 1);
+        r.setAttribute("y", y * S + 1);
+        r.setAttribute("width", S - 2);
+        r.setAttribute("height", S - 2);
+        r.setAttribute("rx", 3);
+        r.setAttribute("class", "cell");
+  
+        if (board[y][x] === -1) {
+          r.setAttribute("fill", "#455563");
+        } else {
+          r.setAttribute("fill", colors[board[y][x]]);
+        }
+  
+        if (last && last.some(([a, b]) => a === x && b === y)) {
+          r.setAttribute("class", "cell last");
+        }
+  
+        if (board[y][x] === -1 &&
+            x === starts[turn][0] && y === starts[turn][1]) {
+          r.setAttribute("stroke", "#fff");
+          r.setAttribute("stroke-width", "2");
+        }
+  
+        svg.append(r);
+      }
+    }
+  
+    // Draw the full silhouette for every legal placement in the current orientation.
+    if (selected !== null && !isAITurn()) {
+      const shape = oriented(selected, orientation);
+      const silhouetteColors = [
+        "#54d6c7", "#ffd166", "#ff6b8a", "#7db7ff",
+        "#c79bff", "#8ee08e", "#ffad66", "#f28cff"
+      ];
+  
+      legal.forEach(({ x, y }, index) => {
+        const color = silhouetteColors[index % silhouetteColors.length];
+  
+        shape.forEach(([dx, dy]) => {
+          const r = document.createElementNS(NS, "rect");
+          r.setAttribute("x", (x + dx) * S + 1);
+          r.setAttribute("y", (y + dy) * S + 1);
+          r.setAttribute("width", S - 2);
+          r.setAttribute("height", S - 2);
+          r.setAttribute("rx", 3);
+          r.setAttribute("fill", color);
+          r.setAttribute("fill-opacity", "0.42");
+          r.setAttribute("stroke", color);
+          r.setAttribute("stroke-width", "1.5");
+          r.style.cursor = "pointer";
+  
+          r.addEventListener("click", () => placeAt(x, y));
+          svg.append(r);
+        });
+      });
+    }
+  }
+  function renderPieces(){
+    const box=$("pieces");box.innerHTML="";
+    pieces.forEach((_,i)=>{
+      const b=document.createElement("button");b.className="piece"+(used[turn][i]?" used":"")+(selected===i?" selected":"");
+      b.disabled=used[turn][i]||isAITurn();
+      const c=oriented(i,selected===i?orientation:0), maxX=Math.max(...c.map(a=>a[0]))+1,maxY=Math.max(...c.map(a=>a[1]))+1;
+      const cellSize = 10;
+      const s = document.createElementNS(NS, "svg");
+      s.setAttribute("viewBox", `0 0 ${maxX * cellSize} ${maxY * cellSize}`);
+      s.setAttribute("width", maxX * cellSize);
+      s.setAttribute("height", maxY * cellSize);
+      c.forEach(([x, y]) => {
+        const r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", x * cellSize + 0.5);
+        r.setAttribute("y", y * cellSize + 0.5);
+        r.setAttribute("width", cellSize - 1);
+        r.setAttribute("height", cellSize - 1);
+        r.setAttribute("fill", colors[turn]);
+        s.append(r);
+      });
+      b.append(s);b.onclick=()=>{if(selected===i)orientation=(orientation+1)%8;else{selected=i;orientation=0;}update();};
+      box.append(b);
+    });
+  }
+  function isAITurn(){return mode==="ai"&&turn===1}
+  function canPlace(id,x,y,o){
+    const c=oriented(id,o), own=turn;
+    let coversStart=false, touchesCorner=false;
+    for(const [dx,dy] of c){
+      const a=x+dx,b=y+dy;
+      if(a<0||b<0||a>=N||b>=N||board[b][a]!==-1)return false;
+      if(a===starts[own][0]&&b===starts[own][1])coversStart=true;
+      for(const [ox,oy] of [[1,0],[-1,0],[0,1],[0,-1]])
+        if(a+ox>=0&&a+ox<N&&b+oy>=0&&b+oy<N&&board[b+oy][a+ox]===own)return false;
+      for(const [ox,oy] of [[1,1],[1,-1],[-1,1],[-1,-1]])
+        if(a+ox>=0&&a+ox<N&&b+oy>=0&&b+oy<N&&board[b+oy][a+ox]===own)touchesCorner=true;
+    }
+    const hasAny=board.some(row=>row.includes(own));
+    return hasAny?touchesCorner:coversStart;
+  }
+  function findLegal(){
+    legal = [];
+    if (selected === null || isAITurn()) return;
+  
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        if (canPlace(selected, x, y, orientation)) {
+          legal.push({ x, y, o: orientation });
+        }
+      }
+    }
+  }
+  function placeAt(x,y){
+    if(selected===null||isAITurn())return;
+    const p=legal.find(q=>q.x===x&&q.y===y); if(!p)return;
+    const coords=oriented(selected,p.o).map(([dx,dy])=>[x+dx,y+dy]);
+    coords.forEach(([a,b])=>board[b][a]=turn);
+    used[turn][selected]=true;last=coords;selected=null;orientation=0;advance();
+  }
+  function movesFor(player){
+    const result=[]; const oldTurn=turn; turn=player;
+    pieces.forEach((_,id)=>{if(used[player][id])return;
+      for(let o=0;o<8;o++)for(let y=0;y<N;y++)for(let x=0;x<N;x++)
+        if(canPlace(id,x,y,o))result.push({id,x,y,o});
+    });
+    turn=oldTurn;return result;
+  }
+  function advance(){
+    turn=1-turn;selected=null;orientation=0;
+    if(!movesFor(turn).length){
+      if(!movesFor(1-turn).length){finish();return;}
+      $("status").textContent=txt("noMoves");turn=1-turn;
+    }else $("status").textContent=txt("choose");
+    update();
+    if(isAITurn())setTimeout(aiMove,250);
+  }
+  function aiMove(){
+    const moves=movesFor(1);
+    if(!moves.length){advance();return;}
+    // Prefer larger pieces and placements nearer the middle.
+    moves.sort((a,b)=>{
+      const score=m=>pieces[m.id].length*20-(Math.abs(m.x+2-N/2)+Math.abs(m.y+2-N/2));
+      return score(b)-score(a);
+    });
+    const m=moves[Math.floor(Math.random()*Math.min(12,moves.length))];
+    const cells=oriented(m.id,m.o).map(([dx,dy])=>[m.x+dx,m.y+dy]);
+    cells.forEach(([x,y])=>board[y][x]=1);
+    used[1][m.id]=true;last=cells;advance();
+  }
+  function finish(){
+    const counts=used.map(u=>u.reduce((n,v,i)=>n+(v?pieces[i].length:0),0));
+    $("status").textContent=`${txt("win")} — ${txt("p1")}: ${counts[0]} ${txt("score")}; ${txt("p2")}: ${counts[1]} ${txt("score")}`;
+    selected=null;update();
+  }
+  function update(){
+    document.documentElement.lang=lang;
+    $("title").textContent=txt("title");document.title=txt("title");
+    $("languageLabel").textContent=txt("language");$("modeLabel").textContent=txt("mode");
+    $("newGame").textContent=txt("fresh");$("rotate").textContent=txt("rotate");
+    $("flip").textContent=txt("flip");$("pass").textContent=txt("pass");
+    $("pieceHelp").textContent=txt("help");
+    $("mode").options[0].text=txt("two");$("mode").options[1].text=txt("ai");
+    $("p1").textContent=txt("p1");$("p2").textContent=txt("p2");
+    $("p1").classList.toggle("active",turn===0);$("p2").classList.toggle("active",turn===1);
+    if(!$("status").textContent||$("status").textContent===txt("choose"))$("status").textContent=isAITurn()?txt("aiThinking"):txt("choose");
+    findLegal();renderBoard();renderPieces();
+    $("rotate").disabled=selected===null||isAITurn();
+    $("flip").disabled=selected===null||isAITurn();
+    $("pass").disabled=isAITurn();
+  }
+  function reset(){
+    board=Array.from({length:N},()=>Array(N).fill(-1));
+    used=[pieces.map(()=>false),pieces.map(()=>false)];
+    turn=0;selected=null;orientation=0;last=null;$("status").textContent=txt("choose");update();
+  }
+  $("rotate").onclick=()=>{if(selected!==null){orientation=(orientation+1)%8;update();}};
+  $("flip").onclick=()=>{if(selected!==null){orientation=(orientation+4)%8;update();}};
+  $("pass").onclick=()=>{if(!isAITurn())advance();};
+  $("newGame").onclick=reset;
+  $("mode").onchange=e=>{mode=e.target.value;reset();};
+  $("language").onchange = e => {
+    lang = e.target.value;
+    localStorage.setItem("blockus-lang", lang);
+    $("status").textContent = txt("choose");
+    update();
+  };
+  const queryLang=new URLSearchParams(location.search).get("lang");
+  const saved=localStorage.getItem("blockus-lang");
+  const browser=(navigator.language||"en").toLowerCase();
+  lang=["en","es","zh"].includes(queryLang)?queryLang:
+       ["en","es","zh"].includes(saved)?saved:
+       browser.startsWith("es")?"es":browser.startsWith("zh")?"zh":"en";
+  $("language").value=lang;
+  reset();
+})();
+</script>
+</body>
+</html>

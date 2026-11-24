@@ -5,6 +5,7 @@ const FILES_TO_CACHE = [
   "/2048/index.html",
   "/addoku/index.html",
   "/alquerque/index.html",
+  "/block2/index.html",
   "/brick/index.html",
   "/checkers/index.html",
   "/chromo/index.html",
