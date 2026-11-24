@@ -5,7 +5,7 @@ const FILES_TO_CACHE = [
   "./index.html",
   "./style.css",
   "./script.js",
-  ".path.json",
+  "./path.json",
   "/util/wordlist/en.json"
 ];
 

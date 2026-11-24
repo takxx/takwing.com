@@ -1,4 +1,4 @@
-const CACHE_PREFIX = "picto-";
+const CACHE_PREFIX = "puzzle15-";
 const CACHE_NAME = `${CACHE_PREFIX}261124`;
 const FILES_TO_CACHE = [
   "./",
@@ -40,7 +40,6 @@ self.addEventListener("fetch", (event) => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
 
-    // /snake/?lang=en → /snake/index.html
     if (request.mode === "navigate") {
       const path = url.pathname.endsWith("/")
         ? `${url.pathname}index.html`
