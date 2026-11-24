@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "games-";
-const CACHE_NAME = `${CACHE_PREFIX}261124`;
+const CACHE_NAME = `${CACHE_PREFIX}261125`;
 
 const FILES_TO_CACHE = [
   "/2048/index.html",
