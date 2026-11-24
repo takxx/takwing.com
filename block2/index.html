@@ -5,65 +5,101 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Blockus Duo</title>
 <style>
-  :root {
-    color-scheme: dark;
-    --page:#202a35; --panel:#2c3947; --board:#455563; --line:#71818d;
-    --purple:#a879e8; --orange:#f0a24e; --text:#f1f4f6; --muted:#bcc6ce;
-  }
-  * { box-sizing:border-box }
-  body { margin:0; background:var(--page); color:var(--text); font:16px system-ui,sans-serif }
-  main { width:min(1100px,100%); margin:auto; padding:16px }
-  header,.toolbar,.players { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap }
-  h1 { margin:0; font-size:clamp(1.5rem,4vw,2.2rem) }
-  button,select { font:inherit; color:var(--text); background:#394957; border:1px solid #61717d; border-radius:8px; padding:9px 12px }
-  button { cursor:pointer; touch-action:manipulation }
-  button:hover { background:#4a5d6c }
-  .layout { display:grid; grid-template-columns:minmax(280px,650px) minmax(220px,1fr); gap:16px; margin-top:14px }
-  .boardwrap,.side { background:var(--panel); border-radius:12px; padding:12px }
-  svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
-  .cell { stroke:#82919c; stroke-width:.55 }
-  .empty { fill:var(--board) }
-  .hint { fill:#fff; fill-opacity:.28; stroke:#fff; stroke-width:.7; cursor:pointer }
-  .hint:hover { fill-opacity:.55 }
-  .last { stroke:#fff; stroke-width:2.4 }
-  .side { display:flex; flex-direction:column; gap:12px; min-height:300px }
-  .players { justify-content:flex-start }
-  .player { padding:8px 10px; border-radius:8px; background:#394957 }
-  .player.active { outline:2px solid white }
-  .player.p1 { color:#d8c2ff } .player.p2 { color:#ffd1a0 }
-  #pieces { display:grid; grid-template-columns:repeat(4,minmax(42px,1fr)); gap:7px }
-  .piece { min-height:52px; padding:5px; display:grid; place-items:center; background:#394957 }
-  .piece.selected { outline:2px solid white }
-  .piece.used { opacity:.3; cursor:default }
-  .piece svg { display:block; width:auto; height:auto; max-width:50px; max-height:50px; overflow:visible }
-  .piece rect { stroke:#fff8; stroke-width:.5 }
-  .controls { display:flex; gap:8px; flex-wrap:wrap }
-  #status { color:var(--muted); min-height:2.5em }
-  .small { color:var(--muted); font-size:.9rem }
-  @media(max-width:720px) {
-    main { padding:10px }
-    .layout { grid-template-columns:1fr }
-    .side { min-height:0 }
-    #pieces { grid-template-columns:repeat(5,minmax(42px,1fr)) }
-  }
+:root {
+  color-scheme: dark;
+  --page:#202a35; --panel:#2c3947; --board:#455563; --line:#71818d;
+  --purple:#a879e8; --orange:#f0a24e; --text:#f1f4f6; --muted:#bcc6ce;
+}
+* { box-sizing:border-box }
+body { margin:0; background:var(--page); color:var(--text); font:16px system-ui,sans-serif }
+main { width:min(1100px,100%); margin:auto; padding:16px }
+header,.toolbar,.players { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap }
+h1 { margin:0; font-size:clamp(1.5rem,4vw,2.2rem) }
+button,select { font:inherit; color:var(--text); background:#394957; border:1px solid #61717d; border-radius:8px; padding:9px 12px }
+button { cursor:pointer; touch-action:manipulation }
+button:hover { background:#4a5d6c }
+.layout { display:grid; grid-template-columns:minmax(280px,650px) minmax(220px,1fr); gap:16px; margin-top:14px }
+.boardwrap,.side { background:var(--panel); border-radius:12px; padding:12px }
+svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
+.cell { stroke:#82919c; stroke-width:.55 }
+.empty { fill:var(--board) }
+.hint { fill:#fff; fill-opacity:.28; stroke:#fff; stroke-width:.7; cursor:pointer }
+.hint:hover { fill-opacity:.55 }
+.last { stroke:#fff; stroke-width:2.4 }
+.side { display:flex; flex-direction:column; gap:12px; min-height:300px }
+.players { justify-content:flex-start }
+.player { padding:8px 10px; border-radius:8px; background:#394957 }
+.player.active { outline:2px solid white }
+.player.p1 { color:#d8c2ff } .player.p2 { color:#ffd1a0 }
+#pieces { display:grid; grid-template-columns:repeat(4,minmax(42px,1fr)); gap:7px }
+.piece { min-height:52px; padding:5px; display:grid; place-items:center; background:#394957 }
+.piece.selected { outline:2px solid white }
+.piece.used { opacity:.3; cursor:default }
+.piece svg { display:block; width:auto; height:auto; max-width:50px; max-height:50px; overflow:visible }
+.piece rect { stroke:#fff8; stroke-width:.5 }
+.controls { display:flex; gap:8px; flex-wrap:wrap }
+#status { color:var(--muted); min-height:2.5em }
+.small { color:var(--muted); font-size:.9rem }
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #18212bdc;
+}
+.overlay[hidden] {
+  display: none;
+}
+.start-card {
+  width: min(480px, 100%);
+  padding: 24px;
+  border: 1px solid #61717d;
+  border-radius: 14px;
+  background: var(--panel);
+}
+.start-card h1 { margin: 0 0 12px }
+.start-card h2 { margin: 20px 0 8px; font-size: 1rem }
+.start-card p { color: var(--muted); line-height: 1.5 }
+.choice-row { display: flex; flex-wrap: wrap; gap: 8px }
+.choice-row button.selected { outline: 2px solid white }
+.start-button { margin-top: 22px; width: 100%; background: #526777 }
+@media(max-width:720px) {
+  main { padding:10px }
+  .layout { grid-template-columns:1fr }
+  .side { min-height:0 }
+  #pieces { grid-template-columns:repeat(5,minmax(42px,1fr)) }
+}
 </style>
 </head>
 <body>
+<div id="startOverlay" class="overlay">
+  <section class="start-card" aria-labelledby="startTitle">
+    <h1 id="startTitle"></h1>
+    <p id="startInstructions"></p>
+
+    <h2 id="startModeLabel"></h2>
+    <div class="choice-row">
+      <button type="button" data-mode="human" id="chooseHuman"></button>
+      <button type="button" data-mode="ai" id="chooseAI"></button>
+    </div>
+
+    <h2 id="startLanguageLabel"></h2>
+    <div class="choice-row language-choices">
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="es">Español</button>
+      <button type="button" data-lang="zh">中文</button>
+    </div>
+
+    <button type="button" id="startGame" class="start-button"></button>
+  </section>
+</div>
 <main>
   <header>
     <h1 id="title">Blockus Duo</h1>
-    <label><span id="languageLabel">Language</span>
-      <select id="language" aria-label="Language">
-        <option value="en">English</option><option value="es">Español</option><option value="zh">繁體中文</option>
-      </select>
-    </label>
+    <button id="newGame"></button>
   </header>
-  <div class="toolbar" style="margin-top:12px">
-    <label><span id="modeLabel">Mode</span>
-      <select id="mode"><option value="human">Two players</option><option value="ai">Play against AI</option></select>
-    </label>
-    <button id="newGame">New game</button>
-  </div>
   <div class="layout">
     <section class="boardwrap">
       <svg id="board" viewBox="0 0 560 560" role="img" aria-label="Game board"></svg>
@@ -89,6 +125,10 @@
   const colors=["#a879e8","#f0a24e"];
   const translations = {
     en: {
+      instructions: "Place pieces so they touch your own pieces only at the corners. Your first piece must cover your starting square. Use Rotate and Flip before placing.",
+      chooseMode: "Choose a play mode",
+      chooseLanguage: "Choose a language",
+      start: "Start game",
       title: "BlockGrid Duel",
       language: "Language",
       mode: "Mode",
@@ -114,6 +154,10 @@
       placed: "Block placed."
     },
     es: {
+      instructions: "Coloca las piezas de modo que solo toquen las tuyas por las esquinas. La primera pieza debe cubrir tu casilla inicial. Gira o voltea las piezas antes de colocarlas.",
+      chooseMode: "Elige el modo de juego",
+      chooseLanguage: "Elige un idioma",
+      start: "Empezar partida",
       title: "BloqueGrid Duelo",
       language: "Idioma",
       mode: "Modo",
@@ -139,6 +183,10 @@
       placed: "Bloque colocado."
     },
     zh: {
+      instructions: "放置拼片時，只可與自己的拼片角對角相接。第一塊拼片必須覆蓋起始格。放置前可旋轉或翻轉拼片。",
+      chooseMode: "選擇遊戲模式",
+      chooseLanguage: "選擇語言",
+      start: "開始遊戲",
       title: "方塊對決",
       language: "語言",
       mode: "模式",
@@ -194,7 +242,8 @@
   ];
 
   const starts=[[4,4],[9,9]];
-  let board, used, turn, selected, orientation, last, mode="human", lang="en", legal=[];
+  let board, used, turn, selected, orientation, last;
+  let mode = "ai", lang = "en", legal = [], gameStarted = false;
   const $=id=>document.getElementById(id);
   const txt=key=>translations[lang][key];
   const norm=cells=>{
@@ -385,22 +434,18 @@
       const winnerName = winner === 0 ? txt("p1") : txt("p2");
       result = `${winnerName} ${txt("wins")}`;
     }
-  
     $("status").textContent =
       `${txt("win")} — ${result}. ${txt("p1")}: ${counts[0]} ${txt("score")}; ` +
       `${txt("p2")}: ${counts[1]} ${txt("score")}`;
-  
     selected = null;
     update();
   }
   function update(){
     document.documentElement.lang=lang;
     $("title").textContent=txt("title");document.title=txt("title");
-    $("languageLabel").textContent=txt("language");$("modeLabel").textContent=txt("mode");
     $("newGame").textContent=txt("fresh");$("rotate").textContent=txt("rotate");
     $("flip").textContent=txt("flip");$("pass").textContent=txt("pass");
     $("pieceHelp").textContent=txt("help");
-    $("mode").options[0].text=txt("two");$("mode").options[1].text=txt("ai");
     $("p1").textContent=txt("p1");$("p2").textContent=txt("p2");
     $("p1").classList.toggle("active",turn===0);$("p2").classList.toggle("active",turn===1);
     if(!$("status").textContent||$("status").textContent===txt("choose"))$("status").textContent=isAITurn()?txt("aiThinking"):txt("choose");
@@ -408,6 +453,23 @@
     $("rotate").disabled=selected===null||isAITurn();
     $("flip").disabled=selected===null||isAITurn();
     $("pass").disabled=isAITurn();
+  }
+  function updateOverlay(){
+    $("startTitle").textContent = txt("title");
+    $("startInstructions").textContent = txt("instructions");
+    $("startModeLabel").textContent = txt("chooseMode");
+    $("startLanguageLabel").textContent = txt("chooseLanguage");
+    $("chooseHuman").textContent = txt("two");
+    $("chooseAI").textContent = txt("ai");
+    $("startGame").textContent = txt("start");  
+    document.querySelectorAll("[data-mode]").forEach(button => {
+      button.classList.toggle("selected", button.dataset.mode === mode);
+    });
+    document.querySelectorAll("[data-lang]").forEach(button => {
+      button.classList.toggle("selected", button.dataset.lang === lang);
+    });
+    $("title").textContent = txt("title");
+    document.title = txt("title");
   }
   function reset(){
     board=Array.from({length:N},()=>Array(N).fill(-1));
@@ -418,21 +480,36 @@
   $("flip").onclick=()=>{if(selected!==null){orientation=(orientation+4)%8;update();}};
   $("pass").onclick=()=>{if(!isAITurn())advance();};
   $("newGame").onclick=reset;
-  $("mode").onchange=e=>{mode=e.target.value;reset();};
-  $("language").onchange = e => {
-    lang = e.target.value;
-    localStorage.setItem("blockus-lang", lang);
-    $("status").textContent = txt("choose");
-    update();
+  document.querySelectorAll("[data-mode]").forEach(button => {
+    button.addEventListener("click", () => {
+      mode = button.dataset.mode;
+      updateOverlay();
+    });
+  });  
+  document.querySelectorAll("[data-lang]").forEach(button => {
+    button.addEventListener("click", () => {
+      lang = button.dataset.lang;
+      localStorage.setItem("blockus-lang", lang);
+      updateOverlay();
+      if (gameStarted) update();
+    });
+  });  
+  $("startGame").onclick = () => {
+    gameStarted = true;
+    $("startOverlay").hidden = true;
+    reset();
+  };  
+  $("newGame").onclick = () => {
+    $("startOverlay").hidden = false;
+    updateOverlay();
   };
   const queryLang=new URLSearchParams(location.search).get("lang");
   const saved=localStorage.getItem("blockus-lang");
   const browser=(navigator.language||"en").toLowerCase();
   lang=["en","es","zh"].includes(queryLang)?queryLang:
        ["en","es","zh"].includes(saved)?saved:
-       browser.startsWith("es")?"es":browser.startsWith("zh")?"zh":"en";
-  $("language").value=lang;
-  reset();
+       browser.startsWith("es")?"es":browser.startsWith("zh")?"zh":"en";  
+  updateOverlay();
 })();
 </script>
 </body>
