@@ -1,220 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title id="pageTitle">Casino Bingo Card Generator</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title id="pageTitle">Casino Bingo Card Generator</title>
 
-  <style>
-    :root {
-      --casino-green: #075b38;
-      --dark-green: #043b25;
-      --gold: #f6c453;
-      --card-cream: #f4eedf;
-    }
+<style>
+  :root {
+    --casino-green: #075b38;
+    --dark-green: #043b25;
+    --gold: #f6c453;
+    --card-cream: #f4eedf;
+  }
 
-    * {
-      box-sizing: border-box;
-    }
+  * {
+    box-sizing: border-box;
+  }
 
-    body {
-      min-height: 100vh;
-      margin: 0;
-      padding: 24px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: Arial, Helvetica, sans-serif;
-      color: white;
-      background:
-        radial-gradient(
-          circle at center,
-          rgba(255, 255, 255, 0.06) 1px,
-          transparent 1px
-        ),
-        linear-gradient(
-          135deg,
-          #087044,
-          var(--casino-green) 50%,
-          #034227
-        );
-      background-size: 18px 18px, cover;
-    }
+  body {
+    min-height: 100vh;
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(255, 255, 255, 0.06) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        135deg,
+        #087044,
+        var(--casino-green) 50%,
+        #034227
+      );
+    background-size: 18px 18px, cover;
+  }
 
-    .game-container {
-max-width: 400px;
-width: 100%;
-      padding: 28px;
-      text-align: center;
-      border: 3px solid var(--gold);
-      border-radius: 20px;
-      background: rgba(2, 48, 29, 0.86);
-      box-shadow:
-        0 18px 45px rgba(0, 0, 0, 0.4),
-        inset 0 0 25px rgba(255, 255, 255, 0.05);
-    }
+  .game-container {
+    max-width: 400px;
+    width: 100%;
+    padding: 28px;
+    text-align: center;
+    border: 3px solid var(--gold);
+    border-radius: 20px;
+    background: rgba(2, 48, 29, 0.86);
+    box-shadow:
+      0 18px 45px rgba(0, 0, 0, 0.4),
+      inset 0 0 25px rgba(255, 255, 255, 0.05);
+  }
 
-    .top-bar {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 10px;
-    }
+  .top-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
 
-    .lang-select {
-      padding: 6px 12px;
-      border: 2px solid var(--gold);
-      border-radius: 999px;
-      background: #02301d;
-      color: var(--gold);
-      font-size: 0.9rem;
-      font-weight: bold;
-      cursor: pointer;
-    }
+  .lang-select {
+    padding: 6px 12px;
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    background: #02301d;
+    color: var(--gold);
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+  }
 
-    h1 {
-      margin: 0 0 8px;
-      color: var(--gold);
-      font-size: clamp(2rem, 7vw, 3.6rem);
-      letter-spacing: 7px;
-      text-shadow: 2px 3px 0 #633e0a;
-    }
+  h1 {
+    margin: 0 0 8px;
+    color: var(--gold);
+    font-size: clamp(2rem, 7vw, 3.6rem);
+    letter-spacing: 7px;
+    text-shadow: 2px 3px 0 #633e0a;
+  }
 
-    .subtitle {
-      margin: 0 0 24px;
-      color: #d7f1dc;
-    }
+  .subtitle {
+    margin: 0 0 24px;
+    color: #d7f1dc;
+  }
 
-    .bingo-card {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 7px;
-      width: 100%;
-      max-width: 570px;
-      margin: 0 auto 24px;
-      padding: 10px;
-      border: 5px solid var(--gold);
-      border-radius: 14px;
-      background: #efe6ce;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-    }
+  .bingo-card {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 7px;
+    width: 100%;
+    max-width: 570px;
+    margin: 0 auto 24px;
+    padding: 10px;
+    border: 5px solid var(--gold);
+    border-radius: 14px;
+    background: #efe6ce;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  }
 
-    .column-header,
-    .cell {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 8px;
-    }
+  .column-header,
+  .cell {
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+  }
 
-    .column-header {
-      min-height: 54px;
-      color: white;
-      font-size: clamp(1.3rem, 5vw, 2rem);
-      font-weight: bold;
-      text-shadow: 1px 2px 2px rgba(0, 0, 0, 0.4);
-    }
+  .column-header {
+    min-height: 54px;
+    color: white;
+    font-size: clamp(1.3rem, 5vw, 2rem);
+    font-weight: bold;
+    text-shadow: 1px 2px 2px rgba(0, 0, 0, 0.4);
+  }
 
-    .header-b { background: #d83b3b; }
-    .header-i { background: #db961d; }
-    .header-n { background: #188aca; }
-    .header-g { background: #35933b; }
-    .header-o { background: #8a4fc7; }
+  .header-b { background: #d83b3b; }
+  .header-i { background: #db961d; }
+  .header-n { background: #188aca; }
+  .header-g { background: #35933b; }
+  .header-o { background: #8a4fc7; }
 
-    .cell {
-      aspect-ratio: 1 / 1;
-      padding: 5px;
-      color: #173d2b;
-      background: var(--card-cream);
-      font-size: clamp(1.15rem, 5.5vw, 2.1rem);
-      font-weight: bold;
-      line-height: 1.15;
-      text-align: center;
-      cursor: pointer;
-      user-select: none;
-      transition:
-        transform 0.15s ease,
-        filter 0.15s ease,
-        background 0.15s ease,
-        color 0.15s ease;
-      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.1);
-    }
+  .cell {
+    aspect-ratio: 1 / 1;
+    padding: 5px;
+    color: #173d2b;
+    background: var(--card-cream);
+    font-size: clamp(1.15rem, 5.5vw, 2.1rem);
+    font-weight: bold;
+    line-height: 1.15;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      transform 0.15s ease,
+      filter 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.1);
+  }
 
-    .cell:hover {
-      transform: scale(1.04);
-      filter: brightness(1.08);
-    }
+  .cell:hover {
+    transform: scale(1.04);
+    filter: brightness(1.08);
+  }
 
-    .cell.selected.col-b { color: white; background: #d83b3b; }
-    .cell.selected.col-i { color: white; background: #db961d; }
-    .cell.selected.col-n { color: white; background: #188aca; }
-    .cell.selected.col-g { color: white; background: #35933b; }
-    .cell.selected.col-o { color: white; background: #8a4fc7; }
+  .cell.selected.col-b { color: white; background: #d83b3b; }
+  .cell.selected.col-i { color: white; background: #db961d; }
+  .cell.selected.col-n { color: white; background: #188aca; }
+  .cell.selected.col-g { color: white; background: #35933b; }
+  .cell.selected.col-o { color: white; background: #8a4fc7; }
 
-    .cell.selected {
-      box-shadow:
-        inset 0 -3px 0 rgba(0, 0, 0, 0.25),
-        0 0 8px rgba(255, 255, 255, 0.45);
-    }
+  .cell.selected {
+    box-shadow:
+      inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+      0 0 8px rgba(255, 255, 255, 0.45);
+  }
 
-    .free-space {
-      color: white;
-      background: #bd2630 !important;
-      font-size: clamp(0.7rem, 2.6vw, 1rem);
-      cursor: default;
-    }
+  .free-space {
+    color: white;
+    background: #bd2630 !important;
+    font-size: clamp(1.5rem, 6vw, 2.2rem);
+    line-height: 1;
+    cursor: default;
+  }
 
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-    }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
 
-    button {
-      padding: 12px 20px;
-      border: 2px solid var(--gold);
-      border-radius: 999px;
-      color: #173d2b;
-      background: var(--gold);
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition:
-        transform 0.15s ease,
-        background 0.15s ease;
-    }
+  button {
+    padding: 12px 20px;
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    color: #173d2b;
+    background: var(--gold);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition:
+      transform 0.15s ease,
+      background 0.15s ease;
+  }
 
-    button:hover {
-      background: #ffe08a;
-      transform: translateY(-2px);
-    }
+  button:hover {
+    background: #ffe08a;
+    transform: translateY(-2px);
+  }
 
-    button.secondary {
-      color: white;
-      background: transparent;
-    }
+  button.secondary {
+    color: white;
+    background: transparent;
+  }
 
-    button.secondary:hover {
-      color: #173d2b;
-      background: var(--gold);
-    }
+  button.secondary:hover {
+    color: #173d2b;
+    background: var(--gold);
+  }
 
-    .status {
-      min-height: 22px;
-      margin-top: 15px;
-      color: #d7f1dc;
-      font-size: 0.95rem;
-    }
+  .status {
+    min-height: 22px;
+    margin-top: 15px;
+    color: #d7f1dc;
+    font-size: 0.95rem;
+  }
 
-    @media (max-width: 500px) {
-      body { padding: 12px; }
-      .game-container { padding: 16px 10px; }
-      .bingo-card { gap: 4px; padding: 6px; border-width: 3px; }
-      .cell, .column-header { border-radius: 5px; }
-      .cell { font-size: clamp(1.35rem, 6.5vw, 2.2rem); padding: 2px; }
-      .free-space { font-size: clamp(0.75rem, 3vw, 1.05rem); }
-    }
-  </style>
+  @media (max-width: 500px) {
+    body { padding: 12px; }
+    .game-container { padding: 16px 10px; }
+    .bingo-card { gap: 4px; padding: 6px; border-width: 3px; }
+    .cell, .column-header { border-radius: 5px; }
+    .cell { font-size: clamp(1.35rem, 6.5vw, 2.2rem); padding: 2px; }
+  }
+</style>
 </head>
 
 <body>
@@ -256,7 +257,7 @@ width: 100%;
         subtitle: "Click a square to highlight it with its column color.",
         generate: "Generate New Card",
         clear: "Clear Marks",
-        free: "FREE",
+        free: "★",
         noMarks: "No squares marked.",
         markedSingle: "1 square marked.",
         markedMultiple: (count) => `${count} squares marked.`
@@ -266,7 +267,7 @@ width: 100%;
         subtitle: "Haz clic en una casilla para resaltarla con el color de su columna.",
         generate: "Generar Nuevo Cartón",
         clear: "Borrar Marcas",
-        free: "GRATIS",
+        free: "★",
         noMarks: "Ninguna casilla marcada.",
         markedSingle: "1 casilla marcada.",
         markedMultiple: (count) => `${count} casillas marcadas.`
@@ -276,7 +277,7 @@ width: 100%;
         subtitle: "點擊方格即可用其直行顏色反白標記。",
         generate: "生成新卡片",
         clear: "清除標記",
-        free: "免費",
+        free: "★",
         noMarks: "未標記任何方格。",
         markedSingle: "已標記 1 個方格。",
         markedMultiple: (count) => `已標記 ${count} 個方格。`
