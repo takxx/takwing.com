@@ -398,6 +398,34 @@ gap: 10px;
 justify-items: center;
 }
 
+.language-selector {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.language-selector button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.language-selector button[aria-pressed="true"] {
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.language-selector[hidden] {
+  display: none;
+}
+
 @media (max-width: 620px) {
 :root {
 --frame: 34px;
@@ -437,13 +465,21 @@ aria-modal="true"
 role="dialog"
 >
 <div class="message-panel">
-<h1 class="message-title" id="messageTitle"></h1>
-<p class="message-text" id="messageText"></p>
+  <h1 class="message-title" id="messageTitle"></h1>
+  <p class="message-text" id="messageText"></p>
 
-<div class="message-actions">
-<button id="primaryAction" type="button"></button>
-<button id="secondaryAction" type="button" hidden></button>
-</div>
+  <div class="message-actions">
+    <button id="primaryAction" type="button"></button>
+    <button id="secondaryAction" type="button" hidden></button>
+  </div>
+
+  <nav class="language-selector" aria-label="Choose language" hidden>
+    <button type="button" data-lang="en">English</button>
+    <span aria-hidden="true">|</span>
+    <button type="button" data-lang="es">Español</button>
+    <span aria-hidden="true">|</span>
+    <button type="button" data-lang="zh">中文</button>
+  </nav>
 </div>
 </section>
 </main>
@@ -1557,7 +1593,17 @@ messageTitle.textContent = title;
 messageText.textContent = description;
 }
 
+function setLanguageSelectorVisibility() {
+  const selector = document.querySelector(".language-selector");
+  if (selector) {
+    selector.hidden = currentMessage !== "start";
+  }
+}
+
 function showStartScreen() {
+currentMessage = "start";
+setLanguageSelectorVisibility();
+
 const isMobile =
 /Mobi|Android/i.test(navigator.userAgent);
 
@@ -1580,6 +1626,8 @@ gameScreen.hidden = false;
 }
 
 function showHoleScreen() {
+currentMessage = "hole";
+setLanguageSelectorVisibility();
 setScreenContent(
 text.holeTitle,
 text.holeText
@@ -1598,6 +1646,8 @@ gameScreen.hidden = false;
 }
 
 function showWinScreen() {
+currentMessage = "win";
+setLanguageSelectorVisibility();
 setScreenContent(
 text.winTitle,
 text.winText
@@ -1673,6 +1723,50 @@ resetBall();
 gameStarted = false;
 showStartScreen();
 }
+
+let currentMessage = "start"; // "start", "hole", or "win"
+
+function renderMessage() {
+  text = messages[currentLang] || messages.en;
+
+  const languageSelector = document.querySelector(".language-selector");
+  if (languageSelector) {
+    languageSelector.hidden = currentMessage !== "start";
+  }
+
+  if (currentMessage === "start") {
+    showStartScreen();
+  } else if (currentMessage === "hole") {
+    showHoleScreen();
+  } else if (currentMessage === "win") {
+    showWinScreen();
+  }
+
+  document.querySelectorAll(".language-selector [data-lang]").forEach(button => {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.lang === currentLang)
+    );
+  });
+}
+
+document.querySelector(".language-selector").addEventListener("click", event => {
+  const button = event.target.closest("[data-lang]");
+  if (!button) return;
+
+  currentLang = button.dataset.lang;
+  renderMessage();
+});
+
+// Call this when the game changes which message is displayed:
+function showMessage(type) {
+  currentMessage = type;
+  renderMessage();
+}
+
+// Initial display
+renderMessage();
+
 
 /* ---------- Gameplay logic ---------- */
 
