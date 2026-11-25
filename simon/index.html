@@ -336,15 +336,54 @@ const translations = {
   }
 };
 
-let language = "en";
+const LANGUAGE_KEY = "hexagonSimonLanguage";
+
+function normalizeLanguage(value) {
+  if (!value) return null;
+
+  const lang = value.toLowerCase();
+  if (lang === "en" || lang.startsWith("en-")) return "en";
+  if (lang === "es" || lang.startsWith("es-")) return "es";
+  if (lang === "zh" || lang.startsWith("zh-")) return "zh-Hant";
+
+  return null;
+}
+
+function getInitialLanguage() {
+  const queryLanguage = normalizeLanguage(
+    new URLSearchParams(window.location.search).get("lang")
+  );
+  if (queryLanguage) return queryLanguage;
+
+  try {
+    const savedLanguage = normalizeLanguage(
+      localStorage.getItem(LANGUAGE_KEY)
+    );
+    if (savedLanguage) return savedLanguage;
+  } catch {
+    // Storage may be unavailable; continue to browser preferences.
+  }
+
+  for (const preference of navigator.languages || [navigator.language]) {
+    const browserLanguage = normalizeLanguage(preference);
+    if (browserLanguage) return browserLanguage;
+  }
+
+  return "en";
+}
+
+let language = getInitialLanguage();
 let text = translations[language];
 
 function applyTranslations() {
   document.documentElement.lang = language;
+  languageSelect.value = language;
+
   document.querySelectorAll("[data-i18n]").forEach(element => {
     const key = element.dataset.i18n;
     if (text[key]) element.textContent = text[key];
   });
+
   board.setAttribute("aria-label", text.boardLabel);
   hexagons.forEach((hex, index) => {
     const prefix = language === "zh-Hant" ? "六角形 " : language === "es" ? "Hexágono " : "Hexagon ";
