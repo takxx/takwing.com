@@ -1,1224 +1,657 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-GB">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#171027">
-<title>Whack-a-Mole!</title>
-<link rel="stylesheet" href="style.css">
+<title>Whack-A-Mole</title>
 <style>
-@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Righteous&display=swap");
-
 :root {
-  color-scheme: dark;
-  --cream: #fff3d2;
-  --pink: #ff4e8a;
-  --yellow: #ffd34e;
-  --blue: #54d8ee;
-  font-family: "Fredoka", system-ui, sans-serif;
+  font-family: "Chalkboard SE", "Comic Sans MS", ui-rounded, system-ui, sans-serif;
+  color: #fff7cf;
+  background: #173c2d;
 }
-
-* {
-  box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
 body {
   min-height: 100vh;
   margin: 0;
-  padding: 32px 16px 40px;
-  color: var(--cream);
-  background:
-    radial-gradient(ellipse at 50% 0%, #433269 0, transparent 55%),
-    repeating-linear-gradient(90deg, transparent 0 58px, #ffffff05 59px 60px),
-    #171027;
+  padding: 16px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 0%, #438746, transparent 60%), #173c2d;
 }
+button { font: inherit; }
 
-button,
-select {
-  font: inherit;
+.cabinet {
+  width: min(100%, 680px);
+  overflow: hidden;
+  border: 8px solid #633719;
+  border-radius: 28px;
+  background: #a95725;
+  box-shadow: 0 18px 0 #3c2417, 0 24px 38px #071b1380;
 }
+.marquee {
+  padding: 18px 20px;
+  text-align: center;
+  color: #69254f;
+  background: linear-gradient(#fff078, #ffac47);
+  border-bottom: 6px solid #713a1b;
+}
+h1 { margin: 0; font-size: clamp(1.7rem, 6vw, 3rem); letter-spacing: .04em; }
+.subtitle { margin: 4px 0 0; font-weight: 800; }
 
-.arcade {
-  width: min(680px, 100%);
-  margin-inline: auto;
+.hud {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 12px;
+  background: #542d1d;
   text-align: center;
 }
-
-.header {
-  margin-bottom: 22px;
-}
-
-.eyebrow {
-  margin: 0 0 5px;
-  color: var(--yellow);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-}
-
-h1 {
-  margin: 0;
-  color: var(--yellow);
-  font-family: "Righteous", "Fredoka", sans-serif;
-  font-size: clamp(2.5rem, 9vw, 4.6rem);
-  line-height: 1;
-  text-shadow: 0 4px 0 #a94c39, 0 8px 20px #0008;
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  color: #e0d2fb;
-}
-
-.machine {
-  position: relative;
-  padding: 18px clamp(12px, 4vw, 28px) 20px;
-  overflow: hidden;
-  border: 4px solid #ffb34f;
-  border-radius: 28px;
-  background: linear-gradient(145deg, #f85b78, #c92770 50%, #862c83);
-  box-shadow:
-    inset 0 0 0 5px #ffffff25,
-    0 12px 0 #531d59,
-    0 22px 40px #0007;
-}
-
-.marquee {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 9px 8px 13px;
-  color: white;
-  font-family: "Righteous", sans-serif;
-  font-size: clamp(1.3rem, 5vw, 2rem);
-  letter-spacing: 0.06em;
-  text-shadow: 0 3px 0 #982354;
-}
-
-.marquee-highlight,
-.marquee-star {
-  color: var(--yellow);
-}
-
-.marquee-star {
-  font-size: 1.2em;
-}
-
-.scoreboard {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
-  padding: 9px;
-  border: 3px solid #4d3a70;
-  border-radius: 15px;
-  background: #17122a;
-  box-shadow: inset 0 3px 9px #0008;
-}
-
 .stat {
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: #38251d;
+  color: #fff19a;
+  font-weight: 900;
+}
+.stat span { display: block; margin-top: 3px; color: #fff; font-size: 1.2rem; }
+
+.yard {
+  padding: clamp(14px, 5vw, 28px);
+  background: radial-gradient(ellipse at 50% 15%, #a5de58, transparent 55%), linear-gradient(#54a943, #28733b);
+}
+
+/* Eight tracks let the four-hole row stagger between the three-hole rows. */
+.holes {
   display: grid;
-  gap: 1px;
-  min-width: 0;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  column-gap: 0;
+  row-gap: clamp(0px, .5vw, 5px);
+  max-width: 560px;
+  margin: auto;
 }
-
-.stat-label {
-  color: #b9acd2;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-
-.stat-value {
-  color: var(--yellow);
-  font-family: "Righteous", sans-serif;
-  font-size: clamp(1.3rem, 5vw, 1.8rem);
-  line-height: 1.1;
-}
-
-.stat-high-score .stat-label,
-.stat-high-score .stat-value {
-  color: var(--pink);
-}
-
-.status {
-  min-height: 1.5em;
-  margin: 9px 0 12px;
-  color: var(--cream);
-  font-size: 0.95rem;
-}
-
-.playfield-frame {
-  position: relative;
-  width: 100%;
-  max-width: 510px;
-  margin: 0 auto 17px;
-  transform: perspective(700px) rotateX(3deg);
-}
-
-.playfield {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(9px, 2.5vw, 18px);
-  width: 100%;
-  margin: 0;
-  padding: clamp(14px, 3vw, 22px);
-  border: 0;
-  border-radius: 13px;
-  background-color: #75432d;
-  background-size: 112px 112px;
-  box-shadow:
-    inset 0 5px 0 #ffffff38,
-    inset 0 -10px 0 #29170d80,
-    0 7px 0 #54291f;
-  clip-path: polygon(9% 0, 91% 0, 100% 100%, 0 100%);
-}
-
-.playfield-outline {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.playfield-outline polygon {
-  fill: none;
-  stroke: #f1bc78;
-  stroke-width: 4px;
-  vector-effect: non-scaling-stroke;
-  stroke-linejoin: round;
-}
-
 .hole {
+  grid-column: span 2;
+  min-width: 0;
+  aspect-ratio: 1.15;
   position: relative;
-  width: 70%;
-  aspect-ratio: 1.3;
-  justify-self: center;
-  overflow: hidden;
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse,
-    #050408 0 55%,
-    #100b12 75%,
-    #1b1118 100%
-  );
-  box-shadow: inset 0 5px 7px #0009, 0 3px 0 #351e18;
-  cursor: pointer;
+  background: transparent;
+  cursor: crosshair;
   touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
 }
+.hole:nth-child(1)  { grid-area: 1 / 2 / 2 / 4; }
+.hole:nth-child(2)  { grid-area: 1 / 4 / 2 / 6; }
+.hole:nth-child(3)  { grid-area: 1 / 6 / 2 / 8; }
+.hole:nth-child(4)  { grid-area: 2 / 1 / 3 / 3; }
+.hole:nth-child(5)  { grid-area: 2 / 3 / 3 / 5; }
+.hole:nth-child(6)  { grid-area: 2 / 5 / 3 / 7; }
+.hole:nth-child(7)  { grid-area: 2 / 7 / 3 / 9; }
+.hole:nth-child(8)  { grid-area: 3 / 2 / 4 / 4; }
+.hole:nth-child(9)  { grid-area: 3 / 4 / 4 / 6; }
+.hole:nth-child(10) { grid-area: 3 / 6 / 4 / 8; }
 
-.hole:nth-child(-n + 3) {
-  width: 64%;
-}
-
-.hole:nth-child(n + 4):nth-child(-n + 6) {
-  width: 67%;
-}
-
-.hole:nth-child(n + 7) {
-  width: 70%;
-}
-
-.hole:focus-visible,
-.action-button:focus-visible,
-select:focus-visible {
-  outline: 3px solid white;
-  outline-offset: 4px;
-}
-
+.hole:focus-visible { outline: 4px solid #fff4a8; outline-offset: 3px; border-radius: 50%; }
+.hole svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .mole {
-  position: absolute;
-  z-index: 1;
-  bottom: -12%;
-  left: 50%;
-  display: grid;
-  width: 75%;
-  aspect-ratio: 1;
-  place-items: center;
-  border: 3px solid #7b3a28;
-  border-radius: 48% 48% 42% 42%;
-  background: linear-gradient(145deg, #d99a60, #a85b3e);
-  box-shadow: inset -7px -7px 0 #713b37, inset 5px 5px 0 #ffcf84;
-  font-size: clamp(2.2rem, 9vw, 3.7rem);
-  line-height: 1;
-  transform: translate(-50%, 115%);
-  transition: transform 150ms ease-out;
-  pointer-events: none;
-}
-
-.mole::before {
-  content: "🐹";
-}
-
-.hole.is-up .mole {
-  transform: translate(-50%, 4%);
-}
-
-.hole.is-hit .mole {
-  transform: translate(-50%, 100%) scale(0.8);
-  transition-duration: 100ms;
-}
-
-.controls {
-  display: flex;
-  justify-content: center;
-}
-
-.action-button {
-  min-height: 48px;
-  padding: 10px 25px;
-  border: 0;
-  border-bottom: 5px solid #c17816;
-  border-radius: 999px;
-  color: #492413;
-  background: var(--yellow);
-  box-shadow: 0 5px 15px #210d3266;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 100ms, filter 100ms;
-  touch-action: manipulation;
-}
-
-.action-button:hover {
-  filter: brightness(1.08);
-}
-
-.action-button:active {
-  transform: translateY(3px);
-  border-bottom-width: 2px;
-}
-
-.cabinet-lights {
-  display: flex;
-  justify-content: center;
-  gap: 13px;
-  margin-top: 18px;
-}
-
-.cabinet-lights i {
-  width: 10px;
-  height: 10px;
-  border: 2px solid #fff9;
-  border-radius: 50%;
-  background: var(--blue);
-  box-shadow: 0 0 10px var(--blue);
-}
-
-.cabinet-lights i:nth-child(odd) {
-  background: var(--yellow);
-  box-shadow: 0 0 10px var(--yellow);
-}
-
-.help {
-  margin: 24px 0 16px;
-  color: #cbbde5;
-  font-size: 0.9rem;
-}
-
-.language-control {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  color: #e0d2fb;
-  font-size: 0.9rem;
-}
-
-.language-control select {
-  max-width: 100%;
-  padding: 8px 30px 8px 11px;
-  border: 1px solid #ffffff42;
-  border-radius: 9px;
-  color: white;
-  background: #302344;
-  cursor: pointer;
-}
-
-.language-control option {
-  color: white;
-  background: #211832;
-}
-
-.round-dialog {
-  width: min(420px, calc(100% - 32px));
-  padding: 28px 24px 24px;
-  border: 3px solid var(--yellow);
-  border-radius: 24px;
-  color: var(--cream);
-  background: linear-gradient(145deg, #34234f, #201832);
-  box-shadow: 0 20px 80px #000b;
-  text-align: center;
-}
-
-.round-dialog::backdrop {
-  background: #10091dcc;
-  backdrop-filter: blur(5px);
-}
-
-.dialog-stars {
-  margin-bottom: 10px;
-  color: var(--yellow);
-  font-size: 1.35rem;
-}
-
-.round-dialog h2 {
-  margin: 5px 0 8px;
-  color: var(--yellow);
-  font-family: "Righteous", sans-serif;
-  font-size: clamp(1.8rem, 8vw, 2.5rem);
-}
-
-.dialog-copy {
-  margin: 0 0 18px;
-  color: #dfd4f0;
-}
-
-.objective {
-  display: grid;
-  gap: 5px;
-  margin-bottom: 16px;
-  padding: 14px;
-  border: 1px solid #ffffff2b;
-  border-radius: 14px;
-  background: #100b2070;
-}
-
-.objective span {
-  color: var(--blue);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-}
-
-.objective strong {
-  color: white;
-  font-size: 1.1rem;
-}
-
-.relaxed-control {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-  padding: 12px 13px;
-  border: 1px solid #ffffff2b;
-  border-radius: 14px;
-  background: #100b2070;
-  text-align: left;
-  cursor: pointer;
-}
-
-/* Important: hide the switch even though .relaxed-control uses display: flex. */
-.relaxed-control[hidden] {
-  display: none !important;
-}
-
-.relaxed-copy {
-  display: grid;
-  gap: 3px;
-}
-
-.relaxed-copy strong {
-  color: white;
-  font-size: 0.98rem;
-}
-
-.relaxed-copy small {
-  color: #cbbde5;
-  font-size: 0.76rem;
-  line-height: 1.3;
-}
-
-.relaxed-control input {
-  position: absolute;
-  right: 13px;
-  width: 48px;
-  height: 27px;
-  margin: 0;
   opacity: 0;
-  cursor: pointer;
-}
-
-.switch-track {
-  position: relative;
-  flex: 0 0 48px;
-  height: 27px;
-  border: 2px solid #9385a9;
-  border-radius: 999px;
-  background: #554b65;
-  transition: background 150ms, border-color 150ms;
+  transform: translateY(48px) scale(.72);
+  transform-origin: center;
+  transition: transform .12s ease-out, opacity .1s ease-out;
   pointer-events: none;
 }
+.hole.up .mole { opacity: 1; transform: translateY(0) scale(1); }
+.hole.hit .mole { transform: translateY(12px) scale(.78); }
+.hit-mark { opacity: 0; font-size: 34px; text-anchor: middle; pointer-events: none; }
+.hole.hit .hit-mark { opacity: 1; }
 
-.switch-track::after {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: white;
-  content: "";
-  transition: transform 150ms;
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #542d1d;
+  color: #fff19a;
+  font-weight: 800;
 }
-
-.relaxed-control input:checked + .switch-track {
-  border-color: var(--blue);
-  background: #20899a;
+.small-button, .choice, .primary {
+  border: 3px solid #713a1b;
+  border-radius: 12px;
+  padding: 9px 14px;
+  background: #ffe05b;
+  color: #51285d;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #9c571d;
 }
+button:hover { filter: brightness(1.08); }
+button:active { transform: translateY(2px); box-shadow: 0 1px 0 #9c571d; }
 
-.relaxed-control input:checked + .switch-track::after {
-  transform: translateX(21px);
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: #10251ed9;
 }
-
-.relaxed-control input:focus-visible + .switch-track {
-  outline: 3px solid white;
-  outline-offset: 3px;
+.overlay[hidden] { display: none; }
+.panel {
+  width: min(100%, 480px);
+  padding: clamp(20px, 5vw, 32px);
+  border: 7px solid #633719;
+  border-radius: 24px;
+  background: linear-gradient(#fff0a1, #ffba57);
+  color: #51285d;
+  text-align: center;
+  box-shadow: 0 12px 0 #301d14;
 }
-
-.dialog-button {
-  width: 100%;
+.overlay-game-title {
+  margin: 0 0 12px;
+  color: #69254f;
+  font-size: clamp(1.8rem, 7vw, 2.6rem);
+  line-height: 1.1;
+  text-shadow: 0 2px #fff19a;
 }
+.panel h2 { margin: 0 0 8px; font-size: clamp(1.5rem, 5vw, 2.2rem); }
+.panel p { line-height: 1.45; }
+.group { margin: 18px 0; }
+.group-label, .notice { color: #713255; font-weight: 900; }
+.group-label { margin-bottom: 8px; }
+.choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+.choice[aria-pressed="true"] { background: #a8e06a; border-color: #416d2d; }
+.primary { margin-top: 10px; padding: 12px 24px; background: #9be95f; font-size: 1.1rem; }
+.notice { min-height: 1.5em; }
 
-@media (max-width: 520px) {
-  .scoreboard {
-    gap: 4px;
-    padding: 8px 5px;
-  }
-
-  .stat-label {
-    font-size: 0.55rem;
-    letter-spacing: 0.06em;
-  }
-
-  .stat-value {
-    font-size: clamp(1.1rem, 5vw, 1.5rem);
-  }
+@media (max-width: 480px) {
+  .hud { grid-template-columns: repeat(3, 1fr); }
+  .footer { align-items: flex-start; font-size: .9rem; }
+  .yard { padding: 12px 8px; }
 }
-
-@media (max-width: 420px) {
-  body {
-    padding: 24px 10px 32px;
-  }
-
-  .machine {
-    padding-inline: 10px;
-    border-radius: 22px;
-  }
-
-  .playfield {
-    gap: 8px;
-    padding: 12px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
-  }
+  *, *::before, *::after { transition-duration: .01ms !important; }
 }
 </style>
 </head>
 <body>
-<main class="arcade">
-  <header class="header">
-    <p class="eyebrow" id="eyebrow">THE MIDWAY ARCADE</p>
-    <h1 id="gameTitle">Whack-a-Mole!</h1>
-    <p class="subtitle" id="subtitle">Step right up and test your reflexes.</p>
+<main class="cabinet">
+  <header class="marquee">
+    <h1 id="game-title"></h1>
+    <p class="subtitle" id="tagline"></p>
   </header>
 
-  <section class="machine" id="machine" aria-label="Whack-a-mole game">
-    <div class="marquee" aria-hidden="true">
-      <span class="marquee-star">★</span>
-      <span id="marqueeMole">MOLE</span>
-      <span class="marquee-highlight" id="marqueeMadness">MADNESS</span>
-      <span class="marquee-star">★</span>
-    </div>
-
-    <div class="scoreboard" id="scoreboard">
-      <div class="stat">
-        <span class="stat-label" id="stageLabel">ROUND</span>
-        <span class="stat-value" id="stage">1</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label" id="targetLabel">TARGET</span>
-        <span class="stat-value" id="target">5</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label" id="scoreLabel">SCORE</span>
-        <span class="stat-value" id="score">0</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label" id="timeLabel">TIME</span>
-        <span class="stat-value" id="time">30</span>
-      </div>
-      <div class="stat stat-high-score">
-        <span class="stat-label" id="highScoreLabel">HIGH SCORE</span>
-        <span class="stat-value" id="highScore">0</span>
-      </div>
-    </div>
-
-    <p class="status" id="status" aria-live="polite"></p>
-
-    <div class="playfield-frame">
-      <section class="playfield" id="playfield" aria-label="Mole holes">
-        <button class="hole" type="button" aria-label="Hole 1">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 2">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 3">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 4">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 5">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 6">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 7">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 8">
-          <span class="mole"></span>
-        </button>
-        <button class="hole" type="button" aria-label="Hole 9">
-          <span class="mole"></span>
-        </button>
-      </section>
-
-      <svg
-        class="playfield-outline"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <polygon points="9,2 91,2 98,98 2,98"></polygon>
-      </svg>
-    </div>
-
-    <div class="controls">
-      <button class="action-button" id="restartButton" type="button">
-        New game
-      </button>
-    </div>
-
-    <div class="cabinet-lights" aria-hidden="true">
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-    </div>
+  <section class="hud" aria-live="polite">
+    <div class="stat"><span id="target-label"></span><span id="target-count">0</span></div>
+    <div class="stat"><span id="stage-label"></span><span id="stage">1</span></div>
+    <div class="stat"><span id="time-label"></span><span id="time">15</span></div>
+    <div class="stat"><span id="score-label"></span><span id="score">0</span></div>
+    <div class="stat"><span id="best-label"></span><span id="best">0</span></div>
   </section>
 
-  <p class="help" id="helpText"></p>
+  <section class="yard" aria-label="Game field">
+    <div class="holes" id="holes"></div>
+  </section>
 
-  <div class="language-control">
-    <label for="languageSelect" id="languageLabel">Language</label>
-    <select id="languageSelect">
-      <option value="en">English</option>
-      <option value="es">Español</option>
-      <option value="zh">中文</option>
-    </select>
-  </div>
+  <footer class="footer">
+    <span id="mode-display"></span>
+    <button class="small-button" id="menu-button" type="button"></button>
+  </footer>
 </main>
 
-<dialog class="round-dialog" id="roundDialog" aria-labelledby="dialogTitle">
-  <div class="dialog-stars" aria-hidden="true">✦ &nbsp; ★ &nbsp; ✦</div>
-  <p class="eyebrow" id="dialogEyebrow">READY, PLAYER?</p>
-  <h2 id="dialogTitle">Step right up!</h2>
-  <p class="dialog-copy" id="dialogCopy"></p>
+<div class="overlay" id="overlay">
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
+    <h1 class="overlay-game-title" id="overlay-game-title"></h1>
+    <h2 id="panel-title"></h2>
+    <p id="panel-text"></p>
 
-  <div class="objective">
-    <span id="objectiveLabel">YOUR OBJECTIVE</span>
-    <strong id="dialogObjective"></strong>
-  </div>
+    <div class="group" id="mode-group">
+      <div class="group-label" id="mode-prompt"></div>
+      <div class="choices">
+        <button class="choice" type="button" data-mode="relaxed" aria-pressed="false"></button>
+        <button class="choice" type="button" data-mode="normal" aria-pressed="true"></button>
+        <button class="choice" type="button" data-mode="brutal" aria-pressed="false"></button>
+      </div>
+    </div>
 
-  <label class="relaxed-control" id="relaxedControl">
-    <span class="relaxed-copy">
-      <strong id="relaxedLabel">Relaxed Mode</strong>
-      <small id="relaxedDescription">
-        Slower moles and a slower countdown
-      </small>
-    </span>
-    <input id="relaxedToggle" type="checkbox" role="switch">
-    <span class="switch-track" aria-hidden="true"></span>
-  </label>
+    <div class="group" id="language-group">
+      <div class="group-label" id="language-prompt"></div>
+      <div class="choices">
+        <button class="choice" type="button" data-lang="en" aria-pressed="false">English</button>
+        <button class="choice" type="button" data-lang="es" aria-pressed="false">Español</button>
+        <button class="choice" type="button" data-lang="zh" aria-pressed="false">中文</button>
+      </div>
+    </div>
 
-  <button class="action-button dialog-button" id="confirmButton" type="button">
-    Start game
-  </button>
-</dialog>
+    <p class="notice" id="notice" aria-live="polite"></p>
+    <button class="primary" id="action-button" type="button"></button>
+  </section>
+</div>
+
 <script>
-const translations = {
-  en: {
-    pageTitle: "Whack-a-Mole! — Funfair Challenge",
-    langCode: "en-GB",
-    arcade: "THE MIDWAY ARCADE",
-    title: "Whack-a-Mole!",
-    subtitle: "Step right up and test your reflexes.",
-    mole: "MOLE",
-    madness: "MADNESS",
-    gameLabel: "Whack-a-mole game",
-    holesLabel: "Mole holes",
-    round: "ROUND",
-    target: "TARGET",
-    score: "SCORE",
-    time: "TIME",
-    highScore: "HIGH SCORE",
-    readyStatus: "Ready for a little friendly competition?",
-    help: "Tap or click a mole when it pops up. Each round gets quicker!",
-    language: "Language",
-    newGame: "New game",
-    ready: "READY, PLAYER?",
-    roundEyebrow: (stage) => `ROUND ${stage}`,
-    firstTitle: "Step right up!",
-    nextTitle: "Next round!",
-    firstCopy: "The carnival challenge is about to begin.",
-    nextCopy: "The crowd is cheering. Can you beat the next challenge?",
-    objective: "YOUR OBJECTIVE",
-    objectiveText: (target, time) => `Hit ${target} moles in ${time} seconds`,
-    relaxed: "Relaxed Mode",
-    relaxedDescription: "Slower moles and a slower countdown",
-    start: "Start game",
-    next: "Start next round",
-    playAgain: "Play again",
-    statusStart: (stage, target) =>
-      `Round ${stage}: hit ${target} moles before time runs out!`,
-    remaining: (count, stage) => `${count} more to clear round ${stage}.`,
-    cleared: (stage) => `Round ${stage} cleared!`,
-    timesUp: "TIME'S UP!",
-    tryAgain: "Have another go?",
-    lostCopy: (hits, target) =>
-      `You hit ${hits} of ${target} moles. Take a breath, then try again!`,
-    newRecord: "New high score!",
-  },
+(() => {
+  "use strict";
 
-  es: {
-    pageTitle: "¡A golpear topos! — Feria",
-    langCode: "es-ES",
-    arcade: "LA FERIA",
-    title: "¡A golpear topos!",
-    subtitle: "¡Acércate y demuestra tus reflejos!",
-    mole: "TOPOS",
-    madness: "¡A TOPE!",
-    gameLabel: "Juego de golpear topos",
-    holesLabel: "Agujeros de los topos",
-    round: "RONDA",
-    target: "OBJETIVO",
-    score: "PUNTOS",
-    time: "TIEMPO",
-    highScore: "RÉCORD",
-    readyStatus: "¿Listo para un poco de competición amistosa?",
-    help: "Toca o haz clic en un topo cuando aparezca. ¡Cada ronda será más rápida!",
-    language: "Idioma",
-    newGame: "Nueva partida",
-    ready: "¿PREPARADO?",
-    roundEyebrow: (stage) => `RONDA ${stage}`,
-    firstTitle: "¡Pasa y juega!",
-    nextTitle: "¡Siguiente ronda!",
-    firstCopy: "El reto de la feria está a punto de empezar.",
-    nextCopy: "¡El público está animándote! ¿Superarás el siguiente reto?",
-    objective: "TU OBJETIVO",
-    objectiveText: (target, time) =>
-      `Golpea ${target} topos en ${time} segundos`,
-    relaxed: "Modo relajado",
-    relaxedDescription: "Topos más lentos y cuenta atrás más pausada",
-    start: "Empezar",
-    next: "Empezar siguiente ronda",
-    playAgain: "Jugar otra vez",
-    statusStart: (stage, target) =>
-      `Ronda ${stage}: golpea ${target} topos antes de que se acabe el tiempo.`,
-    remaining: (count, stage) =>
-      `Te faltan ${count} para superar la ronda ${stage}.`,
-    cleared: (stage) => `¡Ronda ${stage} superada!`,
-    timesUp: "¡SE ACABÓ EL TIEMPO!",
-    tryAgain: "¿Otra partida?",
-    lostCopy: (hits, target) =>
-      `Has golpeado ${hits} de ${target} topos. ¡Respira y vuelve a intentarlo!`,
-    newRecord: "¡Nuevo récord!",
-  },
-
-  zh: {
-    pageTitle: "扑傻瓜！— 嘉年華挑戰",
-    langCode: "zh-HK",
-    arcade: "嘉年華遊戲攤位",
-    title: "扑傻瓜！",
-    subtitle: "快啲嚟試下你嘅反應！",
-    mole: "扑傻瓜",
-    madness: "大挑戰",
-    gameLabel: "扑傻瓜遊戲",
-    holesLabel: "傻瓜洞",
-    round: "關卡",
-    target: "目標",
-    score: "分數",
-    time: "時間",
-    highScore: "最高分",
-    readyStatus: "準備好玩一場未？",
-    help: "傻瓜一出現就撳落去！每一關都會快啲。",
-    language: "語言",
-    newGame: "重新開始",
-    ready: "準備好未？",
-    roundEyebrow: (stage) => `第 ${stage} 關`,
-    firstTitle: "快啲嚟玩！",
-    nextTitle: "下一關！",
-    firstCopy: "嘉年華挑戰就快開始喇。",
-    nextCopy: "大家都喺度幫你打氣！下一個挑戰難啲喎。",
-    objective: "今關目標",
-    objectiveText: (target, time) => `${time} 秒內扑中 ${target} 次`,
-    relaxed: "輕鬆模式",
-    relaxedDescription: "傻瓜出現耐啲，倒數亦會慢一半",
-    start: "開始遊戲",
-    next: "開始下一關",
-    playAgain: "再玩一次",
-    statusStart: (stage, target) =>
-      `第 ${stage} 關：時間完之前扑中 ${target} 次！`,
-    remaining: (count, stage) =>
-      `仲差 ${count} 次就過第 ${stage} 關。`,
-    cleared: (stage) => `過咗第 ${stage} 關！`,
-    timesUp: "時間到！",
-    tryAgain: "再試一次？",
-    lostCopy: (hits, target) =>
-      `你扑中咗 ${target} 次目標入面嘅 ${hits} 次。唞一唞再試啦！`,
-    newRecord: "新紀錄！",
-  },
-};
-
-const LANGUAGE_KEY = "whack-a-mole-language";
-const NORMAL_HIGH_SCORE_KEY = "whack-a-mole-high-score-normal";
-const RELAXED_HIGH_SCORE_KEY = "whack-a-mole-high-score-relaxed";
-
-const stageDisplay = document.querySelector("#stage");
-const targetDisplay = document.querySelector("#target");
-const scoreDisplay = document.querySelector("#score");
-const timeDisplay = document.querySelector("#time");
-const highScoreDisplay = document.querySelector("#highScore");
-const statusDisplay = document.querySelector("#status");
-
-const dialog = document.querySelector("#roundDialog");
-const dialogEyebrow = document.querySelector("#dialogEyebrow");
-const dialogTitle = document.querySelector("#dialogTitle");
-const dialogCopy = document.querySelector("#dialogCopy");
-const dialogObjective = document.querySelector("#dialogObjective");
-const confirmButton = document.querySelector("#confirmButton");
-const relaxedControl = document.querySelector("#relaxedControl");
-const relaxedToggle = document.querySelector("#relaxedToggle");
-const languageSelect = document.querySelector("#languageSelect");
-
-const holes = [...document.querySelectorAll(".hole")];
-const restartButton = document.querySelector("#restartButton");
-
-let stage = 1;
-let target = 5;
-let score = 0;
-let stageScore = 0;
-let timeLeft = 30;
-let running = false;
-let relaxedMode = false;
-let activeHole = null;
-let moleTimer = null;
-let countdownTimer = null;
-let nextMoleTimer = null;
-let language = getInitialLanguage();
-
-// Add a subtle randomized texture to the playfield.
-const board = document.querySelector(".playfield");
-const canvas = document.createElement("canvas");
-const size = 128;
-const colors = [
-  [117, 67, 45],
-  [180, 119, 75],
-  [137, 80, 52],
-  [96, 53, 31],
-];
-
-canvas.width = size;
-canvas.height = size;
-
-const context = canvas.getContext("2d");
-const image = context.createImageData(size, size);
-
-for (let i = 0; i < image.data.length; i += 4) {
-  const color = colors[Math.floor(Math.random() * colors.length)];
-  image.data[i] = color[0];
-  image.data[i + 1] = color[1];
-  image.data[i + 2] = color[2];
-  image.data[i + 3] = 255;
-}
-
-context.putImageData(image, 0, 0);
-board.style.backgroundImage = `url(${canvas.toDataURL()})`;
-board.style.backgroundSize = "100% 100%";
-
-function normalizeLanguage(value) {
-  if (!value) return null;
-
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "en" || normalized.startsWith("en-")) return "en";
-  if (normalized === "es" || normalized.startsWith("es-")) return "es";
-  if (
-    normalized === "zh" ||
-    normalized.startsWith("zh-") ||
-    normalized.startsWith("zh_")
-  ) {
-    return "zh";
-  }
-
-  return null;
-}
-
-function getInitialLanguage() {
-  const params = new URLSearchParams(window.location.search);
-  const urlLanguage = normalizeLanguage(params.get("lang"));
-
-  if (urlLanguage) {
-    localStorage.setItem(LANGUAGE_KEY, urlLanguage);
-    return urlLanguage;
-  }
-
-  const savedLanguage = normalizeLanguage(localStorage.getItem(LANGUAGE_KEY));
-  if (savedLanguage) return savedLanguage;
-
-  const browserLanguages = navigator.languages?.length
-    ? navigator.languages
-    : [navigator.language || "en"];
-
-  for (const browserLanguage of browserLanguages) {
-    const detected = normalizeLanguage(browserLanguage);
-    if (detected) return detected;
-  }
-
-  return "en";
-}
-
-function t(key, ...args) {
-  const value = translations[language][key] ?? translations.en[key];
-  return typeof value === "function" ? value(...args) : value;
-}
-
-function applyTranslations() {
-  document.documentElement.lang = t("langCode");
-  document.title = t("pageTitle");
-
-  const textById = {
-    eyebrow: "arcade",
-    gameTitle: "title",
-    subtitle: "subtitle",
-    marqueeMole: "mole",
-    marqueeMadness: "madness",
-    stageLabel: "round",
-    targetLabel: "target",
-    scoreLabel: "score",
-    timeLabel: "time",
-    highScoreLabel: "highScore",
-    languageLabel: "language",
-    restartButton: "newGame",
-    objectiveLabel: "objective",
-    relaxedLabel: "relaxed",
-    relaxedDescription: "relaxedDescription",
-    helpText: "help",
+const words = {
+    en: {
+      title: "Whack-A-Mole", tagline: "The classic arcade garden!",
+      score: "Score", stage: "Stage", time: "Time", best: "Best", menu: "Menu",
+      relaxed: "Relaxed", normal: "Normal", brutal: "Brutal",
+      modePrompt: "Choose a mode", languagePrompt: "Choose a language",
+      readyTitle: "Ready to play?", readyText: "Choose a mode and language, then start the game.",
+      start: "Start game", startStage: "Start stage", continue: "Continue", restart: "Restart",
+      nextTitle: "Stage {n}", targetLine: "Target: whack {target} moles in 15 seconds.",
+      completeTitle: "Stage {n} complete!", completeText: "Brilliant! Your score is {score}.",
+      failedTitle: "Game over!", failedText: "You whacked {hits} of {target} moles in stage {n}. Your score is {score}.",
+      finalTitle: "Brilliant!", finalText: "You cleared all 10 stages with {score} points.",
+      target: "Moles left: {target}",
+      targetLabel: "Left",
+      modes: { relaxed: "Relaxed", normal: "Normal", brutal: "Brutal" }
+    },
+    es: {
+      title: "Golpea al topo", tagline: "¡El clásico jardín de los recreativos!",
+      score: "Puntos", stage: "Nivel", time: "Tiempo", best: "Récord", menu: "Menú",
+      relaxed: "Relajado", normal: "Normal", brutal: "Brutal",
+      modePrompt: "Elige un modo", languagePrompt: "Elige un idioma",
+      readyTitle: "¿Listo para jugar?", readyText: "Elige un modo y un idioma para empezar.",
+      start: "Empezar", startStage: "Empezar nivel", continue: "Continuar", restart: "Reiniciar",
+      nextTitle: "Nivel {n}", targetLine: "Objetivo: golpea {target} topos en 15 segundos.",
+      completeTitle: "¡Nivel {n} completado!", completeText: "¡Buen trabajo! Tu puntuación es de {score} puntos.",
+      failedTitle: "Fin de la partida", failedText: "Has golpeado {hits} de {target} topos en el nivel {n}. Tu puntuación es de {score} puntos.",
+      finalTitle: "¡Increíble!", finalText: "Has superado los 10 niveles con {score} puntos.",
+      target: "Topos restantes: {target}",
+      targetLabel: "Faltan",
+      modes: { relaxed: "Relajado", normal: "Normal", brutal: "Brutal" }
+    },
+    zh: {
+      title: "扑傻瓜", tagline: "經典街機大挑戰！",
+      score: "分數", stage: "關卡", time: "時間", best: "最高分", menu: "選單",
+      relaxed: "輕鬆", normal: "普通", brutal: "地獄",
+      modePrompt: "揀個難度", languagePrompt: "揀種語言",
+      readyTitle: "準備好未？", readyText: "揀好難度同語言就可以開始。",
+      start: "開始遊戲", startStage: "開始呢關", continue: "繼續", restart: "重新開始",
+      nextTitle: "第 {n} 關", targetLine: "目標：喺 15 秒內打中 {target} 隻地鼠。",
+      completeTitle: "過咗第 {n} 關！", completeText: "好嘢！你拎到 {score} 分。",
+      failedTitle: "玩完！", failedText: "第 {n} 關你只係打中 {hits} 隻（目標 {target} 隻），總分係 {score} 分。",
+      finalTitle: "爆機！好犀利！", finalText: "你過晒全部 10 關，總共拎到 {score} 分！",
+      target: "仲差：{target} 隻",
+      targetLabel: "仲差",
+      modes: { relaxed: "輕鬆", normal: "普通", brutal: "地獄" }
+    }
   };
 
-  for (const [id, key] of Object.entries(textById)) {
-    document.getElementById(id).textContent = t(key);
+  const config = {
+    relaxed: { delay: 1900, min: 1250, visible: 1500, target: 3, growth: 1 },
+    normal: { delay: 1050, min: 420, visible: 820, target: 5, growth: 2 },
+    brutal: { delay: 620, min: 190, visible: 430, target: 8, growth: 3 }
+  };
+
+  const $ = id => document.getElementById(id);
+
+  function initialLanguage() {
+    const query = new URLSearchParams(location.search).get("lang");
+    if (["en", "es", "zh"].includes(query)) return query;
+
+    try {
+      const saved = localStorage.getItem("wam-language");
+      if (["en", "es", "zh"].includes(saved)) return saved;
+    } catch (_) {}
+
+    for (const preference of navigator.languages || [navigator.language || ""]) {
+      const p = preference.toLowerCase();
+      if (p.startsWith("zh")) return "zh";
+      if (p.startsWith("es")) return "es";
+      if (p.startsWith("en")) return "en";
+    }
+    return "en";
   }
 
-  document.querySelector("#machine").setAttribute("aria-label", t("gameLabel"));
-  document.querySelector("#playfield").setAttribute("aria-label", t("holesLabel"));
+  let lang = initialLanguage();
+  let mode = "normal";
+  let score = 0, stage = 1, hits = 0, target = 0;
+  let running = false, roundEnd = 0;
+  let roundTimer = null, moleTimer = null, audioContext = null;
+  let panelState = "start", lastHit = 0;
 
-  holes.forEach((hole, index) => {
-    hole.setAttribute("aria-label", `${index + 1}`);
+  const activeHoles = new Set();
+  const moleTimers = new Map();
+
+  function t(key, vars = {}) {
+    const value = words[lang][key];
+    if (typeof value !== "string") return value;
+    return value.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+  }
+
+  function bestKey() {
+    return "wam-best-" + mode;
+  }
+
+  function bestScore() {
+    try {
+      return Number(localStorage.getItem(bestKey())) || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function saveBest(value) {
+    try {
+      localStorage.setItem(bestKey(), String(value));
+    } catch (_) {}
+  }
+
+  function sound(kind) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      audioContext ||= new AudioCtx();
+      if (audioContext.state === "suspended") audioContext.resume();
+
+      const notes = {
+        start: [[440, .11], [660, .16]],
+        hit: [[740, .07], [980, .09]],
+        complete: [[523, .12], [659, .12], [784, .12], [1047, .24]],
+        failed: [[392, .16], [330, .18], [262, .28]]
+      }[kind];
+
+      const now = audioContext.currentTime;
+
+      notes.forEach(([frequency, duration], i) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const at = now + i * (kind === "hit" ? .075 : .14);
+
+        oscillator.type = kind === "failed" ? "triangle" : "sine";
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(.0001, at);
+        gain.gain.exponentialRampToValueAtTime(.12, at + .015);
+        gain.gain.exponentialRampToValueAtTime(.0001, at + duration);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(at);
+        oscillator.stop(at + duration + .02);
+      });
+    } catch (_) {}
+  }
+
+  function makeHole(index) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hole";
+    button.setAttribute("aria-label", "Mole hole " + (index + 1));
+    button.innerHTML = `
+      <svg viewBox="0 0 180 150" aria-hidden="true">
+        <ellipse cx="90" cy="112" rx="75" ry="28" fill="#542918"/>
+        <ellipse cx="90" cy="106" rx="62" ry="19" fill="#281711"/>
+        <g class="mole">
+          <ellipse cx="90" cy="95" rx="45" ry="47" fill="#9b5c37" stroke="#633719" stroke-width="5"/>
+          <circle cx="62" cy="65" r="15" fill="#9b5c37" stroke="#633719" stroke-width="4"/>
+          <circle cx="118" cy="65" r="15" fill="#9b5c37" stroke="#633719" stroke-width="4"/>
+          <circle cx="62" cy="65" r="7" fill="#f2a5a1"/>
+          <circle cx="118" cy="65" r="7" fill="#f2a5a1"/>
+          <ellipse cx="90" cy="101" rx="27" ry="21" fill="#e4b27e"/>
+          <circle cx="75" cy="85" r="4" fill="#21150f"/>
+          <circle cx="105" cy="85" r="4" fill="#21150f"/>
+          <ellipse cx="90" cy="98" rx="7" ry="5" fill="#56301e"/>
+          <path d="M82 107 Q90 114 98 107" fill="none" stroke="#56301e" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <text class="hit-mark" x="90" y="55">✨</text>
+        <path d="M20 118 Q48 104 67 116 M113 116 Q135 102 160 118"
+          fill="none" stroke="#83c84f" stroke-width="10" stroke-linecap="round"/>
+      </svg>`;
+
+    button.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      whack(button);
+    });
+
+    return button;
+  }
+
+  const holes = Array.from({ length: 10 }, (_, i) => {
+    const hole = makeHole(i);
+    $("holes").appendChild(hole);
+    return hole;
   });
 
-  languageSelect.value = language;
-  updateDisplay();
+  function updateLabels() {
+    document.documentElement.lang =
+      lang === "zh" ? "zh-HK" : lang === "es" ? "es-ES" : "en-GB";
 
-  if (dialog.open) {
-    if (stage === 1 && score === 0 && timeLeft === 30) {
-      showRoundDialog("first");
-    } else if (!running && timeLeft <= 0) {
-      showRoundDialog("gameOver");
+    $("game-title").textContent = t("title");
+    $("overlay-game-title").textContent = t("title");
+    $("tagline").textContent = t("tagline");
+    $("score-label").textContent = t("score");
+    $("stage-label").textContent = t("stage");
+    $("time-label").textContent = t("time");
+    $("best-label").textContent = t("best");
+    $("menu-button").textContent = t("menu");
+    $("mode-prompt").textContent = t("modePrompt");
+    $("language-prompt").textContent = t("languagePrompt");
+    $("mode-display").textContent = t("modes")[mode];
+    $("target-label").textContent = t("targetLabel");
+    $("best").textContent = bestScore();
+    $("score").textContent = score;
+    $("stage").textContent = stage;
+
+    document.querySelectorAll("[data-mode]").forEach(button => {
+      button.textContent = t(button.dataset.mode);
+      button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
+    });
+
+    document.querySelectorAll("[data-lang]").forEach(button => {
+      button.setAttribute("aria-pressed", String(button.dataset.lang === lang));
+    });
+
+    const opening = panelState === "start";
+    $("mode-group").hidden = !opening;
+    $("language-group").hidden = !opening;
+
+    let action = t("start");
+    if (panelState === "stage") action = t("startStage");
+    if (panelState === "complete") action = t("continue");
+    if (panelState === "failed" || panelState === "final") action = t("restart");
+    $("action-button").textContent = action;
+  }
+
+  function showPanel(state, title, body) {
+    panelState = state;
+    $("panel-title").textContent = title;
+    $("panel-text").textContent = body;
+    $("notice").textContent = "";
+    updateLabels();
+    $("overlay").hidden = false;
+  }
+
+  function showOpening() {
+    showPanel("start", t("readyTitle"), t("readyText"));
+  }
+
+  function showStageIntro() {
+    updateTargetDisplay(target);
+    showPanel("stage", t("nextTitle", { n: stage }), t("targetLine", { target }));
+  }
+
+  function beginStage() {
+    $("overlay").hidden = true;
+    running = true;
+    hits = 0;
+    updateTargetDisplay(target);
+    roundEnd = Date.now() + 15000;
+    $("time").textContent = "15";
+    $("notice").textContent = t("target", { target });
+    roundTimer = setInterval(updateClock, 100);
+    scheduleMole(350);
+  }
+
+  function updateTargetDisplay(remaining) {
+    $("target-count").textContent = remaining;
+  }
+  
+  function updateClock() {
+    if (!running) return;
+
+    const remaining = Math.max(0, Math.ceil((roundEnd - Date.now()) / 1000));
+    $("time").textContent = remaining;
+    if (remaining === 0) finishStage(false);
+  }
+
+  function scheduleMole(delay) {
+    clearTimeout(moleTimer);
+    if (running) moleTimer = setTimeout(popMole, Math.max(100, delay));
+  }
+
+  function popMole() {
+    if (!running || Date.now() >= roundEnd) return;
+
+    const choices = holes.filter(hole => !activeHoles.has(hole));
+    if (!choices.length) {
+      scheduleMole(150);
+      return;
+    }
+
+    const hole = choices[Math.floor(Math.random() * choices.length)];
+    activeHoles.add(hole);
+    hole.classList.remove("hit");
+    hole.classList.add("up");
+
+    const c = config[mode];
+    const delay = Math.max(
+      c.min,
+      c.delay - Math.min((stage - 1) * 75, c.delay - c.min)
+    );
+    const visible = Math.max(500, c.visible - (stage - 1) * 25);
+
+    const hideTimer = setTimeout(() => {
+      hole.classList.remove("up");
+      activeHoles.delete(hole);
+      moleTimers.delete(hole);
+    }, visible);
+
+    moleTimers.set(hole, hideTimer);
+    scheduleMole(delay);
+  }
+
+  function whack(hole) {
+    if (!running || !activeHoles.has(hole)) return;
+    if (Date.now() - lastHit < 100) return;
+    lastHit = Date.now();
+
+    clearTimeout(moleTimers.get(hole));
+    moleTimers.delete(hole);
+    activeHoles.delete(hole);
+    hole.classList.remove("up");
+    hole.classList.add("hit");
+    setTimeout(() => hole.classList.remove("hit"), 230);
+
+    score++;
+    hits++;
+    sound("hit");
+    updateTargetDisplay(Math.max(0, target - hits));
+    $("score").textContent = score;
+
+    if (score > bestScore()) {
+      saveBest(score);
+      $("best").textContent = score;
+    }
+
+    $("notice").textContent = t("target", {
+      target: Math.max(0, target - hits)
+    });
+
+    if (hits >= target) finishStage(true);
+    else scheduleMole(Math.max(120, config[mode].delay * .48));
+  }
+
+  function stopRound() {
+    running = false;
+    clearInterval(roundTimer);
+    clearTimeout(moleTimer);
+
+    moleTimers.forEach(timer => clearTimeout(timer));
+    moleTimers.clear();
+    activeHoles.clear();
+    holes.forEach(hole => hole.classList.remove("up", "hit"));
+  }
+
+  function finishStage(success) {
+    if (!running) return;
+    stopRound();
+
+    if (!success) {
+      sound("failed");
+      showPanel("failed", t("failedTitle"), t("failedText", {
+        n: stage, hits, target, score
+      }));
+      return;
+    }
+
+    sound("complete");
+
+    if (stage >= 10) {
+      showPanel("final", t("finalTitle"), t("finalText", { score }));
     } else {
-      showRoundDialog("next");
+      const finishedStage = stage;
+      stage++;
+      target = config[mode].target + (stage - 1) * config[mode].growth;
+      showPanel("complete", t("completeTitle", { n: finishedStage }),
+        t("completeText", { score }));
     }
   }
-}
 
-function setLanguage(nextLanguage) {
-  if (!translations[nextLanguage]) return;
-  language = nextLanguage;
-  localStorage.setItem(LANGUAGE_KEY, language);
-  applyTranslations();
-}
+  document.querySelectorAll("[data-mode]").forEach(button => {
+    button.addEventListener("click", () => {
+      mode = button.dataset.mode;
+      updateLabels();
+    });
+  });
 
-function highScoreKey(mode = relaxedMode) {
-  return mode ? RELAXED_HIGH_SCORE_KEY : NORMAL_HIGH_SCORE_KEY;
-}
+  document.querySelectorAll("[data-lang]").forEach(button => {
+    button.addEventListener("click", () => {
+      lang = button.dataset.lang;
+      try {
+        localStorage.setItem("wam-language", lang);
+      } catch (_) {}
 
-function readHighScore(mode = relaxedMode) {
-  const saved = Number.parseInt(
-    localStorage.getItem(highScoreKey(mode)),
-    10
-  );
-  return Number.isFinite(saved) && saved > 0 ? saved : 0;
-}
+      updateLabels();
 
-function updateDisplay() {
-  stageDisplay.textContent = stage;
-  targetDisplay.textContent = target;
-  scoreDisplay.textContent = score;
-  timeDisplay.textContent = timeLeft;
-  highScoreDisplay.textContent = readHighScore();
-}
+      if (panelState === "start") {
+        $("panel-title").textContent = t("readyTitle");
+        $("panel-text").textContent = t("readyText");
+      } else {
+        showOpening();
+      }
+    });
+  });
 
-function clearTimers() {
-  clearTimeout(moleTimer);
-  clearTimeout(nextMoleTimer);
-  clearInterval(countdownTimer);
-}
-
-function hideMoles() {
-  holes.forEach((hole) => hole.classList.remove("is-up", "is-hit"));
-  activeHole = null;
-}
-
-function stageDuration() {
-  return Math.max(12, 30 - (stage - 1) * 2);
-}
-
-function moleTimings() {
-  const speed = relaxedMode ? 2 : 1;
-  return {
-    visible: Math.max(350, 1100 - (stage - 1) * 85) * speed,
-    pause: Math.max(120, 650 - (stage - 1) * 45) * speed,
-  };
-}
-
-function showRoundDialog(kind) {
-  const initial = kind === "first";
-  const gameOver = kind === "gameOver";
-
-  dialogEyebrow.textContent = initial
-    ? t("ready")
-    : gameOver
-      ? t("timesUp")
-      : t("roundEyebrow", stage);
-
-  dialogTitle.textContent = initial
-    ? t("firstTitle")
-    : gameOver
-      ? t("tryAgain")
-      : t("nextTitle");
-
-  dialogCopy.textContent = initial
-    ? t("firstCopy")
-    : gameOver
-      ? t("lostCopy", stageScore, target)
-      : t("nextCopy");
-
-  dialogObjective.textContent = t("objectiveText", target, timeLeft);
-  confirmButton.textContent = gameOver
-    ? t("playAgain")
-    : initial
-      ? t("start")
-      : t("next");
-
-  // Mode can only be selected before the first round or after a game ends.
-  relaxedControl.hidden = !(initial || gameOver);
-  if (initial || gameOver) {
-    relaxedToggle.checked = relaxedMode;
-  }
-
-  if (!dialog.open) dialog.showModal();
-}
-
-function prepareStage() {
-  running = false;
-  clearTimers();
-  hideMoles();
-
-  target = 4 + stage;
-  timeLeft = stageDuration();
-  stageScore = 0;
-  updateDisplay();
-
-  showRoundDialog(stage === 1 ? "first" : "next");
-}
-
-function startStage() {
-  // Read the mode only at the start of a game, not between stages.
-  if (stage === 1) {
-    relaxedMode = relaxedToggle.checked;
-  }
-
-  dialog.close();
-  running = true;
-  statusDisplay.textContent = t("statusStart", stage, target);
-  updateDisplay();
-  startCountdown();
-  showRandomMole();
-}
-
-function startCountdown() {
-  clearInterval(countdownTimer);
-
-  // Relaxed Mode makes each countdown second take twice as long.
-  const tickMilliseconds = relaxedMode ? 2000 : 1000;
-
-  countdownTimer = setInterval(() => {
-    timeLeft -= 1;
-    updateDisplay();
-
-    if (timeLeft <= 0) finishStage();
-  }, tickMilliseconds);
-}
-
-function showRandomMole() {
-  if (!running) return;
-
-  hideMoles();
-
-  const choices = holes.filter((hole) => hole !== activeHole);
-  const hole = choices[Math.floor(Math.random() * choices.length)];
-  const timings = moleTimings();
-
-  activeHole = hole;
-  hole.classList.add("is-up");
-
-  moleTimer = setTimeout(() => {
-    if (activeHole === hole) {
-      hole.classList.remove("is-up");
-      activeHole = null;
+  $("action-button").addEventListener("click", () => {
+    if (panelState === "start") {
+      score = 0;
+      stage = 1;
+      target = config[mode].target;
+      updateLabels();
+      showStageIntro();
+    } else if (panelState === "stage") {
+      sound("start");
+      beginStage();
+    } else if (panelState === "complete") {
+      showStageIntro();
+    } else if (panelState === "failed" || panelState === "final") {
+      showOpening();
     }
+  });
 
-    if (running) {
-      nextMoleTimer = setTimeout(showRandomMole, timings.pause);
-    }
-  }, timings.visible);
-}
+  $("menu-button").addEventListener("click", () => {
+    stopRound();
+    showOpening();
+  });
 
-function saveHighScoreIfNeeded() {
-  const highScore = readHighScore(relaxedMode);
-
-  if (score > highScore) {
-    localStorage.setItem(highScoreKey(relaxedMode), String(score));
-    return true;
-  }
-
-  return false;
-}
-
-function finishStage() {
-  if (!running) return;
-
-  running = false;
-  clearTimers();
-  hideMoles();
-
-  if (stageScore >= target) {
-    statusDisplay.textContent = t("cleared", stage);
-    saveHighScoreIfNeeded();
-    updateDisplay();
-
-    stage += 1;
-    nextMoleTimer = setTimeout(prepareStage, 700);
-  } else {
-    const brokeRecord = saveHighScoreIfNeeded();
-    statusDisplay.textContent = brokeRecord ? t("newRecord") : t("timesUp");
-    updateDisplay();
-
-    showRoundDialog("gameOver");
-  }
-}
-
-function whackMole(event) {
-  if (!running) return;
-
-  const hole = event.currentTarget;
-  if (!hole.classList.contains("is-up")) return;
-
-  hole.classList.remove("is-up");
-  hole.classList.add("is-hit");
-  activeHole = null;
-
-  score += 1;
-  stageScore += 1;
-  updateDisplay();
-
-  if ("vibrate" in navigator) navigator.vibrate(20);
-
-  if (stageScore >= target) {
-    finishStage();
-    return;
-  }
-
-  statusDisplay.textContent = t("remaining", target - stageScore, stage);
-  clearTimeout(moleTimer);
-  clearTimeout(nextMoleTimer);
-
-  nextMoleTimer = setTimeout(() => {
-    if (running) showRandomMole();
-  }, moleTimings().pause);
-}
-
-holes.forEach((hole) => {
-  hole.addEventListener("pointerdown", whackMole);
-});
-
-confirmButton.addEventListener("click", () => {
-  if (!running && timeLeft <= 0) {
-    stage = 1;
-    target = 5;
-    score = 0;
-    stageScore = 0;
-    timeLeft = 30;
-    updateDisplay();
-  }
-
-  startStage();
-});
-
-restartButton.addEventListener("click", () => {
-  clearTimers();
-  hideMoles();
-  running = false;
-  stage = 1;
-  target = 5;
-  score = 0;
-  stageScore = 0;
-  timeLeft = 30;
-  statusDisplay.textContent = t("readyStatus");
-  updateDisplay();
-  prepareStage();
-});
-
-languageSelect.addEventListener("change", (event) => {
-  setLanguage(event.target.value);
-});
-
-relaxedToggle.addEventListener("change", () => {
-  // Keep the high-score display in sync with the mode selected for the next game.
-  if (!running && relaxedControl.hidden === false) {
-    highScoreDisplay.textContent = readHighScore(relaxedToggle.checked);
-  }
-});
-
-applyTranslations();
-statusDisplay.textContent = t("readyStatus");
-prepareStage();
+  updateLabels();
+  showOpening();
+})();
 </script>
 </body>
 </html>
