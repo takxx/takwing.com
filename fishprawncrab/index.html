@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -64,8 +64,9 @@
     }
 
     .symbol {
-      font-size: clamp(50px, 12vw, 76px);
-      line-height: 1;
+      width: clamp(50px, 12vw, 76px);
+      height: clamp(50px, 12vw, 76px);
+      fill: currentColor;
     }
 
     .label {
@@ -114,12 +115,6 @@
       color: #8e44ad;
     }
 
-    #motionStatus {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #555;
-    }
-
     @keyframes shake {
       0% {
         transform: rotate(-5deg) scale(1.03);
@@ -152,54 +147,43 @@
 
 <body>
   <main class="app">
-    <h1>🎲 魚蝦蟹骰仔</h1>
+    <h1>魚蝦蟹骰仔</h1>
     <p class="subtitle">買定離手</p>
 
     <section class="dice-area" aria-label="骰仔結果">
       <div class="die">
-        <span class="symbol">🐟</span>
+        <svg class="symbol" aria-hidden="true"><use href="./images.svg#fish"></use></svg>
         <span class="label">魚</span>
       </div>
 
       <div class="die">
-        <span class="symbol">🦐</span>
+        <svg class="symbol" aria-hidden="true"><use href="./images.svg#prawn"></use></svg>
         <span class="label">蝦</span>
       </div>
 
       <div class="die">
-        <span class="symbol">🦀</span>
+        <svg class="symbol" aria-hidden="true"><use href="./images.svg#crab"></use></svg>
         <span class="label">蟹</span>
       </div>
     </section>
 
-    <div>
-      <button id="rollButton" type="button">
-        開骰
-      </button>
-      <button id="enableMotionButton" type="button" style="background:#27ae60;box-shadow:0 4px 0 #1e8449;">
-        啟用搖動擲骰
-      </button>
-    </div>
-
+    <button id="rollButton" type="button">開骰</button>
     <div id="result" aria-live="polite"></div>
-    <div id="motionStatus"></div>
   </main>
 
   <script>
     const faces = [
-      { emoji: "🐟", name: "魚" },
-      { emoji: "🦐", name: "蝦" },
-      { emoji: "🦀", name: "蟹" },
-      { emoji: "🥜", name: "葫蘆" },
-      { emoji: "🐓", name: "雞" },
-      { emoji: "🪙", name: "金錢" }
+      { id: "fish", name: "魚" },
+      { id: "prawn", name: "蝦" },
+      { id: "crab", name: "蟹" },
+      { id: "calabash", name: "葫蘆" },
+      { id: "rooster", name: "雞" },
+      { id: "coin", name: "金錢" }
     ];
 
     const dice = document.querySelectorAll(".die");
     const rollButton = document.getElementById("rollButton");
-    const enableMotionButton = document.getElementById("enableMotionButton");
     const result = document.getElementById("result");
-    const motionStatus = document.getElementById("motionStatus");
 
     function getRandomFace() {
       const randomIndex = Math.floor(Math.random() * faces.length);
@@ -207,7 +191,7 @@
     }
 
     function showFace(die, face) {
-      die.querySelector(".symbol").textContent = face.emoji;
+      die.querySelector("use").setAttribute("href", `./images.svg#${face.id}`);
       die.querySelector(".label").textContent = face.name;
     }
 
@@ -235,14 +219,11 @@
             die.classList.remove("rolling");
           });
 
-          const results = Array.from(dice).map(die => ({
-            name: die.querySelector(".label").textContent
-          }));
-
           const totals = {};
 
-          results.forEach(face => {
-            totals[face.name] = (totals[face.name] || 0) + 1;
+          Array.from(dice).forEach(die => {
+            const name = die.querySelector(".label").textContent;
+            totals[name] = (totals[name] || 0) + 1;
           });
 
           const summary = Object.entries(totals)
@@ -256,102 +237,6 @@
     }
 
     rollButton.addEventListener("click", rollDice);
-
-    // ----- Motion (shake) to toss -----
-    let motionEnabled = false;
-
-    // Shake detection parameters
-    const SHAKE_THRESHOLD = 12;      // m/s² approx, tweak as needed
-    const SHAKE_COOLDOWN_MS = 900;   // avoid multiple triggers from one shake
-    let lastX = 0, lastY = 0, lastZ = 0;
-    let lastShakeTime = 0;
-
-    function handleMotion(event) {
-      if (!motionEnabled) return;
-
-      const acc = event.accelerationIncludingGravity;
-      if (!acc || acc.x == null || acc.y == null || acc.z == null) return;
-
-      const now = performance.now();
-      if (now - lastShakeTime < SHAKE_COOLDOWN_MS) {
-        lastX = acc.x;
-        lastY = acc.y;
-        lastZ = acc.z;
-        return;
-      }
-
-      const deltaX = Math.abs(lastX - (acc.x || 0));
-      const deltaY = Math.abs(lastY - (acc.y || 0));
-      const deltaZ = Math.abs(lastZ - (acc.z || 0));
-
-      const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
-
-      lastX = acc.x || 0;
-      lastY = acc.y || 0;
-      lastZ = acc.z || 0;
-
-      if (delta > SHAKE_THRESHOLD) {
-        lastShakeTime = now;
-        rollDice();
-      }
-    }
-
-    async function enableMotion() {
-      motionStatus.textContent = "";
-
-      // Check if DeviceMotionEvent exists
-      if (!("DeviceMotionEvent" in window)) {
-        motionStatus.textContent = "此裝置不支援動作感應器，無法使用搖動擲骰。";
-        enableMotionButton.disabled = true;
-        return;
-      }
-
-      // iOS 13+ requires permission
-      if (
-        typeof DeviceMotionEvent !== "undefined" &&
-        typeof DeviceMotionEvent.requestPermission === "function"
-      ) {
-        try {
-          const permission = await DeviceMotionEvent.requestPermission();
-          if (permission !== "granted") {
-            motionStatus.textContent = "動作感應器權限被拒絕，無法使用搖動擲骰。";
-            enableMotionButton.disabled = true;
-            return;
-          }
-        } catch (err) {
-          motionStatus.textContent = "無法請求動作感應器權限。";
-          enableMotionButton.disabled = true;
-          return;
-        }
-      }
-
-      window.addEventListener("devicemotion", handleMotion);
-      motionEnabled = true;
-      motionStatus.textContent = "已啟用搖動擲骰（搖動裝置即可開骰）。";
-      enableMotionButton.disabled = true;
-    }
-
-    enableMotionButton.addEventListener("click", enableMotion);
-
-    // Optional: auto-check support and show message
-    (function initMotionStatus() {
-      if (!("DeviceMotionEvent" in window)) {
-        motionStatus.textContent = "此裝置不支援動作感應器。";
-        enableMotionButton.disabled = true;
-      } else if (
-        typeof DeviceMotionEvent !== "undefined" &&
-        typeof DeviceMotionEvent.requestPermission === "function"
-      ) {
-        motionStatus.textContent = "iOS 13+ 需要點擊「啟用搖動擲骰」以授予權限。";
-      } else {
-        // Non-iOS or older devices: usually no permission needed
-        motionStatus.textContent = "支援動作感應器，可直接搖動裝置開骰（或按「開骰」）。";
-        // Optionally auto-enable:
-        window.addEventListener("devicemotion", handleMotion);
-        motionEnabled = true;
-        enableMotionButton.style.display = "none";
-      }
-    })();
   </script>
 </body>
 </html>

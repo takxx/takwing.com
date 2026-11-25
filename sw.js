@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "games-";
-const CACHE_NAME = `${CACHE_PREFIX}261125`;
+const CACHE_NAME = `${CACHE_PREFIX}261126`;
 
 const FILES_TO_CACHE = [
   "/2048/index.html",
@@ -14,6 +14,7 @@ const FILES_TO_CACHE = [
   "/dopewars/index.html",
   "/domino/index.html",
   "/fishprawncrab/index.html",
+  "/fishprawncrab/images.svg",
   "/freecell/index.html",
   "/froggy/index.html",
   "/hex/index.html",
