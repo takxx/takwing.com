@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SVG Sprite Viewer</title>
+  <style>
+    body {
+      margin: 2rem;
+      font: 16px system-ui, sans-serif;
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: end;
+    }
+
+    label {
+      display: grid;
+      gap: .35rem;
+    }
+
+    input, button {
+      padding: .45rem;
+      font: inherit;
+    }
+
+    #status {
+      margin-top: 1rem;
+    }
+
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    figure {
+      margin: 0;
+      padding: .75rem;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    figure canvas {
+      display: block;
+      width: 120px;
+      height: 120px;
+      margin: 0 auto;
+      image-rendering: pixelated;
+    }
+
+    figcaption {
+      margin-top: .4rem;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <h1>SVG Sprite Viewer</h1>
+
+  <form id="form">
+    <label>
+      SVG file
+      <input id="file" type="file" accept=".svg,image/svg+xml" required>
+    </label>
+
+    <button type="submit">Show all</button>
+  </form>
+
+  <p id="status" aria-live="polite"></p>
+  <main id="gallery"></main>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const XLINK_NS = "http://www.w3.org/1999/xlink";
+
+    function sanitizeSvg(node) {
+      node.querySelectorAll("script, foreignObject").forEach(el => el.remove());
+
+      for (const el of [node, ...node.querySelectorAll("*")]) {
+        for (const attr of [...el.attributes]) {
+          if (/^on/i.test(attr.name)) {
+            el.removeAttribute(attr.name);
+          } else if (
+            (attr.name === "href" || attr.name === "xlink:href") &&
+            !attr.value.trim().startsWith("#")
+          ) {
+            el.removeAttributeNS(attr.namespaceURI, attr.localName);
+          }
+        }
+      }
+
+      return node;
+    }
+
+    async function makePixelatedPreview(svg, size = 20, displaySize = 120) {
+      const source = new Blob(
+        [new XMLSerializer().serializeToString(svg)],
+        { type: "image/svg+xml;charset=utf-8" }
+      );
+      const url = URL.createObjectURL(source);
+
+      try {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        canvas.style.width = `${displaySize}px`;
+        canvas.style.height = `${displaySize}px`;
+        canvas.setAttribute("role", "img");
+        canvas.setAttribute("aria-label", svg.getAttribute("aria-label") || "");
+
+        const context = canvas.getContext("2d");
+        context.imageSmoothingEnabled = false;
+        context.drawImage(image, 0, 0, size, size);
+
+        return canvas;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    document.getElementById("form").addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const file = document.getElementById("file").files[0];
+      const gallery = document.getElementById("gallery");
+      const status = document.getElementById("status");
+
+      gallery.replaceChildren();
+
+      if (!file) {
+        status.textContent = "Choose an SVG file.";
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+        const sourceRoot = doc.documentElement;
+
+        if (doc.querySelector("parsererror") || sourceRoot.localName !== "svg") {
+          throw new Error("The selected file could not be read as an SVG.");
+        }
+
+        const rootViewBox = sourceRoot.getAttribute("viewBox") || "0 0 100 100";
+
+        const matches = [...sourceRoot.querySelectorAll("symbol[id]")]
+          .filter(el => el.id.trim() !== "")
+          .sort((a, b) => a.id.localeCompare(b.id, undefined, {
+            numeric: true,
+            sensitivity: "base"
+          }));
+
+        if (matches.length === 0) {
+          status.textContent = "No elements with IDs were found.";
+          return;
+        }
+
+        for (const element of matches) {
+          const isSymbol = element.localName === "symbol";
+          const previewViewBox =
+            isSymbol && element.getAttribute("viewBox")
+              ? element.getAttribute("viewBox")
+              : rootViewBox;
+
+          const preview = document.createElementNS(SVG_NS, "svg");
+          preview.setAttribute("viewBox", previewViewBox);
+          preview.setAttribute("role", "img");
+          preview.setAttribute("aria-label", element.id);
+
+          for (const name of ["fill", "stroke", "color", "stroke-width"]) {
+            if (sourceRoot.hasAttribute(name)) {
+              preview.setAttribute(name, sourceRoot.getAttribute(name));
+            }
+          }
+
+          for (const child of sourceRoot.children) {
+            if (child.localName === "defs" || child.localName === "style") {
+              preview.append(sanitizeSvg(document.importNode(child, true)));
+            }
+          }
+
+          if (isSymbol) {
+            const symbolAlreadyCopied = [...preview.querySelectorAll("[id]")]
+              .some(el => el.id === element.id);
+
+            if (!symbolAlreadyCopied) {
+              const defs = document.createElementNS(SVG_NS, "defs");
+              defs.append(sanitizeSvg(document.importNode(element, true)));
+              preview.append(defs);
+            }
+
+            const use = document.createElementNS(SVG_NS, "use");
+            use.setAttribute("href", `#${element.id}`);
+            use.setAttributeNS(XLINK_NS, "xlink:href", `#${element.id}`);
+
+            const [, , width, height] =
+              previewViewBox.trim().split(/[ ,]+/).map(Number);
+
+            if (width > 0 && height > 0) {
+              use.setAttribute("width", width);
+              use.setAttribute("height", height);
+            }
+
+            preview.append(use);
+          } else {
+            preview.append(sanitizeSvg(document.importNode(element, true)));
+          }
+
+          const pixelatedPreview = await makePixelatedPreview(preview);
+          const figure = document.createElement("figure");
+          const caption = document.createElement("figcaption");
+          caption.textContent = `ID: ${element.id}`;
+
+          figure.append(pixelatedPreview, caption);
+          gallery.append(figure);
+        }
+
+        status.textContent = `Found ${matches.length} element(s) with IDs.`;
+      } catch (error) {
+        status.textContent = `Error: ${error.message || "Could not read the SVG."}`;
+      }
+    });
+  </script>
+</body>
+</html>
