@@ -42,20 +42,41 @@ body {
     radial-gradient(circle at 18% 12%, rgba(34, 202, 207, 0.32), transparent 24rem),
     radial-gradient(circle at 85% 25%, rgba(255, 128, 107, 0.18), transparent 20rem),
     linear-gradient(180deg, #03192d 0%, #064c6e 48%, #021827 100%);
+  position: relative;
 }
 
 body::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
   content: "";
-  pointer-events: none;
-  opacity: 0.3;
+  position: absolute;
+  inset: 0;
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.8) 0 1px, transparent 2px),
-    radial-gradient(circle, rgba(255, 255, 255, 0.5) 0 1px, transparent 2px);
-  background-position: 20px 30px, 100px 120px;
-  background-size: 190px 230px, 270px 320px;
+    radial-gradient(circle, rgba(223, 252, 255, 0.7) 0 2px, transparent 3px),
+    radial-gradient(circle, rgba(25, 199, 201, 0.4) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(223, 252, 255, 0.5) 0 3px, transparent 4px);
+  background-size: 200px 300px, 150px 250px, 300px 400px;
+  animation: riseBubbles 25s linear infinite;
+  pointer-events: none;
+}
+
+body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(25, 199, 201, 0.6) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle, rgba(223, 252, 255, 0.4) 0 2px, transparent 3px);
+  background-size: 120px 180px, 250px 350px;
+  animation: riseBubbles 15s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes riseBubbles {
+  from { 
+    background-position: 0px 400px, 50px 500px, 100px 600px; 
+  }
+  to { 
+    background-position: 0px -100px, 50px -150px, 100px -200px; 
+  }
 }
 
 button,
