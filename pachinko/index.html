@@ -441,6 +441,24 @@ button.secondary{flex:0 0 95px;background:linear-gradient(#75f8ed,#3bb7e9);borde
     refresh();
   }
 
+  function randomLaunchX() {
+    const mean = W / 2;
+    const sigma = (W / 2 - 24) / 3;
+    let x;
+  
+    // Resample values outside the board rather than piling them up at its edges.
+    do {
+      const u1 = Math.random();
+      const u2 = Math.random();
+      const standardNormal =
+        Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  
+      x = mean + standardNormal * sigma;
+    } while (x < 24 || x > W - 24);
+  
+    return x;
+  }
+
   function setLanguage(next) {
     if (!validLanguages.includes(next)) {
       return;
@@ -766,7 +784,13 @@ button.secondary{flex:0 0 95px;background:linear-gradient(#75f8ed,#3bb7e9);borde
 
       for (const peg of pegs) collide(ball, peg);
 
-      if (!ball.hitPin && collide(ball, { x: P.x, y: P.y, r: 11 }, 2.2)) {
+      const hitPin = collide(
+        ball,
+        { x: P.x, y: P.y, r: 11 },
+        ball.hitPin ? 0.55 : 2.2
+      );
+      
+      if (hitPin && !ball.hitPin) {
         ball.hitPin = true;
         ballsLeft++;
         refresh();
@@ -881,7 +905,7 @@ button.secondary{flex:0 0 95px;background:linear-gradient(#75f8ed,#3bb7e9);borde
   });
 
   document.querySelector("#launch").addEventListener("click", () => {
-    launch(launchX);
+    launch(randomLaunchX());
   });
 
   document.querySelector("#reset").addEventListener("click", () => {
