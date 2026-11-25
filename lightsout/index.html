@@ -38,7 +38,7 @@ h1 {
   letter-spacing: .1em;
   text-transform: uppercase;
   color: #ff007f;
-  text-shadow: 
+  text-shadow:
     0 0 5px #ff007f,
     0 0 15px #ff007faa,
     0 0 30px #ff007f55;
@@ -54,7 +54,8 @@ h1 {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--board-size, 5), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--board-size, 5), minmax(0, 1fr));
   gap: clamp(7px, 2vw, 12px);
   width: min(100%, 460px);
   aspect-ratio: 1;
@@ -63,7 +64,7 @@ h1 {
   border: 2px solid #00f0ff;
   border-radius: 6px;
   background: #050508;
-  box-shadow: 
+  box-shadow:
     inset 0 0 20px #000000,
     0 0 20px #00f0ff44,
     0 0 40px #ff007f22;
@@ -72,6 +73,8 @@ h1 {
 .cell {
   --light: #ff007f;
   min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
   border: 1px solid #334;
   border-radius: 4px;
   background: linear-gradient(145deg, #13131d, #0d0d14);
@@ -81,10 +84,7 @@ h1 {
   transition: background .14s, box-shadow .14s, transform .08s, border-color .14s;
 }
 
-.cell:hover {
-  border-color: #00f0ff55;
-}
-
+.cell:hover { border-color: #00f0ff55; }
 .cell:active { transform: scale(.92); }
 
 .cell.on {
@@ -110,7 +110,7 @@ h1 {
   margin-top: 1.1rem;
 }
 
-button, select {
+button {
   min-height: 46px;
   border: 1px solid #ff007f88;
   border-radius: 4px;
@@ -123,19 +123,20 @@ button, select {
   box-shadow: 0 0 10px #ff007f11;
 }
 
-button:focus-visible, select:focus-visible {
+button:focus-visible {
   outline: 2px solid #00f0ff;
   outline-offset: 3px;
 }
 
-.controls button, .dialog button {
+.controls button,
+.dialog button {
   padding: .65rem 1.1rem;
   cursor: pointer;
   touch-action: manipulation;
 }
 
-button:hover { 
-  background: #1f132b; 
+button:hover {
+  background: #1f132b;
   border-color: #ff007f;
   box-shadow: 0 0 15px #ff007f44;
 }
@@ -159,49 +160,58 @@ button:hover {
   border: 2px solid #00f0ff;
   border-radius: 6px;
   background: #0b0b14;
-  box-shadow: 
+  box-shadow:
     0 0 30px #00f0ff44,
     inset 0 0 20px #000;
   text-align: center;
 }
 
-.dialog h2 { 
-  margin: 0 0 .7rem; 
-  color: #00f0ff; 
+.dialog h2 {
+  margin: 0 0 .7rem;
+  color: #00f0ff;
   text-shadow: 0 0 10px #00f0ffaa;
   letter-spacing: .08em;
 }
 
-.dialog p { 
-  line-height: 1.55; 
-  color: #b0b0c0; 
+.dialog p {
+  line-height: 1.55;
+  color: #b0b0c0;
 }
 
-.language {
-  margin-top: 1rem;
-  display: inline-flex;
+.choice-row {
+  margin: 1rem auto 0;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: .55rem;
+  gap: .45rem;
   color: #00f0ff88;
   font-size: .92rem;
 }
 
-select { 
-  padding: .4rem .6rem; 
+.choice-buttons {
+  display: flex;
+  justify-content: center;
+  gap: .4rem;
+}
+
+.choice-buttons button {
+  min-height: 40px;
+  padding: .45rem .7rem;
+  cursor: pointer;
   color: #00f0ff;
   border-color: #00f0ff88;
-  background: #13131d;
-  box-shadow: 0 0 10px #00f0ff11;
 }
 
-select:hover {
+.choice-buttons button[aria-pressed="true"] {
+  color: #09090e;
+  background: #00f0ff;
   border-color: #00f0ff;
-  box-shadow: 0 0 15px #00f0ff44;
+  text-shadow: none;
+  box-shadow: 0 0 12px #00f0ff66;
 }
 
-.victory .dialog { 
-  background: #0b0b14; 
+.victory .dialog {
+  background: #0b0b14;
   border-color: #ff007f;
   box-shadow: 0 0 40px #ff007f66;
 }
@@ -220,9 +230,7 @@ select:hover {
 <main class="game">
   <h1 id="title">Lights Out</h1>
   <p class="hint" id="hint"></p>
-
   <div class="board" id="board" role="group" aria-label="5 by 5 game board"></div>
-
   <div class="controls">
     <button id="newGame" type="button"></button>
     <button id="reset" type="button"></button>
@@ -240,18 +248,25 @@ select:hover {
     <h2 id="dialogTitle"></h2>
     <p id="instructionsText"></p>
 
-    <label class="language">
-      <span id="languageLabel"></span>
-      <select id="language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <option value="zh">繁體中文</option>
-      </select>
-    </label>
+    <div class="choice-row">
+      <span id="boardSizeLabel"></span>
+      <div class="choice-buttons" id="boardSizeChoices" role="group" aria-labelledby="boardSizeLabel">
+        <button type="button" data-size="5" aria-pressed="true">5 × 5</button>
+        <button type="button" data-size="7" aria-pressed="false">7 × 7</button>
+        <button type="button" data-size="9" aria-pressed="false">9 × 9</button>
+      </div>
+    </div>
 
-    <p>
-      <button id="start" type="button"></button>
-    </p>
+    <div class="choice-row">
+      <span id="languageLabel"></span>
+      <div class="choice-buttons" id="languageChoices" role="group" aria-labelledby="languageLabel">
+        <button type="button" data-lang="en" aria-pressed="true">English</button>
+        <button type="button" data-lang="es" aria-pressed="false">Español</button>
+        <button type="button" data-lang="zh" aria-pressed="false">繁體中文</button>
+      </div>
+    </div>
+
+    <p><button id="start" type="button"></button></p>
   </div>
 </section>
 
@@ -282,6 +297,7 @@ select:hover {
       newGame: "New Game",
       reset: "Reset",
       language: "Language",
+      boardSize: "Board",
       victoryTitle: "You did it!",
       victory: steps => `Solved in ${steps} moves!`,
       playAgain: "Play again",
@@ -296,6 +312,7 @@ select:hover {
       newGame: "Nueva partida",
       reset: "Reiniciar",
       language: "Idioma",
+      boardSize: "Tablero",
       victoryTitle: "¡Lo has conseguido!",
       victory: steps => `¡Resuelto en ${steps} movimientos!`,
       playAgain: "Jugar otra vez",
@@ -310,6 +327,7 @@ select:hover {
       newGame: "新遊戲",
       reset: "重設",
       language: "語言",
+      boardSize: "棋盤",
       victoryTitle: "贏咗！",
       victory: steps => `用咗 ${steps} 步完成！`,
       playAgain: "再玩一次",
@@ -344,9 +362,9 @@ select:hover {
   }
 
   let lang = getInitialLanguage();
+  let size = 5;
   let cells = [];
   let original = [];
-  let solutionMoves = [];
   let steps = 0;
 
   const $ = id => document.getElementById(id);
@@ -370,16 +388,20 @@ select:hover {
     $("newGame").textContent = text.newGame;
     $("reset").textContent = text.reset;
     $("languageLabel").textContent = text.language;
+    $("boardSizeLabel").textContent = text.boardSize;
     $("victoryTitle").textContent = text.victoryTitle;
     $("victoryText").textContent = text.victory(steps);
     $("playAgain").textContent = text.playAgain;
-    $("language").value = lang;
+
+    document.querySelectorAll("#languageChoices button").forEach(button => {
+      button.setAttribute("aria-pressed", String(button.dataset.lang === lang));
+    });
 
     render();
   }
 
   function toggle(r, c) {
-    if (r >= 0 && r < 5 && c >= 0 && c < 5) {
+    if (r >= 0 && r < size && c >= 0 && c < size) {
       cells[r][c] = !cells[r][c];
     }
   }
@@ -406,7 +428,10 @@ select:hover {
   }
 
   function render() {
+    board.style.setProperty("--board-size", size);
+    board.setAttribute("aria-label", `${size} by ${size} game board`);
     board.replaceChildren();
+
     const text = copy[lang];
 
     cells.forEach((row, r) => {
@@ -425,30 +450,37 @@ select:hover {
 
   function newGame() {
     steps = 0;
-    cells = Array.from({ length: 5 }, () => Array(5).fill(false));
+    cells = Array.from({ length: size }, () => Array(size).fill(false));
 
-    // Store a sequence of moves that will solve this puzzle.
-    solutionMoves = [];
-    const moveCount = 12 + Math.floor(Math.random() * 14);
+    // Create a solvable puzzle by applying random moves to a solved board.
+    const moveCount = Math.floor(size * size / 3);
 
     for (let i = 0; i < moveCount; i++) {
-      solutionMoves.push({
-        r: Math.floor(Math.random() * 5),
-        c: Math.floor(Math.random() * 5)
-      });
-    }
-
-    // Apply the solution moves to a solved board to create a solvable puzzle.
-    for (const move of solutionMoves) {
-      applyMove(move.r, move.c);
+      const r = Math.floor(Math.random() * size);
+      const c = Math.floor(Math.random() * size);
+      applyMove(r, c);
     }
 
     original = cells.map(row => [...row]);
     render();
   }
 
-  $("language").addEventListener("change", event => {
-    setLanguage(event.target.value);
+  $("languageChoices").addEventListener("click", event => {
+    const button = event.target.closest("button[data-lang]");
+    if (button) setLanguage(button.dataset.lang);
+  });
+
+  $("boardSizeChoices").addEventListener("click", event => {
+    const button = event.target.closest("button[data-size]");
+    if (!button) return;
+
+    size = Number(button.dataset.size);
+
+    document.querySelectorAll("#boardSizeChoices button").forEach(option => {
+      option.setAttribute("aria-pressed", String(option === button));
+    });
+
+    newGame();
   });
 
   $("start").addEventListener("click", () => {
