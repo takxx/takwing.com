@@ -99,7 +99,14 @@ function applyLanguage() {
   document.querySelector("#new-game").textContent = text.newGame;
   document.querySelector("#instructions").textContent = text.instructions;
   document.querySelector("#language-label").textContent = text.language;
-  languageElement.value = language;
+
+  languageElement.querySelectorAll(".language-button").forEach(button => {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.language === language)
+    );
+  });
+
   statusElement.textContent = isSolved() ? text.complete : "";
 }
 
@@ -445,17 +452,66 @@ boardElement.addEventListener("pointercancel", () => {
 
 document.querySelector("#new-game").addEventListener("click", newGame);
 
-languageElement.addEventListener("change", event => {
-  language = event.target.value;
+languageElement.addEventListener("click", event => {
+  const button = event.target.closest(".language-button");
+  if (!button) return;
+
+  language = button.dataset.language;
 
   try {
     localStorage.setItem("puzzle-language", language);
   } catch (_) {
     // The selected language still applies for this page session.
   }
-
   applyLanguage();
 });
 
+
 applyLanguage();
 newGame();
+
+const mosaicCanvas = document.querySelector("#mosaic-bg");
+const mosaicCtx = mosaicCanvas.getContext("2d");
+
+const mosaicColors = [
+  "#1b050d",
+  "#210713",
+  "#2c0a18",
+  "#2c0a18",
+  "#3a1024",
+  "#3a1024",
+  "#470b1f",
+  "#4a152b",
+  "#6e1230",
+];
+
+function drawMosaic() {
+  const dpr = window.devicePixelRatio || 1;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  mosaicCanvas.width = Math.round(width * dpr);
+  mosaicCanvas.height = Math.round(height * dpr);
+  mosaicCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const tileSize = 8;
+  const cols = Math.ceil(width / tileSize);
+  const rows = Math.ceil(height / tileSize);
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      mosaicCtx.fillStyle =
+        mosaicColors[Math.floor(Math.random() * mosaicColors.length)];
+
+      mosaicCtx.fillRect(
+        col * tileSize,
+        row * tileSize,
+        tileSize - 2,
+        tileSize - 2
+      );
+    }
+  }
+}
+
+drawMosaic();
+window.addEventListener("resize", drawMosaic);
