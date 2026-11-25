@@ -41,7 +41,7 @@ h1 { margin: 0; font-size: clamp(1.7rem, 6vw, 3rem); letter-spacing: .04em; }
 
 .hud {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   padding: 12px;
   background: #542d1d;
@@ -53,8 +53,12 @@ h1 { margin: 0; font-size: clamp(1.7rem, 6vw, 3rem); letter-spacing: .04em; }
   background: #38251d;
   color: #fff19a;
   font-weight: 900;
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(0.55rem, 2.5vw, 1rem);
+  overflow-wrap: anywhere;
 }
-.stat span { display: block; margin-top: 3px; color: #fff; font-size: 1.2rem; }
+.stat span { display: block; margin-top: 3px; color: #fff; font-size: clamp(0.75rem, 3.5vw, 1.2rem);}
 
 .yard {
   padding: clamp(14px, 5vw, 28px);
@@ -167,10 +171,37 @@ button:active:not(.hole) { transform: translateY(2px); box-shadow: 0 1px 0 #9c57
 .notice { min-height: 1.5em; }
 
 @media (max-width: 480px) {
-  .hud { grid-template-columns: repeat(3, 1fr); }
+  .hud { grid-template-columns: repeat(5, 1fr); }
   .footer { align-items: flex-start; font-size: .9rem; }
   .yard { padding: 12px 8px; }
+
+  .holes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, auto);
+    row-gap: 0;
+  }
+
+  .hole {
+    grid-column: auto;
+  }
+
+  /* Left column: three holes, shifted down half a hole */
+  .hole:nth-child(1) { grid-area: 1 / 1; transform: translateY(50%); }
+  .hole:nth-child(2) { grid-area: 2 / 1; transform: translateY(50%); }
+  .hole:nth-child(3) { grid-area: 3 / 1; transform: translateY(50%); }
+
+  /* Center column: four holes */
+  .hole:nth-child(4) { grid-area: 1 / 2; }
+  .hole:nth-child(5) { grid-area: 2 / 2; }
+  .hole:nth-child(6) { grid-area: 3 / 2; }
+  .hole:nth-child(7) { grid-area: 4 / 2; }
+
+  /* Right column: three holes, shifted down half a hole */
+  .hole:nth-child(8)  { grid-area: 1 / 3; transform: translateY(50%); }
+  .hole:nth-child(9)  { grid-area: 2 / 3; transform: translateY(50%); }
+  .hole:nth-child(10) { grid-area: 3 / 3; transform: translateY(50%); }
 }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; }
 }
@@ -234,7 +265,7 @@ button:active:not(.hole) { transform: translateY(2px); box-shadow: 0 1px 0 #9c57
 (() => {
   "use strict";
 
-const words = {
+  const words = {
     en: {
       title: "Whack-A-Mole", tagline: "The classic arcade garden!",
       score: "Score", stage: "Stage", time: "Time", best: "Best", menu: "Menu",
