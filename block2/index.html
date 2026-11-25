@@ -76,6 +76,9 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
 .choice-row { display: flex; flex-wrap: wrap; gap: 8px }
 .choice-row button.selected { outline: 2px solid white }
 .start-button { margin-top: 22px; width: 100%; background: #526777 }
+#mosaic-bg {position: fixed;inset: 0;z-index: 0;width: 100%;height: 100%;opacity: 0.18;pointer-events: none;}
+main {position: relative;z-index: 1;}
+.overlay {z-index: 10;}
 @media(max-width:720px) {
   main { padding:10px }
   .layout { grid-template-columns:1fr }
@@ -85,6 +88,7 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
 </style>
 </head>
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <div id="startOverlay" class="overlay">
   <section class="start-card" aria-labelledby="startTitle">
     <h1 id="startTitle"></h1>
@@ -253,7 +257,7 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
 
   const starts=[[4,4],[9,9]];
   let board, used, turn, selected, orientation, last;
-  let mode = "ai-simple", lang = "en", legal = [], gameStarted = false;
+  let mode = "ai-simple", lang = "en", legal = [], gameStarted = false, gameOver = false;
   const $=id=>document.getElementById(id);
   const txt=key=>translations[lang][key];
   const norm=cells=>{
@@ -406,7 +410,7 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
   function advance(){
     turn=1-turn;selected=null;orientation=0;
     if(!movesFor(turn).length){
-      if(!movesFor(1-turn).length){finish();return;}
+      if(!movesFor(1-turn).length){finish();update();return;}
       $("status").textContent=txt("noMoves");turn=1-turn;
     }else $("status").textContent=txt("choose");
     update();
@@ -415,7 +419,6 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
   function aiMove(){
     const moves=movesFor(1);
     if(!moves.length){advance();return;}
-
     let chosenMove;
     if (mode === "ai-simple") {
       moves.sort((a,b)=>{
@@ -424,21 +427,14 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
       });
       chosenMove = moves[Math.floor(Math.random()*Math.min(12,moves.length))];
     } else {
-      // Normal AI: Evaluates moves based on piece size, central proximity, and board expansion potential
       let bestScore = -99999;
       let scoredMoves = [];
 
       for (const m of moves) {
         const pieceSize = pieces[m.id].length;
-        // Central distance penalty (closer to center/opponent start is better)
         const distToCenter = Math.abs((m.x + 1) - (N / 2)) + Math.abs((m.y + 1) - (N / 2));
-        
-        // Count how many new corners this move opens up or how deep it pushes
         let score = pieceSize * 15 - distToCenter * 2;
-        
-        // Bonus for larger pieces early on
         if (pieceSize >= 4) score += 10;
-
         if (score > bestScore) {
           bestScore = score;
           scoredMoves = [m];
@@ -448,7 +444,6 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
       }
       chosenMove = scoredMoves[Math.floor(Math.random() * scoredMoves.length)];
     }
-
     const cells=oriented(chosenMove.id,chosenMove.o).map(([dx,dy])=>[chosenMove.x+dx,chosenMove.y+dy]);
     cells.forEach(([x,y])=>board[y][x]=1);
     used[1][chosenMove.id]=true;last=cells;advance();
@@ -473,6 +468,7 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
       `${txt("win")} — ${result}. ` +
       `${txt("p1")}: ${counts[0]} ${txt("score")}; ` +
       `${txt("p2")}: ${counts[1]} ${txt("score")}`;
+    gameOver = true;
   }
   function update(){
     document.documentElement.lang=lang;
@@ -487,6 +483,9 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
     $("rotate").disabled=selected===null||isAITurn();
     $("flip").disabled=selected===null||isAITurn();
     $("pass").disabled=isAITurn();
+    $("p1").classList.toggle("active", !gameOver && turn === 0);
+    $("p2").classList.toggle("active", !gameOver && turn === 1);
+    $("pieces").style.display = gameOver ? "none" : "";
   }
   function updateOverlay(){
     $("startTitle").textContent = txt("title");
@@ -506,10 +505,16 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
     $("title").textContent = txt("title");
     document.title = txt("title");
   }
-  function reset(){
-    board=Array.from({length:N},()=>Array(N).fill(-1));
-    used=[pieces.map(()=>false),pieces.map(()=>false)];
-    turn=0;selected=null;orientation=0;last=null;$("status").textContent=txt("choose");update();
+  function reset() {
+    gameOver = false;
+    board = Array.from({length:N}, () => Array(N).fill(-1));
+    used = [pieces.map(() => false), pieces.map(() => false)];
+    turn = 0;
+    selected = null;
+    orientation = 0;
+    last = null;
+    $("status").textContent = txt("choose");
+    update();
   }
   $("rotate").onclick=()=>{if(selected!==null){orientation=(orientation+1)%8;update();}};
   $("flip").onclick=()=>{if(selected!==null){orientation=(orientation+4)%8;update();}};
@@ -546,6 +551,32 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
        browser.startsWith("es")?"es":browser.startsWith("zh")?"zh":"en";  
   updateOverlay();
 })();
+const canvas = document.getElementById("mosaic-bg");
+const ctx = canvas.getContext("2d");
+const colors = ["#263858", "#2c3e60", "#3a4d70", "#1b2945"];
+
+function drawMosaic() {
+  const dpr = window.devicePixelRatio || 1;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const tile = 8;
+
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  for (let y = 0; y < height; y += tile) {
+    for (let x = 0; x < width; x += tile) {
+      ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+      ctx.fillRect(x, y, tile - 1, tile - 1);
+    }
+  }
+}
+
+drawMosaic();
+window.addEventListener("resize", drawMosaic);
 </script>
 </body>
 </html>
