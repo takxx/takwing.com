@@ -127,7 +127,7 @@ h1 { margin: 0; font-size: clamp(1.7rem, 6vw, 3rem); letter-spacing: .04em; }
   box-shadow: 0 3px 0 #9c571d;
 }
 button:hover { filter: brightness(1.08); }
-button:active { transform: translateY(2px); box-shadow: 0 1px 0 #9c571d; }
+button:active:not(.hole) { transform: translateY(2px); box-shadow: 0 1px 0 #9c571d; }
 
 .overlay {
   position: fixed;
@@ -383,25 +383,80 @@ const words = {
     button.className = "hole";
     button.setAttribute("aria-label", "Mole hole " + (index + 1));
     button.innerHTML = `
-      <svg viewBox="0 0 180 150" aria-hidden="true">
-        <ellipse cx="90" cy="112" rx="75" ry="28" fill="#542918"/>
-        <ellipse cx="90" cy="106" rx="62" ry="19" fill="#281711"/>
-        <g class="mole">
-          <ellipse cx="90" cy="95" rx="45" ry="47" fill="#9b5c37" stroke="#633719" stroke-width="5"/>
-          <circle cx="62" cy="65" r="15" fill="#9b5c37" stroke="#633719" stroke-width="4"/>
-          <circle cx="118" cy="65" r="15" fill="#9b5c37" stroke="#633719" stroke-width="4"/>
-          <circle cx="62" cy="65" r="7" fill="#f2a5a1"/>
-          <circle cx="118" cy="65" r="7" fill="#f2a5a1"/>
-          <ellipse cx="90" cy="101" rx="27" ry="21" fill="#e4b27e"/>
-          <circle cx="75" cy="85" r="4" fill="#21150f"/>
-          <circle cx="105" cy="85" r="4" fill="#21150f"/>
-          <ellipse cx="90" cy="98" rx="7" ry="5" fill="#56301e"/>
-          <path d="M82 107 Q90 114 98 107" fill="none" stroke="#56301e" stroke-width="3" stroke-linecap="round"/>
-        </g>
-        <text class="hit-mark" x="90" y="55">✨</text>
-        <path d="M20 118 Q48 104 67 116 M113 116 Q135 102 160 118"
-          fill="none" stroke="#83c84f" stroke-width="10" stroke-linecap="round"/>
-      </svg>`;
+    <svg viewBox="0 0 180 150" aria-hidden="true">
+      <!-- Mound -->
+      <ellipse cx="90" cy="112" rx="75" ry="28" fill="#542918"/>
+      <ellipse cx="90" cy="106" rx="62" ry="19" fill="#281711"/>
+    
+      <!-- Mole -->
+      <g class="mole">
+        <!-- Filled head shape -->
+        <path d="M51 105
+          Q48 82 61 68
+          Q72 55 90 57
+          Q108 55 119 68
+          Q132 82 129 105
+          Q125 124 110 136
+          Q100 143 90 143
+          Q80 143 70 136
+          Q55 124 51 105Z"
+          fill="#9b5c37"/>
+    
+        <!-- Open head outline: leaves the chin unclosed -->
+        <path d="M51 105
+          Q48 82 61 68
+          Q72 55 90 57
+          Q108 55 119 68
+          Q132 82 129 105"
+          fill="none" stroke="#633719" stroke-width="5"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    
+        <!-- Small ears -->
+        <circle cx="62" cy="71" r="10"
+          fill="#9b5c37" stroke="#633719" stroke-width="4"/>
+        <circle cx="118" cy="71" r="10"
+          fill="#9b5c37" stroke="#633719" stroke-width="4"/>
+        <circle cx="62" cy="71" r="4.5" fill="#f2a5a1"/>
+        <circle cx="118" cy="71" r="4.5" fill="#f2a5a1"/>
+    
+        <!-- Eyes -->
+        <circle cx="75" cy="86" r="3.5" fill="#21150f"/>
+        <circle cx="105" cy="86" r="3.5" fill="#21150f"/>
+    
+        <!-- Tapered muzzle -->
+        <path d="M69 96
+          Q78 91 90 91
+          Q102 91 111 96
+          L100 113
+          Q95 120 90 124
+          Q85 120 80 113Z"
+          fill="#e4b27e"/>
+    
+        <!-- Pointed nose and mouth -->
+        <path d="M83 96 Q90 91 97 96 L90 103Z" fill="#56301e"/>
+        <path d="M90 103 L90 112 M90 112 L84 115 M90 112 L96 115"
+          fill="none" stroke="#56301e" stroke-width="2.5"
+          stroke-linecap="round"/>
+    
+        <!-- Front paws and digging claws -->
+        <path d="M55 116 Q63 111 72 116 L68 125 Q61 128 54 123Z"
+          fill="#9b5c37" stroke="#633719" stroke-width="2"/>
+        <path d="M125 116 Q117 111 108 116 L112 125 Q119 128 126 123Z"
+          fill="#9b5c37" stroke="#633719" stroke-width="2"/>
+        <path d="M58 124 l-5 5 M64 126 l-2 6 M119 126 l2 6 M125 124 l5 5"
+          fill="none" stroke="#e8d0ae" stroke-width="3"
+          stroke-linecap="round"/>
+      </g>
+    
+      <!-- Hit mark -->
+      <text class="hit-mark" x="90" y="53" text-anchor="middle">✨</text>
+    
+      <!-- Grass -->
+      <path d="M20 118 Q42 105 56 116 M124 116 Q140 104 160 118"
+        fill="none" stroke="#83c84f" stroke-width="10"
+        stroke-linecap="round"/>
+    </svg>
+    `;
 
     button.addEventListener("pointerdown", event => {
       event.preventDefault();
@@ -506,32 +561,36 @@ const words = {
 
   function popMole() {
     if (!running || Date.now() >= roundEnd) return;
-
-    const choices = holes.filter(hole => !activeHoles.has(hole));
-    if (!choices.length) {
-      scheduleMole(150);
-      return;
-    }
-
-    const hole = choices[Math.floor(Math.random() * choices.length)];
-    activeHoles.add(hole);
-    hole.classList.remove("hit");
-    hole.classList.add("up");
-
+  
     const c = config[mode];
     const delay = Math.max(
       c.min,
       c.delay - Math.min((stage - 1) * 75, c.delay - c.min)
     );
     const visible = Math.max(500, c.visible - (stage - 1) * 25);
-
-    const hideTimer = setTimeout(() => {
-      hole.classList.remove("up");
-      activeHoles.delete(hole);
-      moleTimers.delete(hole);
-    }, visible);
-
-    moleTimers.set(hole, hideTimer);
+  
+    // Start adding two-mole bursts from stage 3, increasingly often.
+    const burstChance = stage < 3 ? 0 : Math.min(0.7, 0.15 + (stage - 3) * 0.08);
+    const spawnCount = Math.random() < burstChance ? 2 : 1;
+  
+    for (let i = 0; i < spawnCount; i++) {
+      const choices = holes.filter(hole => !activeHoles.has(hole));
+      if (!choices.length) break;
+  
+      const hole = choices[Math.floor(Math.random() * choices.length)];
+      activeHoles.add(hole);
+      hole.classList.remove("hit");
+      hole.classList.add("up");
+  
+      const hideTimer = setTimeout(() => {
+        hole.classList.remove("up");
+        activeHoles.delete(hole);
+        moleTimers.delete(hole);
+      }, visible);
+  
+      moleTimers.set(hole, hideTimer);
+    }
+  
     scheduleMole(delay);
   }
 
