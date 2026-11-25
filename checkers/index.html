@@ -595,68 +595,224 @@ select {
     border-radius: 16px;
   }
 }
+
+/* Overlay Container */
+.game-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--background);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  transition: opacity 0.3s ease;
+}
+
+.game-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none;
+}
+
+/* Modal Content Box */
+.overlay-card {
+  background: var(--panel);
+  color: var(--text);
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 25px -5px var(--panel-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border: 1px solid var(--panel-border);
+}
+
+.overlay-card h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+/* Sections inside Overlay */
+.overlay-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75srem;
+}
+
+.overlay-section h3 {
+  font-size: 1.1rem;
+  color: var(--text);
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 0.25rem;
+}
+
+.rules-snippet {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--panel);
+  padding: 1rem;
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Form Controls inside Overlay */
+.overlay-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media(min-width: 480px) {
+  .overlay-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.overlay-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.overlay-control-group label {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.overlay-control-group select {
+  background: linear-gradient(180deg, #382c23, #241c16);
+  color: white;
+  border: 1px solid var(--panel-border-strong);
+  padding: 0.6rem;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+/* Play Button */
+.start-game-btn {
+  background: rgba(217, 179, 108, 0.11);
+  color: inherit;
+  border: 1px solid var(--panel-border-strong);
+  padding: 0.85rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 0.5rem;
+}
+
+.start-game-btn:hover {
+  border-color: var(--brass);
+  background:
+    linear-gradient(180deg, #4a392b, #2b211a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 200, 0.1),
+    0 5px 14px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
 </style>
 </head>
 
 <body>
-  <main class="app-shell">
-    <header class="page-header">
-      <h1 data-i18n="title">Chinese Chequers Board</h1>
+<!-- Main Start Overlay -->
+<div id="gameOverlay" class="game-overlay">
+  <div class="overlay-card">
+    <h2 data-i18n="title">Chinese Chequers</h2>
+    
+    <!-- Language & Mode Selectors -->
+    <div class="overlay-controls">
+      <div class="overlay-control-group">
+        <label data-i18n="languageLabel">Language:</label>
+        <div id="overlayLangContainer" style="display: flex; gap: 0.5rem;">
+          <button class="language-button" data-language="en">English</button>
+          <button class="language-button" data-language="es">Español</button>
+          <button class="language-button" data-language="zh">中文</button>
+        </div>
+      </div>
+      
+      <div class="overlay-control-group">
+        <label for="overlayOpponentSelect" data-i18n="opponentCountLabel">Computer opponents</label>
+        <select id="overlayOpponentSelect">
+          <option value="1-easy" data-i18n="oneEasyOpponentOption">1 Casual AI</option>
+          <option value="2-easy" data-i18n="twoEasyOpponentsOption">2 Casual AI</option>
+          <option value="1-normal" data-i18n="oneNormalOpponentOption">1 Normal AI</option>
+          <option value="2-normal" data-i18n="twoNormalOpponentsOption">2 Normal AI</option>
+        </select>
+      </div>
+    </div>
 
-      <p class="description" data-i18n="description">
-      </p>
-    </header>
+    <!-- Instructions / Rules Snippet -->
+    <div class="overlay-section">
+      <h3 data-i18n="rulesTitle">Variant rules</h3>
+      <div class="rules-snippet">
+        <p><strong data-i18n="ruleObjectiveTitle">Objective</strong>: <span data-i18n="ruleObjectiveText">Move all ten of your marbles from your home triangle into the triangle directly opposite it.</span></p>
+        <p style="margin-top: 0.5rem;"><strong data-i18n="ruleExtendedJumpTitle">Extended jump</strong>: <span data-i18n="ruleExtendedJumpText">Jump exactly one marble at any straight-line distance. Both clear segments must be equal in length.</span></p>
+      </div>
+    </div>
 
-    <div class="game-layout">
+    <!-- Start Action -->
+    <button id="overlayStartBtn" class="start-game-btn" data-i18n="start">Start Game</button>
+  </div>
+</div>
+<main class="app-shell">
+  <header class="page-header">
+    <h1 data-i18n="title">Chinese Chequers Board</h1>
+
+    <p class="description" data-i18n="description">
+    </p>
+  </header>
+
+  <div class="game-layout">
+    <section
+      class="board-panel"
+      data-i18n-aria-label="boardPanelAriaLabel"
+      aria-label="Chinese Chequers board">
+
+      <svg
+        id="board"
+        viewBox="-275 -305 550 620"
+        preserveAspectRatio="xMidYMid meet"
+        role="grid"
+        aria-label="Chinese Chequers coordinate board">
+      </svg>
+    </section>
+
+    <aside class="side-panel">
       <section
-        class="board-panel"
-        data-i18n-aria-label="boardPanelAriaLabel"
-        aria-label="Chinese Chequers board">
+        class="status-panel"
+        data-i18n-aria-label="statusAriaLabel"
+        aria-label="Game status">
 
-        <svg
-          id="board"
-          viewBox="-275 -305 550 620"
-          preserveAspectRatio="xMidYMid meet"
-          role="grid"
-          aria-label="Chinese Chequers coordinate board">
-        </svg>
-      </section>
+        <div class="game-options" style="display:none">        
+          <label for="opponentCount" data-i18n="opponentCountLabel">Computer opponents</label>
+          <select id="opponentCount">
+            <option value="1-easy" data-i18n="oneEasyOpponentOption">1 Easy AI</option>
+            <option value="2-easy" data-i18n="twoEasyOpponentsOption">2 Easy AI</option>
+            <option value="1-normal" data-i18n="oneNormalOpponentOption">1 Normal AI</option>
+            <option value="2-normal" data-i18n="twoNormalOpponentsOption">2 Normal AI</option>
+          </select>
+        </div>
 
-      <aside class="side-panel">
-        <section
-          class="status-panel"
-          data-i18n-aria-label="statusAriaLabel"
-          aria-label="Game status">
+        <p id="turnStatus" class="turn-status" aria-live="polite">
+          Loading game…
+        </p>
 
-          <div class="game-options">
-	          
-            <label for="opponentCount" data-i18n="opponentCountLabel">
-              Computer opponents
-            </label>
-
-            <select id="opponentCount">
-              <option value="1-easy" data-i18n="oneEasyOpponentOption">
-                1 Easy AI
-              </option>
-              <option value="2-easy" data-i18n="twoEasyOpponentsOption">
-                2 Easy AI
-              </option>
-              <option value="1-normal" data-i18n="oneNormalOpponentOption">
-                1 Normal AI
-              </option>
-              <option value="2-normal" data-i18n="twoNormalOpponentsOption">
-                2 Normal AI
-              </option>
-            </select>
-          </div>
-
-          <p id="turnStatus" class="turn-status" aria-live="polite">
-            Loading game…
-          </p>
-
-          <p id="readout" class="readout" aria-live="polite">
-            Select one of your marbles.
-          </p>
+        <p id="readout" class="readout" aria-live="polite">
+          Select one of your marbles.
+        </p>
 
         <div class="results" aria-live="polite">
           <span class="result-item result-win">
@@ -669,12 +825,12 @@ select {
             <strong id="lossCount">0</strong>
           </span>
         </div>
-
+  
         <div class="controls">
           <button id="resetMoveButton" type="button" disabled>
             Reset move
           </button>
-
+  
           <button id="restartButton" type="button">
             Restart game
           </button>
@@ -697,7 +853,7 @@ select {
 
       <section class="rules-panel" aria-labelledby="rulesTitle">
         <h2 id="rulesTitle" data-i18n="rulesTitle">Variant rules</h2>
-
+  
         <div class="rules-grid">
           <article>
             <h3 data-i18n="ruleObjectiveTitle">Objective</h3>
@@ -706,14 +862,14 @@ select {
               triangle directly opposite it.
             </p>
           </article>
-
+  
           <article>
             <h3 data-i18n="ruleStepTitle">Step move</h3>
             <p data-i18n="ruleStepText">
               Move one marble to an adjacent empty hole. A step ends your turn.
             </p>
           </article>
-
+  
           <article>
             <h3 data-i18n="ruleExtendedJumpTitle">Extended jump</h3>
             <p data-i18n="ruleExtendedJumpText">
@@ -721,7 +877,7 @@ select {
               x --- o --- x. Both clear segments must be equal in length.
             </p>
           </article>
-
+  
           <article>
             <h3 data-i18n="ruleMultipleJumpTitle">Multiple jumps</h3>
             <p data-i18n="ruleMultipleJumpText">
@@ -730,7 +886,7 @@ select {
               jump sequence.
             </p>
           </article>
-
+  
           <article>
             <h3 data-i18n="ruleTerritoryTitle">Territory restriction</h3>
             <p data-i18n="ruleTerritoryText">
@@ -738,7 +894,7 @@ select {
               finish a move there, whether or not that triangle contains marbles.
             </p>
           </article>
-
+  
           <article>
             <h3 data-i18n="ruleNoCaptureTitle">No captures</h3>
             <p data-i18n="ruleNoCaptureText">
@@ -747,48 +903,6 @@ select {
           </article>
         </div>
       </section>
-
-      <footer
-        class="language-panel"
-        data-i18n-aria-label="languageSelectorAriaLabel"
-        aria-label="Language selection">
-
-        <span data-i18n="languageLabel">Language:</span>
-
-        <div
-          class="language-controls"
-          data-i18n-aria-label="languageSelectorAriaLabel"
-          role="group"
-          aria-label="Language selection">
-
-          <button
-            type="button"
-            class="language-button"
-            data-language="en"
-            lang="en"
-            aria-pressed="true">
-            English
-          </button>
-
-          <button
-            type="button"
-            class="language-button"
-            data-language="es"
-            lang="es"
-            aria-pressed="false">
-            Español
-          </button>
-
-          <button
-            type="button"
-            class="language-button"
-            data-language="zh"
-            lang="zh-Hant"
-            aria-pressed="false">
-            中文
-          </button>
-        </div>
-      </footer>
     </aside>
   </div>
 </main>
@@ -1895,6 +2009,7 @@ var translations = {
     oneNormalOpponentOption: "1 Normal AI",
     twoNormalOpponentsOption: "2 Normal AI",
     resetMoveButton: "Reset move",
+    start: "Start game",
     restartButton: "Restart game",
     loading: "Loading game…",
     selectOwnMarble: "Select one of your marbles.",
@@ -1953,6 +2068,7 @@ var translations = {
     oneNormalOpponentOption: "1 IA normal",
     twoNormalOpponentsOption: "2 IA normales",
     resetMoveButton: "Restablecer movimiento",
+    start: "Empezar partida",
     restartButton: "Reiniciar partida",
     loading: "Cargando partida…",
     selectOwnMarble: "Selecciona una de tus fichas.",
@@ -2011,6 +2127,7 @@ zh: {
     oneNormalOpponentOption: "1個一般對手",
     twoNormalOpponentsOption: "2個一般對手",
     resetMoveButton: "重設移動",
+    start: "開始遊戲",
     restartButton: "重新開始",
     loading: "載入緊遊戲…",
     selectOwnMarble: "請揀一粒你嘅波子。",
@@ -2521,7 +2638,7 @@ elements.resetMoveButton.addEventListener("click", () => {
   game.resetCurrentHumanMove();
 });
 elements.restartButton.addEventListener("click", () => {
-  game.resetGame();
+  overlay.classList.toggle("hidden");
 });
 elements.opponentCountSelect.addEventListener("change", (event) => {
   const [count, difficulty] = event.target.value.split("-");
@@ -2540,6 +2657,32 @@ installLanguagePopstate(() => {
 renderer.render(game.getSnapshot());
 game.resetGame();
 
-  </script>
+// Reference the overlay elements
+const overlay = document.getElementById("gameOverlay");
+const overlayStartBtn = document.getElementById("overlayStartBtn");
+const overlayOpponentSelect = document.getElementById("overlayOpponentSelect");
+
+// Handle Start Game click from overlay
+overlayStartBtn.addEventListener("click", () => {
+  // Sync opponent settings to core game logic
+  const [count, diff] = overlayOpponentSelect.value.split("-");
+  game.setOpponentCount(Number(count));
+  game.setAiDifficulty(diff);
+  
+  // Hide overlay and kick off game loop/reset
+  overlay.classList.add("hidden");
+  game.resetGame();
+});
+
+// Sync overlay language selector buttons with main functionality
+document.querySelectorAll("#overlayLangContainer .language-button").forEach(button => {
+  button.addEventListener("click", () => {
+    setLanguage(button.dataset.language);
+    renderer.render(game.getSnapshot());
+  });
+});
+
+
+</script>
 </body>
 </html>
