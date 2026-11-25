@@ -253,7 +253,7 @@ svg#board { width:100%; height:auto; display:block; touch-action:manipulation }
 
   const starts=[[4,4],[9,9]];
   let board, used, turn, selected, orientation, last;
-  let mode = "ai-normal", lang = "en", legal = [], gameStarted = false;
+  let mode = "ai-simple", lang = "en", legal = [], gameStarted = false;
   const $=id=>document.getElementById(id);
   const txt=key=>translations[lang][key];
   const norm=cells=>{
