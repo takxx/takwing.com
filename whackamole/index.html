@@ -390,6 +390,49 @@ button:active:not(.hole) { transform: translateY(2px); box-shadow: 0 1px 0 #9c57
 
       const now = audioContext.currentTime;
 
+      if (kind === "hit") {
+        // Brief noise burst for the sharp contact.
+        const buffer = audioContext.createBuffer(
+          1,
+          Math.floor(audioContext.sampleRate * 0.07),
+          audioContext.sampleRate
+        );
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+      
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+      
+        const noiseGain = audioContext.createGain();
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.16, now + 0.005);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+      
+        noise.connect(noiseGain);
+        noiseGain.connect(audioContext.destination);
+        noise.start(now);
+        noise.stop(now + 0.07);
+      
+        // Low, quick thump underneath the noise.
+        const osc = audioContext.createOscillator();
+        const oscGain = audioContext.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(65, now + 0.09);
+      
+        oscGain.gain.setValueAtTime(0.0001, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.22, now + 0.005);
+        oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+      
+        osc.connect(oscGain);
+        oscGain.connect(audioContext.destination);
+        osc.start(now);
+        osc.stop(now + 0.11);
+        return;
+      }
+
       notes.forEach(([frequency, duration], i) => {
         const oscillator = audioContext.createOscillator();
         const gain = audioContext.createGain();
