@@ -280,7 +280,7 @@ const translations = {
 };
 
 const pages = [
-  { id: "games", url: "/games/zh", color: "blue", en: "", es: "", zh: "遊戲" },
+  { id: "games", url: "/games/index.html?lang=zh", color: "blue", en: "", es: "", zh: "遊戲" },
   { id: "videos", url: "https://gimy.tw/", color: "blue", en: "", es: "", zh: "睇劇" },
   { id: "youtube", url: "https://youtube.com/", color: "blue", en: "", es: "", zh: "YouTube" },
 ];
@@ -303,7 +303,7 @@ languageSelect.value = language;
 
 languageSelect.addEventListener("change", () => {
   const url = new URL(window.location.href);
-  url.searchParams.set("lang", languageSelect.value);
+//  url.searchParams.set("lang", languageSelect.value);
   window.location.href = url.href;
 });
 

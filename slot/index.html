@@ -54,7 +54,6 @@ body::before {
     radial-gradient(circle, rgba(25, 199, 201, 0.4) 0 1px, transparent 2px),
     radial-gradient(circle, rgba(223, 252, 255, 0.5) 0 3px, transparent 4px);
   background-size: 200px 300px, 150px 250px, 300px 400px;
-  animation: riseBubbles 25s linear infinite;
   pointer-events: none;
 }
 
@@ -66,17 +65,7 @@ body::after {
     radial-gradient(circle, rgba(25, 199, 201, 0.6) 0 1.5px, transparent 2.5px),
     radial-gradient(circle, rgba(223, 252, 255, 0.4) 0 2px, transparent 3px);
   background-size: 120px 180px, 250px 350px;
-  animation: riseBubbles 15s linear infinite;
   pointer-events: none;
-}
-
-@keyframes riseBubbles {
-  from { 
-    background-position: 0px 400px, 50px 500px, 100px 600px; 
-  }
-  to { 
-    background-position: 0px -100px, 50px -150px, 100px -200px; 
-  }
 }
 
 button,
