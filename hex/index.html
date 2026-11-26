@@ -35,6 +35,15 @@ button {
   cursor: pointer;
 }
 
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 /* Wide layout: content on the left, board on the right. */
 .app {
   display: grid;
@@ -48,6 +57,8 @@ button {
   width: min(100% - 32px, 1200px);
   margin: 0 auto;
   padding: 28px 0 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .topbar {
@@ -402,6 +413,7 @@ footer {
 </style>
 </head>
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main class="app">
   <header class="topbar">
     <div>
@@ -475,1085 +487,1059 @@ footer {
   </section>
 </div>
 <script>
-const NEIGHBORS = [
-  [-1, 0],
-  [1, 0],
-  [0, -1],
-  [0, 1],
-  [-1, 1],
-  [1, -1]
-];
-
-const BRIDGE_DATA = [
-  { offset: [-2, 1], gaps: [[-1, 0], [-1, 1]] },
-  { offset: [-1, 2], gaps: [[0, 1], [-1, 1]] },
-  { offset: [1, 1], gaps: [[1, 0], [0, 1]] },
-  { offset: [2, -1], gaps: [[1, 0], [1, -1]] },
-  { offset: [1, -2], gaps: [[0, -1], [1, -1]] },
-  { offset: [-1, -1], gaps: [[0, -1], [-1, 0]] }
-];
+const NEIGHBORS = [[-1, 0],[1, 0],[0, -1],[0, 1],[-1, 1],[1, -1]];
+const BRIDGE_DATA=[{offset:[-2,1],gaps:[[-1,0],[-1,1]]},{offset:[-1,2],gaps:[[0,1],[-1,1]]},{offset:[1,1],gaps:[[1,0],[0,1]]},{offset:[2,-1],gaps:[[1,0],[1,-1]]},{offset:[1,-2],gaps:[[0,-1],[1,-1]]},{offset:[-1,-1],gaps:[[0,-1],[-1,0]]}];
 
 function chooseComputerMove(board, player = "blue") {
-  const size = board.length;
+    const size = board.length;
 
-  if (!size || board.some((row) => row.length !== size)) {
-    throw new Error("The AI expects a non-empty square board.");
-  }
-
-  const opponent = otherPlayer(player);
-  const legalMoves = getPrunedLegalMoves(board, player);
-
-  if (legalMoves.length === 0) {
-    return null;
-  }
-
-  const winningMove = findImmediateWin(board, player);
-
-  if (winningMove) {
-    return winningMove;
-  }
-
-  const opponentWinningMove = findImmediateWin(board, opponent);
-
-  if (opponentWinningMove) {
-    return opponentWinningMove;
-  }
-
-  const root = createNode(player);
-  root.untried = rankMovesFast(
-    board,
-    player,
-    Math.min(25, legalMoves.length)
-  );
-
-  const simulations =
-    size >= 12 ? 1400 : size >= 9 ? 1800 : 2200;
-
-  for (let simulation = 0; simulation < simulations; simulation += 1) {
-    const position = board.map((row) => row.slice());
-    const path = [root];
-    let node = root;
-
-    while (!node.terminal) {
-      if (node.untried === null) {
-        node.untried = rankMovesFast(
-          position,
-          node.toMove,
-          Math.min(
-            14,
-            getPrunedLegalMoves(position, node.toMove).length
-          )
-        );
-      }
-
-      if (node.untried.length > 0) {
-        const action = node.untried.shift();
-        const mover = node.toMove;
-
-        position[action.row][action.col] = mover;
-
-        const child = createNode(otherPlayer(mover));
-        child.move = [action.row, action.col];
-        child.prior = action.prior;
-        child.terminal = hasConnection(position, mover);
-        child.winner = child.terminal ? mover : null;
-
-        node.children.push(child);
-        node = child;
-        path.push(node);
-
-        break;
-      }
-
-      if (node.children.length === 0) {
-        break;
-      }
-
-      const child = selectChild(node, player);
-
-      position[child.move[0]][child.move[1]] = node.toMove;
-      node = child;
-      path.push(node);
+    if (!size || board.some((row) => row.length !== size)) {
+        throw new Error("The AI expects a non-empty square board.");
     }
 
-    const winner = node.terminal
-      ? node.winner
-      : rollout(position, node.toMove);
+    const opponent = otherPlayer(player);
+    const legalMoves = getPrunedLegalMoves(board, player);
 
-    const result = winner === player ? 1 : 0;
-
-    for (const visited of path) {
-      visited.visits += 1;
-      visited.wins += result;
-    }
-  }
-
-  if (root.children.length === 0) {
-    return legalMoves[Math.floor(Math.random() * legalMoves.length)];
-  }
-
-  root.children.sort((a, b) => {
-    if (b.visits !== a.visits) {
-      return b.visits - a.visits;
+    if (legalMoves.length === 0) {
+        return null;
     }
 
-    return (
-      b.wins / Math.max(1, b.visits) -
-      a.wins / Math.max(1, a.visits)
-    );
-  });
+    const winningMove = findImmediateWin(board, player);
 
-  return root.children[0].move;
+    if (winningMove) {
+        return winningMove;
+    }
+
+    const opponentWinningMove = findImmediateWin(board, opponent);
+
+    if (opponentWinningMove) {
+        return opponentWinningMove;
+    }
+
+    const root = createNode(player);
+    root.untried = rankMovesFast(board, player, Math.min(25, legalMoves.length));
+
+    const simulations = size >= 12
+        ? 1400
+        : size >= 9
+            ? 1800
+            : 2200;
+
+    for (let simulation = 0; simulation < simulations; simulation += 1) {
+        const position = board.map((row) => row.slice());
+        const path = [root];
+        let node = root;
+
+        while (!node.terminal) {
+            if (node.untried === null) {
+                node.untried = rankMovesFast(position, node.toMove, Math.min(14, getPrunedLegalMoves(position, node.toMove).length));
+            }
+
+            if (node.untried.length > 0) {
+                const action = node
+                    .untried
+                    .shift();
+                const mover = node.toMove;
+
+                position[action.row][action.col] = mover;
+
+                const child = createNode(otherPlayer(mover));
+                child.move = [action.row, action.col];
+                child.prior = action.prior;
+                child.terminal = hasConnection(position, mover);
+                child.winner = child.terminal
+                    ? mover
+                    : null;
+
+                node
+                    .children
+                    .push(child);
+                node = child;
+                path.push(node);
+
+                break;
+            }
+
+            if (node.children.length === 0) {
+                break;
+            }
+
+            const child = selectChild(node, player);
+
+            position[child.move[0]][child.move[1]] = node.toMove;
+            node = child;
+            path.push(node);
+        }
+
+        const winner = node.terminal
+            ? node.winner
+            : rollout(position, node.toMove);
+
+        const result = winner === player
+            ? 1
+            : 0;
+
+        for (const visited of path) {
+            visited.visits += 1;
+            visited.wins += result;
+        }
+    }
+
+    if (root.children.length === 0) {
+        return legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    }
+
+    root
+        .children
+        .sort((a, b) => {
+            if (b.visits !== a.visits) {
+                return b.visits - a.visits;
+            }
+
+            return (b.wins / Math.max(1, b.visits) - a.wins / Math.max(1, a.visits));
+        });
+
+    return root.children[0].move;
 }
 
 function createNode(toMove) {
-  return {
-    toMove,
-    move: null,
-    prior: 0,
-    visits: 0,
-    wins: 0,
-    children: [],
-    untried: null,
-    terminal: false,
-    winner: null
-  };
+    return {
+        toMove,
+        move: null,
+        prior: 0,
+        visits: 0,
+        wins: 0,
+        children: [],
+        untried: null,
+        terminal: false,
+        winner: null
+    };
 }
 
 function selectChild(node, computer) {
-  const logParent = Math.log(node.visits + 1);
-  let bestChild = null;
-  let bestScore = -Infinity;
+    const logParent = Math.log(node.visits + 1);
+    let bestChild = null;
+    let bestScore = -Infinity;
 
-  for (const child of node.children) {
-    if (child.visits === 0) {
-      return child;
+    for (const child of node.children) {
+        if (child.visits === 0) {
+            return child;
+        }
+
+        const computerWinRate = child.wins / child.visits;
+        const exploitation = node.toMove === computer
+            ? computerWinRate
+            : 1 - computerWinRate;
+        const exploration = 1.41 * Math.sqrt(logParent / child.visits);
+        const priorBonus = 0.2 * child.prior / (1 + child.visits);
+        const score = exploitation + exploration + priorBonus;
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestChild = child;
+        }
     }
 
-    const computerWinRate = child.wins / child.visits;
-    const exploitation =
-      node.toMove === computer ? computerWinRate : 1 - computerWinRate;
-    const exploration = 1.41 * Math.sqrt(logParent / child.visits);
-    const priorBonus = 0.2 * child.prior / (1 + child.visits);
-    const score = exploitation + exploration + priorBonus;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestChild = child;
-    }
-  }
-
-  return bestChild;
+    return bestChild;
 }
 
 function rollout(board, firstPlayer) {
-  let player = firstPlayer;
-  const maxMoves = board.length * board.length;
+    let player = firstPlayer;
+    const maxMoves = board.length * board.length;
 
-  for (let turn = 0; turn < maxMoves; turn += 1) {
-    const opponent = otherPlayer(player);
-    const ownPath = connectionInfo(board, player);
-    const opponentPath = connectionInfo(board, opponent);
-    const ownPathMoves = emptyCellsOnPath(board, ownPath.path);
-    const opponentPathMoves = emptyCellsOnPath(
-      board,
-      opponentPath.path
-    );
+    for (let turn = 0; turn < maxMoves; turn += 1) {
+        const opponent = otherPlayer(player);
+        const ownPath = connectionInfo(board, player);
+        const opponentPath = connectionInfo(board, opponent);
+        const ownPathMoves = emptyCellsOnPath(board, ownPath.path);
+        const opponentPathMoves = emptyCellsOnPath(board, opponentPath.path);
 
-    let move = null;
+        let move = null;
 
-    if (ownPath.cost === 1 && ownPathMoves.length === 1) {
-      move = ownPathMoves[0];
+        if (ownPath.cost === 1 && ownPathMoves.length === 1) {
+            move = ownPathMoves[0];
+        }
+
+        if (!move && opponentPath.cost === 1 && opponentPathMoves.length === 1) {
+            move = opponentPathMoves[0];
+        }
+
+        if (!move) {
+            const useOwnPath = opponentPathMoves.length === 0 || Math.random() < 0.65;
+            const preferred = useOwnPath
+                ? ownPathMoves
+                : opponentPathMoves;
+            const fallback = useOwnPath
+                ? opponentPathMoves
+                : ownPathMoves;
+
+            move = randomItem(preferred) || randomItem(fallback);
+        }
+
+        if (!move || Math.random() < 0.05) {
+            const remaining = getPrunedLegalMoves(board, player);
+            move = randomItem(remaining);
+        }
+
+        if (!move) {
+            break;
+        }
+
+        const [row,
+            col] = move;
+        board[row][col] = player;
+
+        if (hasConnection(board, player)) {
+            return player;
+        }
+
+        player = opponent;
     }
 
-    if (
-      !move &&
-      opponentPath.cost === 1 &&
-      opponentPathMoves.length === 1
-    ) {
-      move = opponentPathMoves[0];
-    }
-
-    if (!move) {
-      const useOwnPath =
-        opponentPathMoves.length === 0 || Math.random() < 0.65;
-      const preferred = useOwnPath ? ownPathMoves : opponentPathMoves;
-      const fallback = useOwnPath ? opponentPathMoves : ownPathMoves;
-
-      move = randomItem(preferred) || randomItem(fallback);
-    }
-
-    if (!move || Math.random() < 0.05) {
-      const remaining = getPrunedLegalMoves(board, player);
-      move = randomItem(remaining);
-    }
-
-    if (!move) {
-      break;
-    }
-
-    const [row, col] = move;
-    board[row][col] = player;
-
-    if (hasConnection(board, player)) {
-      return player;
-    }
-
-    player = opponent;
-  }
-
-  return otherPlayer(firstPlayer);
+    return otherPlayer(firstPlayer);
 }
 
 function getPrunedLegalMoves(board, player) {
-  const size = board.length;
-  const allMoves = getLegalMoves(board);
+    const size = board.length;
+    const allMoves = getLegalMoves(board);
 
-  if (size <= 5 || allMoves.length < size * 2) {
-    return allMoves;
-  }
-
-  const opponent = otherPlayer(player);
-  const ownInfo = connectionInfo(board, player);
-  const oppInfo = connectionInfo(board, opponent);
-  const activeSet = new Set();
-
-  for (const [r, c] of ownInfo.path) {
-    activeSet.add(`${r},${c}`);
-  }
-
-  for (const [r, c] of oppInfo.path) {
-    activeSet.add(`${r},${c}`);
-  }
-
-  const extendedSet = new Set(activeSet);
-
-  for (const key of activeSet) {
-    const [r, c] = key.split(",").map(Number);
-
-    for (const [dr, dc] of NEIGHBORS) {
-      const nr = r + dr;
-      const nc = c + dc;
-
-      if (
-        nr >= 0 &&
-        nr < size &&
-        nc >= 0 &&
-        nc < size &&
-        board[nr][nc] === null
-      ) {
-        extendedSet.add(`${nr},${nc}`);
-      }
+    if (size <= 5 || allMoves.length < size * 2) {
+        return allMoves;
     }
 
-    for (const { offset: [dr, dc] } of BRIDGE_DATA) {
-      const nr = r + dr;
-      const nc = c + dc;
+    const opponent = otherPlayer(player);
+    const ownInfo = connectionInfo(board, player);
+    const oppInfo = connectionInfo(board, opponent);
+    const activeSet = new Set();
 
-      if (
-        nr >= 0 &&
-        nr < size &&
-        nc >= 0 &&
-        nc < size &&
-        board[nr][nc] === null
-      ) {
-        extendedSet.add(`${nr},${nc}`);
-      }
+    for (const [r,
+        c]of ownInfo.path) {
+        activeSet.add(`${r},${c}`);
     }
-  }
 
-  const pruned = [];
-
-  for (const [row, col] of allMoves) {
-    if (extendedSet.has(`${row},${col}`)) {
-      pruned.push([row, col]);
+    for (const [r,
+        c]of oppInfo.path) {
+        activeSet.add(`${r},${c}`);
     }
-  }
 
-  return pruned.length > 0 ? pruned : allMoves;
+    const extendedSet = new Set(activeSet);
+
+    for (const key of activeSet) {
+        const [r,
+            c] = key
+            .split(",")
+            .map(Number);
+
+        for (const [dr,
+            dc]of NEIGHBORS) {
+            const nr = r + dr;
+            const nc = c + dc;
+
+            if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === null) {
+                extendedSet.add(`${nr},${nc}`);
+            }
+        }
+
+        for (const {
+            offset: [dr, dc]
+        }
+        of BRIDGE_DATA) {
+            const nr = r + dr;
+            const nc = c + dc;
+
+            if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === null) {
+                extendedSet.add(`${nr},${nc}`);
+            }
+        }
+    }
+
+    const pruned = [];
+
+    for (const [row,
+        col]of allMoves) {
+        if (extendedSet.has(`${row},${col}`)) {
+            pruned.push([row, col]);
+        }
+    }
+
+    return pruned.length > 0
+        ? pruned
+        : allMoves;
 }
 
 function rankMovesFast(board, player, limit) {
-  const size = board.length;
-  const center = (size - 1) / 2;
-  const opponent = otherPlayer(player);
-  const candidateMoves = getPrunedLegalMoves(board, player);
-  const ranked = [];
+    const size = board.length;
+    const center = (size - 1) / 2;
+    const opponent = otherPlayer(player);
+    const candidateMoves = getPrunedLegalMoves(board, player);
+    const ranked = [];
 
-  for (const [row, col] of candidateMoves) {
-    if (board[row][col] !== null) {
-      continue;
+    for (const [row,
+        col]of candidateMoves) {
+        if (board[row][col] !== null) {
+            continue;
+        }
+
+        let bridgeCompletion = 0;
+        let bridgeDisruption = 0;
+
+        for (const {
+            offset: [
+                dr, dc
+            ],
+            gaps
+        }
+        of BRIDGE_DATA) {
+            const tr = row + dr;
+            const tc = col + dc;
+
+            if (tr < 0 || tr >= size || tc < 0 || tc >= size) {
+                continue;
+            }
+
+            if (board[tr][tc] === player) {
+                let gapBlocked = false;
+
+                for (const [gdr,
+                    gdc]of gaps) {
+                    const gr = row + gdr;
+                    const gc = col + gdc;
+
+                    if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+                        if (board[gr][gc] === opponent) {
+                            gapBlocked = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!gapBlocked) {
+                    bridgeCompletion += 2.5;
+                }
+            } else if (board[tr][tc] === opponent) {
+                let gapBlocked = false;
+
+                for (const [gdr,
+                    gdc]of gaps) {
+                    const gr = row + gdr;
+                    const gc = col + gdc;
+
+                    if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+                        if (board[gr][gc] === player) {
+                            gapBlocked = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!gapBlocked) {
+                    bridgeDisruption += 4.0;
+                }
+            }
+        }
+
+        const centerDist = Math.abs(row - center) + Math.abs(col - center);
+        const positionalScore = (size - centerDist) * 0.25;
+        const score = bridgeCompletion * 3.0 + bridgeDisruption * 4.0 + positionalScore;
+
+        ranked.push({row, col, score});
     }
 
-    let bridgeCompletion = 0;
-    let bridgeDisruption = 0;
+    ranked.sort((a, b) => b.score - a.score);
 
-    for (const {
-      offset: [dr, dc],
-      gaps
-    } of BRIDGE_DATA) {
-      const tr = row + dr;
-      const tc = col + dc;
+    const count = Math.min(limit, ranked.length);
 
-      if (tr < 0 || tr >= size || tc < 0 || tc >= size) {
-        continue;
-      }
-
-      if (board[tr][tc] === player) {
-        let gapBlocked = false;
-
-        for (const [gdr, gdc] of gaps) {
-          const gr = row + gdr;
-          const gc = col + gdc;
-
-          if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
-            if (board[gr][gc] === opponent) {
-              gapBlocked = true;
-              break;
-            }
-          }
-        }
-
-        if (!gapBlocked) {
-          bridgeCompletion += 2.5;
-        }
-      } else if (board[tr][tc] === opponent) {
-        let gapBlocked = false;
-
-        for (const [gdr, gdc] of gaps) {
-          const gr = row + gdr;
-          const gc = col + gdc;
-
-          if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
-            if (board[gr][gc] === player) {
-              gapBlocked = true;
-              break;
-            }
-          }
-        }
-
-        if (!gapBlocked) {
-          bridgeDisruption += 4.0;
-        }
-      }
-    }
-
-    const centerDist = Math.abs(row - center) + Math.abs(col - center);
-    const positionalScore = (size - centerDist) * 0.25;
-    const score =
-      bridgeCompletion * 3.0 +
-      bridgeDisruption * 4.0 +
-      positionalScore;
-
-    ranked.push({ row, col, score });
-  }
-
-  ranked.sort((a, b) => b.score - a.score);
-
-  const count = Math.min(limit, ranked.length);
-
-  return ranked
-    .slice(0, count)
-    .map((move, index) => ({
-      row: move.row,
-      col: move.col,
-      prior: 1 / (1 + index * 0.15)
-    }));
+    return ranked
+        .slice(0, count)
+        .map((move, index) => ({
+            row: move.row,
+            col: move.col,
+            prior: 1 / (1 + index * 0.15)
+        }));
 }
 
 function connectionInfo(board, player) {
-  const size = board.length;
-  const total = size * size;
-  const opponent = otherPlayer(player);
-  const distances = new Int32Array(total);
-  const previous = new Int32Array(total);
+    const size = board.length;
+    const total = size * size;
+    const opponent = otherPlayer(player);
+    const distances = new Int32Array(total);
+    const previous = new Int32Array(total);
 
-  distances.fill(0x3fffffff);
-  previous.fill(-1);
+    distances.fill(0x3fffffff);
+    previous.fill(-1);
 
-  const buckets = Array.from({ length: total + 1 }, () => []);
+    const buckets = Array.from({
+        length: total + 1
+    }, () => []);
 
-  const addStart = (row, col) => {
-    const index = row * size + col;
+    const addStart = (row, col) => {
+        const index = row * size + col;
 
-    if (board[row][col] === opponent) {
-      return;
-    }
-
-    const cost = board[row][col] === player ? 0 : 1;
-
-    if (cost < distances[index]) {
-      distances[index] = cost;
-      buckets[cost].push(index);
-    }
-  };
-
-  if (player === "blue") {
-    for (let col = 0; col < size; col += 1) {
-      addStart(0, col);
-    }
-  } else {
-    for (let row = 0; row < size; row += 1) {
-      addStart(row, 0);
-    }
-  }
-
-  let goal = -1;
-
-  for (let cost = 0; cost < buckets.length; cost += 1) {
-    const bucket = buckets[cost];
-
-    while (bucket.length) {
-      const index = bucket.pop();
-
-      if (distances[index] !== cost) {
-        continue;
-      }
-
-      const row = Math.floor(index / size);
-      const col = index % size;
-
-      if (
-        (player === "blue" && row === size - 1) ||
-        (player === "red" && col === size - 1)
-      ) {
-        goal = index;
-        break;
-      }
-
-      for (const [dr, dc] of NEIGHBORS) {
-        const nextRow = row + dr;
-        const nextCol = col + dc;
-
-        if (
-          nextRow < 0 ||
-          nextRow >= size ||
-          nextCol < 0 ||
-          nextCol >= size ||
-          board[nextRow][nextCol] === opponent
-        ) {
-          continue;
+        if (board[row][col] === opponent) {
+            return;
         }
 
-        const nextIndex = nextRow * size + nextCol;
-        const stepCost =
-          board[nextRow][nextCol] === player ? 0 : 1;
-        const nextCost = cost + stepCost;
+        const cost = board[row][col] === player
+            ? 0
+            : 1;
 
-        if (nextCost < distances[nextIndex]) {
-          distances[nextIndex] = nextCost;
-          previous[nextIndex] = index;
-          buckets[nextCost].push(nextIndex);
+        if (cost < distances[index]) {
+            distances[index] = cost;
+            buckets[cost].push(index);
         }
-      }
-
-      for (const {
-        offset: [dr, dc],
-        gaps
-      } of BRIDGE_DATA) {
-        const nextRow = row + dr;
-        const nextCol = col + dc;
-
-        if (
-          nextRow < 0 ||
-          nextRow >= size ||
-          nextCol < 0 ||
-          nextCol >= size ||
-          board[nextRow][nextCol] === opponent
-        ) {
-          continue;
-        }
-
-        let bridgeBlocked = false;
-
-        for (const [gdr, gdc] of gaps) {
-          const gr = row + gdr;
-          const gc = col + gdc;
-
-          if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
-            if (board[gr][gc] === opponent) {
-              bridgeBlocked = true;
-              break;
-            }
-          }
-        }
-
-        if (!bridgeBlocked) {
-          const nextIndex = nextRow * size + nextCol;
-          const stepCost =
-            board[nextRow][nextCol] === player ? 0 : 1;
-          const nextCost = cost + stepCost;
-
-          if (nextCost < distances[nextIndex]) {
-            distances[nextIndex] = nextCost;
-            previous[nextIndex] = index;
-            buckets[nextCost].push(nextIndex);
-          }
-        }
-      }
-    }
-
-    if (goal !== -1) {
-      break;
-    }
-  }
-
-  if (goal === -1) {
-    return {
-      cost: Infinity,
-      path: []
     };
-  }
 
-  const path = [];
+    if (player === "blue") {
+        for (let col = 0; col < size; col += 1) {
+            addStart(0, col);
+        }
+    } else {
+        for (let row = 0; row < size; row += 1) {
+            addStart(row, 0);
+        }
+    }
 
-  for (
-    let index = goal;
-    index !== -1;
-    index = previous[index]
-  ) {
-    path.push([
-      Math.floor(index / size),
-      index % size
-    ]);
-  }
+    let goal = -1;
 
-  path.reverse();
+    for (let cost = 0; cost < buckets.length; cost += 1) {
+        const bucket = buckets[cost];
 
-  return {
-    cost: distances[goal],
-    path
-  };
+        while (bucket.length) {
+            const index = bucket.pop();
+
+            if (distances[index] !== cost) {
+                continue;
+            }
+
+            const row = Math.floor(index / size);
+            const col = index % size;
+
+            if ((player === "blue" && row === size - 1) || (player === "red" && col === size - 1)) {
+                goal = index;
+                break;
+            }
+
+            for (const [dr,
+                dc]of NEIGHBORS) {
+                const nextRow = row + dr;
+                const nextCol = col + dc;
+
+                if (nextRow < 0 || nextRow >= size || nextCol < 0 || nextCol >= size || board[nextRow][nextCol] === opponent) {
+                    continue;
+                }
+
+                const nextIndex = nextRow * size + nextCol;
+                const stepCost = board[nextRow][nextCol] === player
+                    ? 0
+                    : 1;
+                const nextCost = cost + stepCost;
+
+                if (nextCost < distances[nextIndex]) {
+                    distances[nextIndex] = nextCost;
+                    previous[nextIndex] = index;
+                    buckets[nextCost].push(nextIndex);
+                }
+            }
+
+            for (const {
+                offset: [
+                    dr, dc
+                ],
+                gaps
+            }
+            of BRIDGE_DATA) {
+                const nextRow = row + dr;
+                const nextCol = col + dc;
+
+                if (nextRow < 0 || nextRow >= size || nextCol < 0 || nextCol >= size || board[nextRow][nextCol] === opponent) {
+                    continue;
+                }
+
+                let bridgeBlocked = false;
+
+                for (const [gdr,
+                    gdc]of gaps) {
+                    const gr = row + gdr;
+                    const gc = col + gdc;
+
+                    if (gr >= 0 && gr < size && gc >= 0 && gc < size) {
+                        if (board[gr][gc] === opponent) {
+                            bridgeBlocked = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!bridgeBlocked) {
+                    const nextIndex = nextRow * size + nextCol;
+                    const stepCost = board[nextRow][nextCol] === player
+                        ? 0
+                        : 1;
+                    const nextCost = cost + stepCost;
+
+                    if (nextCost < distances[nextIndex]) {
+                        distances[nextIndex] = nextCost;
+                        previous[nextIndex] = index;
+                        buckets[nextCost].push(nextIndex);
+                    }
+                }
+            }
+        }
+
+        if (goal !== -1) {
+            break;
+        }
+    }
+
+    if (goal === -1) {
+        return {cost: Infinity, path: []};
+    }
+
+    const path = [];
+
+    for (let index = goal; index !== -1; index = previous[index]) {
+        path.push([
+            Math.floor(index / size),
+            index % size
+        ]);
+    }
+
+    path.reverse();
+
+    return {cost: distances[goal], path};
 }
 
 function findImmediateWin(board, player) {
-  const size = board.length;
+    const size = board.length;
 
-  for (let row = 0; row < size; row += 1) {
-    for (let col = 0; col < size; col += 1) {
-      if (board[row][col] !== null) {
-        continue;
-      }
+    for (let row = 0; row < size; row += 1) {
+        for (let col = 0; col < size; col += 1) {
+            if (board[row][col] !== null) {
+                continue;
+            }
 
-      board[row][col] = player;
-      const wins = hasConnection(board, player);
-      board[row][col] = null;
+            board[row][col] = player;
+            const wins = hasConnection(board, player);
+            board[row][col] = null;
 
-      if (wins) {
-        return [row, col];
-      }
+            if (wins) {
+                return [row, col];
+            }
+        }
     }
-  }
 
-  return null;
+    return null;
 }
 
 function hasConnection(board, player) {
-  const size = board.length;
-  const visited = new Uint8Array(size * size);
-  const stack = [];
-
-  if (player === "blue") {
-    for (let col = 0; col < size; col += 1) {
-      if (board[0][col] === player) {
-        stack.push(col);
-      }
-    }
-  } else {
-    for (let row = 0; row < size; row += 1) {
-      if (board[row][0] === player) {
-        stack.push(row * size);
-      }
-    }
-  }
-
-  while (stack.length) {
-    const index = stack.pop();
-
-    if (visited[index]) {
-      continue;
-    }
-
-    visited[index] = 1;
-
-    const row = Math.floor(index / size);
-    const col = index % size;
-
-    if (
-      (player === "blue" && row === size - 1) ||
-      (player === "red" && col === size - 1)
-    ) {
-      return true;
-    }
-
-    for (const [dr, dc] of NEIGHBORS) {
-      const nextRow = row + dr;
-      const nextCol = col + dc;
-
-      if (
-        nextRow >= 0 &&
-        nextRow < size &&
-        nextCol >= 0 &&
-        nextCol < size &&
-        board[nextRow][nextCol] === player
-      ) {
-        const nextIndex = nextRow * size + nextCol;
-
-        if (!visited[nextIndex]) {
-          stack.push(nextIndex);
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-function emptyCellsOnPath(board, path) {
-  const moves = [];
-
-  for (const [row, col] of path) {
-    if (board[row][col] === null) {
-      moves.push([row, col]);
-    }
-  }
-
-  return moves;
-}
-
-function getLegalMoves(board) {
-  const moves = [];
-
-  for (let row = 0; row < board.length; row += 1) {
-    for (let col = 0; col < board.length; col += 1) {
-      if (board[row][col] === null) {
-        moves.push([row, col]);
-      }
-    }
-  }
-
-  return moves;
-}
-
-function randomItem(items) {
-  if (!items.length) {
-    return null;
-  }
-
-  return items[Math.floor(Math.random() * items.length)];
-}
-
-function otherPlayer(player) {
-  return player === "blue" ? "red" : "blue";
-}
-
-// ============================================================
-// Game
-// ============================================================
-
-class HexGame {
-  constructor({ size = 11, mode = "human" } = {}) {
-    this.listeners = new Set();
-    this.newGame({ size, mode });
-  }
-
-  newGame({ size = 11, mode = "human" } = {}) {
-    this.size = Number(size) === 13 ? 13 : 11;
-    this.mode = mode === "computer" ? "computer" : "human";
-
-    if (this.mode === "computer") {
-      this.computerPlayer =
-        Math.random() < 0.5 ? "red" : "blue";
-      this.humanPlayer =
-        this.computerPlayer === "red" ? "blue" : "red";
-    } else {
-      this.computerPlayer = null;
-      this.humanPlayer = null;
-    }
-
-    this.board = Array.from(
-      { length: this.size },
-      () => Array(this.size).fill(null)
-    );
-
-    this.currentPlayer = "red";
-    this.winner = null;
-    this.winningPath = [];
-    this.aiThinking = false;
-    this.generation = (this.generation || 0) + 1;
-
-    this.notify();
-
-    if (
-      this.mode === "computer" &&
-      this.currentPlayer === this.computerPlayer
-    ) {
-      this.runComputerTurn();
-    }
-  }
-
-  subscribe(listener) {
-    this.listeners.add(listener);
-
-    return () => this.listeners.delete(listener);
-  }
-
-  notify() {
-    const state = this.getState();
-
-    for (const listener of this.listeners) {
-      listener(state);
-    }
-  }
-
-  getState() {
-    return {
-      size: this.size,
-      mode: this.mode,
-      humanPlayer: this.humanPlayer,
-      computerPlayer: this.computerPlayer,
-      board: this.board.map((row) => [...row]),
-      currentPlayer: this.currentPlayer,
-      winner: this.winner,
-      winningPath: this.winningPath.map(([row, col]) => [
-        row,
-        col
-      ]),
-      aiThinking: this.aiThinking
-    };
-  }
-
-  play(row, col) {
-    if (this.winner || this.aiThinking) {
-      return false;
-    }
-
-    if (!this.board[row] || this.board[row][col] !== null) {
-      return false;
-    }
-
-    if (
-      this.mode === "computer" &&
-      this.currentPlayer !== this.humanPlayer
-    ) {
-      return false;
-    }
-
-    this.place(row, col, this.currentPlayer);
-
-    return true;
-  }
-
-  place(row, col, player) {
-    this.board[row][col] = player;
-
-    const path = this.findWinningPath(player);
-
-    if (path) {
-      this.winner = player;
-      this.winningPath = path;
-      this.notify();
-
-      return;
-    }
-
-    this.currentPlayer =
-      player === "red" ? "blue" : "red";
-
-    this.notify();
-
-    if (
-      this.mode === "computer" &&
-      this.currentPlayer === this.computerPlayer
-    ) {
-      this.runComputerTurn();
-    }
-  }
-
-  runComputerTurn() {
-    this.aiThinking = true;
-    this.notify();
-
-    const generation = this.generation;
-
-    window.setTimeout(() => {
-      if (generation !== this.generation || this.winner) {
-        return;
-      }
-
-      const move = chooseComputerMove(
-        this.board,
-        this.computerPlayer
-      );
-
-      if (move) {
-        this.aiThinking = false;
-        this.place(move[0], move[1], this.computerPlayer);
-      } else {
-        this.aiThinking = false;
-        this.notify();
-      }
-    }, 350);
-  }
-
-  findWinningPath(player) {
+    const size = board.length;
+    const visited = new Uint8Array(size * size);
     const stack = [];
-    const previous = new Map();
-    const visited = new Set();
-    const key = (row, col) => `${row},${col}`;
 
-    if (player === "red") {
-      for (let row = 0; row < this.size; row += 1) {
-        if (this.board[row][0] === player) {
-          stack.push([row, 0]);
+    if (player === "blue") {
+        for (let col = 0; col < size; col += 1) {
+            if (board[0][col] === player) {
+                stack.push(col);
+            }
         }
-      }
     } else {
-      for (let col = 0; col < this.size; col += 1) {
-        if (this.board[0][col] === player) {
-          stack.push([0, col]);
+        for (let row = 0; row < size; row += 1) {
+            if (board[row][0] === player) {
+                stack.push(row * size);
+            }
         }
-      }
-    }
-
-    for (const [row, col] of stack) {
-      visited.add(key(row, col));
     }
 
     while (stack.length) {
-      const [row, col] = stack.pop();
-      const reachedGoal =
-        player === "red"
-          ? col === this.size - 1
-          : row === this.size - 1;
+        const index = stack.pop();
 
-      if (reachedGoal) {
-        const path = [];
-        let current = [row, col];
-
-        while (current) {
-          path.push(current);
-          current =
-            previous.get(key(current[0], current[1])) || null;
+        if (visited[index]) {
+            continue;
         }
 
-        return path.reverse();
-      }
+        visited[index] = 1;
 
-      const adjacent = [
-        [row - 1, col],
-        [row + 1, col],
-        [row, col - 1],
-        [row, col + 1],
-        [row - 1, col + 1],
-        [row + 1, col - 1]
-      ];
+        const row = Math.floor(index / size);
+        const col = index % size;
 
-      for (const [nextRow, nextCol] of adjacent) {
-        if (
-          nextRow < 0 ||
-          nextRow >= this.size ||
-          nextCol < 0 ||
-          nextCol >= this.size ||
-          this.board[nextRow][nextCol] !== player ||
-          visited.has(key(nextRow, nextCol))
-        ) {
-          continue;
+        if ((player === "blue" && row === size - 1) || (player === "red" && col === size - 1)) {
+            return true;
         }
 
-        visited.add(key(nextRow, nextCol));
-        previous.set(key(nextRow, nextCol), [row, col]);
-        stack.push([nextRow, nextCol]);
-      }
+        for (const [dr,
+            dc]of NEIGHBORS) {
+            const nextRow = row + dr;
+            const nextCol = col + dc;
+
+            if (nextRow >= 0 && nextRow < size && nextCol >= 0 && nextCol < size && board[nextRow][nextCol] === player) {
+                const nextIndex = nextRow * size + nextCol;
+
+                if (!visited[nextIndex]) {
+                    stack.push(nextIndex);
+                }
+            }
+        }
     }
 
-    return null;
-  }
+    return false;
+}
+
+function emptyCellsOnPath(board, path) {
+    const moves = [];
+
+    for (const [row,
+        col]of path) {
+        if (board[row][col] === null) {
+            moves.push([row, col]);
+        }
+    }
+
+    return moves;
+}
+
+function getLegalMoves(board) {
+    const moves = [];
+
+    for (let row = 0; row < board.length; row += 1) {
+        for (let col = 0; col < board.length; col += 1) {
+            if (board[row][col] === null) {
+                moves.push([row, col]);
+            }
+        }
+    }
+
+    return moves;
+}
+
+function randomItem(items) {
+    if (!items.length) {
+        return null;
+    }
+
+    return items[Math.floor(Math.random() * items.length)];
+}
+
+function otherPlayer(player) {
+    return player === "blue"
+        ? "red"
+        : "blue";
+}
+
+// ============================================================ Game
+// ============================================================
+
+class HexGame {
+    constructor({
+        size = 11,
+        mode = "human"
+    } = {}) {
+        this.listeners = new Set();
+        this.newGame({size, mode});
+    }
+
+    newGame({
+        size = 11,
+        mode = "human"
+    } = {}) {
+        this.size = Number(size) === 13
+            ? 13
+            : 11;
+        this.mode = mode === "computer"
+            ? "computer"
+            : "human";
+
+        if (this.mode === "computer") {
+            this.computerPlayer = Math.random() < 0.5
+                ? "red"
+                : "blue";
+            this.humanPlayer = this.computerPlayer === "red"
+                ? "blue"
+                : "red";
+        } else {
+            this.computerPlayer = null;
+            this.humanPlayer = null;
+        }
+
+        this.board = Array.from({
+            length: this.size
+        }, () => Array(this.size).fill(null));
+
+        this.currentPlayer = "red";
+        this.winner = null;
+        this.winningPath = [];
+        this.aiThinking = false;
+        this.generation = (this.generation || 0) + 1;
+
+        this.notify();
+
+        if (this.mode === "computer" && this.currentPlayer === this.computerPlayer) {
+            this.runComputerTurn();
+        }
+    }
+
+    subscribe(listener) {
+        this
+            .listeners
+            .add(listener);
+
+        return () => this
+            .listeners
+            .delete(listener);
+    }
+
+    notify() {
+        const state = this.getState();
+
+        for (const listener of this.listeners) {
+            listener(state);
+        }
+    }
+
+    getState() {
+        return {
+            size: this.size,
+            mode: this.mode,
+            humanPlayer: this.humanPlayer,
+            computerPlayer: this.computerPlayer,
+            board: this
+                .board
+                .map((row) => [...row]),
+            currentPlayer: this.currentPlayer,
+            winner: this.winner,
+            winningPath: this
+                .winningPath
+                .map(([row, col]) => [row, col]),
+            aiThinking: this.aiThinking
+        };
+    }
+
+    play(row, col) {
+        if (this.winner || this.aiThinking) {
+            return false;
+        }
+
+        if (!this.board[row] || this.board[row][col] !== null) {
+            return false;
+        }
+
+        if (this.mode === "computer" && this.currentPlayer !== this.humanPlayer) {
+            return false;
+        }
+
+        this.place(row, col, this.currentPlayer);
+
+        return true;
+    }
+
+    place(row, col, player) {
+        this.board[row][col] = player;
+
+        const path = this.findWinningPath(player);
+
+        if (path) {
+            this.winner = player;
+            this.winningPath = path;
+            this.notify();
+
+            return;
+        }
+
+        this.currentPlayer = player === "red"
+            ? "blue"
+            : "red";
+
+        this.notify();
+
+        if (this.mode === "computer" && this.currentPlayer === this.computerPlayer) {
+            this.runComputerTurn();
+        }
+    }
+
+    runComputerTurn() {
+        this.aiThinking = true;
+        this.notify();
+
+        const generation = this.generation;
+
+        window.setTimeout(() => {
+            if (generation !== this.generation || this.winner) {
+                return;
+            }
+
+            const move = chooseComputerMove(this.board, this.computerPlayer);
+
+            if (move) {
+                this.aiThinking = false;
+                this.place(move[0], move[1], this.computerPlayer);
+            } else {
+                this.aiThinking = false;
+                this.notify();
+            }
+        }, 350);
+    }
+
+    findWinningPath(player) {
+        const stack = [];
+        const previous = new Map();
+        const visited = new Set();
+        const key = (row, col) => `${row},${col}`;
+
+        if (player === "red") {
+            for (let row = 0; row < this.size; row += 1) {
+                if (this.board[row][0] === player) {
+                    stack.push([row, 0]);
+                }
+            }
+        } else {
+            for (let col = 0; col < this.size; col += 1) {
+                if (this.board[0][col] === player) {
+                    stack.push([0, col]);
+                }
+            }
+        }
+
+        for (const [row,
+            col]of stack) {
+            visited.add(key(row, col));
+        }
+
+        while (stack.length) {
+            const [row,
+                col] = stack.pop();
+            const reachedGoal = player === "red"
+                ? col === this.size - 1
+                : row === this.size - 1;
+
+            if (reachedGoal) {
+                const path = [];
+                let current = [row, col];
+
+                while (current) {
+                    path.push(current);
+                    current = previous.get(key(current[0], current[1])) || null;
+                }
+
+                return path.reverse();
+            }
+
+            const adjacent = [
+                [
+                    row - 1,
+                    col
+                ],
+                [
+                    row + 1,
+                    col
+                ],
+                [
+                    row, col - 1
+                ],
+                [
+                    row, col + 1
+                ],
+                [
+                    row - 1,
+                    col + 1
+                ],
+                [
+                    row + 1,
+                    col - 1
+                ]
+            ];
+
+            for (const [nextRow,
+                nextCol]of adjacent) {
+                if (nextRow < 0 || nextRow >= this.size || nextCol < 0 || nextCol >= this.size || this.board[nextRow][nextCol] !== player || visited.has(key(nextRow, nextCol))) {
+                    continue;
+                }
+
+                visited.add(key(nextRow, nextCol));
+                previous.set(key(nextRow, nextCol), [row, col]);
+                stack.push([nextRow, nextCol]);
+            }
+        }
+
+        return null;
+    }
 }
 
 const messages = {
-  en: {
-    eyebrow: "A game of connection",
-    title: "Hex",
-    newGame: "New game",
-    redGoal: "Red connects left to right",
-    blueGoal: "Blue connects top to bottom",
-    footer:
-      "There are no draws in Hex: one player will always make a connecting path.",
-    welcome: "Welcome to Hex",
-    instructions:
-      "Take turns placing stones on empty hexes. Red tries to connect the left and right edges; blue tries to connect the top and bottom edges. The first player to connect their two sides wins.",
-    modeLabel: "Play mode",
-    twoPlayers: "Two players",
-    vsComputer: "Play against computer",
-    boardLabel: "Board size",
-    languageLabel: "Language",
-    start: "Start game",
-    redTurn: "Red's turn",
-    blueTurn: "Blue's turn",
-    yourTurn: (player) =>
-      `Your turn (${player === "blue" ? "Blue" : "Red"})`,
-    computerTurn: "Computer is thinking…",
-    redWins: "Red wins!",
-    blueWins: "Blue wins!",
-    youWin: "You win!",
-    computerWins: "Computer wins!",
-    winloss: "Wins/Losses: ",
-    cellLabel: (row, col, occupant) =>
-      `Row ${row}, column ${col}${
-        occupant ? `, ${occupant}` : ", empty"
-      }`
-  },
-  es: {
-    eyebrow: "Un juego de conexión",
-    title: "Hex",
-    newGame: "Nueva partida",
-    redGoal: "Rojo conecta izquierda y derecha",
-    blueGoal: "Azul conecta arriba y abajo",
-    footer:
-      "En Hex no hay empates: siempre habrá un camino ganador.",
-    welcome: "Bienvenido a Hex",
-    instructions:
-      "Por turnos, coloca fichas en hexágonos vacíos. Rojo intenta conectar los bordes izquierdo y derecho; azul, los bordes superior e inferior. Gana quien conecte primero sus dos lados.",
-    modeLabel: "Modo de juego",
-    twoPlayers: "Dos jugadores",
-    vsComputer: "Jugar contra el ordenador",
-    boardLabel: "Tamaño del tablero",
-    languageLabel: "Idioma",
-    start: "Empezar partida",
-    redTurn: "Turno del rojo",
-    blueTurn: "Turno del azul",
-    yourTurn: (player) =>
-      `Tu turno (${player === "blue" ? "azul" : "rojo"})`,
-    computerTurn: "El ordenador está pensando…",
-    redWins: "¡Gana el rojo!",
-    blueWins: "¡Gana el azul!",
-    youWin: "¡Has ganado!",
-    computerWins: "¡Gana el ordenador!",
-    winloss: "Partitas ganadas/perdidas: ",
-    cellLabel: (row, col, occupant) =>
-      `Fila ${row}, columna ${col}${
-        occupant ? `, ${occupant}` : ", vacía"
-      }`
-  },
-  zh: {
-    eyebrow: "連線棋局",
-    title: "Hex 六角棋",
-    newGame: "新一局",
-    redGoal: "紅方連接左右兩邊",
-    blueGoal: "藍方連接上下兩邊",
-    footer: "六角棋不會和局：總有一方可以連成一條路。",
-    welcome: "歡迎玩六角棋",
-    instructions:
-      "輪流喺空格放棋子。紅方要連接左右兩邊；藍方要連接上下兩邊。首先連通自己兩邊嘅一方獲勝。",
-    modeLabel: "遊戲模式",
-    twoPlayers: "雙人對戰",
-    vsComputer: "對戰電腦",
-    boardLabel: "棋盤大小",
-    languageLabel: "語言",
-    start: "開始遊戲",
-    redTurn: "紅方回合",
-    blueTurn: "藍方回合",
-    yourTurn: (player) =>
-      `輪到你（${player === "blue" ? "藍方" : "紅方"}）`,
-    computerTurn: "電腦思考中…",
-    redWins: "紅方獲勝！",
-    blueWins: "藍方獲勝！",
-    youWin: "你贏咗！",
-    computerWins: "電腦獲勝！",
-    winloss: "勝負：",
-    cellLabel: (row, col, occupant) =>
-      `第 ${row} 行，第 ${col} 列${
-        occupant ? `，${occupant}` : "，空格"
-      }`
-  }
+    en: {
+        eyebrow: "A game of connection",
+        title: "Hex",
+        newGame: "New game",
+        redGoal: "Red connects left to right",
+        blueGoal: "Blue connects top to bottom",
+        footer: "There are no draws in Hex: one player will always make a connecting path.",
+        welcome: "Welcome to Hex",
+        instructions: "Take turns placing stones on empty hexes. Red tries to connect the left and righ" +
+                "t edges; blue tries to connect the top and bottom edges. The first player to con" +
+                "nect their two sides wins.",
+        modeLabel: "Play mode",
+        twoPlayers: "Two players",
+        vsComputer: "Play against computer",
+        boardLabel: "Board size",
+        languageLabel: "Language",
+        start: "Start game",
+        redTurn: "Red's turn",
+        blueTurn: "Blue's turn",
+        yourTurn: (player) => `Your turn (${player === "blue"
+            ? "Blue"
+            : "Red"})`,
+        computerTurn: "Computer is thinking…",
+        redWins: "Red wins!",
+        blueWins: "Blue wins!",
+        youWin: "You win!",
+        computerWins: "Computer wins!",
+        winloss: "Wins/Losses: ",
+        cellLabel: (row, col, occupant) => `Row ${row}, column ${col}${occupant
+            ? `, ${occupant}`
+            : ", empty"}`
+    },
+    es: {
+        eyebrow: "Un juego de conexión",
+        title: "Hex",
+        newGame: "Nueva partida",
+        redGoal: "Rojo conecta izquierda y derecha",
+        blueGoal: "Azul conecta arriba y abajo",
+        footer: "En Hex no hay empates: siempre habrá un camino ganador.",
+        welcome: "Bienvenido a Hex",
+        instructions: "Por turnos, coloca fichas en hexágonos vacíos. Rojo intenta conectar los bordes " +
+                "izquierdo y derecho; azul, los bordes superior e inferior. Gana quien conecte pr" +
+                "imero sus dos lados.",
+        modeLabel: "Modo de juego",
+        twoPlayers: "Dos jugadores",
+        vsComputer: "Jugar contra el ordenador",
+        boardLabel: "Tamaño del tablero",
+        languageLabel: "Idioma",
+        start: "Empezar partida",
+        redTurn: "Turno del rojo",
+        blueTurn: "Turno del azul",
+        yourTurn: (player) => `Tu turno (${player === "blue"
+            ? "azul"
+            : "rojo"})`,
+        computerTurn: "El ordenador está pensando…",
+        redWins: "¡Gana el rojo!",
+        blueWins: "¡Gana el azul!",
+        youWin: "¡Has ganado!",
+        computerWins: "¡Gana el ordenador!",
+        winloss: "Partitas ganadas/perdidas: ",
+        cellLabel: (row, col, occupant) => `Fila ${row}, columna ${col}${occupant
+            ? `, ${occupant}`
+            : ", vacía"}`
+    },
+    zh: {
+        eyebrow: "連線棋局",
+        title: "Hex 六角棋",
+        newGame: "新一局",
+        redGoal: "紅方連接左右兩邊",
+        blueGoal: "藍方連接上下兩邊",
+        footer: "六角棋不會和局：總有一方可以連成一條路。",
+        welcome: "歡迎玩六角棋",
+        instructions: "輪流喺空格放棋子。紅方要連接左右兩邊；藍方要連接上下兩邊。首先連通自己兩邊嘅一方獲勝。",
+        modeLabel: "遊戲模式",
+        twoPlayers: "雙人對戰",
+        vsComputer: "對戰電腦",
+        boardLabel: "棋盤大小",
+        languageLabel: "語言",
+        start: "開始遊戲",
+        redTurn: "紅方回合",
+        blueTurn: "藍方回合",
+        yourTurn: (player) => `輪到你（${player === "blue"
+            ? "藍方"
+            : "紅方"}）`,
+        computerTurn: "電腦思考中…",
+        redWins: "紅方獲勝！",
+        blueWins: "藍方獲勝！",
+        youWin: "你贏咗！",
+        computerWins: "電腦獲勝！",
+        winloss: "勝負：",
+        cellLabel: (row, col, occupant) => `第 ${row} 行，第 ${col} 列${occupant
+            ? `，${occupant}`
+            : "，空格"}`
+    }
 };
 
 function chooseInitialLanguage() {
-  const params = new URLSearchParams(window.location.search);
-  const queryLanguage = normalizeLanguage(params.get("lang"));
+    const params = new URLSearchParams(window.location.search);
+    const queryLanguage = normalizeLanguage(params.get("lang"));
 
-  if (queryLanguage) {
-    return queryLanguage;
-  }
-
-  try {
-    const savedLanguage = normalizeLanguage(
-      localStorage.getItem("hex-language")
-    );
-
-    if (savedLanguage) {
-      return savedLanguage;
+    if (queryLanguage) {
+        return queryLanguage;
     }
-  } catch {}
 
-  const preferences = navigator.languages?.length
-    ? navigator.languages
-    : [navigator.language || "en"];
+    try {
+        const savedLanguage = normalizeLanguage(localStorage.getItem("hex-language"));
 
-  for (const preference of preferences) {
-    const language = normalizeLanguage(preference);
+        if (savedLanguage) {
+            return savedLanguage;
+        }
+    } catch {}
 
-    if (language) {
-      return language;
+    const preferences = navigator.languages
+        ?.length
+            ? navigator.languages
+            : [navigator.language || "en"];
+
+    for (const preference of preferences) {
+        const language = normalizeLanguage(preference);
+
+        if (language) {
+            return language;
+        }
     }
-  }
 
-  return "en";
+    return "en";
 }
 
 function normalizeLanguage(value) {
-  if (!value) {
+    if (!value) {
+        return null;
+    }
+
+    const language = value.toLowerCase();
+
+    if (language === "en" || language.startsWith("en-")) {
+        return "en";
+    }
+
+    if (language === "es" || language.startsWith("es-")) {
+        return "es";
+    }
+
+    if (language === "zh" || language.startsWith("zh-") || language === "yue" || language.startsWith("yue-")) {
+        return "zh";
+    }
+
     return null;
-  }
-
-  const language = value.toLowerCase();
-
-  if (language === "en" || language.startsWith("en-")) {
-    return "en";
-  }
-
-  if (language === "es" || language.startsWith("es-")) {
-    return "es";
-  }
-
-  if (
-    language === "zh" ||
-    language.startsWith("zh-") ||
-    language === "yue" ||
-    language.startsWith("yue-")
-  ) {
-    return "zh";
-  }
-
-  return null;
 }
 
 function saveLanguage(language) {
-  try {
-    localStorage.setItem("hex-language", language);
-  } catch {}
+    try {
+        localStorage.setItem("hex-language", language);
+    } catch {}
 }
 
 function translate(language, key, ...args) {
-  const dictionary = messages[language] || messages.en;
-  const value = dictionary[key] ?? messages.en[key] ?? key;
+    const dictionary = messages[language] || messages.en;
+    const value = dictionary[key] ?? messages.en[key] ?? key;
 
-  return typeof value === "function" ? value(...args) : value;
+    return typeof value === "function"
+        ? value(...args)
+        : value;
 }
 
 function applyTranslations(language, root = document) {
-  root.documentElement?.setAttribute(
-    "lang",
-    language === "zh" ? "zh-HK" : language
-  );
+    root.documentElement
+        ?.setAttribute("lang", language === "zh"
+            ? "zh-HK"
+            : language);
 
-  root.querySelectorAll("[data-i18n]").forEach((element) => {
-    element.textContent = translate(
-      language,
-      element.dataset.i18n
-    );
-  });
+    root
+        .querySelectorAll("[data-i18n]")
+        .forEach((element) => {
+            element.textContent = translate(language, element.dataset.i18n);
+        });
 }
 
 const SQRT3 = Math.sqrt(3);
@@ -1563,465 +1549,396 @@ const RECORD_KEY = "hex-computer-record";
 const lastWinnerByGame = new WeakMap();
 
 function renderGame(game, language) {
-  const svg = document.querySelector("#board");
-  const status = document.querySelector("#status");
+    const svg = document.querySelector("#board");
+    const status = document.querySelector("#status");
 
-  if (!svg || !status) {
-    return;
-  }
-
-  const state = game.getState();
-  const size = state.size;
-
-  updateComputerRecord(game, state, language);
-
-  const radius = size === 13 ? 16 : 19;
-  const padding = radius + 5;
-  const boardWidth = SQRT3 * radius * (1.5 * size - 0.5);
-  const boardHeight = 1.5 * radius * (size - 1) + 2 * radius;
-  const viewWidth = boardWidth + 2 * padding;
-  const viewHeight = boardHeight + 2 * padding;
-
-  svg.setAttribute(
-    "aria-label",
-    `${size} × ${size} Hex board`
-  );
-  svg.replaceChildren();
-
-  const centerX = viewWidth / 2;
-  const centerY = viewHeight / 2;
-  const radians = (BOARD_ROTATION * Math.PI) / 180;
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  for (let row = 0; row < size; row += 1) {
-    for (let col = 0; col < size; col += 1) {
-      const { cx, cy } = cellCenter(
-        row,
-        col,
-        size,
-        radius,
-        padding
-      );
-
-      for (const [x, y] of hexPoints(cx, cy, radius)) {
-        const dx = x - centerX;
-        const dy = y - centerY;
-
-        const rotatedX =
-          centerX +
-          dx * Math.cos(radians) -
-          dy * Math.sin(radians);
-
-        const rotatedY =
-          centerY +
-          dx * Math.sin(radians) +
-          dy * Math.cos(radians);
-
-        minX = Math.min(minX, rotatedX);
-        minY = Math.min(minY, rotatedY);
-        maxX = Math.max(maxX, rotatedX);
-        maxY = Math.max(maxY, rotatedY);
-      }
+    if (!svg || !status) {
+        return;
     }
-  }
 
-  const margin = 7;
-  const viewBoxX = minX - margin;
-  const viewBoxY = minY - margin;
-  const viewBoxWidth = maxX - minX + margin * 2;
-  const viewBoxHeight = maxY - minY + margin * 2;
+    const state = game.getState();
+    const size = state.size;
 
-  svg.setAttribute(
-    "viewBox",
-    `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`
-  );
+    updateComputerRecord(game, state, language);
 
-  const board = document.createElementNS(SVG_NS, "g");
-  board.setAttribute(
-    "transform",
-    `rotate(${BOARD_ROTATION} ${centerX} ${centerY})`
-  );
+    const radius = size === 13
+        ? 16
+        : 19;
+    const padding = radius + 5;
+    const boardWidth = SQRT3 * radius * (1.5 * size - 0.5);
+    const boardHeight = 1.5 * radius * (size - 1) + 2 * radius;
+    const viewWidth = boardWidth + 2 * padding;
+    const viewHeight = boardHeight + 2 * padding;
 
-  svg.append(board);
+    svg.setAttribute("aria-label", `${size} × ${size} Hex board`);
+    svg.replaceChildren();
 
-  const winning = new Set(
-    (state.winningPath ?? []).map(
-      ([row, col]) => `${row},${col}`
-    )
-  );
+    const centerX = viewWidth / 2;
+    const centerY = viewHeight / 2;
+    const radians = (BOARD_ROTATION * Math.PI) / 180;
 
-  for (let row = 0; row < size; row += 1) {
-    for (let col = 0; col < size; col += 1) {
-      const { cx, cy } = cellCenter(
-        row,
-        col,
-        size,
-        radius,
-        padding
-      );
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
 
-      const occupant = state.board[row][col];
-      const polygon = document.createElementNS(
-        SVG_NS,
-        "polygon"
-      );
+    for (let row = 0; row < size; row += 1) {
+        for (let col = 0; col < size; col += 1) {
+            const {cx, cy} = cellCenter(row, col, size, radius, padding);
 
-      polygon.setAttribute(
-        "points",
-        hexPoints(cx, cy, radius)
-          .map(([x, y]) => `${x},${y}`)
-          .join(" ")
-      );
+            for (const [x,
+                y]of hexPoints(cx, cy, radius)) {
+                const dx = x - centerX;
+                const dy = y - centerY;
 
-      polygon.setAttribute(
-        "class",
-        `cell ${
-          occupant ? `cell-${occupant}` : "cell-empty"
-        }` +
-          (winning.has(`${row},${col}`)
-            ? " cell-winning"
-            : "")
-      );
+                const rotatedX = centerX + dx * Math.cos(radians) - dy * Math.sin(radians);
 
-      polygon.setAttribute(
-        "tabindex",
-        occupant || state.winner || state.aiThinking
-          ? "-1"
-          : "0"
-      );
+                const rotatedY = centerY + dx * Math.sin(radians) + dy * Math.cos(radians);
 
-      polygon.setAttribute("role", "gridcell");
-      polygon.dataset.row = row;
-      polygon.dataset.col = col;
-      polygon.setAttribute(
-        "aria-label",
-        translate(
-          language,
-          "cellLabel",
-          row + 1,
-          col + 1,
-          occupant
-        )
-      );
-
-      board.append(polygon);
+                minX = Math.min(minX, rotatedX);
+                minY = Math.min(minY, rotatedY);
+                maxX = Math.max(maxX, rotatedX);
+                maxY = Math.max(maxY, rotatedY);
+            }
+        }
     }
-  }
 
-  for (let row = 0; row < size; row += 1) {
-    for (let col = 0; col < size; col += 1) {
-      const { cx, cy } = cellCenter(
-        row,
-        col,
-        size,
-        radius,
-        padding
-      );
+    const margin = 7;
+    const viewBoxX = minX - margin;
+    const viewBoxY = minY - margin;
+    const viewBoxWidth = maxX - minX + margin * 2;
+    const viewBoxHeight = maxY - minY + margin * 2;
 
-      if (row === 0) {
-        drawEdges(
-          board,
-          cx,
-          cy,
-          radius,
-          [5, 0],
-          "boundary-blue"
-        );
-      }
+    svg.setAttribute("viewBox", `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`);
 
-      if (row === size - 1) {
-        drawEdges(
-          board,
-          cx,
-          cy,
-          radius,
-          [2, 3],
-          "boundary-blue"
-        );
-      }
+    const board = document.createElementNS(SVG_NS, "g");
+    board.setAttribute("transform", `rotate(${BOARD_ROTATION} ${centerX} ${centerY})`);
 
-      if (col === 0) {
-        drawEdges(
-          board,
-          cx,
-          cy,
-          radius,
-          [3, 4],
-          "boundary-red"
-        );
-      }
+    svg.append(board);
 
-      if (col === size - 1) {
-        drawEdges(
-          board,
-          cx,
-          cy,
-          radius,
-          [0, 1],
-          "boundary-red"
-        );
-      }
+    const winning = new Set((state.winningPath ?? []).map(([row, col]) => `${row},${col}`));
+
+    for (let row = 0; row < size; row += 1) {
+        for (let col = 0; col < size; col += 1) {
+            const {cx, cy} = cellCenter(row, col, size, radius, padding);
+
+            const occupant = state.board[row][col];
+            const polygon = document.createElementNS(SVG_NS, "polygon");
+
+            polygon.setAttribute("points", hexPoints(cx, cy, radius).map(([x, y]) => `${x},${y}`).join(" "));
+
+            polygon.setAttribute("class", `cell ${occupant
+                ? `cell-${occupant}`
+                : "cell-empty"}` + (winning.has(`${row},${col}`)
+                    ? " cell-winning"
+                    : ""));
+
+            polygon.setAttribute("tabindex", occupant || state.winner || state.aiThinking
+                ? "-1"
+                : "0");
+
+            polygon.setAttribute("role", "gridcell");
+            polygon.dataset.row = row;
+            polygon.dataset.col = col;
+            polygon.setAttribute("aria-label", translate(language, "cellLabel", row + 1, col + 1, occupant));
+
+            board.append(polygon);
+        }
     }
-  }
 
-  updateStatus(status, state, language);
+    for (let row = 0; row < size; row += 1) {
+        for (let col = 0; col < size; col += 1) {
+            const {cx, cy} = cellCenter(row, col, size, radius, padding);
+
+            if (row === 0) {
+                drawEdges(board, cx, cy, radius, [
+                    5, 0
+                ], "boundary-blue");
+            }
+
+            if (row === size - 1) {
+                drawEdges(board, cx, cy, radius, [
+                    2, 3
+                ], "boundary-blue");
+            }
+
+            if (col === 0) {
+                drawEdges(board, cx, cy, radius, [
+                    3, 4
+                ], "boundary-red");
+            }
+
+            if (col === size - 1) {
+                drawEdges(board, cx, cy, radius, [
+                    0, 1
+                ], "boundary-red");
+            }
+        }
+    }
+
+    updateStatus(status, state, language);
 }
 
 function updateComputerRecord(game, state, language) {
-  const recordElement =
-    document.querySelector("#computer-record");
+    const recordElement = document.querySelector("#computer-record");
 
-  if (!recordElement) {
-    return;
-  }
-
-  if (state.mode !== "computer") {
-    recordElement.hidden = true;
-    return;
-  }
-
-  recordElement.hidden = false;
-
-  const previousWinner =
-    lastWinnerByGame.get(game) ?? null;
-
-  if (state.winner && !previousWinner) {
-    const record = readRecord();
-
-    if (state.winner === state.humanPlayer) {
-      record.wins += 1;
-    } else {
-      record.losses += 1;
+    if (!recordElement) {
+        return;
     }
 
-    try {
-      localStorage.setItem(
-        RECORD_KEY,
-        JSON.stringify(record)
-      );
-    } catch {}
-  }
+    if (state.mode !== "computer") {
+        recordElement.hidden = true;
+        return;
+    }
 
-  lastWinnerByGame.set(game, state.winner ?? null);
+    recordElement.hidden = false;
 
-  const record = readRecord();
+    const previousWinner = lastWinnerByGame.get(game) ?? null;
 
-  recordElement.textContent = `${translate(
-    language,
-    "winloss"
-  )}${record.wins}/${record.losses}`;
+    if (state.winner && !previousWinner) {
+        const record = readRecord();
+
+        if (state.winner === state.humanPlayer) {
+            record.wins += 1;
+        } else {
+            record.losses += 1;
+        }
+
+        try {
+            localStorage.setItem(RECORD_KEY, JSON.stringify(record));
+        } catch {}
+    }
+
+    lastWinnerByGame.set(game, state.winner ?? null);
+
+    const record = readRecord();
+
+    recordElement.textContent = `${translate(language, "winloss")}${record.wins}/${record.losses}`;
 }
 
 function readRecord() {
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem(RECORD_KEY)
-    );
+    try {
+        const saved = JSON.parse(localStorage.getItem(RECORD_KEY));
 
-    return {
-      wins: Number.isFinite(saved?.wins) ? saved.wins : 0,
-      losses: Number.isFinite(saved?.losses)
-        ? saved.losses
-        : 0
-    };
-  } catch {
-    return {
-      wins: 0,
-      losses: 0
-    };
-  }
+        return {
+            wins: Number.isFinite(saved
+                ?.wins)
+                ? saved.wins
+                : 0,
+            losses: Number.isFinite(saved
+                ?.losses)
+                ? saved.losses
+                : 0
+        };
+    } catch {
+        return {wins: 0, losses: 0};
+    }
 }
 
 function updateStatus(status, state, language) {
-  if (state.winner) {
-    const key =
-      state.mode === "computer"
-        ? state.winner === state.humanPlayer
-          ? "youWin"
-          : "computerWins"
-        : state.winner === "red"
-          ? "redWins"
-          : "blueWins";
+    if (state.winner) {
+        const key = state.mode === "computer"
+            ? state.winner === state.humanPlayer
+                ? "youWin"
+                : "computerWins"
+            : state.winner === "red"
+                ? "redWins"
+                : "blueWins";
 
-    status.textContent = translate(language, key);
-  } else if (state.aiThinking) {
-    status.textContent = translate(
-      language,
-      "computerTurn"
-    );
-  } else if (state.mode === "computer") {
-    status.textContent = translate(
-      language,
-      "yourTurn",
-      state.currentPlayer
-    );
-  } else {
-    status.textContent = translate(
-      language,
-      state.currentPlayer === "red"
-        ? "redTurn"
-        : "blueTurn"
-    );
-  }
+        status.textContent = translate(language, key);
+    } else if (state.aiThinking) {
+        status.textContent = translate(language, "computerTurn");
+    } else if (state.mode === "computer") {
+        status.textContent = translate(language, "yourTurn", state.currentPlayer);
+    } else {
+        status.textContent = translate(language, state.currentPlayer === "red"
+            ? "redTurn"
+            : "blueTurn");
+    }
 }
 
 function cellCenter(row, col, size, radius, padding) {
-  const boardWidth = SQRT3 * radius * (1.5 * size - 0.5);
-  const boardHeight =
-    1.5 * radius * (size - 1) + 2 * radius;
-  const viewWidth = boardWidth + 2 * padding;
-  const viewHeight = boardHeight + 2 * padding;
-  const offsetX = (viewWidth - boardWidth) / 2;
-  const offsetY = (viewHeight - boardHeight) / 2;
+    const boardWidth = SQRT3 * radius * (1.5 * size - 0.5);
+    const boardHeight = 1.5 * radius * (size - 1) + 2 * radius;
+    const viewWidth = boardWidth + 2 * padding;
+    const viewHeight = boardHeight + 2 * padding;
+    const offsetX = (viewWidth - boardWidth) / 2;
+    const offsetY = (viewHeight - boardHeight) / 2;
 
-  return {
-    cx:
-      offsetX +
-      (SQRT3 * radius) / 2 +
-      SQRT3 * radius * (col + row / 2),
-    cy: offsetY + radius + 1.5 * radius * row
-  };
+    return {
+        cx: offsetX + (SQRT3 * radius) / 2 + SQRT3 * radius * (col + row / 2),
+        cy: offsetY + radius + 1.5 * radius * row
+    };
 }
 
 function hexPoints(cx, cy, radius) {
-  return Array.from(
-    { length: 6 },
-    (_, index) => {
-      const angle =
-        (-90 + index * 60) * (Math.PI / 180);
+    return Array.from({
+        length: 6
+    }, (_, index) => {
+        const angle = (-90 + index * 60) * (Math.PI / 180);
 
-      return [
-        cx + radius * Math.cos(angle),
-        cy + radius * Math.sin(angle)
-      ];
-    }
-  );
+        return [
+            cx + radius * Math.cos(angle),
+            cy + radius * Math.sin(angle)
+        ];
+    });
 }
 
-function drawEdges(
-  svg,
-  cx,
-  cy,
-  radius,
-  edgeIndexes,
-  className
-) {
-  const vertices = hexPoints(cx, cy, radius);
+function drawEdges(svg, cx, cy, radius, edgeIndexes, className) {
+    const vertices = hexPoints(cx, cy, radius);
 
-  for (const index of edgeIndexes) {
-    const start = vertices[index];
-    const end = vertices[(index + 1) % vertices.length];
+    for (const index of edgeIndexes) {
+        const start = vertices[index];
+        const end = vertices[(index + 1) % vertices.length];
 
-    const line = document.createElementNS(SVG_NS, "line");
+        const line = document.createElementNS(SVG_NS, "line");
 
-    line.setAttribute("x1", start[0]);
-    line.setAttribute("y1", start[1]);
-    line.setAttribute("x2", end[0]);
-    line.setAttribute("y2", end[1]);
-    line.setAttribute(
-      "class",
-      `boundary ${className}`
-    );
+        line.setAttribute("x1", start[0]);
+        line.setAttribute("y1", start[1]);
+        line.setAttribute("x2", end[0]);
+        line.setAttribute("y2", end[1]);
+        line.setAttribute("class", `boundary ${className}`);
 
-    svg.append(line);
-  }
+        svg.append(line);
+    }
 }
 
 let language = chooseInitialLanguage();
 let game = new HexGame();
 
-const overlay =
-  document.querySelector("#start-overlay");
-const languageSelect = document.querySelector(
-  "#language-select"
-);
-const sizeSelect =
-  document.querySelector("#size-select");
-const modeSelect =
-  document.querySelector("#mode-select");
+const overlay = document.querySelector("#start-overlay");
+const languageSelect = document.querySelector("#language-select");
+const sizeSelect = document.querySelector("#size-select");
+const modeSelect = document.querySelector("#mode-select");
 
 languageSelect.value = language;
 applyTranslations(language);
 
 function draw() {
-  renderGame(game, language);
+    renderGame(game, language);
 }
 
 game.subscribe(draw);
 draw();
 
 languageSelect.addEventListener("change", () => {
-  language = languageSelect.value;
-  saveLanguage(language);
-  applyTranslations(language);
-  draw();
+    language = languageSelect.value;
+    saveLanguage(language);
+    applyTranslations(language);
+    draw();
 });
 
 document
-  .querySelector("#start-game")
-  .addEventListener("click", () => {
-    game.newGame({
-      size: Number(sizeSelect.value),
-      mode: modeSelect.value
+    .querySelector("#start-game")
+    .addEventListener("click", () => {
+        game.newGame({
+            size: Number(sizeSelect.value),
+            mode: modeSelect.value
+        });
+
+        overlay.hidden = true;
     });
 
-    overlay.hidden = true;
-  });
+document
+    .querySelector("#new-game")
+    .addEventListener("click", () => {
+        sizeSelect.value = String(game.size);
+        modeSelect.value = game.mode;
+        overlay.hidden = false;
+
+        document
+            .querySelector("#start-game")
+            .focus();
+    });
 
 document
-  .querySelector("#new-game")
-  .addEventListener("click", () => {
-    sizeSelect.value = String(game.size);
-    modeSelect.value = game.mode;
-    overlay.hidden = false;
+    .querySelector("#board")
+    .addEventListener("click", (event) => {
+        const cell = event
+            .target
+            .closest(".cell");
 
-    document
-      .querySelector("#start-game")
-      .focus();
-  });
+        if (!cell) {
+            return;
+        }
 
-document
-  .querySelector("#board")
-  .addEventListener("click", (event) => {
-    const cell = event.target.closest(".cell");
-
-    if (!cell) {
-      return;
-    }
-
-    game.play(
-      Number(cell.dataset.row),
-      Number(cell.dataset.col)
-    );
-  });
+        game.play(Number(cell.dataset.row), Number(cell.dataset.col));
+    });
 
 document
-  .querySelector("#board")
-  .addEventListener("keydown", (event) => {
-    if (
-      event.key !== "Enter" &&
-      event.key !== " "
-    ) {
-      return;
+    .querySelector("#board")
+    .addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+            return;
+        }
+
+        const cell = event
+            .target
+            .closest(".cell");
+
+        if (!cell) {
+            return;
+        }
+
+        event.preventDefault();
+
+        game.play(Number(cell.dataset.row), Number(cell.dataset.col));
+    });
+
+  function drawMosaicBackground() {
+    const canvas = document.getElementById("mosaic-bg");
+    if (!canvas) return;
+
+    const context = canvas.getContext("2d");
+    const pixelSize = 12; 
+const colors = [
+  "#1d0b15",
+  "#240e19",
+  "#2b111e",
+  "#321523",
+  "#391a29"
+];
+
+    const scale = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+    context.clearRect(0, 0, width, height);
+
+    const radius = pixelSize;
+    const columnStep = radius * 1.5;
+    const rowStep = Math.sqrt(3) * radius;
+
+    for (let col = -1; col * columnStep < width + radius; col++) {
+      const x = col * columnStep;
+      const yOffset = (Math.abs(col) % 2) * rowStep / 2;
+
+      for (let row = -1; row * rowStep + yOffset < height + rowStep; row++) {
+        const y = row * rowStep + yOffset;
+
+        context.beginPath();
+        for (let point = 0; point < 6; point++) {
+          const angle = (Math.PI / 3) * point;
+          const px = x + radius * Math.cos(angle);
+          const py = y + radius * Math.sin(angle);
+
+          if (point === 0) context.moveTo(px, py);
+          else context.lineTo(px, py);
+        }
+
+        context.closePath();
+        context.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+        context.fill();
+      }
     }
+  }
 
-    const cell = event.target.closest(".cell");
-
-    if (!cell) {
-      return;
-    }
-
-    event.preventDefault();
-
-    game.play(
-      Number(cell.dataset.row),
-      Number(cell.dataset.col)
-    );
-  });
+  drawMosaicBackground();
+  window.addEventListener("resize", drawMosaicBackground);
 </script>
+
 </body>
 </html>
