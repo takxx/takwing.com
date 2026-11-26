@@ -218,6 +218,7 @@ button:active {
   let gameStartedAt = 0;
   let muted = false;
   let bestTime = null;
+  let stoppedTime = null;
 
   try {
     const savedTime = Number(localStorage.getItem(BEST_TIME_KEY));
@@ -375,6 +376,7 @@ button:active {
   }
 
   function currentTimeSeconds() {
+    if (stoppedTime !== null) return stoppedTime;
     if (!gameStartedAt) return 0;
     return Math.floor((performance.now() - gameStartedAt) / 1000);
   }
@@ -456,6 +458,7 @@ button:active {
 
   function resetGame() {
     lives = 3;
+    stoppedTime = null;
     gameOver = false;
     gameStartedAt = 0;
     paddle.x = W / 2 - paddle.w / 2;
@@ -625,6 +628,7 @@ button:active {
     if (balls.length === 0) {
       lives -= 1;
       if (lives <= 0) {
+        stoppedTime = currentTimeSeconds();
         gameOver = true;
         running = false;
         showMessage(translations[lang].gameOver, 0);
@@ -636,6 +640,7 @@ button:active {
     }
 
     if (bricks.every((brick) => !brick.alive)) {
+      stoppedTime = currentTimeSeconds();
       gameOver = true;
       running = false;
       saveBestTime();
@@ -702,17 +707,10 @@ button:active {
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
     ctx.fillText(`${text.time}  ${currentTimeSeconds()}`, 18, 28);
-
     ctx.textAlign = "center";
-    ctx.fillText(
-      `${text.highScore}  ${bestTime === null ? "-" : `${bestTime}s`}`,
-      W / 2,
-      28
-    );
-
-    // The ball currently in play is not counted as a remaining life.
+    ctx.fillText("♥".repeat(Math.max(0, lives - 1)), W / 2, 28);    
     ctx.textAlign = "right";
-    ctx.fillText("♥".repeat(Math.max(0, lives - 1)), W - 18, 28);
+    ctx.fillText(`${text.highScore}  ${bestTime === null ? "-" : bestTime}`,W - 18,28);
     ctx.textAlign = "start";
 
     if (message && (!messageUntil || now < messageUntil)) {
