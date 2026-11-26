@@ -98,7 +98,6 @@ function applyLanguage() {
   document.querySelector("#title").textContent = text.title;
   document.querySelector("#new-game").textContent = text.newGame;
   document.querySelector("#instructions").textContent = text.instructions;
-  document.querySelector("#language-label").textContent = text.language;
 
   languageElement.querySelectorAll(".language-button").forEach(button => {
     button.setAttribute(

@@ -248,7 +248,7 @@ select {
 .language-control {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid var(--border);
