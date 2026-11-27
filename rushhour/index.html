@@ -215,9 +215,9 @@ h1,
     <div class="choice-group">
       <h3 id="mode-label"></h3>
       <div class="choice-buttons" id="mode-options">
-        <button type="button" data-mode="casual">Casual</button>
+        <button type="button" data-mode="casual">Easy</button>
         <button type="button" data-mode="normal">Normal</button>
-        <button type="button" data-mode="brutal">Brutal</button>
+        <button type="button" data-mode="brutal">Fiendish</button>
       </div>
     </div>
 
@@ -421,7 +421,7 @@ function parsePuzzle(description) {
 }
 
 function render() {
-  board.querySelectorAll(".cell,.car").forEach(el => el.remove());
+  board.querySelectorAll(".cell, .car").forEach(el => el.remove());
 
   for (let i = 0; i < 36; i++) {
     const cell = document.createElement("div");
@@ -430,13 +430,13 @@ function render() {
     board.append(cell);
   }
 
-  const size = board.clientWidth;
+  // clientWidth excludes the border but includes padding.
   const style = getComputedStyle(board);
-  const border = parseFloat(style.borderLeftWidth);
   const padding = parseFloat(style.paddingLeft);
   const gap = parseFloat(style.gap);
-  const inner = size - 2 * border - 2 * padding;
+  const inner = board.clientWidth - 2 * padding;
   const cellSize = (inner - 5 * gap) / 6;
+
   let otherCarIndex = 0;
 
   cars.forEach(car => {
@@ -449,14 +449,19 @@ function render() {
     el.setAttribute("role", "img");
     el.setAttribute("aria-label", isRed ? "Red car" : "Vehicle");
     el.dataset.id = car.id;
-    el.style.left = `${border + padding + car.col * (cellSize + gap)}px`;
-    el.style.top = `${border + padding + car.row * (cellSize + gap)}px`;
-    el.style.width = `${car.horizontal
-      ? car.length * cellSize + (car.length - 1) * gap
-      : cellSize}px`;
-    el.style.height = `${car.horizontal
-      ? cellSize
-      : car.length * cellSize + (car.length - 1) * gap}px`;
+
+    el.style.left = `${padding + car.col * (cellSize + gap)}px`;
+    el.style.top = `${padding + car.row * (cellSize + gap)}px`;
+    el.style.width = `${
+      car.horizontal
+        ? car.length * cellSize + (car.length - 1) * gap
+        : cellSize
+    }px`;
+    el.style.height = `${
+      car.horizontal
+        ? cellSize
+        : car.length * cellSize + (car.length - 1) * gap
+    }px`;
 
     addDragging(el, car);
     board.append(el);
