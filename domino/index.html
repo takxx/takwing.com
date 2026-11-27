@@ -1284,9 +1284,9 @@ const translations = {
     youWin: "你贏咗呢局。",
     computerWins: "電腦贏咗呢局。",
     blockedYouWin:
-      "呢局無牌可出。你點數少啲，贏咗呢局。",
+      "呢局無牌可出。你以少啲點數贏咗呢局。",
     blockedComputerWins:
-      "呢局無牌可出。電腦點數少啲，贏咗呢局。",
+      "呢局無牌可出。電腦以少啲點數贏咗呢局。",
     blockedTie: "呢局無牌可出，打和。",
     leftSide: "左面",
     rightSide: "右面",
@@ -1387,7 +1387,7 @@ function initializeLanguage() {
 const INITIAL_COLUMNS = 11;
 const MAX_COLUMNS = 15;
 const INITIAL_ROWS = 9;
-const ROWS_PER_EXTENSION = 4;
+const ROWS_PER_EXTENSION = 3;
 const TURN_MARGIN = 2;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -2179,64 +2179,68 @@ function createRenderer(elements) {
     renderBoard();
   }
 
-  function renderHand(tiles, options) {
+  function renderDominoTiles(container, tiles, options = {}) {
     const fragment = document.createDocumentFragment();
-
+  
     for (const tile of tiles) {
       const playable =
-        options.enabled && options.isPlayable(tile);
-
+        options.enabled === true && options.isPlayable?.(tile);
+  
       const button = document.createElement("button");
       button.type = "button";
-      button.className = `hand-domino${
-        playable ? " playable" : ""
-      }`;
+      button.className = `hand-domino${playable ? " playable" : ""}`;
       button.disabled = !playable;
       button.title = `${tile.a}-${tile.b}`;
-      button.setAttribute(
-        "aria-label",
-        `${tile.a}-${tile.b}`
-      );
-
+      button.setAttribute("aria-label", `${tile.a}-${tile.b}`);
+  
       for (const value of [tile.a, tile.b]) {
         const half = document.createElement("span");
         half.className = "domino-half";
-
+  
         const pips = document.createElement("span");
         pips.className = "pips";
-
+  
         for (const position of PIP_POSITIONS[value] ?? []) {
           const pip = document.createElement("span");
           pip.className = `pip pip-${position}`;
           pips.appendChild(pip);
         }
-
+  
         half.appendChild(pips);
         button.appendChild(half);
       }
-
-      if (playable) {
+  
+      if (playable && options.onTileClick) {
         button.addEventListener("click", () => {
           options.onTileClick(tile);
         });
       }
-
+  
       fragment.appendChild(button);
     }
-
-    playerHand.replaceChildren(fragment);
+  
+    container.replaceChildren(fragment);
   }
-
-  function renderComputerHand(count) {
+  
+  function renderHand(tiles, options) {
+    renderDominoTiles(playerHand, tiles, options);
+  }
+  
+  function renderComputerHand(tiles, reveal = false) {
+    if (reveal) {
+      renderDominoTiles(computerHand, tiles);
+      return;
+    }
+  
     const fragment = document.createDocumentFragment();
-
-    for (let index = 0; index < count; index += 1) {
+  
+    for (let index = 0; index < tiles.length; index += 1) {
       const tileBack = document.createElement("span");
       tileBack.className = "computer-back";
       tileBack.setAttribute("aria-hidden", "true");
       fragment.appendChild(tileBack);
     }
-
+  
     computerHand.replaceChildren(fragment);
   }
 
@@ -2456,8 +2460,14 @@ function renderApplication() {
     }
   });
 
+  const revealComputerHand =
+    snapshot.gameOver &&
+    (snapshot.lastEvent?.reason === "blocked" ||
+      snapshot.lastEvent?.reason === "blocked-tie");
+  
   renderer.renderComputerHand(
-    snapshot.hands[PLAYER.COMPUTER].length
+    snapshot.hands[PLAYER.COMPUTER],
+    revealComputerHand
   );
 
   renderer.renderStats({
