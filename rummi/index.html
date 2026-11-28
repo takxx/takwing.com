@@ -31,16 +31,16 @@ body {
   margin: 0;
   padding: 18px;
   color: #f5efe2;
-  background:
-    radial-gradient(circle at top, rgb(82 113 214 / 30%), transparent 35%),
-    radial-gradient(circle at bottom right, rgb(215 177 90 / 12%), transparent 28%),
-    linear-gradient(135deg, #243a7a 0%, #162658 50%, #0f1731 100%);
+  background:#0f1731;
 }
+
+#mosaic-bg {position: fixed;inset: 0;z-index: 0;width: 100%;height: 100%;opacity: 0.18;pointer-events: none;}
 
 .game {
   width: 100%;
   max-width: 1500px;
   margin: 0 auto;
+  position: relative;z-index: 1;
 }
 
 .game-layout {
@@ -608,6 +608,7 @@ h2 {
 </style>
 </head>
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main class="game">
   <div id="game-layout" class="game-layout">
     <header class="game-header">
@@ -2141,6 +2142,8 @@ document.querySelector("#new-game")?.addEventListener("click", () => {
   update();
 });
 update();
+const mosaicColors = ["#263858", "#2c3e60", "#3a4d70", "#1b2945"];
 </script>
+<script src="../util/mosaic6.js"></script>
 </body>
 </html>
