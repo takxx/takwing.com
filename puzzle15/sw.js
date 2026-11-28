@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "puzzle15-";
-const CACHE_NAME = `${CACHE_PREFIX}261126`;
+const CACHE_NAME = `${CACHE_PREFIX}261128`;
 const FILES_TO_CACHE = [
   "./",
   "/pixel/index.html",

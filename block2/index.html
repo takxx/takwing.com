@@ -551,32 +551,9 @@ main {position: relative;z-index: 1;}
        browser.startsWith("es")?"es":browser.startsWith("zh")?"zh":"en";  
   updateOverlay();
 })();
-const canvas = document.getElementById("mosaic-bg");
-const ctx = canvas.getContext("2d");
-const colors = ["#263858", "#2c3e60", "#3a4d70", "#1b2945"];
-
-function drawMosaic() {
-  const dpr = window.devicePixelRatio || 1;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const tile = 8;
-
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
-  canvas.style.width = `${width}px`;
-  canvas.style.height = `${height}px`;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  for (let y = 0; y < height; y += tile) {
-    for (let x = 0; x < width; x += tile) {
-      ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-      ctx.fillRect(x, y, tile - 1, tile - 1);
-    }
-  }
-}
-
-drawMosaic();
-window.addEventListener("resize", drawMosaic);
+const mosaicColors = ["#263858", "#2c3e60", "#3a4d70", "#1b2945"];
 </script>
+<script src="../util/mosaic.js"></script>
+</body>
 </body>
 </html>
