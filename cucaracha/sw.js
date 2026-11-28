@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "cacaracha-";
-const CACHE_NAME = `${CACHE_PREFIX}261122`;
+const CACHE_NAME = `${CACHE_PREFIX}261128`;
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -7,7 +7,6 @@ const FILES_TO_CACHE = [
   "./script.js",  
   "./lang.js",  
   "./audio.js",  
-  "./background.js",  
   "./lacucaracha.mp3",
 ];
 

@@ -9,6 +9,7 @@ const FILES_TO_CACHE = [
   "/puzzle15/style.css",
   "/puzzle15/script.js",  
   "/util/images.svg",  
+  "/util/mosaic.js",  
 ];
 
 self.addEventListener("install", (event) => {

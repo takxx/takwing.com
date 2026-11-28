@@ -35,6 +35,20 @@
 
 <script src="script.js"></script>
 <script>
+const mosaicColors = [
+  "#1b050d",
+  "#210713",
+  "#2c0a18",
+  "#2c0a18",
+  "#3a1024",
+  "#3a1024",
+  "#470b1f",
+  "#4a152b",
+  "#6e1230",
+];
+</script>
+<script src="../util/mosaic.js"></script>
+<script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js");

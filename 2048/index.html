@@ -25,11 +25,7 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(145, 94, 47, .18), transparent 62%),
-    radial-gradient(ellipse at 20% 80%, rgba(94, 58, 32, .22), transparent 58%),
-    radial-gradient(ellipse at 80% 75%, rgba(63, 38, 22, .25), transparent 60%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font: 15px system-ui, -apple-system, sans-serif;
   user-select: none;
@@ -544,33 +540,17 @@ const colors = {
   });
   boardEl.addEventListener("pointercancel", () => { touchStart = null; });
 
-  function drawMosaicBackground() {
-    const canvas = $("mosaic-bg");
-    const context = canvas.getContext("2d");
-    const pixelSize = 4;
-    const browns = ["#24170f", "#2c1b11", "#302015", "#3a2619"];
-    const scale = window.devicePixelRatio || 1;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-  
-    canvas.width = Math.round(width * scale);
-    canvas.height = Math.round(height * scale);
-    context.setTransform(scale, 0, 0, scale, 0, 0);
-  
-    for (let y = 0; y < height; y += pixelSize) {
-      for (let x = 0; x < width; x += pixelSize) {
-        context.fillStyle = browns[Math.floor(Math.random() * browns.length)];
-        context.fillRect(x, y, pixelSize, pixelSize);
-      }
-    }
-  }
-  
-  drawMosaicBackground();
-  window.addEventListener("resize", drawMosaicBackground);
-
   renderLanguage();
 })();
 
+const mosaicColors = [
+  "#24170f",
+  "#302015",
+  "#3a2619",
+  "#463020",
+  "#503824",
+];
 </script>
+<script src="../util/mosaic.js"></script>
 </body>
 </html>

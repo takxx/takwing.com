@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pixel Perfect</title>
   <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
 </head>
 <body>
 <canvas id="mosaic-bg" aria-hidden="true"></canvas>
@@ -51,6 +50,18 @@
     </div>
   </div>
 </main>
+<script src="script.js"></script>
+<script>
+const mosaicColors = [
+  "#1b1028",
+  "#261536",
+  "#311d45",
+  "#40235b",
+  "#4a2a63",
+  "#39244d",
+];
+</script>
+<script src="../util/mosaic.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

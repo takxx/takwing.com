@@ -78,7 +78,14 @@ body {
   user-select: none;
   -webkit-touch-callout: none;
 }
-
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
 button,
 select {
   font: inherit;
@@ -122,14 +129,12 @@ select:focus-visible {
 #container {
   width: 100%;
   max-width: 980px;
-
   display: flex;
   align-items: flex-start;
   justify-content: center;
   gap: 24px;
-
   position: relative;
-
+  z-index: 1;
   touch-action: none;
 }
 
@@ -289,7 +294,7 @@ select {
 }
 
 .audio-controls button.muted {
-  background: #465066;
+  background: #666B5A;
 }
 
 .intro-panel {
@@ -443,6 +448,7 @@ select {
 </style>
 </head>
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main id="container">
   <!-- Game board -->
   <canvas id="board" aria-label="Tetris game board"></canvas>
@@ -1944,6 +1950,8 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js");
   });
 }
+const mosaicColors = ["#17191d","#1a1c21","#1d1f24","#202228","#23252b",];
 </script>
+<script src="../util/mosaic.js"></script>
 </body>
 </html>

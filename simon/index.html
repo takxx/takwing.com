@@ -28,7 +28,14 @@ padding: 1rem;
 box-sizing: border-box;
 touch-action: manipulation;
 }
-
+#mosaic-bg {
+position: fixed;
+inset: 0;
+z-index: 0;
+width: 100%;
+height: 100%;
+pointer-events: none;
+}
 .game-container {
 background-color: var(--card-bg);
 padding: 2rem;
@@ -40,6 +47,8 @@ align-items: center;
 max-width: 400px;
 width: 100%;
 box-sizing: border-box;
+position: relative;
+z-index: 1;
 }
 
 header {
@@ -110,8 +119,6 @@ stroke 90ms ease-out;
 .hex-4 { color: #a855f7; } /* Purple */
 .hex-5 { color: #ec4899; } /* Pink */
 .hex-6 { color: #06b6d4; } /* Cyan */
-
-
 
 #message {
 height: 1.5rem;
@@ -218,7 +225,7 @@ filter: none;
 </style>
 </head>
 <body>
-
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <div class="game-container">
   <header>
     <h1 style="font-size: 1.25rem; margin: 0;" data-i18n="title">Hexagon Simon</h1>
@@ -635,6 +642,17 @@ board.addEventListener("pointerup", handlePointerUp);
 board.addEventListener("pointercancel", handlePointerCancel);
 
 applyTranslations();
+const mosaicColors = [
+  "#171b19",
+  "#1b201d",
+  "#202521",
+  "#252b26",
+  "#252b26",
+  "#2a302b",
+  "#303731",
+  "#363d37",
+];
 </script>
+<script src="../util/mosaic6.js"></script>
 </body>
 </html>

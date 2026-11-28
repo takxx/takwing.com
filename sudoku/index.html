@@ -56,17 +56,25 @@ body {
     "Segoe UI",
     sans-serif;
   font-size: 15px;
-}
-
-body {
   user-select: none;
   -webkit-user-select: none;
+}
+
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 main {
   width: min(94vw, 640px);
   margin: 0 auto;
   padding: 22px 0 35px;
+  position: relative;
+  z-index: 1;
 }
 
 h1 {
@@ -503,8 +511,9 @@ select:focus-visible {
 </head>
 
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main>
-  <h1>Color Sudoku</h1>
+  <h1>Sudoku</h1>
 
   <div class="bar">
     <select id="difficulty" aria-label="Difficulty">
@@ -1707,6 +1716,17 @@ applyTranslations();
 generatePuzzle(difficultyEl.value);
 render();
 setStatus(t("initialStatus"));
+const mosaicColors = [
+  "#171b19",
+  "#1b201d",
+  "#202521",
+  "#252b26",
+  "#252b26",
+  "#2a302b",
+  "#303731",
+  "#363d37",
+];
 </script>
+<script src="../util/mosaic.js"></script>
 </body>
 </html>

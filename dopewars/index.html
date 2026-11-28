@@ -39,6 +39,15 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 button,
 input,
 select {
@@ -78,6 +87,8 @@ button:disabled {
   max-width: 100%;
   margin: 0 auto;
   padding: 28px 0 50px;
+  position: relative;
+  z-index: 1;
 }
 
 header {
@@ -545,6 +556,7 @@ label select {
 </head>
 
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main class="container">
   <header>
     <div>
@@ -1406,6 +1418,16 @@ $("marketBody").addEventListener("click", event => {
 });
 
 createGame();
+const mosaicColors = [
+  "#171b19",
+  "#1b201d",
+  "#202521",
+  "#252b26",
+  "#252b26",
+  "#2a302b",
+  "#303731",
+  "#363d37",
+];
 </script>
-</body>
+<script src="../util/mosaic6.js"></script></body>
 </html>

@@ -6,230 +6,294 @@
 <title>Shikaku</title>
 
 <style>
-  :root {
-    --bg:#0b0f14;
-    --panel:#121820;
-    --cell:#1b2330;
+:root {
+  --bg: #0b0f14;
+  --panel: #121820;
+  --cell: #1b2330;
+  --grid: rgba(107, 114, 128, .55);
+  --major-grid: rgba(156, 163, 175, .38);
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --select: #fbbf24;
+  --bad: #f87171;
+  --ok: #34d399;
+}
 
-    --grid:rgba(107,114,128,.55);
-    --major-grid:rgba(156,163,175,.38);
+* {
+  box-sizing: border-box;
+}
 
-    --text:#e5e7eb;
-    --muted:#9ca3af;
-    --select:#fbbf24;
-    --bad:#f87171;
-    --ok:#34d399;
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px system-ui, -apple-system, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+main.layout {
+  width: min(96vw, 1200px);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 20px 0;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-areas:
+    "board header"
+    "board status"
+    "board instructions"
+    "board language";
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  align-content: center;
+  align-items: start;
+  gap: 12px 28px;
+}
+
+.header {
+  grid-area: header;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+}
+
+.bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+button,
+select {
+  border: 1px solid #374151;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: #1f2937;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover,
+select:hover {
+  background: #374151;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.board-area {
+  grid-area: board;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  align-self: center;
+}
+
+#board {
+  width: min(100%, calc(100svh - 40px));
+  max-height: calc(100svh - 40px);
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--n), minmax(0, 1fr));
+  border: 2px solid rgba(156, 163, 175, .45);
+  background: var(--grid);
+}
+
+.cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--cell);
+  border: 1px solid var(--grid);
+  cursor: pointer;
+}
+
+.cell.major-column {
+  border-right: 2px solid var(--major-grid);
+}
+
+.cell.major-row {
+  border-bottom: 2px solid var(--major-grid);
+}
+
+.cell.selected {
+  outline: 4px solid var(--select);
+  outline-offset: -4px;
+  z-index: 5;
+}
+
+.cell.filled {
+  background: var(--fill);
+}
+
+.cell.filled::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, .6);
+  pointer-events: none;
+}
+
+.clue {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  pointer-events: none;
+  color: #fff;
+  font-size: clamp(10px, 1.8vw, 16px);
+  line-height: 1;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+}
+
+#status {
+  grid-area: status;
+  width: 100%;
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.instructions {
+  grid-area: instructions;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.instructions b {
+  color: #d1d5db;
+}
+
+.instructions ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.instructions li {
+  margin: 4px 0;
+}
+
+.language-control {
+  grid-area: language;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.language-control select {
+  min-width: 145px;
+}
+
+@media (max-width: 700px) {
+  main.layout {
+    width: min(92vw, 560px);
+    min-height: 100svh;
+    padding: 16px 0 28px;
+    grid-template-areas:
+      "header"
+      "board"
+      "status"
+      "instructions"
+      "language";
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 12px;
   }
 
-  * {
-    box-sizing:border-box;
-  }
-
-  html,
-  body {
-    margin:0;
-    min-height:100%;
-    background:var(--bg);
-    color:var(--text);
-    font:15px system-ui,-apple-system,sans-serif;
-    user-select:none;
-    -webkit-user-select:none;
-    touch-action: manipulation;
-  }
-
-  main {
-    width:min(92vw,820px);
-    margin:0 auto;
-    padding:20px 0 35px;
-  }
-
-  h1 {
-    margin:0 0 12px;
-    font-size:24px;
-  }
-
-  .bar {
-    width:100%;
-    display:flex;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-bottom:12px;
-    padding:10px;
-    border-radius:12px;
-    background:var(--panel);
-  }
-
-  button,
-  select {
-    border:1px solid #374151;
-    border-radius:6px;
-    padding:7px 10px;
-    background:#1f2937;
-    color:var(--text);
-    cursor:pointer;
-    font:inherit;
-  }
-
-  button:hover,
-  select:hover {
-    background:#374151;
-  }
-
-  button:focus-visible,
-  select:focus-visible {
-    outline:2px solid #fff;
-    outline-offset:2px;
+  .board-area {
+    align-self: auto;
   }
 
   #board {
-    width:100%;
-    aspect-ratio:1 / 1;
-    display:grid;
-    grid-template-columns:repeat(var(--n),minmax(0,1fr));
-    grid-template-rows:repeat(var(--n),minmax(0,1fr));
-    border:2px solid rgba(156,163,175,.45);
-    background:var(--grid);
-  }
-
-  .cell {
-    position:relative;
-    min-width:0;
-    min-height:0;
-    overflow:hidden;
-    display:grid;
-    place-items:center;
-    background:var(--cell);
-    border:1px solid var(--grid);
-    cursor:pointer;
-  }
-
-  .cell.major-column {
-    border-right:2px solid var(--major-grid);
-  }
-
-  .cell.major-row {
-    border-bottom:2px solid var(--major-grid);
-  }
-
-  .cell.selected {
-    outline:4px solid var(--select);
-    outline-offset:-4px;
-    z-index:5;
-  }
-
-  .cell.filled {
-    background:var(--fill);
-  }
-
-  .cell.filled::after {
-    content:"";
-    position:absolute;
-    inset:0;
-    border:2px solid rgba(255,255,255,.6);
-    pointer-events:none;
-  }
-
-  .clue {
-    position:absolute;
-    inset:0;
-    display:grid;
-    place-items:center;
-    z-index:3;
-    pointer-events:none;
-    color:#fff;
-    font-size:clamp(10px,1.8vw,16px);
-    line-height:1;
-    font-weight:700;
-    text-shadow:0 1px 2px #000;
-  }
-
-  #status {
-    width:100%;
-    min-height:18px;
-    margin:8px auto 0;
-    color:var(--muted);
-    font-size:13px;
-    text-align:center;
-  }
-
-  .instructions {
-    margin-top:12px;
-    color:var(--muted);
-    font-size:13px;
-  }
-
-  .instructions b {
-    color:#d1d5db;
-  }
-
-  .instructions ul {
-    margin:6px 0 0;
-    padding-left:20px;
-  }
-
-  .instructions li {
-    margin:4px 0;
+    width: 100%;
+    max-height: none;
   }
 
   .language-control {
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    margin-top:24px;
-    color:var(--muted);
-    font-size:13px;
+    justify-content: center;
   }
-
-  .language-control select {
-    min-width:145px;
-  }
+}
 </style>
 </head>
 
 <body>
-<main>
-  <h1 id="title">Shikaku</h1>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
+<main class="layout">
+  <section class="header">
+    <h1 id="title">Shikaku</h1>
 
-  <div class="bar">
-    <label for="size" id="sizeLabel">Size</label>
+    <div class="bar">
+      <label for="size" id="sizeLabel">Size</label>
+      <select id="size" aria-label="Size">
+        <option value="12" selected>12×12</option>
+        <option value="18">18×18</option>
+        <option value="24">24×24</option>
+      </select>
 
-    <select id="size" aria-label="Size">
-      <option value="12" selected>12×12</option>
-      <option value="18">18×18</option>
-      <option value="24">24×24</option>
-    </select>
+      <button id="new" type="button">New puzzle</button>
+      <button id="undo" type="button">Undo</button>
+    </div>
+  </section>
 
-    <button id="new" type="button">New puzzle</button>
-    <button id="undo" type="button">Undo</button>
+  <div class="board-area">
+    <div id="board" aria-label="Shikaku board"></div>
   </div>
 
-  <div id="board" aria-label="Shikaku board"></div>
   <div id="status" aria-live="polite"></div>
 
-  <div class="instructions">
+  <section class="instructions">
     <b id="howToPlay">How to play:</b>
-
     <ul>
       <li id="instructionOne">
         Click one corner, then the opposite corner to place a rectangle.
       </li>
-
       <li id="instructionTwo">
         Double-click a filled cell to remove that rectangle.
       </li>
-
       <li id="instructionThree">
         Fill the board with rectangles so each clue’s rectangle has exactly
         that area and contains only its clue.
       </li>
     </ul>
-  </div>
+  </section>
 
   <div class="language-control">
     <label for="language" id="languageLabel">Language</label>
-
     <select id="language" aria-label="Language">
       <option value="en">English</option>
       <option value="es">Español</option>
@@ -1150,6 +1214,17 @@ $("language").onchange = () => {
 $("language").value = currentLanguage;
 applyTranslations();
 $("new").click();
+const mosaicColors = [
+  "#171b19",
+  "#1b201d",
+  "#202521",
+  "#252b26",
+  "#252b26",
+  "#2a302b",
+  "#303731",
+  "#363d37",
+];
 </script>
+<script src="../util/mosaic.js"></script>
 </body>
 </html>

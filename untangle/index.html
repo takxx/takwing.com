@@ -22,8 +22,17 @@ body {
   margin: 0;
   padding: 24px;
   color: var(--cream);
-  background: radial-gradient(ellipse at center, #1a523e, #123b2e 62%, #0b2b22);
+  background: #177245;
   font: 16px system-ui, sans-serif;
+}
+
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .game-layout {
@@ -34,6 +43,8 @@ body {
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .board-area {
@@ -224,6 +235,7 @@ button:focus-visible {
 </style>
 </head>
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main class="game-layout">
   <section class="board-area">
     <canvas id="game" width="700" height="700" aria-label="Untangle puzzle"></canvas>
@@ -709,6 +721,17 @@ actionButton.addEventListener("click", () => {
 });
 
 applyLanguage();
+
+const mosaicColors = [
+  "#145f3c",
+  "#166a42",
+  "#177245",
+  "#177245",
+  "#177245",
+  "#1a7950",
+  "#1c7e54",
+];
 </script>
+<script src="../util/mosaic.js"></script>
 </body>
 </html>

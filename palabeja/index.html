@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <canvas id="mosaic-bg" aria-hidden="true"></canvas>
   <main class="hive-game">
     <header class="game-header">
       <h1 class="game-title">Palabeja</h1>
@@ -105,6 +106,10 @@
   </main>
 
   <script src="script.js" type="module"></script>
+  <script>
+    const mosaicColors = ["#1d1719","#211a1c","#241d1f","#282123","#2b2426",];
+  </script>
+  <script src="../util/mosaic6.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

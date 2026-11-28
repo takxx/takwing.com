@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <canvas id="mosaic-bg" aria-hidden="true"></canvas>
   <main class="hive-game">
     <header class="game-header">
       <h1 class="game-title">Buzzword</h1>
@@ -105,6 +106,16 @@
   </main>
 
   <script src="script.js" type="module"></script>
+  <script>
+    const mosaicColors = [
+      "#17191d",
+      "#1a1c21",
+      "#1d1f24",
+      "#202228",
+      "#23252b",
+    ];
+  </script>
+  <script src="../util/mosaic6.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

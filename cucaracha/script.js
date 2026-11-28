@@ -9,11 +9,8 @@ import {
 } from "./lang.js";
 
 import { music, playHitSound } from "./audio.js";
-import { drawFloor } from "./background.js";
 
 const game = document.querySelector("#game");
-const floor = document.querySelector("#floor");
-const floorContext = floor.getContext("2d");
 const roachLayer = document.querySelector("#roaches");
 const sandal = document.querySelector("#sandal");
 
@@ -561,10 +558,6 @@ game.addEventListener("pointerdown", (event) => {
 function initialize() {
   updateLabels();
   updateDisplays();
-  drawFloor(game, floor, floorContext);
-  window.addEventListener("resize", () =>
-    drawFloor(game, floor, floorContext)
-  );
   showStart();
 }
 

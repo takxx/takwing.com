@@ -23,15 +23,25 @@ body {
   margin: 0;
   min-height: 100vh;
   padding: 28px 16px;
-  background:
-    radial-gradient(ellipse at top, #50392d 0%, var(--bg) 62%);
+  background: var(--bg);
   color: var(--text);
   font: 16px/1.5 system-ui, sans-serif;
+}
+
+#mosaic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 main {
   width: min(620px, 100%);
   margin: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .header {
@@ -277,6 +287,7 @@ button:focus-visible {
 </style>
 </head>
 <body>
+<canvas id="mosaic-bg" aria-hidden="true"></canvas>
 <main>
 <header class="header">
   <h1 id="title"></h1>
@@ -669,6 +680,8 @@ languageSelect.addEventListener("change", event => {
 
 applyLanguage();
 newGame();
+const mosaicColors = ["#24170f", "#2c1b11", "#302015", "#3a2619"];
 </script>
+<script src="../util/mosaic6.js"></script></body>
 </body>
 </html>

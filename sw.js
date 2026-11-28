@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "games-";
-const CACHE_NAME = `${CACHE_PREFIX}261127`;
+const CACHE_NAME = `${CACHE_PREFIX}261128`;
 
 const FILES_TO_CACHE = [
   "/2048/index.html",
@@ -47,6 +47,8 @@ const FILES_TO_CACHE = [
   "/games/index.html",
   "/games/ico.svg",
   "/juegos/index.html",
+  "/util/mosaic.js",
+  "/util/mosaic6.js",
 ];
 
 self.addEventListener("install", (event) => {
