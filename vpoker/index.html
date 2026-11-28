@@ -850,6 +850,7 @@ h1 {
 
   $("restart-game").addEventListener("click", () => {
     $("game-over-overlay").close();
+    balance = 100;
     startGame();
     $("start-overlay").showModal();
   });
